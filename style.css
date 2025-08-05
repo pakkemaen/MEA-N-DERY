@@ -8,7 +8,7 @@
     --accent-color: #a89a87;
     --header-color: #4a3c2c;
     --brand-color: #8F8C79;
-    --action-color: #b45309; /* Stronger action color */
+    --action-color: #b45309;
     --danger-color: #ef4444;
     --success-color: #22c55e;
     --info-color: #3b82f6;
@@ -20,11 +20,11 @@
     --bg-tertiary: #4b5563;
     --text-primary: #f3f4f6;
     --text-secondary: #d1d5db;
-    --border-color: #6b7280; /* Lighter border for better contrast */
-    --accent-color: #c7c4b6; /* Brighter accent */
+    --border-color: #6b7280;
+    --accent-color: #c7c4b6;
     --header-color: #f9fafb;
-    --brand-color: #adaa9a; /* Brighter brand color */
-    --action-color: #f59e0b; /* Brighter action color for dark mode */
+    --brand-color: #adaa9a;
+    --action-color: #f59e0b;
     --danger-color: #f87171;
     --success-color: #4ade80;
     --info-color: #60a5fa;
@@ -45,9 +45,7 @@ body {
 .text-app-header { color: var(--header-color); }
 .text-app-brand { color: var(--brand-color); }
 .bg-app-action { background-color: var(--action-color); }
-.tab.active { border-bottom-color: var(--brand-color); color: var(--brand-color); }
 .sub-tab.active { background-color: var(--brand-color); color: var(--bg-secondary); }
-
 
 .font-header {
     font-family: 'Barlow Semi Condensed', sans-serif;
@@ -133,11 +131,6 @@ body {
 .fermentation-table th, .fermentation-table td { border: 1px solid var(--border-color); padding: 8px; text-align: left; }
 .fermentation-table th { background-color: var(--bg-primary); }
 .fermentation-table input { width: 100%; border: none; background: transparent; padding: 4px; color: var(--text-primary); }
-
-.tab {
-    transition: color 0.2s, border-color 0.2s;
-    padding: 10px 16px; /* Added padding for spacing */
-}
 
 .btn {
     transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;

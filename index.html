@@ -233,7 +233,32 @@
             .brew-log-section .log-item input, .brew-log-section .log-item textarea { border-bottom: 1px dotted #999; }
             .fermentation-table th, .fermentation-table td { border: 1px solid #999; }
         }
-    </style>
+        /* DEFINITIEVE STIJLEN VOOR SOCIAL MEDIA OUTPUT (v2) */
+        #social-content-container {
+            font-family: 'Barlow Semi Condensed', sans-serif; /* Standaard lettertype voor de hele container */
+        }
+        #social-content-container h1, 
+        #social-content-container h2, 
+        #social-content-container h3 {
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        #social-content-container h2 { font-size: 1.5rem; }
+        #social-content-container h3 { font-size: 1.25rem; }
+        #social-content-container p { line-height: 1.6; margin-bottom: 1rem; }
+        #social-content-container strong { font-weight: 700; color: var(--text-primary); }
+        #social-content-container ul, #social-content-container ol {
+            padding-left: 20px;
+            margin-bottom: 1rem;
+        }
+        #social-content-container li { 
+            margin-bottom: 0.5rem; 
+            line-height: 1.6; 
+        }
+  
+</style>
     <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
@@ -259,26 +284,37 @@
         <!-- Main Content Area -->
         <div id="dashboard-main-view">
             <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 80vh;">
-                <h2 id="dashboard-greeting" class="text-3xl font-header font-bold mb-6 text-center">Good Morning!</h2>
                 
                 <div id="current-brew-card" class="card p-6 rounded-lg mb-6 hidden">
                     <!-- Content injected by JS -->
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                    <button data-view="brewing" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn">
+               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <button data-view="brewing" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-4 text-app-brand">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .994-.806 1.8-1.8 1.8h-3.6a1.8 1.8 0 01-1.8-1.8V3.104m0 0c.269.11.55.204.841.295m-1.492 0a24.301 24.301 0 004.132 0M19.5 14.5l-2.59-2.59a2.25 2.25 0 00-1.591-.659V3.104m0 0a24.301 24.301 0 00-4.5 0M19.5 14.5v5.25c0 .621-.504 1.125-1.125 1.125H5.625c-.621 0-1.125-.504-1.125-1.125V14.5m14.25 0h-5.625" />
+                        </svg>
                         <h3 class="text-xl font-header font-bold">Brewing</h3>
                         <p class="text-app-secondary/80 text-sm">Creator, Brew Day, History</p>
                     </button>
-                    <button data-view="management" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn">
+                    <button data-view="management" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
+                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-4 text-app-brand">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                        </svg>
                         <h3 class="text-xl font-header font-bold">Management</h3>
                         <p class="text-app-secondary/80 text-sm">Inventory, Planning, Financials</p>
                     </button>
-                    <button data-view="tools" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn">
+                    <button data-view="tools" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-4 text-app-brand">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.472-2.472a3.375 3.375 0 00-4.773-4.773L6.75 11.42m5.877-5.877l-5.877 5.877m0 0a3.375 3.375 0 01-4.773-4.773L9.375 3.375" />
+                        </svg>
                         <h3 class="text-xl font-header font-bold">Tools</h3>
                         <p class="text-app-secondary/80 text-sm">Calculators, Water, Social</p>
                     </button>
-                    <button data-view="settings" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn">
+                    <button data-view="settings" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
+                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-4 text-app-brand">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 0015 0m-15 0a7.5 7.5 0 1115 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077l1.41-.513m14.095-5.13l-1.41-.513M5.106 17.785l1.153-.964M17.74 5.106l1.153-.964M16.5 12a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                        </svg>
                         <h3 class="text-xl font-header font-bold">Settings</h3>
                         <p class="text-app-secondary/80 text-sm">Configure your app</p>
                     </button>
@@ -291,10 +327,6 @@
                      </ul>
                 </div>
 
-                <div class="card p-6 rounded-lg">
-                    <h3 class="text-xl font-header font-bold mb-2">Alchemist's Tip of the Day</h3>
-                    <p id="alchemist-tip" class="text-app-secondary/80 italic">Loading tip...</p>
-                </div>
             </div>
         </div>
 
@@ -481,7 +513,8 @@
              <div class="bg-app-secondary p-4 rounded-b-lg shadow-inner">
                 <nav class="flex space-x-2">
                     <button id="inventory-sub-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold">Inventory</button>
-                    <button id="planning-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Planning</button>
+                    <button id="equipment-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Equipment</button>
+                    <button id="cellar-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Cellar</button> <button id="planning-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Planning</button>
                     <button id="financials-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Financials</button>
                 </nav>
             </div>
@@ -536,6 +569,46 @@
                         <div id="inventory-list">
                             </div>
                     </main>
+                </div>
+            </div>
+            <div id="equipment-view" class="hidden mt-4">
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg">
+                        <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app">Add Equipment</h2>
+                        <form id="equipment-form" class="space-y-4">
+                            <div>
+                                <label for="equipName" class="block text-sm font-bold mb-2">Equipment Name</label>
+                                <input type="text" id="equipName" placeholder="e.g., Fermenter Bucket 30L" required class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="equipQty" class="block text-sm font-bold mb-2">Quantity</label>
+                                    <input type="number" id="equipQty" value="1" step="1" required class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                                </div>
+                                <div>
+                                    <label for="equipCapacity" class="block text-sm font-bold mb-2">Capacity (Liters)</label>
+                                    <input type="number" id="equipCapacity" step="0.1" placeholder="e.g., 25.5" class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                                </div>
+                            </div>
+                             <div>
+                                <label for="equipNotes" class="block text-sm font-bold mb-2">Notes</label>
+                                <input type="text" id="equipNotes" placeholder="e.g., Glass, Speidel, with spigot" class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                            </div>
+                            <button type="submit" class="w-full bg-app-action text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-all duration-300 shadow-md btn">Add Equipment</button>
+                        </form>
+                    </aside>
+                    <main class="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg inventory-panel overflow-y-auto" style="max-height: 70vh;">
+                        <h2 class="text-3xl font-header font-bold mb-4 text-center">Current Equipment</h2>
+                        <div id="equipment-list">
+                            </div>
+                    </main>
+                </div>
+            </div>
+            <div id="cellar-view" class="hidden mt-4">
+                <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 70vh;">
+                    <h2 class="text-3xl font-header font-bold mb-6 text-center">My Cellar</h2>
+                    <div id="cellar-list" class="space-y-4">
+                        </div>
                 </div>
             </div>
             <div id="planning-view" class="hidden mt-4">
@@ -782,12 +855,49 @@
             <div id="social-view" class="hidden mt-4">
                 <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 70vh;">
                     <h2 class="text-3xl font-header font-bold mb-6 text-center">Social Media Assistant</h2>
-                    <div id="social-content-container">
-                        <p class="text-center text-app-secondary/80">Load a recipe from your history and click "Generate Social Post" to get started.</p>
+                    
+                    <div class="card p-4 rounded-lg mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="social-persona" class="block text-sm font-bold mb-2">AI Persona</label>
+                                <select id="social-persona" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                                    <option value="homebrewer">Enthousiaste Thuisbrouwer</option>
+                                    <option value="pro_brewery">Professionele Brouwerij</option>
+                                    <option value="sommelier">Mede Connaisseur / Sommelier</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="social-platform" class="block text-sm font-bold mb-2">Platform</label>
+                                <select id="social-platform" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                                    <option value="instagram">Instagram Post</option>
+                                    <option value="untappd_checkin">Untappd Check-in</option>
+                                    <option value="untappd_description">Untappd Mead Description</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                             <label for="social-tweak" class="block text-sm font-bold mb-2">Tweak / Extra Instructie</label>
+                             <textarea id="social-tweak" rows="2" placeholder="bv. 'Maak het grappig', 'Focus op de gebruikte honing', etc." class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"></textarea>
+                        </div>
+                    </div>
+
+                    <div id="social-from-recipe-container">
+                        <p class="text-sm font-bold text-center mb-2">Genereer op basis van geladen recept:</p>
+                        <button id="regenerate-social-btn" class="w-full bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">Regenerate Post from Recipe</button>
+                    </div>
+
+                    <hr class="my-8 border-app">
+
+                    <div id="social-from-manual-container">
+                         <label for="manual-social-input" class="block text-sm font-bold mb-2">Of, genereer op basis van uw eigen tekst:</label>
+                         <textarea id="manual-social-input" rows="4" placeholder="Typ hier uw onderwerp. Bv: 'Net mijn kersenmede gebotteld. Hij is prachtig helder met een dieprode kleur en ruikt fantastisch!'" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"></textarea>
+                         <button id="generate-manual-social-btn" class="w-full mt-4 bg-purple-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-800 btn">Generate Post from Manual Input</button>
+                    </div>
+                    <div id="social-content-container" class="mt-8 border-t border-app pt-6">
+                        <p class="text-center text-app-secondary/80">Load a recipe or type a topic to get started.</p>
                     </div>
                 </div>
             </div>
-        </div>
 
         <div id="settings-view" class="hidden">
             <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
@@ -875,6 +985,8 @@
             let db, auth, userId;
             let brews = []; // Local cache of brews
             let inventory = []; // Local cache of inventory
+            let equipment = []; // Local cache of equipment
+            let cellar = [];    // Local cache of bottled batches
             let userSettings = {}; // Holds settings from Firestore
             let currentBrewDay = { brewId: null, checklist: {} }; // Holds the state for the current brew day
             let currentRecipeMarkdown = ''; // To hold the latest generated recipe markdown
@@ -959,6 +1071,8 @@
                             userId = user.uid;
                             loadHistory();
                             loadInventory();
+                            loadEquipment();
+                            loadCellar();
                             loadUserSettings(); // Load settings from Firestore
                         } else {
                             try {
@@ -993,6 +1107,8 @@
                 styleSelect.addEventListener('change', handleStyleChange);
                 generateBtn.addEventListener('click', generateRecipe);
                 inventoryForm.addEventListener('submit', addInventoryItem);
+                document.getElementById('equipment-form').addEventListener('submit', addEquipmentItem);
+                document.getElementById('bottling-form').addEventListener('submit', bottleBatch);
                 
                 // Calculator buttons
                 document.getElementById('calcAbvBtn').addEventListener('click', calculateABV);
@@ -1286,6 +1402,44 @@
                 }
             }
 
+            // DEFINITIEVE FUNCTIE OM RECEPTGEGEVENS TE PARSEN
+            function parseRecipeData(markdown) {
+                // Deze regel is voor debuggen. Het toont de volledige tekst van de AI in de browser console.
+                console.log("AI Recipe Output:", markdown);
+
+                const data = {};
+
+                // Zoek de titel
+                const titleMatch = markdown.match(/^#\s*(.*)/m);
+                if (titleMatch && titleMatch[1]) {
+                    data.recipeName = titleMatch[1].trim();
+                }
+
+                // Zoek Target OG
+                const ogMatch = markdown.match(/(?:Target OG|Original Gravity|Start SG|O\.G\.)[\s\w:]*(\d\.\d{3})/i);
+                if (ogMatch && ogMatch[1]) {
+                    data.targetOG = ogMatch[1];
+                }
+
+                // Zoek Target FG
+                const fgMatch = markdown.match(/(?:Target FG|Final Gravity|Eind SG|F\.G\.)[\s\w:]*(\d\.\d{3})/i);
+                if (fgMatch && fgMatch[1]) {
+                    data.targetFG = fgMatch[1];
+                }
+
+                // DEFINITIEVE, VEREENVOUDIGDE ZOEKTOCHT NAAR TARGET ABV
+                // Dit patroon zoekt nu heel direct naar "keyword: getal".
+                const abvMatch = markdown.match(/(?:Target ABV|ABV|Alcoholpercentage):\s*([\d.,]+)/i);
+                if (abvMatch && abvMatch[1]) {
+                    // Stap 1: Pak het getal (bv. "12.5")
+                    const abvValue = abvMatch[1];
+                    // Stap 2: Voeg het '%' symbool toe en vul het in
+                    data.targetABV = `${abvValue}%`;
+                }
+
+                return data;
+            }
+
             async function generateRecipe() {
                 recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
                 generateBtn.disabled = true;
@@ -1294,8 +1448,14 @@
                 try {
                     const prompt = buildPrompt();
                     currentRecipeMarkdown = await performApiCall(prompt);
-                    const recipeHtml = marked.parse(currentRecipeMarkdown);
                     
+                    // Zet de ruwe Markdown om naar nette HTML
+                    const recipeHtml = marked.parse(currentRecipeMarkdown);
+
+                    // Gebruik onze werkende parser om de data te extraheren
+                    const parsedData = parseRecipeData(currentRecipeMarkdown);
+                    
+                    // Bouw de volledige, normale weergave op
                     const fullHtml = `
                         <div class="print-button-container text-right mb-4 flex justify-end gap-2 no-print">
                             <button onclick="window.printEmptyLog()" class="bg-stone-500 text-white py-2 px-4 rounded-lg hover:bg-stone-600 transition-colors btn">
@@ -1311,18 +1471,15 @@
                                 Save to Brew History
                             </button>
                         </div>
-                        ${getBrewLogHtml(null)}
+                        ${getBrewLogHtml(parsedData, 'new')}
                     `;
                     recipeOutput.innerHTML = fullHtml;
                     document.getElementById('saveBtn').addEventListener('click', saveBrewToHistory);
+
                 } catch (error) {
                     console.error("Error calling Gemini API:", error);
                     recipeOutput.innerHTML = `<p class="text-center text-red-600 font-bold">Sorry, the Alchemist is busy. Please try again.</p><p class="text-center text-sm text-app-secondary/80">${error.message}</p>`;
-                } finally {
-                    generateBtn.disabled = false;
-                    generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                }
-            }
+                }            }
 
             function buildPrompt() {
                 const customDescription = document.getElementById('customDescription').value;
@@ -1331,6 +1488,15 @@
                 const nutrientProtocol = document.getElementById('nutrientProtocol').selectedOptions[0].text;
                 let prompt;
                 const personaAndConstraints = `You are an expert mead maker named "The MEA(N)DERY Alchemist". All ingredients you recommend (especially yeast strains, honey types, and special adjuncts) must be readily available in Belgium or through common European homebrew suppliers.`;
+
+                // --- NIEUW: Definieer de waterprofielen voor de AI ---
+                const waterProfilesForPrompt = `
+- Spa Reine: Ca 5, Mg 2, Na 3, SO4 4, Cl 5, HCO3 17
+- Chaudfontaine: Ca 65, Mg 18, Na 44, SO4 40, Cl 35, HCO3 305
+- Valvert: Ca 68, Mg 2, Na 2, SO4 18, Cl 4, HCO3 204
+- Bru: Ca 23, Mg 22, Na 8, SO4 5, Cl 4, HCO3 209
+- Villers: Ca 106, Mg 11, Na 8, SO4 49, Cl 20, HCO3 340`;
+
 
                 if (customDescription.trim() !== '') {
                     prompt = `${personaAndConstraints} A user wants to create a unique mead from scratch. Their primary instruction is a text description. You MUST prioritize this description to generate the recipe. Any other form fields should be IGNORED, except for the Batch Size. The user's description is: "${customDescription}" The recipe must be for a ${batchSize}-liter batch. Based ONLY on the user's description and the batch size, create a detailed, world-class mead recipe. Infer the style, ABV, sweetness, honey type, and other ingredients from their text. If they don't specify something like ABV, make an expert recommendation that fits their description.`;
@@ -1378,7 +1544,12 @@
                         prompt += `\n- Special Ingredients: The recipe must creatively incorporate: ${specialIngredients}.`;
                     }
                 }
-                prompt += `\n\nFor the final output, generate a full recipe. It must be suitable for an experienced homebrewer. It must use the "${nutrientProtocol}" nutrient schedule. Provide specific ingredient quantities scaled for the batch size. Detail a no-heat method for must preparation. Include recommendations for a specific yeast strain. Give advice on aging. For the 'Ingredients' section, you MUST format it as a Markdown table with columns: | Ingredient | Quantity | Unit |. This is essential. If applicable, provide carbonation targets and priming sugar amounts. Format the rest of the response in Markdown with a creative title and clear headings for 'Description', 'Ingredients', 'Instructions', and 'Brewer's Notes'.`;
+                prompt += `\n\nFor the final output, generate a full recipe. It must be suitable for an experienced homebrewer. It must use the "${nutrientProtocol}" nutrient schedule. Provide specific ingredient quantities scaled for the batch size. Detail a no-heat method for must preparation. Include recommendations for a specific yeast strain. Give advice on aging. For the 'Ingredients' section, you MUST format it as a Markdown table with columns: | Ingredient | Quantity | Unit |. This is essential. If applicable, provide carbonation targets and priming sugar amounts. Format the rest of the response in Markdown with a creative title and clear headings for 'Description', 'Ingredients', 'Instructions', and 'Brewer's Notes'.
+
+You MUST explicitly state the Target OG, Target FG, and Target ABV in the description, for example: 'Target OG: 1.110, Target FG: 1.015, Target ABV: 12.5%'. This is a mandatory part of the output.
+
+**--- NIEUWE INSTRUCTIE ---**
+Finally, after the 'Brewer's Notes', add a new heading '## Recommended Water'. Based on the style of the mead recipe you just generated (e.g., dry, sweet, fruity, dark), recommend ONE of the following Belgian bottled waters and briefly explain in 1-2 sentences WHY it is a good choice. Available Belgian Bottled Waters (minerals in mg/L) are: ${waterProfilesForPrompt}.`;
                 return prompt;
             }
             
@@ -1484,6 +1655,7 @@
                         <button onclick="window.startBrewDay('${brew.id}')" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors btn">Start Brew Day</button>
                         <button onclick="window.generateShoppingList('${brew.id}')" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors btn">Generate Shopping List</button>
                         <button onclick="window.generateSocialContent('${brew.id}')" class="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors btn">Generate Social Post</button>
+                        <button onclick="window.showBottlingModal('${brew.id}')" class="bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors btn">Bottle Batch</button> </div>
                     </div>
                     <div class="recipe-content">${recipeHtml}</div>
                     ${costHtml}
@@ -1722,6 +1894,284 @@
                 }
             }
 
+            // --- Equipment Functions ---
+            async function addEquipmentItem(e) {
+                e.preventDefault();
+                if (!userId) return;
+
+                const name = document.getElementById('equipName').value;
+                const qty = parseInt(document.getElementById('equipQty').value);
+                const capacity = parseFloat(document.getElementById('equipCapacity').value) || null; // Store as number or null
+                const notes = document.getElementById('equipNotes').value;
+                
+                if (!name || isNaN(qty)) return;
+
+                const itemData = { userId, name, qty, capacity, notes };
+                
+                try {
+                    const appId = 'meandery-aa05e';
+                    const equipCol = collection(db, 'artifacts', appId, 'users', userId, 'equipment');
+                    await addDoc(equipCol, itemData);
+                    document.getElementById('equipment-form').reset();
+                } catch (error) {
+                    console.error("Error adding equipment item:", error);
+                }
+            }
+
+            function loadEquipment() {
+                if (!userId) return;
+                const appId = 'meandery-aa05e';
+                const equipCol = collection(db, 'artifacts', appId, 'users', userId, 'equipment');
+                const q = query(equipCol);
+
+                onSnapshot(q, (snapshot) => {
+                    equipment = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderEquipment();
+                }, (error) => {
+                    console.error("Error loading equipment: ", error);
+                    document.getElementById('equipment-list').innerHTML = `<p class="text-red-500">Could not load equipment.</p>`;
+                });
+            }
+
+            function renderEquipment() {
+                const listDiv = document.getElementById('equipment-list');
+                if (equipment.length === 0) {
+                    listDiv.innerHTML = `<p class="text-center text-app-secondary/80">Your equipment list is empty. Add your first item!</p>`;
+                    return;
+                }
+                
+                listDiv.innerHTML = equipment.map(item => `
+                    <div class="flex justify-between items-center p-3 card rounded-md mb-2">
+                        <div>
+                            <p class="font-bold">${item.name} <span class="text-sm font-normal text-app-secondary/80">(x${item.qty})</span></p>
+                            <p class="text-sm text-app-secondary">${item.capacity ? `${item.capacity}L` : ''} ${item.notes ? `- ${item.notes}` : ''}</p>
+                        </div>
+                        <button onclick="window.deleteEquipmentItem('${item.id}')" class="text-red-600 hover:text-red-800 text-sm font-semibold">Delete</button>
+                    </div>
+                `).join('');
+            }
+
+            window.deleteEquipmentItem = async function(itemId) {
+                if (!userId) return;
+                if (!confirm('Are you sure you want to delete this equipment item?')) return;
+                try {
+                    const appId = 'meandery-aa05e';
+                    const itemDocRef = doc(db, 'artifacts', appId, 'users', userId, 'equipment', itemId);
+                    await deleteDoc(itemDocRef);
+                } catch (error) {
+                    console.error("Error deleting equipment item:", error);
+                }
+            }
+
+            // --- Cellar Functions ---
+
+            function loadCellar() {
+                if (!userId) return;
+                const appId = 'meandery-aa05e';
+                const cellarCol = collection(db, 'artifacts', appId, 'users', userId, 'cellar');
+                const q = query(cellarCol);
+
+                onSnapshot(q, (snapshot) => {
+                    cellar = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    // Sorteer op botteldatum, nieuwste eerst
+                    if (cellar.length > 0 && cellar[0].bottlingDate) {
+                        cellar.sort((a, b) => b.bottlingDate.toDate() - a.bottlingDate.toDate());
+                    }
+                    renderCellar();
+                }, (error) => {
+                    console.error("Error loading cellar: ", error);
+                    document.getElementById('cellar-list').innerHTML = `<p class="text-red-500">Could not load cellar.</p>`;
+                });
+            }
+
+            function renderCellar() {
+                const listDiv = document.getElementById('cellar-list');
+                if (cellar.length === 0) {
+                    listDiv.innerHTML = `<p class="text-center text-app-secondary/80">Your cellar is empty. Bottle a batch from your history to add it here!</p>`;
+                    return;
+                }
+                
+                listDiv.innerHTML = cellar.map(item => {
+                    const totalBottles = (item.bottles && Array.isArray(item.bottles)) ? item.bottles.reduce((acc, b) => acc + b.quantity, 0) : (item.initialQuantity || 0);
+                    const bottlingDateStr = item.bottlingDate ? item.bottlingDate.toDate().toLocaleDateString() : 'No date';
+
+                    // Bouw de lijst met fles-details en consumeer-knoppen
+                    const bottleDetailsHtml = (item.bottles && Array.isArray(item.bottles)) ? item.bottles.map(b => `
+                        <div class="flex items-center justify-between text-sm py-1">
+                            <span>${b.quantity} x ${b.size}ml</span>
+                            <button onclick="window.consumeBottle('${item.id}', ${b.size})" class="text-xs bg-app-action text-white px-2 py-1 rounded hover:opacity-80 btn">-1 Bottle</button>
+                        </div>
+                    `).join('') : `<p class="text-sm">${totalBottles} bottles (old format)</p>`;
+
+                    // Bouw het AI advies-gedeelte
+                    const adviceHtml = item.peakFlavorDate ? `
+                        <div class="mt-3 pt-3 border-t border-app">
+                            <p class="text-sm font-bold text-app-primary">Alchemist's Aging Advice:</p>
+                            <p class="text-sm text-app-secondary/90">
+                                <span class="font-semibold">Peak Flavor around: ${item.peakFlavorDate}.</span> ${item.peakFlavorJustification || ''}
+                            </p>
+                        </div>
+                    ` : '';
+
+                    return `
+                    <div class="p-4 card rounded-lg">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-lg font-header">${item.recipeName}</h4>
+                                <p class="text-sm text-app-secondary">Bottled on: ${bottlingDateStr}</p>
+                            </div>
+                            <div class="text-right flex-shrink-0 ml-4">
+                                <p class="text-2xl font-bold text-app-brand">${totalBottles} <span class="text-base font-normal">total</span></p>
+                            </div>
+                        </div>
+                        <div class="mt-3 space-y-2">${bottleDetailsHtml}</div>
+                        ${adviceHtml}
+                        <div class="text-right mt-3 border-t border-app pt-2">
+                             <button onclick="window.deleteCellarItem('${item.id}', '${item.recipeName}')" class="text-red-600 hover:text-red-800 text-xs font-semibold">Delete Entire Batch</button>
+                        </div>
+                    </div>
+                    `}).join('');
+            }
+
+            window.consumeBottle = async function(cellarItemId, bottleSize) {
+                if (!userId) return;
+
+                const cellarItemRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar', cellarItemId);
+                
+                try {
+                    // Haal het huidige document op
+                    const docSnap = await getDoc(cellarItemRef);
+                    if (!docSnap.exists()) {
+                        console.error("Cellar item not found!");
+                        return;
+                    }
+
+                    const itemData = docSnap.data();
+                    const bottles = itemData.bottles;
+
+                    // Vind de juiste flesmaat en verminder de hoeveelheid
+                    const bottleIndex = bottles.findIndex(b => b.size == bottleSize);
+                    if (bottleIndex > -1 && bottles[bottleIndex].quantity > 0) {
+                        bottles[bottleIndex].quantity -= 1;
+
+                        // Optioneel: verwijder de flesmaat als de hoeveelheid 0 is
+                        const updatedBottles = bottles.filter(b => b.quantity > 0);
+                        
+                        // Update het document in Firestore
+                        await updateDoc(cellarItemRef, { bottles: updatedBottles });
+                    } else {
+                        alert("Bottle size not found or quantity is already 0.");
+                    }
+                } catch (error) {
+                    console.error("Error consuming bottle: ", error);
+                }
+            }
+
+            window.deleteCellarItem = async function(itemId, recipeName) {
+                if (!userId) return;
+                if (!confirm(`Are you sure you want to delete the entire batch of '${recipeName}' from your cellar? This cannot be undone.`)) return;
+                try {
+                    const appId = 'meandery-aa05e';
+                    const itemDocRef = doc(db, 'artifacts', appId, 'users', userId, 'cellar', itemId);
+                    await deleteDoc(itemDocRef);
+                } catch (error) {
+                    console.error("Error deleting cellar item:", error);
+                }
+            }
+
+
+            // --- Functies voor het bottel-proces ---
+
+            let currentBrewToBottleId = null; 
+
+            window.showBottlingModal = function(brewId) {
+                currentBrewToBottleId = brewId;
+                const bottlingForm = document.getElementById('bottling-form');
+                bottlingForm.reset();
+                document.getElementById('bottlingDate').valueAsDate = new Date();
+                document.getElementById('bottling-modal').classList.remove('hidden');
+            }
+
+            window.hideBottlingModal = function() {
+                document.getElementById('bottling-modal').classList.add('hidden');
+                currentBrewToBottleId = null;
+            }
+
+            async function bottleBatch(e) {
+                e.preventDefault();
+                if (!currentBrewToBottleId) return;
+
+                const submitButton = e.target.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.innerHTML;
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<div class="loader" style="height:20px; width:20px; border-width: 2px; margin: 0 auto;"></div>';
+
+                try {
+                    const originalBrew = brews.find(b => b.id === currentBrewToBottleId);
+                    if (!originalBrew) {
+                        console.error("Original brew not found!");
+                        alert("Error: could not find the original recipe to bottle.");
+                        return;
+                    }
+
+                    // Data uit formulier halen (blijft hetzelfde)
+                    const bottlingDate = new Date(document.getElementById('bottlingDate').value);
+                    const qty750 = parseInt(document.getElementById('qty750').value) || 0;
+                    const qty500 = parseInt(document.getElementById('qty500').value) || 0;
+                    const qty330 = parseInt(document.getElementById('qty330').value) || 0;
+                    const qty250 = parseInt(document.getElementById('qty250').value) || 0;
+                    const customSize = parseInt(document.getElementById('customSize').value) || 0;
+                    const customQty = parseInt(document.getElementById('customQty').value) || 0;
+
+                    const bottles = [];
+                    if (qty750 > 0) bottles.push({ size: 750, quantity: qty750 });
+                    if (qty500 > 0) bottles.push({ size: 500, quantity: qty500 });
+                    if (qty330 > 0) bottles.push({ size: 330, quantity: qty330 });
+                    if (qty250 > 0) bottles.push({ size: 250, quantity: qty250 });
+                    if (customSize > 0 && customQty > 0) bottles.push({ size: customSize, quantity: customQty });
+
+                    if (bottles.length === 0) {
+                        alert("Please enter a quantity for at least one bottle size.");
+                        return;
+                    }
+
+                    // --- NIEUW: Vraag AI om rijpingsadvies ---
+                    const agingPrompt = `You are a mead aging expert. Based on the following mead recipe and a bottling date of ${bottlingDate.toISOString().split('T')[0]}, determine a recommended 'peak flavor' or 'best before' date. High ABV, sweet, or complex meads can age longer. Provide a short justification (1 sentence) and the date in YYYY-MM-DD format. Example: "Best before: 2027-08-06. Justification: This sweet, high ABV mead will develop complex flavors with extended aging." Recipe:\n\n---\n${originalBrew.recipeMarkdown}`;
+                    const agingAdvice = await performApiCall(agingPrompt);
+                    
+                    const dateMatch = agingAdvice.match(/(\d{4}-\d{2}-\d{2})/);
+                    const justificationMatch = agingAdvice.match(/Justification:\s*(.*)/i);
+
+                    const cellarData = {
+                        userId: userId,
+                        brewId: currentBrewToBottleId,
+                        recipeName: originalBrew.recipeName,
+                        bottlingDate: bottlingDate,
+                        bottles: bottles,
+                        peakFlavorDate: dateMatch ? dateMatch[1] : null,
+                        peakFlavorJustification: justificationMatch ? justificationMatch[1] : agingAdvice,
+                        tastingNotes: [] 
+                    };
+
+                    const appId = 'meandery-aa05e';
+                    const cellarCol = collection(db, 'artifacts', appId, 'users', userId, 'cellar');
+                    await addDoc(cellarCol, cellarData);
+                    
+                    const brewDocRef = doc(db, 'artifacts', appId, 'users', userId, 'brews', currentBrewToBottleId);
+                    await updateDoc(brewDocRef, { isBottled: true });
+
+                    hideBottlingModal();
+                    switchMainView('management');
+                    switchSubView('cellar', 'management-main-view');
+
+                } catch (error) {
+                    console.error("FATAL: Error adding batch to cellar: ", error);
+                    alert("Something went wrong while saving to the cellar. Please check the F12 Developer Console for error messages.");
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonText;
+                }
+            }
             // --- Calculator Functions ---
             function calculateABV() {
                 const og = parseFloat(document.getElementById('og').value);
@@ -1951,7 +2401,13 @@
 
             function getBrewLogHtml(logData, idSuffix = 'new') {
                 const data = logData || {};
-                const fermLog = data.fermentationLog || Array(8).fill({});
+                const fermLog = data.fermentationLog || Array.from({ length: 8 }, () => ({}));
+                
+                // Variabelen om de laatst bekende waarde bij te houden.
+                // We initialiseren ze met de standaardwaarden voor de allereerste rij.
+                let lastTempValue = '18';
+                let lastSgValue = data.targetOG || '';
+
                 return `
                     <div class="brew-log-section" data-id="${idSuffix}">
                         <h3>Brewmaster's Log</h3>
@@ -1971,7 +2427,22 @@
                             <label>Fermentation Log</label>
                             <table class="fermentation-table" id="fermentationTable-${idSuffix}">
                                 <thead><tr><th>Date</th><th>Temp (°C)</th><th>S.G.</th><th>Notes</th></tr></thead>
-                                <tbody>${fermLog.map(row => `<tr><td><input type="text" value="${row.date || ''}"></td><td><input type="text" value="${row.temp || ''}"></td><td><input type="text" value="${row.sg || ''}"></td><td><input type="text" value="${row.notes || ''}"></td></tr>`).join('')}</tbody>
+                                <tbody>${fermLog.map((row, index) => {
+                                    // Bepaal de te gebruiken waarde: de eigen waarde van de rij, of anders de laatst bekende waarde.
+                                    const currentTempValue = row.temp || lastTempValue;
+                                    const currentSgValue = row.sg || lastSgValue;
+                                    
+                                    // Update de 'laatst bekende waarde' voor de VOLGENDE rij in de loop.
+                                    lastTempValue = currentTempValue;
+                                    lastSgValue = currentSgValue;
+
+                                    return `<tr>
+                                        <td><input type="date" value="${row.date || ''}" class="w-full"></td>
+                                        <td><input type="number" step="0.5" placeholder="18.5" value="${currentTempValue}" class="w-full text-center"></td>
+                                        <td><input type="number" step="0.001" placeholder="1.050" value="${currentSgValue}" class="w-full text-center"></td>
+                                        <td><input type="text" value="${row.notes || ''}"></td>
+                                    </tr>`;
+                                }).join('')}</tbody>
                             </table>
                         </div>
                         <div class="log-item"><label for="agingNotes-${idSuffix}">Aging & Conditioning Notes:</label><textarea id="agingNotes-${idSuffix}" rows="4" placeholder="Secondary additions, clearing, bulk aging time, etc.">${data.agingNotes || ''}</textarea></div>
@@ -1990,6 +2461,7 @@
                 switchSubView('brewing', 'brewing-main-view');
             }
 
+            // DEFINITIEVE, VERBETERDE FUNCTIE VOOR DE BREW DAY CHECKLIST
             function renderBrewDay(brewId) {
                 const brew = brews.find(b => b.id === brewId);
                 if (!brew) {
@@ -1997,40 +2469,34 @@
                     return;
                 }
 
-                const recipeHtml = marked.parse(brew.recipeMarkdown);
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = recipeHtml;
-
                 let checklistHtml = `<h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2>`;
                 
-                // Ingredients Checklist
-                const ingredientsHeader = tempDiv.querySelector('h3, h2'); // Find first header
-                if (ingredientsHeader && ingredientsHeader.textContent.toLowerCase().includes('ingredients')) {
+                // --- INGREDIENTEN CHECKLIST (NU ROBUUST) ---
+                const ingredients = parseIngredientsFromMarkdown(brew.recipeMarkdown);
+                if (ingredients.length > 0) {
                     checklistHtml += `<h3 class="text-2xl font-header mt-6 mb-3">Ingredients</h3>`;
-                    const ingredientsTable = ingredientsHeader.nextElementSibling;
-                    if (ingredientsTable && ingredientsTable.tagName === 'TABLE') {
-                        const rows = ingredientsTable.querySelectorAll('tbody tr');
-                        rows.forEach((row, index) => {
-                            const cells = row.querySelectorAll('td');
-                            if (cells.length === 3) {
-                                const text = `${cells[0].textContent.trim()} - ${cells[1].textContent.trim()} ${cells[2].textContent.trim()}`;
-                                const id = `ing-${index}`;
-                                const isChecked = currentBrewDay.checklist[id] ? 'checked' : '';
-                                checklistHtml += `<div class="flex items-center my-2"><input type="checkbox" id="${id}" data-task="${id}" ${isChecked} onchange="window.updateChecklist(this)"><label for="${id}" class="ml-3">${text}</label></div>`;
-                            }
-                        });
-                    }
+                    ingredients.forEach((ing, index) => {
+                        const text = `${ing.name} - ${ing.quantity} ${ing.unit}`;
+                        const id = `ing-${index}`;
+                        const isChecked = currentBrewDay.checklist[id] ? 'checked' : '';
+                        checklistHtml += `<div class="flex items-center my-2"><input type="checkbox" id="${id}" data-task="${id}" ${isChecked} onchange="window.updateChecklist(this)"><label for="${id}" class="ml-3">${text}</label></div>`;
+                    });
                 }
 
-                // Instructions Checklist
-                const instructionsHeader = Array.from(tempDiv.querySelectorAll('h3, h2')).find(h => h.textContent.toLowerCase().includes('instructions'));
+
+                // --- INSTRUCTIES CHECKLIST (NU ROBUUST) ---
+                // We parsen de HTML om de instructies te vinden
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = marked.parse(brew.recipeMarkdown);
+                // Zoek specifiek naar de 'Instructions' header
+                const instructionsHeader = Array.from(tempDiv.querySelectorAll('h2, h3')).find(h => h.textContent.toLowerCase().includes('instructions'));
                 if (instructionsHeader) {
                     checklistHtml += `<h3 class="text-2xl font-header mt-6 mb-3">Instructions</h3>`;
                     const instructionsList = instructionsHeader.nextElementSibling;
                     if (instructionsList && (instructionsList.tagName === 'OL' || instructionsList.tagName === 'UL')) {
                         const items = instructionsList.querySelectorAll('li');
                         items.forEach((item, index) => {
-                            const text = item.innerHTML;
+                            const text = item.innerHTML; // Gebruik innerHTML om opmaak zoals <strong> te behouden
                             const id = `inst-${index}`;
                             const isChecked = currentBrewDay.checklist[id] ? 'checked' : '';
                             checklistHtml += `<div class="flex items-start my-2"><input type="checkbox" id="${id}" data-task="${id}" class="mt-1" ${isChecked} onchange="window.updateChecklist(this)"><label for="${id}" class="ml-3">${text}</label></div>`;
@@ -2038,7 +2504,7 @@
                     }
                 }
 
-                // Quick Log Section
+                // Quick Log Section (blijft hetzelfde)
                 checklistHtml += `
                     <div class="mt-8 pt-6 border-t-2 border-app">
                         <h3 class="text-2xl font-header mb-4 text-center">Quick Log</h3>
@@ -2148,45 +2614,98 @@
                 switchSubView('planning', 'management-main-view');
             }
 
+            // --- Social Media Functies (Volledig Vernieuwd) ---
+
             window.generateSocialContent = async function(brewId) {
-                const brew = brews.find(b => b.id === brewId);
-                if (!brew) return;
-                
-                // Navigeer eerst naar de juiste view
+                // Deze functie zet de view klaar en doet de EERSTE aanroep.
+                const socialView = document.getElementById('social-view');
+                socialView.dataset.brewId = brewId; // Sla de brewId op voor later gebruik
+
+                // Navigeer naar de social media view
                 switchMainView('tools');
                 switchSubView('social', 'tools-main-view');
 
+                // Voer de generator uit met standaardinstellingen
+                runSocialMediaGenerator(); 
+
+                // Zorg dat de 'Regenerate' knop de generator opnieuw aanroept
+                document.getElementById('regenerate-social-btn').onclick = runSocialMediaGenerator;
+            }
+
+            async function runSocialMediaGenerator() {
+                const socialView = document.getElementById('social-view');
+                const brewId = socialView.dataset.brewId;
+                const brew = brews.find(b => b.id === brewId);
+                if (!brew) return;
+
                 const socialContainer = document.getElementById('social-content-container');
-                socialContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">De Alchemist schrijft een bericht voor je...</p>';
+                socialContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">De Alchemist schrijft een nieuw bericht voor je...</p>';
 
-                const prompt = `Je bent een social media expert voor een brouwerij. Genereer een korte, enthousiaste social media post (voor Instagram of Facebook) over een mede die net gebrouwen is. Gebruik emoji's. Baseer je op de volgende recept-informatie:\n\n---\n${brew.recipeMarkdown}\n---\n\nSluit af met een vraag om de interactie te verhogen. Formatteer het antwoord in Markdown.`;
+                const persona = document.getElementById('social-persona').value;
+                const platform = document.getElementById('social-platform').value;
+                const tweak = document.getElementById('social-tweak').value;
 
+                // --- DEFINITIEVE FIX HIER ---
+                // We definiëren de negatieve instructie één keer.
+                const negativeConstraint = " CRUCIAL: Do not wrap your response in a markdown code block using triple backticks (```).";
+
+                let personaPrompt = "You are an enthusiastic homebrewer sharing your passion.";
+                if (persona === 'pro_brewery') {
+                    personaPrompt = "You are a social media expert for a professional craft brewery.";
+                } else if (persona === 'sommelier') {
+                    personaPrompt = "You are a knowledgeable mead sommelier, focusing on tasting notes and pairings.";
+                }
+
+                // We voegen de negatieve instructie nu aan ELKE platform-prompt toe.
+                let platformPrompt = "Generate a short, engaging Instagram post. Use relevant emojis and hashtags." + negativeConstraint;
+                if (platform === 'untappd_checkin') {
+                    platformPrompt = "Generate a descriptive PERSONAL check-in description for Untappd. Write from a first-person perspective (e.g., 'I get notes of...'). Focus on aroma, appearance, taste, and mouthfeel. Do not use hashtags." + negativeConstraint;
+                } else if (platform === 'untappd_description') {
+                    platformPrompt = "Generate an official, commercial description for a new mead to be added to Untappd. The description should be objective, informative, and appealing, detailing the style, key ingredients, and expected flavor profile. This is NOT a personal check-in. Do not use hashtags." + negativeConstraint;
+                }
+
+                let tweakPrompt = "";
+                if (tweak.trim() !== '') {
+                    tweakPrompt = `An additional instruction from the user is: "${tweak}". You must follow this instruction.`;
+                }
+
+                const finalPrompt = `${personaPrompt} ${platformPrompt} ${tweakPrompt} Base the content on the following mead recipe:\n\n---\n${brew.recipeMarkdown}\n---\nFormat the entire response in Markdown.`;
+                
                 try {
-                    const socialMarkdown = await performApiCall(prompt);
+                    const socialMarkdown = await performApiCall(finalPrompt);
                     const socialHtml = marked.parse(socialMarkdown);
-                    socialContainer.innerHTML = `<div class="prose max-w-none text-app-primary">${socialHtml}</div>`;
+                    socialContainer.innerHTML = `<div>${socialHtml}</div>`;
                 } catch (error) {
                     console.error("Error generating social content:", error);
                     socialContainer.innerHTML = `<p class="text-center text-red-500">Kon geen social media post genereren: ${error.message}</p>`;
                 }
             }
 
+            // DEFINITIEVE, ROBUUSTE FUNCTIE VOOR INGREDIENTEN PARSEN
             function parseIngredientsFromMarkdown(markdown) {
                 const ingredients = [];
-                const tableRegex = /\| Ingredient.*?\|\n\|[-|: ]+\|[-|: ]+\|[-|: ]+\|\n([\s\S]*?)\n\n/gm;
-                const tableMatch = tableRegex.exec(markdown);
+                // Deze regex vindt de start van de tabel en pakt alle rijen tot een dubbele witregel of een nieuw subhoofdstuk.
+                const tableContentRegex = /\|-+\|.*\n([\s\S]*?)(?:\n\n|##|$)/;
+                const match = markdown.match(tableContentRegex);
 
-                if (!tableMatch || !tableMatch[1]) return ingredients;
+                if (!match || !match[1]) {
+                    console.warn("Definitive parser could not find ingredient table content.");
+                    return ingredients;
+                }
 
-                const rows = tableMatch[1].split('\n').filter(row => row.trim() !== '');
+                const rows = match[1].trim().split('\n').filter(row => row.trim().startsWith('|'));
+
                 rows.forEach(row => {
-                    const columns = row.split('|').map(c => c.trim()).filter(c => c);
+                    // Pak de waardes uit de cellen, negeer de buitenste pipes.
+                    const columns = row.split('|').map(c => c.trim()).slice(1, 4); 
+                    
                     if (columns.length === 3) {
-                        ingredients.push({
-                            name: columns[0],
-                            quantity: parseFloat(columns[1]),
-                            unit: columns[2]
-                        });
+                        const [name, quantityStr, unit] = columns;
+                        const quantity = parseFloat(quantityStr);
+                        // Voeg enkel toe als alle data logisch is.
+                        if (name && !isNaN(quantity)) {
+                            ingredients.push({ name: name.trim(), quantity: quantity, unit: (unit || '').trim() });
+                        }
                     }
                 });
                 return ingredients;
@@ -2284,5 +2803,55 @@
 
         })(); // End of IIFE
     </script>
+   <div id="bottling-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-app-tertiary p-8 rounded-lg shadow-xl w-full max-w-lg"> <h3 class="text-2xl font-header font-bold mb-6">Bottle Batch</h3>
+        <form id="bottling-form">
+            <div class="space-y-6">
+                <div>
+                    <label for="bottlingDate" class="block text-sm font-bold mb-2">Bottling Date</label>
+                    <input type="date" id="bottlingDate" required class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">Number of Bottles (Standard Sizes)</label>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <label for="qty750" class="block text-xs text-app-secondary">750ml</label>
+                            <input type="number" id="qty750" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                        </div>
+                        <div>
+                            <label for="qty500" class="block text-xs text-app-secondary">500ml</label>
+                            <input type="number" id="qty500" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                        </div>
+                        <div>
+                            <label for="qty330" class="block text-xs text-app-secondary">330ml</label>
+                            <input type="number" id="qty330" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                        </div>
+                        <div>
+                            <label for="qty250" class="block text-xs text-app-secondary">250ml</label>
+                            <input type="number" id="qty250" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                        </div>
+                    </div>
+                </div>
+                <div class="border-t border-app pt-4">
+                    <label class="block text-sm font-bold mb-2">Custom Size (Optional)</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                             <label for="customSize" class="block text-xs text-app-secondary">Size (ml)</label>
+                            <input type="number" id="customSize" min="0" step="1" placeholder="e.g., 1000" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                        </div>
+                        <div>
+                             <label for="customQty" class="block text-xs text-app-secondary">Quantity</label>
+                            <input type="number" id="customQty" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-4 mt-8">
+                <button type="button" onclick="window.hideBottlingModal()" class="px-6 py-2 rounded-lg bg-gray-300 dark:bg-gray-600 hover:opacity-90 btn">Cancel</button>
+                <button type="submit" class="px-6 py-2 rounded-lg bg-app-action text-white font-bold hover:opacity-90 btn">Add to Cellar</button>
+            </div>
+        </form>
+    </div>
+</div>
 </body>
 </html>

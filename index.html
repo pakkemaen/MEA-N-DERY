@@ -233,9 +233,12 @@
             .brew-log-section .log-item input, .brew-log-section .log-item textarea { border-bottom: 1px dotted #999; }
             .fermentation-table th, .fermentation-table td { border: 1px solid #999; }
         }
-        /* DEFINITIEVE STIJLEN VOOR SOCIAL MEDIA OUTPUT (v2) */
-        #social-content-container {
-            font-family: 'Barlow Semi Condensed', sans-serif; /* Standaard lettertype voor de hele container */
+
+        /* DEFINITIEVE STIJLEN VOOR SOCIAL MEDIA OUTPUT (FINALE VERSIE) */
+        #social-content-container, 
+        #social-content-container code, 
+        #social-content-container pre {
+            font-family: 'Barlow Semi Condensed', sans-serif; /* Forceer correct lettertype, zelfs in codeblokken */
         }
         #social-content-container h1, 
         #social-content-container h2, 
@@ -256,6 +259,11 @@
         #social-content-container li { 
             margin-bottom: 0.5rem; 
             line-height: 1.6; 
+        }
+        #social-content-container code, #social-content-container pre {
+             background-color: transparent; /* Verwijder achtergrond van codeblok */
+             padding: 0;
+             white-space: pre-wrap; /* Zorg dat tekst terugloopt */
         }
   
 </style>
@@ -291,29 +299,29 @@
 
                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                     <button data-view="brewing" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-4 text-app-brand">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .994-.806 1.8-1.8 1.8h-3.6a1.8 1.8 0 01-1.8-1.8V3.104m0 0c.269.11.55.204.841.295m-1.492 0a24.301 24.301 0 004.132 0M19.5 14.5l-2.59-2.59a2.25 2.25 0 00-1.591-.659V3.104m0 0a24.301 24.301 0 00-4.5 0M19.5 14.5v5.25c0 .621-.504 1.125-1.125 1.125H5.625c-.621 0-1.125-.504-1.125-1.125V14.5m14.25 0h-5.625" />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 mb-4 text-app-brand">
+                            <path d="M10 2v7.31"></path><path d="M14 9.31V2"></path><path d="M8.5 2h7"></path><path d="M14 9.31C16.57 10.92 18 14.11 18 17.69V20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-2.31C6 14.11 7.43 10.92 10 9.31Z"></path>
                         </svg>
                         <h3 class="text-xl font-header font-bold">Brewing</h3>
                         <p class="text-app-secondary/80 text-sm">Creator, Brew Day, History</p>
                     </button>
                     <button data-view="management" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
-                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-4 text-app-brand">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 mb-4 text-app-brand">
+                            <rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path>
                         </svg>
                         <h3 class="text-xl font-header font-bold">Management</h3>
                         <p class="text-app-secondary/80 text-sm">Inventory, Planning, Financials</p>
                     </button>
                     <button data-view="tools" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-4 text-app-brand">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.472-2.472a3.375 3.375 0 00-4.773-4.773L6.75 11.42m5.877-5.877l-5.877 5.877m0 0a3.375 3.375 0 01-4.773-4.773L9.375 3.375" />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 mb-4 text-app-brand">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
                         </svg>
                         <h3 class="text-xl font-header font-bold">Tools</h3>
                         <p class="text-app-secondary/80 text-sm">Calculators, Water, Social</p>
                     </button>
                     <button data-view="settings" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
-                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-4 text-app-brand">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 0015 0m-15 0a7.5 7.5 0 1115 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077l1.41-.513m14.095-5.13l-1.41-.513M5.106 17.785l1.153-.964M17.74 5.106l1.153-.964M16.5 12a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 mb-4 text-app-brand">
+                            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.4l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2.4l.15.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle>
                         </svg>
                         <h3 class="text-xl font-header font-bold">Settings</h3>
                         <p class="text-app-secondary/80 text-sm">Configure your app</p>
@@ -898,8 +906,9 @@
                     </div>
                 </div>
             </div>
+          </div>
 
-        <div id="settings-view" class="hidden">
+          <div id="settings-main-view" class="hidden">
             <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
             <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg settings-panel overflow-y-auto" style="max-height: 80vh;">
                 <h2 class="text-3xl font-header font-bold mb-6 text-center">Settings</h2>
@@ -944,7 +953,7 @@
                             </div>
                         </div>
                     </div>
-                    
+              
                     <button id="saveSettingsBtn" class="w-full mt-4 bg-blue-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-800 btn">Save Settings</button>
                     <div id="settingsMessage" class="text-center font-semibold mt-4 h-6"></div>
 
@@ -1005,7 +1014,7 @@
             const troubleshootView = document.getElementById('troubleshoot-view');
             const calculatorsView = document.getElementById('calculators-view');
             const waterView = document.getElementById('water-view');
-            const settingsView = document.getElementById('settings-view');
+            const settingsView = document.getElementById('settings-main-view');
             
             const brewingMainView = document.getElementById('brewing-main-view');
             const managementMainView = document.getElementById('management-main-view');
@@ -1052,7 +1061,7 @@
             function initApp() {
                 // Your web app's Firebase configuration
                 const firebaseConfig = {
-                  apiKey: "AIzaSyAhOOrwJCYve5XTGS6oXvhCg_l3_LcK00I",
+                  apiKey: "AIzaSyCWfyqZ_Qzk2m4rvGEw0wBwu4C8RyvL-yY",
                   authDomain: "meandery-aa05e.firebaseapp.com",
                   projectId: "meandery-aa05e",
                   storageBucket: "meandery-aa05e.appspot.com",
@@ -1096,7 +1105,6 @@
                 document.querySelectorAll('.back-to-dashboard-btn').forEach(btn => {
                     btn.addEventListener('click', () => switchMainView('dashboard'));
                 });
-
                 document.querySelectorAll('.sub-tab').forEach(tab => {
                     tab.addEventListener('click', (e) => {
                         const parentId = e.target.closest('[id$="-main-view"]').id;
@@ -1109,13 +1117,16 @@
                 inventoryForm.addEventListener('submit', addInventoryItem);
                 document.getElementById('equipment-form').addEventListener('submit', addEquipmentItem);
                 document.getElementById('bottling-form').addEventListener('submit', bottleBatch);
-                
+
                 // Calculator buttons
                 document.getElementById('calcAbvBtn').addEventListener('click', calculateABV);
                 document.getElementById('correctSgBtn').addEventListener('click', correctHydrometer);
                 document.getElementById('calcSugarBtn').addEventListener('click', calculatePrimingSugar);
                 document.getElementById('calcBlendBtn').addEventListener('click', calculateBlend);
                 getYeastAdviceBtn.addEventListener('click', getYeastAdvice);
+
+                // Manual social post button
+                document.getElementById('generate-manual-social-btn').addEventListener('click', runManualSocialMediaGenerator);
                 
                 // Water tab buttons
                 fetchWaterProfileBtn.addEventListener('click', fetchWaterProfile);
@@ -1143,15 +1154,14 @@
 
             // --- View Management ---
             function switchMainView(viewName) {
-                // Hide all main views
+                if (window.hideBottlingModal) hideBottlingModal();
+                
                 [dashboardMainView, brewingMainView, managementMainView, toolsMainView, settingsView].forEach(v => v.classList.add('hidden'));
                 
                 const viewToShow = document.getElementById(`${viewName}-main-view`);
 
                 if (viewToShow) {
                     viewToShow.classList.remove('hidden');
-                } else if (viewName === 'settings') {
-                    settingsView.classList.remove('hidden');
                 }
             }
 
@@ -2645,8 +2655,6 @@ Finally, after the 'Brewer's Notes', add a new heading '## Recommended Water'. B
                 const platform = document.getElementById('social-platform').value;
                 const tweak = document.getElementById('social-tweak').value;
 
-                // --- DEFINITIEVE FIX HIER ---
-                // We definiëren de negatieve instructie één keer.
                 const negativeConstraint = " CRUCIAL: Do not wrap your response in a markdown code block using triple backticks (```).";
 
                 let personaPrompt = "You are an enthusiastic homebrewer sharing your passion.";
@@ -2656,7 +2664,6 @@ Finally, after the 'Brewer's Notes', add a new heading '## Recommended Water'. B
                     personaPrompt = "You are a knowledgeable mead sommelier, focusing on tasting notes and pairings.";
                 }
 
-                // We voegen de negatieve instructie nu aan ELKE platform-prompt toe.
                 let platformPrompt = "Generate a short, engaging Instagram post. Use relevant emojis and hashtags." + negativeConstraint;
                 if (platform === 'untappd_checkin') {
                     platformPrompt = "Generate a descriptive PERSONAL check-in description for Untappd. Write from a first-person perspective (e.g., 'I get notes of...'). Focus on aroma, appearance, taste, and mouthfeel. Do not use hashtags." + negativeConstraint;
@@ -2673,10 +2680,78 @@ Finally, after the 'Brewer's Notes', add a new heading '## Recommended Water'. B
                 
                 try {
                     const socialMarkdown = await performApiCall(finalPrompt);
-                    const socialHtml = marked.parse(socialMarkdown);
+
+                    // --- DEFINITIEVE FIX: Pak de tekst uit als het een codeblok is ---
+                    let processedMarkdown = socialMarkdown.trim();
+                    if (processedMarkdown.startsWith("```markdown")) {
+                        processedMarkdown = processedMarkdown.substring(10, processedMarkdown.lastIndexOf("```")).trim();
+                    } else if (processedMarkdown.startsWith("```")) {
+                        processedMarkdown = processedMarkdown.substring(3, processedMarkdown.lastIndexOf("```")).trim();
+                    }
+                    
+                    const socialHtml = marked.parse(processedMarkdown);
                     socialContainer.innerHTML = `<div>${socialHtml}</div>`;
                 } catch (error) {
                     console.error("Error generating social content:", error);
+                    socialContainer.innerHTML = `<p class="text-center text-red-500">Kon geen social media post genereren: ${error.message}</p>`;
+                }
+            }
+
+            async function runManualSocialMediaGenerator() {
+                const socialContainer = document.getElementById('social-content-container');
+                const manualInput = document.getElementById('manual-social-input').value;
+
+                if (!manualInput.trim()) {
+                    socialContainer.innerHTML = `<p class="text-center text-red-500">Voer eerst een onderwerp in om een post te genereren.</p>`;
+                    return;
+                }
+
+                socialContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">De Alchemist schrijft een nieuw bericht voor je...</p>';
+
+                // Haal de instellingen op van de UI
+                const persona = document.getElementById('social-persona').value;
+                const platform = document.getElementById('social-platform').value;
+                const tweak = document.getElementById('social-tweak').value;
+
+                const negativeConstraint = " CRUCIAL: Do not wrap your response in a markdown code block using triple backticks (```).";
+
+                let personaPrompt = "You are an enthusiastic homebrewer sharing your passion.";
+                if (persona === 'pro_brewery') {
+                    personaPrompt = "You are a social media expert for a professional craft brewery.";
+                } else if (persona === 'sommelier') {
+                    personaPrompt = "You are a knowledgeable mead sommelier, focusing on tasting notes and pairings.";
+                }
+
+                let platformPrompt = "Generate a short, engaging Instagram post. Use relevant emojis and hashtags." + negativeConstraint;
+                if (platform === 'untappd_checkin') {
+                    platformPrompt = "Generate a descriptive PERSONAL check-in description for Untappd. Write from a first-person perspective (e.g., 'I get notes of...'). Focus on aroma, appearance, taste, and mouthfeel. Do not use hashtags." + negativeConstraint;
+                } else if (platform === 'untappd_description') {
+                    platformPrompt = "Generate an official, commercial description for a new mead to be added to Untappd. The description should be objective, informative, and appealing. This is NOT a personal check-in. Do not use hashtags." + negativeConstraint;
+                }
+
+                let tweakPrompt = "";
+                if (tweak.trim() !== '') {
+                    tweakPrompt = `An additional instruction from the user is: "${tweak}". You must follow this instruction.`;
+                }
+
+                // Bouw de prompt op basis van de handmatige invoer
+                const finalPrompt = `${personaPrompt} ${platformPrompt} ${tweakPrompt} Base the content on the following topic or description provided by the user:\n\n---\n${manualInput}\n---\nFormat the entire response in Markdown.`;
+                
+                try {
+                    const socialMarkdown = await performApiCall(finalPrompt);
+                    
+                    // Verwerk de markdown (deze code heb je al)
+                    let processedMarkdown = socialMarkdown.trim();
+                    if (processedMarkdown.startsWith("```markdown")) {
+                        processedMarkdown = processedMarkdown.substring(10, processedMarkdown.lastIndexOf("```")).trim();
+                    } else if (processedMarkdown.startsWith("```")) {
+                        processedMarkdown = processedMarkdown.substring(3, processedMarkdown.lastIndexOf("```")).trim();
+                    }
+                    
+                    const socialHtml = marked.parse(processedMarkdown);
+                    socialContainer.innerHTML = `<div>${socialHtml}</div>`;
+                } catch (error) {
+                    console.error("Error generating manual social content:", error);
                     socialContainer.innerHTML = `<p class="text-center text-red-500">Kon geen social media post genereren: ${error.message}</p>`;
                 }
             }

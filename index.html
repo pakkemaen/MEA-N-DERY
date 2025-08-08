@@ -33,16 +33,16 @@
         }
 
         .dark {
-            --bg-primary: #1f2937;
-            --bg-secondary: #374151;
-            --bg-tertiary: #4b5563;
-            --text-primary: #f3f4f6;
-            --text-secondary: #d1d5db;
-            --border-color: #6b7280; /* Lighter border for better contrast */
-            --accent-color: #c7c4b6; /* Brighter accent */
-            --header-color: #f9fafb;
-            --brand-color: #adaa9a; /* Brighter brand color */
-            --action-color: #f59e0b; /* Brighter action color for dark mode */
+            --bg-primary: #000000;         /* ECHT ZWART: voor de hoofdachtergrond */
+            --bg-secondary: #121212;      /* BIJNA ZWART: voor panelen en achtergronden */
+            --bg-tertiary: #1e1e1e;       /* DONKERGRIJS: voor kaarten en knoppen */
+            --text-primary: #e0e0e0;      /* Iets zachter wit voor minder hard contrast */
+            --text-secondary: #b3b3b3;    /* Leesbaar secundair grijs */
+            --border-color: #2e2e2e;      /* Subtiele randen */
+            --accent-color: #c7c4b6; 
+            --header-color: #ffffff;
+            --brand-color: #adaa9a; 
+            --action-color: #f59e0b; 
             --danger-color: #f87171;
             --success-color: #4ade80;
             --info-color: #60a5fa;
@@ -297,7 +297,7 @@
                     <!-- Content injected by JS -->
                 </div>
 
-               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+               <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                     <button data-view="brewing" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 mb-4 text-app-brand">
                             <path d="M10 2v7.31"></path><path d="M14 9.31V2"></path><path d="M8.5 2h7"></path><path d="M14 9.31C16.57 10.92 18 14.11 18 17.69V20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-2.31C6 14.11 7.43 10.92 10 9.31Z"></path>
@@ -341,7 +341,7 @@
         <div id="brewing-main-view" class="hidden">
             <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
             <div class="bg-app-secondary p-4 rounded-b-lg shadow-inner">
-                <nav class="flex space-x-2">
+                <nav class="flex space-x-2 overflow-x-auto">
                     <button id="creator-sub-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold">Creator</button>
                     <button id="brewing-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Brew Day</button>
                     <button id="history-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">History</button>
@@ -519,7 +519,7 @@
         <div id="management-main-view" class="hidden">
              <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
              <div class="bg-app-secondary p-4 rounded-b-lg shadow-inner">
-                <nav class="flex space-x-2">
+                <nav class="flex space-x-2 overflow-x-auto">
                     <button id="inventory-sub-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold">Inventory</button>
                     <button id="equipment-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Equipment</button>
                     <button id="cellar-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Cellar</button> <button id="planning-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Planning</button>
@@ -1061,7 +1061,7 @@
             function initApp() {
                 // Your web app's Firebase configuration
                 const firebaseConfig = {
-                  apiKey: "AIzaSyCWfyqZ_Qzk2m4rvGEw0wBwu4C8RyvL-yY",
+                  apiKey: "AIzaSyAhOOrwJCYve5XTGS6oXvhCg_l3_LcK00I",
                   authDomain: "meandery-aa05e.firebaseapp.com",
                   projectId: "meandery-aa05e",
                   storageBucket: "meandery-aa05e.appspot.com",
@@ -1203,7 +1203,7 @@
                         }
                     } else {
                         // Apply default settings if none exist
-                        userSettings = { apiKey: 'AIzaSyCWfyqZ_Qzk2m4rvGEw0wBwu4C8RyvL-yY', defaultBatchSize: 5, currencySymbol: '€', theme: 'light' };
+                        userSettings = { apiKey: '', defaultBatchSize: 5, currencySymbol: '€', theme: 'light' };
                     }
                     applySettings();
                 } catch (error) {
@@ -1214,7 +1214,13 @@
             function applySettings() {
                 // Apply settings to the UI
                 apiKeyInput.value = userSettings.apiKey || '';
-                document.getElementById('batchSize').value = userSettings.defaultBatchSize || 5;
+                
+                // --- FIX: Check if the element exists before changing it ---
+                const batchSizeInput = document.getElementById('batchSize');
+                if (batchSizeInput) {
+                    batchSizeInput.value = userSettings.defaultBatchSize || 5;
+                }
+                
                 defaultBatchSizeInput.value = userSettings.defaultBatchSize || 5;
                 defaultCurrencyInput.value = userSettings.currencySymbol || '€';
                 themeToggle.checked = (userSettings.theme === 'dark');
@@ -1225,7 +1231,6 @@
                 }
                 
                 applyTheme(userSettings.theme);
-                renderInventory(); // Re-render inventory to update currency symbol
             }
 
             async function saveUserSettings() {
@@ -1384,8 +1389,13 @@
 
             // --- Core AI Functions ---
             async function performApiCall(prompt) {
-                const defaultApiKey = 'AIzaSyCWfyqZ_Qzk2m4rvGEw0wBwu4C8RyvL-yY';
-                const apiKey = userSettings.apiKey || defaultApiKey;
+                // Haal de API key op die de gebruiker heeft ingevoerd in de instellingen.
+                const apiKey = userSettings.apiKey;
+
+                // --- NIEUW: Controleer of er wel een sleutel is ---
+                if (!apiKey) {
+                    throw new Error("Please enter your Google AI API key in the Settings page first.");
+                }
                 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
@@ -2481,7 +2491,7 @@ Finally, after the 'Brewer's Notes', add a new heading '## Recommended Water'. B
 
                 let checklistHtml = `<h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2>`;
                 
-                // --- INGREDIENTEN CHECKLIST (NU ROBUUST) ---
+                // --- INGREDIENTEN CHECKLIST (WERKT AL) ---
                 const ingredients = parseIngredientsFromMarkdown(brew.recipeMarkdown);
                 if (ingredients.length > 0) {
                     checklistHtml += `<h3 class="text-2xl font-header mt-6 mb-3">Ingredients</h3>`;
@@ -2493,17 +2503,28 @@ Finally, after the 'Brewer's Notes', add a new heading '## Recommended Water'. B
                     });
                 }
 
-
-                // --- INSTRUCTIES CHECKLIST (NU ROBUUST) ---
-                // We parsen de HTML om de instructies te vinden
+                // --- INSTRUCTIES CHECKLIST (NU VERBETERD) ---
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = marked.parse(brew.recipeMarkdown);
-                // Zoek specifiek naar de 'Instructions' header
                 const instructionsHeader = Array.from(tempDiv.querySelectorAll('h2, h3')).find(h => h.textContent.toLowerCase().includes('instructions'));
+                
                 if (instructionsHeader) {
                     checklistHtml += `<h3 class="text-2xl font-header mt-6 mb-3">Instructions</h3>`;
-                    const instructionsList = instructionsHeader.nextElementSibling;
-                    if (instructionsList && (instructionsList.tagName === 'OL' || instructionsList.tagName === 'UL')) {
+                    
+                    // --- START VAN DE FIX ---
+                    // Zoek naar de EERSTE <ol> of <ul> die NA de header komt
+                    let currentElement = instructionsHeader.nextElementSibling;
+                    let instructionsList = null;
+                    while (currentElement) {
+                        if (currentElement.tagName === 'OL' || currentElement.tagName === 'UL') {
+                            instructionsList = currentElement;
+                            break; // Gevonden! Stop met zoeken.
+                        }
+                        currentElement = currentElement.nextElementSibling;
+                    }
+                    // --- EINDE VAN DE FIX ---
+
+                    if (instructionsList) {
                         const items = instructionsList.querySelectorAll('li');
                         items.forEach((item, index) => {
                             const text = item.innerHTML; // Gebruik innerHTML om opmaak zoals <strong> te behouden
@@ -2514,7 +2535,7 @@ Finally, after the 'Brewer's Notes', add a new heading '## Recommended Water'. B
                     }
                 }
 
-                // Quick Log Section (blijft hetzelfde)
+                // Quick Log Section (blijft ongewijzigd)
                 checklistHtml += `
                     <div class="mt-8 pt-6 border-t-2 border-app">
                         <h3 class="text-2xl font-header mb-4 text-center">Quick Log</h3>
@@ -2922,7 +2943,7 @@ Finally, after the 'Brewer's Notes', add a new heading '## Recommended Water'. B
                 </div>
             </div>
             <div class="flex justify-end gap-4 mt-8">
-                <button type="button" onclick="window.hideBottlingModal()" class="px-6 py-2 rounded-lg bg-gray-300 dark:bg-gray-600 hover:opacity-90 btn">Cancel</button>
+                <button type="button" onclick="window.hideBottlingModal()" class="px-6 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500 btn">Cancel</button>
                 <button type="submit" class="px-6 py-2 rounded-lg bg-app-action text-white font-bold hover:opacity-90 btn">Add to Cellar</button>
             </div>
         </form>

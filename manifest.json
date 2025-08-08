@@ -1,21 +1,21 @@
 {
-  "name": "MEA(N)DERY",
+  "name": "MEA(N)DERY - AI Mead Recipe Creator",
   "short_name": "MEA(N)DERY",
-  "description": "Your Personal AI Mead Recipe Creator & Brew Log",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#f3f0e9",
   "theme_color": "#a89a87",
+  "description": "Your AI Brewbuddy for creating mead recipes.",
   "icons": [
     {
       "src": "icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "sizes": "192x192"
     },
     {
       "src": "icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "sizes": "512x512"
     }
   ]
 }

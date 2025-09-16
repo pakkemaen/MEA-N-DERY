@@ -2049,7 +2049,6 @@ async function clearInventory() {
                         ${getBrewLogHtml(parsedData, 'new')}
                     `;
                     recipeOutput.innerHTML = fullHtml;
-                    document.getElementById('saveBtn').addEventListener('click', saveBrewToHistory);
 
                 } catch (error) {
                     console.error("Error calling Gemini API:", error);

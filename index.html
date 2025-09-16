@@ -1425,231 +1425,218 @@ function executeDangerAction() {
 
             // --- Initialization ---
             function initApp() {
+                // Assign UI Elements
+                dashboardMainView = document.getElementById('dashboard-main-view');
+                creatorView = document.getElementById('creator-view');
+                brewingView = document.getElementById('brewing-view');
+                historyView = document.getElementById('history-view');
+                inventoryView = document.getElementById('inventory-view');
+                planningView = document.getElementById('planning-view');
+                financialsView = document.getElementById('financials-view');
+                socialView = document.getElementById('social-view');
+                troubleshootView = document.getElementById('troubleshoot-view');
+                calculatorsView = document.getElementById('calculators-view');
+                waterView = document.getElementById('water-view');
+                settingsView = document.getElementById('settings-main-view');
+                brewingMainView = document.getElementById('brewing-main-view');
+                managementMainView = document.getElementById('management-main-view');
+                toolsMainView = document.getElementById('tools-main-view');
+                styleSelect = document.getElementById('style');
+                fruitSection = document.getElementById('fruit-section');
+                spiceSection = document.getElementById('spice-section');
+                braggotSection = document.getElementById('braggot-section');
+                generateBtn = document.getElementById('generateBtn');
+                recipeOutput = document.getElementById('recipe-output');
+                brewDayContent = document.getElementById('brew-day-content');
+                historyList = document.getElementById('history-list');
+                historyDetailContainer = document.getElementById('history-detail-container');
+                historyListContainer = document.getElementById('history-list-container');
+                inventoryForm = document.getElementById('inventory-form');
+                inventoryList = document.getElementById('inventory-list');
+                fetchWaterProfileBtn = document.getElementById('fetchWaterProfileBtn');
+                getWaterAdviceBtn = document.getElementById('getWaterAdviceBtn');
+                getYeastAdviceBtn = document.getElementById('getYeastAdviceBtn');
+                waterSourceSelect = document.getElementById('waterSource');
+                manualWaterProfileDiv = document.getElementById('manualWaterProfile');
+                troubleshootBtn = document.getElementById('troubleshoot-btn');
+                apiKeyInput = document.getElementById('apiKeyInput');
+                defaultBatchSizeInput = document.getElementById('defaultBatchSizeInput');
+                defaultCurrencyInput = document.getElementById('defaultCurrencyInput');
+                saveSettingsBtn = document.getElementById('saveSettingsBtn');
+                themeToggle = document.getElementById('theme-toggle-checkbox');
+                exportHistoryBtn = document.getElementById('exportHistoryBtn');
+                exportInventoryBtn = document.getElementById('exportInventoryBtn');
+                importHistoryFile = document.getElementById('importHistoryFile');
+                importInventoryFile = document.getElementById('importInventoryFile');
+                clearHistoryBtn = document.getElementById('clearHistoryBtn');
+                clearInventoryBtn = document.getElementById('clearInventoryBtn');
+                labelsView = document.getElementById('labels-view');
+                logoUploadInput = document.getElementById('logoUpload');
+                
+                // Firebase Config
+                const firebaseConfig = {
+                    apiKey: "AIzaSyAhOOrwJCYve5XTGS6oXvhCg_l3_LcK00I",
+                    authDomain: "meandery-aa05e.firebaseapp.com",
+                    projectId: "meandery-aa05e",
+                    storageBucket: "meandery-aa05e.appspot.com",
+                    messagingSenderId: "388311971225",
+                    appId: "1:388311971225:web:e5b0e81ce18d96b4a88f08",
+                    measurementId: "G-S5CPLP80XT"
+                };
 
-            // --- Assign UI Elements now that the DOM is loaded ---
-            dashboardMainView = document.getElementById('dashboard-main-view');
-            creatorView = document.getElementById('creator-view');
-            brewingView = document.getElementById('brewing-view');
-            historyView = document.getElementById('history-view');
-            inventoryView = document.getElementById('inventory-view');
-            planningView = document.getElementById('planning-view');
-            financialsView = document.getElementById('financials-view');
-            socialView = document.getElementById('social-view');
-            troubleshootView = document.getElementById('troubleshoot-view');
-            calculatorsView = document.getElementById('calculators-view');
-            waterView = document.getElementById('water-view');
-            settingsView = document.getElementById('settings-main-view');
-            brewingMainView = document.getElementById('brewing-main-view');
-            managementMainView = document.getElementById('management-main-view');
-            toolsMainView = document.getElementById('tools-main-view');
-            styleSelect = document.getElementById('style');
-            fruitSection = document.getElementById('fruit-section');
-            spiceSection = document.getElementById('spice-section');
-            braggotSection = document.getElementById('braggot-section');
-            generateBtn = document.getElementById('generateBtn');
-            recipeOutput = document.getElementById('recipe-output');
-            brewDayContent = document.getElementById('brew-day-content');
-            historyList = document.getElementById('history-list');
-            historyDetailContainer = document.getElementById('history-detail-container');
-            historyListContainer = document.getElementById('history-list-container');
-            inventoryForm = document.getElementById('inventory-form');
-            inventoryList = document.getElementById('inventory-list');
-            fetchWaterProfileBtn = document.getElementById('fetchWaterProfileBtn');
-            getWaterAdviceBtn = document.getElementById('getWaterAdviceBtn');
-            getYeastAdviceBtn = document.getElementById('getYeastAdviceBtn');
-            waterSourceSelect = document.getElementById('waterSource');
-            manualWaterProfileDiv = document.getElementById('manualWaterProfile');
-            troubleshootBtn = document.getElementById('troubleshoot-btn');
-            apiKeyInput = document.getElementById('apiKeyInput');
-            defaultBatchSizeInput = document.getElementById('defaultBatchSizeInput');
-            defaultCurrencyInput = document.getElementById('defaultCurrencyInput');
-            saveSettingsBtn = document.getElementById('saveSettingsBtn');
-            settingsMessage = document.getElementById('settingsMessage');
-            themeToggle = document.getElementById('theme-toggle-checkbox');
-            exportHistoryBtn = document.getElementById('exportHistoryBtn');
-            exportInventoryBtn = document.getElementById('exportInventoryBtn');
-            importHistoryFile = document.getElementById('importHistoryFile');
-            importInventoryFile = document.getElementById('importInventoryFile');
-            clearHistoryBtn = document.getElementById('clearHistoryBtn');
-            clearInventoryBtn = document.getElementById('clearInventoryBtn');
-            calculateOverheadBtn = document.getElementById('calculateOverheadBtn');
-            labelsView = document.getElementById('labels-view');
-            logoUploadInput = document.getElementById('logoUpload');
-            labelPreview = document.getElementById('label-preview');
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    onAuthStateChanged(auth, async (user) => {
+                        const loginView = document.getElementById('login-view');
+                        const mainAppView = document.getElementById('dashboard-main-view');
 
-            // Your web app's Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyAhOOrwJCYve5XTGS6oXvhCg_l3_LcK00I",
-      authDomain: "meandery-aa05e.firebaseapp.com",
-      projectId: "meandery-aa05e",
-      storageBucket: "meandery-aa05e.appspot.com",
-      messagingSenderId: "388311971225",
-      appId: "1:388311971225:web:e5b0e81ce18d96b4a88f08",
-      measurementId: "G-S5CPLP80XT"
-    };
-
-    try {
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-
-        onAuthStateChanged(auth, async (user) => {
-    const loginView = document.getElementById('login-view');
-    const mainAppView = document.getElementById('dashboard-main-view');
-
-    if (user && !user.isAnonymous) {
-        // Gebruiker is succesvol ingelogd met Google
-        userId = user.uid;
-
-        // Verberg login-scherm en toon de app
-        loginView.classList.add('hidden');
-        mainAppView.classList.remove('hidden');
-
-        // Laad de data van de gebruiker
-        loadHistory();
-        loadInventory();
-        loadEquipmentProfiles();
-        loadCellar();
-        loadUserSettings();
-
-    } else {
-        // Geen gebruiker of anonieme gebruiker -> toon login-scherm
-        loginView.classList.remove('hidden');
-        mainAppView.classList.add('hidden');
-
-        // Log eventuele anonieme of onbekende gebruikers uit
-        if (user && user.isAnonymous) {
-            auth.signOut();
-        }
-    }
-});
-    } catch (e) {
-        console.error("Firebase initialization failed. App will run in offline mode.", e);
-        recipeOutput.innerHTML = `<p class="text-orange-600 font-bold">Running in offline mode. History and Inventory are disabled.</p>`;
-    }
-
-
-    // --- Event Listeners ---
-    document.getElementById('history-search-input').addEventListener('input', renderHistoryList);
-    document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
-    document.getElementById('danger-cancel-btn').addEventListener('click', hideDangerModal);
-    document.getElementById('danger-confirm-btn').addEventListener('click', executeDangerAction);
-    document.getElementById('danger-confirm-input').addEventListener('input', checkDangerConfirmation);
-    document.getElementById('customDescription').addEventListener('input', handleDescriptionInput);
-    document.getElementById('close-prompt-modal-btn').addEventListener('click', hidePromptModal);
-    document.getElementById('prompt-modal').addEventListener('click', function(e) {
-        if (e.target.id === 'prompt-modal') {
-            hidePromptModal();
-        }
-    });
-    document.querySelectorAll('.main-nav-btn').forEach(btn => {
-        btn.addEventListener('click', () => switchMainView(btn.dataset.view));
-    });
-    document.querySelectorAll('.back-to-dashboard-btn').forEach(btn => {
-        btn.addEventListener('click', () => switchMainView('dashboard'));
-    });
-    document.querySelectorAll('.sub-tab').forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            const parentId = e.target.closest('[id$="-main-view"]').id;
-            switchSubView(e.target.id.replace('-sub-tab', ''), parentId);
-        });
-    });
-
-    setupBrewDayEventListeners();
-    styleSelect.addEventListener('change', handleStyleChange);
-    generateBtn.addEventListener('click', generateRecipe);
-    inventoryForm.addEventListener('submit', addInventoryItem);
-    document.getElementById('equipment-profile-form').addEventListener('submit', addEquipmentProfile);
-    document.getElementById('equipProfileType').addEventListener('change', handleEquipmentTypeChange);
-    document.getElementById('bottling-form').addEventListener('submit', bottleBatch);
-    document.getElementById('scan-barcode-btn').addEventListener('click', startScanner);
-    document.getElementById('close-scanner-btn').addEventListener('click', stopScanner);
-    document.getElementById('useInventory').addEventListener('change', (e) => {
-                document.getElementById('budget-section').classList.toggle('hidden', !e.target.checked);
-                handleInventoryToggle(e);
-            });
-    document.getElementById('useBudget').addEventListener('change', (e) => {
-        document.getElementById('budget-input-container').classList.toggle('hidden', !e.target.checked);
-    });
-
-    // Calculator buttons
-    document.getElementById('calcAbvBtn').addEventListener('click', calculateABV);
-    document.getElementById('correctSgBtn').addEventListener('click', correctHydrometer);
-    document.getElementById('calcSugarBtn').addEventListener('click', calculatePrimingSugar);
-    document.getElementById('calcBlendBtn').addEventListener('click', calculateBlend);
-    document.getElementById('calcBacksweetenBtn').addEventListener('click', calculateBacksweetening);
-    document.getElementById('calcDilutionBtn').addEventListener('click', calculateDilution);
-    document.getElementById('calcTosnaBtn').addEventListener('click', calculateTOSNA);
-    getYeastAdviceBtn.addEventListener('click', getYeastAdvice);
-
-    // Manual social post button
-    document.getElementById('generate-manual-social-btn').addEventListener('click', runManualSocialMediaGenerator);
-    document.getElementById('generate-social-from-recipe-btn').addEventListener('click', runSocialMediaGenerator);
-    
-    // Water tab buttons
-    fetchWaterProfileBtn.addEventListener('click', fetchWaterProfile);
-    waterSourceSelect.addEventListener('change', handleWaterSourceChange);
-    getWaterAdviceBtn.addEventListener('click', getWaterAdvice);
-
-    // Settings
-    saveSettingsBtn.addEventListener('click', saveUserSettings);
-    themeToggle.addEventListener('change', (e) => applyTheme(e.target.checked ? 'dark' : 'light'));
-    exportHistoryBtn.addEventListener('click', exportHistory);
-    exportInventoryBtn.addEventListener('click', exportInventory);
-    importHistoryFile.addEventListener('change', importHistory);
-    importInventoryFile.addEventListener('change', importInventory);
-    clearHistoryBtn.addEventListener('click', clearHistory);
-    clearInventoryBtn.addEventListener('click', clearInventory);
-    
-    // Troubleshoot
-    troubleshootBtn.addEventListener('click', getTroubleshootingAdvice);
-    
-            // Label Generator Listeners
-            document.getElementById('edit-front-label-btn').addEventListener('click', () => switchLabelDesigner('front')); 
-            document.getElementById('edit-back-label-btn').addEventListener('click', () => switchLabelDesigner('back'));
-            document.getElementById('logoUpload').addEventListener('change', handleLogoUpload);
-            document.getElementById('removeLogoBtn').addEventListener('click', removeLogo);
-            document.getElementById('labelRecipeSelect').addEventListener('change', handleLabelRecipeSelect);
-            const backLabelControls = [
-                'back-include-description', 'back-include-ingredients', 'back-include-allergens',
-                'back-include-gravity', 'back-include-yeast', 'back-include-dates', 'back-include-flavor'
-            ];
-            backLabelControls.forEach(id => {
-                document.getElementById(id).addEventListener('change', updateBackLabelPreview);
-            });
-            document.getElementById('back-brewed-by').addEventListener('input', updateBackLabelPreview);
-            document.querySelectorAll('.label-style-btn').forEach(btn => btn.addEventListener('click', () => switchLabelStyle(btn.dataset.style)));
-            document.querySelectorAll('.label-style-btn').forEach(btn => btn.addEventListener('click', () => switchLabelStyle(btn.dataset.style)));
-            document.getElementById('generate-print-btn').addEventListener('click', generatePrintPage);
-            document.querySelectorAll('.orientation-btn').forEach(btn => {
-                btn.addEventListener('click', () => setLabelOrientation(btn.dataset.orientation));
-            });
-            
-            ['labelStyle', 'labelAbv', 'labelVol', 'labelDate'].forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.addEventListener('keyup', updateLabelPreview);
+                        if (user && !user.isAnonymous) {
+                            userId = user.uid;
+                            loginView.classList.add('hidden');
+                            mainAppView.classList.remove('hidden');
+                            loadHistory();
+                            loadInventory();
+                            loadEquipmentProfiles();
+                            loadCellar();
+                            loadUserSettings();
+                        } else {
+                            loginView.classList.remove('hidden');
+                            mainAppView.classList.add('hidden');
+                            if (user && user.isAnonymous) {
+                                auth.signOut();
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error("Firebase initialization failed.", e);
                 }
-            });
 
-            const formatSelect = document.getElementById('labelFormatSelect');
-            if (formatSelect) {
-                formatSelect.addEventListener('change', (e) => {
-                    document.getElementById('custom-format-inputs').classList.toggle('hidden', e.target.value !== 'custom');
-                    updatePreviewAspectRatio(); // Update aspect ratio bij wijziging
+                // --- Event Listeners ---
+                document.getElementById('history-search-input').addEventListener('input', renderHistoryList);
+                document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
+                document.getElementById('danger-cancel-btn').addEventListener('click', hideDangerModal);
+                document.getElementById('danger-confirm-btn').addEventListener('click', executeDangerAction);
+                document.getElementById('danger-confirm-input').addEventListener('input', checkDangerConfirmation);
+                document.getElementById('customDescription').addEventListener('input', handleDescriptionInput);
+                document.getElementById('close-prompt-modal-btn').addEventListener('click', hidePromptModal);
+                document.getElementById('prompt-modal').addEventListener('click', (e) => {
+                    if (e.target.id === 'prompt-modal') hidePromptModal();
                 });
-            }
+                document.querySelectorAll('.main-nav-btn').forEach(btn => {
+                    btn.addEventListener('click', () => switchMainView(btn.dataset.view));
+                });
+                document.querySelectorAll('.back-to-dashboard-btn').forEach(btn => {
+                    btn.addEventListener('click', () => switchMainView('dashboard'));
+                });
+                document.querySelectorAll('.sub-tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        const parentId = e.target.closest('[id$="-main-view"]').id;
+                        switchSubView(e.target.id.replace('-sub-tab', ''), parentId);
+                    });
+                });
 
-            // Listeners voor custom formaat inputs
-            ['customWidth', 'customHeight', 'customCols', 'customRows', 'customMarginTop', 'customMarginLeft'].forEach(id => {
-                const input = document.getElementById(id);
-                if(input) {
-                    input.addEventListener('input', updatePreviewAspectRatio);
+                setupBrewDayEventListeners();
+                styleSelect.addEventListener('change', handleStyleChange);
+                generateBtn.addEventListener('click', generateRecipe);
+                inventoryForm.addEventListener('submit', addInventoryItem);
+                document.getElementById('equipment-profile-form').addEventListener('submit', addEquipmentProfile);
+                document.getElementById('equipProfileType').addEventListener('change', handleEquipmentTypeChange);
+                document.getElementById('bottling-form').addEventListener('submit', bottleBatch);
+                document.getElementById('scan-barcode-btn').addEventListener('click', startScanner);
+                document.getElementById('close-scanner-btn').addEventListener('click', stopScanner);
+                document.getElementById('useInventory').addEventListener('change', (e) => {
+                    document.getElementById('budget-section').classList.toggle('hidden', !e.target.checked);
+                    handleInventoryToggle(e);
+                });
+                document.getElementById('useBudget').addEventListener('change', (e) => {
+                    document.getElementById('budget-input-container').classList.toggle('hidden', !e.target.checked);
+                });
+
+                // Calculator buttons
+                document.getElementById('calcAbvBtn').addEventListener('click', calculateABV);
+                document.getElementById('correctSgBtn').addEventListener('click', correctHydrometer);
+                document.getElementById('calcSugarBtn').addEventListener('click', calculatePrimingSugar);
+                document.getElementById('calcBlendBtn').addEventListener('click', calculateBlend);
+                document.getElementById('calcBacksweetenBtn').addEventListener('click', calculateBacksweetening);
+                document.getElementById('calcDilutionBtn').addEventListener('click', calculateDilution);
+                document.getElementById('calcTosnaBtn').addEventListener('click', calculateTOSNA);
+                getYeastAdviceBtn.addEventListener('click', getYeastAdvice);
+
+                // Manual social post button
+                document.getElementById('generate-manual-social-btn').addEventListener('click', runManualSocialMediaGenerator);
+                document.getElementById('generate-social-from-recipe-btn').addEventListener('click', runSocialMediaGenerator);
+                
+                // Water tab buttons
+                const fetchWaterBtn = document.getElementById('fetchWaterProfileBtn');
+                if (fetchWaterBtn) fetchWaterBtn.addEventListener('click', fetchWaterProfile);
+                
+                const waterSrcSelect = document.getElementById('waterSource');
+                if (waterSrcSelect) waterSrcSelect.addEventListener('change', handleWaterSourceChange);
+
+                const getWaterAdvBtn = document.getElementById('getWaterAdviceBtn');
+                if (getWaterAdvBtn) getWaterAdvBtn.addEventListener('click', getWaterAdvice);
+                
+                // Settings
+                saveSettingsBtn.addEventListener('click', saveUserSettings);
+                themeToggle.addEventListener('change', (e) => applyTheme(e.target.checked ? 'dark' : 'light'));
+                exportHistoryBtn.addEventListener('click', exportHistory);
+                exportInventoryBtn.addEventListener('click', exportInventory);
+                importHistoryFile.addEventListener('change', importHistory);
+                importInventoryFile.addEventListener('change', importInventory);
+                clearHistoryBtn.addEventListener('click', clearHistory);
+                clearInventoryBtn.addEventListener('click', clearInventory);
+                
+                // Troubleshoot
+                troubleshootBtn.addEventListener('click', getTroubleshootingAdvice);
+                
+                // --- Label Generator Listeners ---
+                document.getElementById('edit-front-label-btn').addEventListener('click', () => switchLabelDesigner('front')); 
+                document.getElementById('edit-back-label-btn').addEventListener('click', () => switchLabelDesigner('back'));
+                document.getElementById('logoUpload').addEventListener('change', handleLogoUpload);
+                document.getElementById('removeLogoBtn').addEventListener('click', removeLogo);
+                document.getElementById('labelRecipeSelect').addEventListener('change', handleLabelRecipeSelect);
+                
+                const backLabelControls = [
+                    'back-include-description', 'back-include-ingredients', 'back-include-allergens',
+                    'back-include-gravity', 'back-include-yeast', 'back-include-dates', 'back-include-flavor'
+                ];
+                backLabelControls.forEach(id => {
+                    document.getElementById(id).addEventListener('change', updateBackLabelPreview);
+                });
+                document.getElementById('back-brewed-by').addEventListener('input', updateBackLabelPreview);
+                
+                document.querySelectorAll('.label-style-btn').forEach(btn => btn.addEventListener('click', () => switchLabelStyle(btn.dataset.style)));
+                document.getElementById('generate-print-btn').addEventListener('click', generatePrintPage);
+                document.querySelectorAll('.orientation-btn').forEach(btn => {
+                    btn.addEventListener('click', () => setLabelOrientation(btn.dataset.orientation));
+                });
+                
+                ['labelStyle', 'labelAbv', 'labelVol', 'labelDate'].forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.addEventListener('keyup', updateLabelPreview);
+                    }
+                });
+
+                const formatSelect = document.getElementById('labelFormatSelect');
+                if (formatSelect) {
+                    formatSelect.addEventListener('change', (e) => {
+                        document.getElementById('custom-format-inputs').classList.toggle('hidden', e.target.value !== 'custom');
+                        updatePreviewAspectRatio();
+                    });
                 }
-            });
 
-    handleStyleChange();
-    }
+                ['customWidth', 'customHeight', 'customCols', 'customRows', 'customMarginTop', 'customMarginLeft'].forEach(id => {
+                    const input = document.getElementById(id);
+                    if(input) {
+                        input.addEventListener('input', updatePreviewAspectRatio);
+                    }
+                });
+
+                handleStyleChange();
+            }
 
             // --- View Management ---
             function switchMainView(viewName) {

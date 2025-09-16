@@ -5027,15 +5027,19 @@ function populateSocialRecipeDropdown() {
                 if (viewToShow === 'front') {
                     frontBtn.classList.add('active');
                     backBtn.classList.remove('active');
+                    
                     frontDesigner.classList.remove('hidden');
                     backDesigner.classList.add('hidden');
+                    
                     frontPreview.classList.remove('hidden');
                     backPreview.classList.add('hidden');
                 } else { // 'back'
                     frontBtn.classList.remove('active');
                     backBtn.classList.add('active');
+                    
                     frontDesigner.classList.add('hidden');
                     backDesigner.classList.remove('hidden');
+                    
                     frontPreview.classList.add('hidden');
                     backPreview.classList.remove('hidden');
                 }

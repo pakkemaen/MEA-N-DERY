@@ -1692,6 +1692,7 @@ function executeDangerAction() {
 
                 if (viewName === 'labels') {
                     populateLabelRecipeDropdown();
+                    populateLabelFormatDropdown();
                     updatePreviewAspectRatio();
                 }
 
@@ -5381,43 +5382,38 @@ function populateSocialRecipeDropdown() {
                 const dateInput = document.getElementById('labelDate');
                 
                 if (!brewId) {
-                    if(styleInput) styleInput.value = '';
-                    if(abvInput) abvInput.value = '';
-                    if(volInput) volInput.value = '';
-                    if(dateInput) dateInput.value = '';
+                    styleInput.value = '';
+                    abvInput.value = '';
+                    volInput.value = '';
+                    dateInput.value = '';
                 } else {
                     const selectedBrew = brews.find(b => b.id === brewId);
                     if (selectedBrew) {
                         const fullTitle = selectedBrew.recipeName;
-                        let namePart = fullTitle;
                         let subtitlePart = '';
 
                         if (fullTitle.includes(':')) {
-                            const parts = fullTitle.split(/:\s*(.*)/s);
-                            namePart = parts[0];
-                            subtitlePart = parts[1] || '';
+                            subtitlePart = fullTitle.split(/:\s*(.*)/s)[1] || '';
                         } else if (fullTitle.includes(' - ')) {
-                            const parts = fullTitle.split(/\s*-\s*(.*)/s);
-                            namePart = parts[0];
-                            subtitlePart = parts[1] || '';
+                            subtitlePart = fullTitle.split(/\s*-\s*(.*)/s)[1] || '';
                         }
                         
-                        if(styleInput) styleInput.value = subtitlePart;
-                        if(abvInput) abvInput.value = selectedBrew.logData?.finalABV?.replace('%','') || selectedBrew.logData?.targetABV?.replace('%','') || '';
-                        if(volInput) volInput.value = selectedBrew.batchSize ? selectedBrew.batchSize * 1000 : '750';
+                        styleInput.value = subtitlePart;
+                        abvInput.value = selectedBrew.logData?.finalABV?.replace('%','') || selectedBrew.logData?.targetABV?.replace('%','') || '';
+                        volInput.value = selectedBrew.batchSize ? selectedBrew.batchSize * 1000 : '750';
                         
                         const cellarEntry = cellar.find(c => c.brewId === selectedBrew.id);
                         if (cellarEntry && cellarEntry.bottlingDate) {
-                            if(dateInput) dateInput.value = cellarEntry.bottlingDate.toDate().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+                            dateInput.value = cellarEntry.bottlingDate.toDate().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
                         } else {
-                            if(dateInput) dateInput.value = '';
+                            dateInput.value = '';
                         }
                     }
                 }
                 
                 // Roep beide preview-update functies aan
                 updateLabelPreview();
-                updateBackLabelPreview(); // <-- NIEUWE REGEL
+                updateBackLabelPreview();
             }
 
             function updateLabelPreview() {
@@ -5429,11 +5425,12 @@ function populateSocialRecipeDropdown() {
                 const datePreview = document.getElementById('label-date-preview');
                 const ogPreview = document.getElementById('label-og-preview');
                 const fgPreview = document.getElementById('label-fg-preview');
+                const yeastPreview = document.getElementById('label-yeast-preview');
                 const allergensContainer = document.getElementById('label-allergens-container');
                 const select = document.getElementById('labelRecipeSelect');
                 const styleInput = document.getElementById('labelStyle');
                 
-                // --- Update naam en ondertitel ---
+                // Update naam en ondertitel
                 const selectedOption = select.options[select.selectedIndex];
                 const fullTitle = (selectedOption && selectedOption.value) ? selectedOption.text : 'Mead Name';
                 let namePart = fullTitle;
@@ -5447,26 +5444,29 @@ function populateSocialRecipeDropdown() {
                 if(namePreview) namePreview.textContent = namePart;
                 if(stylePreview) stylePreview.textContent = styleInput.value || 'Style / Subtitle';
                 
-                // --- Update overige details ---
+                // Update overige details
                 if(abvPreview) abvPreview.textContent = document.getElementById('labelAbv').value || 'ABV';
                 if(volPreview) {
-                    const volInput = document.getElementById('labelVol');
-                    const volValue = parseFloat(volInput.value);
-                    if (!isNaN(volValue)) {
-                        volPreview.textContent = volValue >= 1000 ? `${(volValue / 1000).toFixed(1)} L` : `${volValue} ml`;
+                    const volInputValue = parseFloat(document.getElementById('labelVol').value);
+                    if (!isNaN(volInputValue)) {
+                        volPreview.textContent = volInputValue >= 1000 ? `${(volInputValue / 1000).toFixed(1)} L` : `${volInputValue} ml`;
                     } else {
                         volPreview.textContent = 'VOL';
                     }
                 }
                 if(datePreview) datePreview.textContent = document.getElementById('labelDate').value || 'Bottling Date';
 
-                // --- Update Professional velden en Allergenen ---
+                // Update Professional velden en Allergenen
                 const selectedBrew = brews.find(b => b.id === select.value);
                 if (selectedBrew) {
                     if(ogPreview) ogPreview.textContent = selectedBrew.logData?.targetOG || 'N/A';
                     if(fgPreview) fgPreview.textContent = selectedBrew.logData?.actualFG || selectedBrew.logData?.targetFG || 'N/A';
-                    
-                    // --- NIEUW: Allergenen logica ---
+                    if(yeastPreview) {
+                         const ingredients = parseIngredientsFromMarkdown(selectedBrew.recipeMarkdown);
+                         yeastPreview.textContent = ingredients.find(i => i.name.toLowerCase().includes('yeast'))?.name.replace('Yeast','').trim() || 'N/A';
+                    }
+
+                    // Allergenen logica
                     const allergens = [];
                     const markdown = selectedBrew.recipeMarkdown.toLowerCase();
                     if (markdown.includes('metabisulfite')) allergens.push('sulfites');
@@ -5483,8 +5483,43 @@ function populateSocialRecipeDropdown() {
                 } else {
                     if(ogPreview) ogPreview.textContent = 'OG';
                     if(fgPreview) fgPreview.textContent = 'FG';
+                    if(yeastPreview) yeastPreview.textContent = 'Yeast';
                     if(allergensContainer) allergensContainer.classList.add('hidden');
                 }
+            }
+
+            function populateLabelFormatDropdown() {
+                const select = document.getElementById('labelFormatSelect');
+                if (!select) return;
+                
+                select.innerHTML = ''; // Clear existing options
+                
+                Object.keys(labelFormats).forEach(key => {
+                    const format = labelFormats[key];
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = `${format.name} (${format.width_mm} x ${format.height_mm} mm) - ${format.cols * format.rows}/page`;
+                    select.appendChild(option);
+                });
+                
+                const customOption = document.createElement('option');
+                customOption.value = 'custom';
+                customOption.textContent = 'Custom Format...';
+                select.appendChild(customOption);
+
+                // Initialiseer de custom fields
+                const customInputsContainer = document.getElementById('custom-format-inputs');
+                customInputsContainer.innerHTML = `
+                     <h4 class="text-sm font-bold text-center">Custom Page Layout</h4>
+                     <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div><label>Label Width (mm)</label><input type="number" id="customWidth" value="99.1" class="w-full p-1 border rounded-md bg-app-primary"></div>
+                        <div><label>Label Height (mm)</label><input type="number" id="customHeight" value="67.7" class="w-full p-1 border rounded-md bg-app-primary"></div>
+                        <div><label>Columns</label><input type="number" id="customCols" value="2" class="w-full p-1 border rounded-md bg-app-primary"></div>
+                        <div><label>Rows</label><input type="number" id="customRows" value="4" class="w-full p-1 border rounded-md bg-app-primary"></div>
+                        <div><label>Top Margin (mm)</label><input type="number" id="customMarginTop" value="11.1" class="w-full p-1 border rounded-md bg-app-primary"></div>
+                        <div><label>Left Margin (mm)</label><input type="number" id="customMarginLeft" value="5.45" class="w-full p-1 border rounded-md bg-app-primary"></div>
+                     </div>
+                `;
             }
             
             // --- Start the App ---

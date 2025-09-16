@@ -1053,7 +1053,7 @@
                     <main class="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
                         <h2 class="text-2xl font-header font-bold mb-2 text-center">Live Preview</h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div class="text-center">
+                            <div id="front-preview-container" class="text-center">
                                 <h3 class="font-semibold mb-2">Front</h3>
                                 <div class="max-w-xs mx-auto">
                                     <div id="front-label-preview" class="label-minimalist aspect-[3/4] p-4 flex flex-col">
@@ -1074,7 +1074,7 @@
                                     </div>
                                 </div>
                             </div>
-                             <div class="text-center">
+                             <div id="back-preview-container" class="hidden text-center">
                                 <h3 class="font-semibold mb-2">Back</h3>
                                 <div class="max-w-xs mx-auto">
                                     <div id="back-label-preview" class="label-minimalist aspect-[3/4] p-4 flex flex-col text-xs text-left" style="font-family: sans-serif; justify-content: space-between;">
@@ -5021,17 +5021,23 @@ function populateSocialRecipeDropdown() {
                 const backBtn = document.getElementById('edit-back-label-btn');
                 const frontDesigner = document.getElementById('front-label-designer');
                 const backDesigner = document.getElementById('back-label-designer');
+                const frontPreview = document.getElementById('front-preview-container');
+                const backPreview = document.getElementById('back-preview-container');
 
                 if (viewToShow === 'front') {
                     frontBtn.classList.add('active');
                     backBtn.classList.remove('active');
                     frontDesigner.classList.remove('hidden');
                     backDesigner.classList.add('hidden');
+                    frontPreview.classList.remove('hidden');
+                    backPreview.classList.add('hidden');
                 } else { // 'back'
                     frontBtn.classList.remove('active');
                     backBtn.classList.add('active');
                     frontDesigner.classList.add('hidden');
                     backDesigner.classList.remove('hidden');
+                    frontPreview.classList.add('hidden');
+                    backPreview.classList.remove('hidden');
                 }
             }
             
@@ -5201,53 +5207,60 @@ function populateSocialRecipeDropdown() {
             }
 
             function switchLabelStyle(styleName) {
-                const labelPreview = document.getElementById('label-preview');
+                const previews = [document.getElementById('front-label-preview'), document.getElementById('back-label-preview')];
                 
-                // Wissel de stijl-class op de preview zelf
-                labelPreview.classList.remove('label-minimalist', 'label-industrial', 'label-professional');
-                labelPreview.classList.add(`label-${styleName}`);
-
-                // Werk de actieve status van de knoppen bij
-                document.querySelectorAll('.label-style-btn').forEach(btn => {
-                    const isSelected = btn.dataset.style === styleName;
-                    
-                    // Verwijder eerst alle mogelijke status-classes
-                    btn.classList.remove('border-2', 'border-app-brand', 'text-app-brand', 'border', 'border-app');
-                    
-                    if (isSelected) {
-                        // Voeg de 'actieve' classes toe aan de geselecteerde knop
-                        btn.classList.add('border-2', 'border-app-brand', 'text-app-brand');
-                    } else {
-                        // Voeg de standaard 'inactieve' classes toe aan de andere knoppen
-                        btn.classList.add('border', 'border-app');
+                previews.forEach(preview => {
+                    if (preview) {
+                        preview.classList.remove('label-minimalist', 'label-industrial', 'label-professional');
+                        preview.classList.add(`label-${styleName}`);
                     }
                 });
-            }
 
-            function setLabelOrientation(orientation) {
-                // Update de actieve status van de knoppen
-                document.querySelectorAll('.orientation-btn').forEach(btn => {
-                    const isSelected = btn.dataset.orientation === orientation;
-                    btn.classList.toggle('active', isSelected);
+                document.querySelectorAll('.label-style-btn').forEach(btn => {
+                    const isSelected = btn.dataset.style === styleName;
                     btn.classList.toggle('border-2', isSelected);
                     btn.classList.toggle('border-app-brand', isSelected);
                     btn.classList.toggle('text-app-brand', isSelected);
                     btn.classList.toggle('border', !isSelected);
                     btn.classList.toggle('border-app', !isSelected);
                 });
-                // Roep de functie aan die de preview bijwerkt
+            }
+
+            function setLabelOrientation(orientation) {
+                document.querySelectorAll('.orientation-btn').forEach(btn => {
+                    const isSelected = btn.dataset.orientation === orientation;
+                    btn.classList.toggle('active', isSelected);
+                    btn.classList.toggle('border-2', isSelected);
+                    btn.classList.toggle('border-app-brand', isSelected);
+                    btn.classList.toggle('text-app-brand', isSelected);
+                });
+
+                // AANGEPAST: Pas de oriëntatie toe op beide previews
+                const previews = [document.getElementById('front-label-preview'), document.getElementById('back-label-preview')];
+                previews.forEach(preview => {
+                    if (preview) {
+                         // Reset de stijl eerst (belangrijk bij wisselen)
+                        preview.style.transform = '';
+                        preview.style.transformOrigin = '';
+                        preview.querySelectorAll('h3, p, div').forEach(el => el.style.fontSize = '');
+
+                        if (orientation === 'horizontal') {
+                            preview.style.transform = 'scale(0.8)'; // Schaal het iets kleiner om in de box te passen
+                        }
+                    }
+                });
+
                 updatePreviewAspectRatio();
             }
 
             function updatePreviewAspectRatio() {
-                const previewDiv = document.getElementById('label-preview');
+                const previews = [document.getElementById('front-label-preview'), document.getElementById('back-label-preview')];
                 const formatSelector = document.getElementById('labelFormatSelect');
-                if (!previewDiv || !formatSelector) return;
+                if (!previews[0] || !previews[1] || !formatSelector) return;
 
-                // Bepaal de actieve oriëntatie
                 const orientation = document.querySelector('.orientation-btn.active')?.dataset.orientation || 'vertical';
-
                 let format;
+
                 if (formatSelector.value === 'custom') {
                     format = {
                         width_mm: parseFloat(document.getElementById('customWidth').value) || 1,
@@ -5258,13 +5271,13 @@ function populateSocialRecipeDropdown() {
                 }
 
                 if (format && format.width_mm && format.height_mm) {
+                    let aspectRatio;
                     if (orientation === 'horizontal') {
-                        // Gebruik de normale verhouding voor een liggende (horizontale) weergave
-                        previewDiv.style.aspectRatio = `${format.width_mm} / ${format.height_mm}`;
+                        aspectRatio = `${format.width_mm} / ${format.height_mm}`;
                     } else {
-                        // Wissel de breedte en hoogte voor een staande (verticale) weergave
-                        previewDiv.style.aspectRatio = `${format.height_mm} / ${format.width_mm}`;
+                        aspectRatio = `${format.height_mm} / ${format.width_mm}`;
                     }
+                    previews.forEach(p => p.style.aspectRatio = aspectRatio);
                 }
             }
 

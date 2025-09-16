@@ -2262,13 +2262,20 @@ async function clearInventory() {
                 
                 let costHtml = '';
                 if (brew.totalCost !== undefined && brew.totalCost > 0) {
-                    const bottles = brew.batchSize / 0.75;
-                    const costPerBottle = brew.totalCost / bottles;
+                    const totalBottlesInBatch = brew.isBottled 
+                        ? (cellar.find(c => c.brewId === brew.id)?.bottles.reduce((acc, b) => acc + b.quantity, 0) || (brew.batchSize / 0.75))
+                        : (brew.batchSize / 0.75);
+
+                    const costPerBottle = totalBottlesInBatch > 0 ? brew.totalCost / totalBottlesInBatch : 0;
+                    
                     costHtml = `
                         <div class="mt-6 p-4 bg-amber-50 rounded-lg dark:bg-opacity-10">
-                            <h3 class="font-header text-lg text-stone-800 dark:text-amber-200">Batch Cost Analysis</h3>
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="font-header text-lg text-stone-800 dark:text-amber-200">Batch Cost Analysis</h3>
+                                <button onclick="window.recalculateBatchCost('${brew.id}')" class="text-xs bg-amber-600 text-white px-2 py-1 rounded hover:opacity-80 btn">Recalculate Cost</button>
+                            </div>
                             <p class="text-stone-800 dark:text-amber-200"><strong>Total Batch Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</p>
-                            <p class="text-stone-800 dark:text-amber-200"><strong>Cost Per 750ml Bottle:</strong> ${currency}${costPerBottle.toFixed(2)}</p>
+                            <p class="text-stone-800 dark:text-amber-200"><strong>Avg. Cost Per 750ml Bottle:</strong> ${currency}${costPerBottle.toFixed(2)}</p>
                         </div>
                     `;
                 }
@@ -2296,7 +2303,6 @@ async function clearInventory() {
                     ? 'This is the AI-predicted flavor profile based on the recipe. Enter your own tasting notes and click the button below to generate a new analysis based on your experience.'
                     : 'Enter your tasting notes above, then click the button to generate a visual flavor wheel.';
 
-                // --- AANGEPAST: De overhead calculator HTML is hier bijgewerkt ---
                 const overheadCalculatorHtml = `
                     <div class="mt-6 pt-4 border-t-2 border-app-brand no-print">
                         <h3 class="text-2xl font-header font-bold text-center mb-4">Update Financials</h3>
@@ -2391,7 +2397,10 @@ async function clearInventory() {
                 `;
                 historyListContainer.classList.add('hidden');
                 historyDetailContainer.classList.remove('hidden');
-                document.getElementById('calculateOverheadBtn').addEventListener('click', calculateOverhead);
+                
+                // Opmerking: de overhead-calculator is verwijderd, dus de listener is ook weg.
+                // We zullen een nieuwe listener toevoegen voor de herbereken-knop indien nodig.
+
                 renderFermentationGraph(brewId);
 
                 if (brew.predictedFlavorProfile) {
@@ -2407,6 +2416,60 @@ async function clearInventory() {
                         brew.predictedFlavorProfile.body_mouthfeel
                     ];
                     renderFlavorWheel(brewId, labels, data);
+                }
+            }
+
+            window.recalculateBatchCost = async function(brewId) {
+                if (!userId) return;
+                const brew = brews.find(b => b.id === brewId);
+                if (!brew) {
+                    showToast("Could not find brew to recalculate.", "error");
+                    return;
+                }
+
+                // Stap 1: Herbereken de ingrediëntenkost
+                const ingredientCost = parseIngredientsAndCalculateCost(brew.recipeMarkdown, inventory, brew.batchSize);
+
+                // Stap 2: Zoek de bottel-informatie in de 'cellar'
+                const cellarEntry = cellar.find(c => c.brewId === brewId);
+                let packagingCost = 0;
+                
+                if (cellarEntry) {
+                    // Als de batch gebotteld is, herbereken ook de verpakkingskost
+                    const packagingCosts = getPackagingCosts();
+                    cellarEntry.bottles.forEach(bottle => {
+                        const bottleCost = packagingCosts[bottle.size.toString()] || 0;
+                        const closureCost = bottle.size >= 750 ? packagingCosts.cork : packagingCosts.crown_cap;
+                        const labelCost = packagingCosts.label;
+                        packagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
+                    });
+                }
+                
+                const newTotalCost = ingredientCost + packagingCost;
+                const oldTotalCost = brew.totalCost || 0;
+
+                if (Math.abs(newTotalCost - oldTotalCost) < 0.01) {
+                    showToast("No change in cost based on current inventory prices.", "info");
+                    return;
+                }
+
+                if (confirm(`The new calculated total cost is ${userSettings.currencySymbol || '€'}${newTotalCost.toFixed(2)} (was ${oldTotalCost.toFixed(2)}). Do you want to update?`)) {
+                    try {
+                        const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
+                        await updateDoc(brewDocRef, { totalCost: newTotalCost });
+                        
+                        // Update ook de cellar entry als die bestaat
+                        if (cellarEntry) {
+                            const cellarDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar', cellarEntry.id);
+                            await updateDoc(cellarDocRef, { totalBatchCost: newTotalCost, ingredientCost: ingredientCost });
+                        }
+
+                        showToast("Batch cost updated successfully!", "success");
+                        // De onSnapshot-listener zal de UI automatisch verversen
+                    } catch (error) {
+                        console.error("Error recalculating cost:", error);
+                        showToast("Failed to update cost.", "error");
+                    }
                 }
             }
        
@@ -4228,16 +4291,44 @@ function renderActiveBrewTimeline() {
 
             function initializeBrewDayState(steps) {
                 brewDaySteps = steps;
+                
+                // --- NIEUW: Controleer op een opgeslagen timer ---
+                const savedTimer = localStorage.getItem('activeBrewDayTimer');
+                if (savedTimer) {
+                    const { brewId, stepIndex, endTime } = JSON.parse(savedTimer);
+                    
+                    // Herstel de timer enkel als het voor de HUIDIGE brouwdag is
+                    if (brewId === currentBrewDay.brewId) {
+                        const now = Date.now();
+                        if (endTime > now) {
+                            // Er is een actieve timer, herstart deze
+                            currentStepIndex = stepIndex;
+                            const remainingSeconds = Math.round((endTime - now) / 1000);
+                            startStepTimer(stepIndex, remainingSeconds);
+                            updateUI(); // Zorg dat de UI de actieve timer toont
+                            return; // Stop de functie hier om de standaard UI-update over te slaan
+                        } else {
+                            // Timer is verlopen terwijl de app gesloten was
+                            localStorage.removeItem('activeBrewDayTimer');
+                            currentBrewDay.checklist[`step-${stepIndex}`] = true;
+                        }
+                    }
+                }
+                
                 const lastCompleted = Object.keys(currentBrewDay.checklist).length - 1;
                 currentStepIndex = lastCompleted >= 0 ? lastCompleted + 1 : 0;
                 updateUI();
             }
 
-            function startStepTimer(stepIndex) {
+            function startStepTimer(stepIndex, resumeTime = null) {
                 if (stepIndex !== currentStepIndex || stepTimerInterval) return;
 
-                let timeLeft = remainingTime > 0 ? remainingTime : brewDaySteps[stepIndex].duration;
-                remainingTime = 0; // Reset na gebruik
+                let timeLeft = resumeTime !== null ? resumeTime : brewDaySteps[stepIndex].duration;
+                
+                // --- NIEUW: Sla de eindtijd van de timer op ---
+                const endTime = Date.now() + timeLeft * 1000;
+                const timerState = { brewId: currentBrewDay.brewId, stepIndex: stepIndex, endTime: endTime };
+                localStorage.setItem('activeBrewDayTimer', JSON.stringify(timerState));
 
                 const timerDisplay = document.getElementById(`timer-${stepIndex}`);
                 const controlsDiv = document.getElementById(`controls-${stepIndex}`);
@@ -4255,7 +4346,8 @@ function renderActiveBrewTimeline() {
                         clearInterval(stepTimerInterval);
                         stepTimerInterval = null;
                         timerDisplay.textContent = "Done!";
-                        new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjQwLjEwMQAAAAAAAAAAAAAA//tAnxAAAAAAAAAAAAAAAAAAAAAAAABSUxNfAAAAAAAAAAAAAAAAAAAAAAAASU5GTwMAAAAUAAABowAAAA8AAAB1bml0eS1tZWRpYQAAAAAAAAAAAAAAAAAAAAAAAFQNCj/9oACQAAAAAABn//6w4j/wAANwAD//5L/xO//6s4j/9r/9E4//lVn//V///6/8j/9E5///8R/wD/1P/0j//8//lVn/Vn//6/8j/9E5///8AAAAAQU1QRTGk9f/7QJ8QaSqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq==").play();
+                        new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjQwLjEwMQAAAAAAAAAAAAAA//tAnxAAAAAAAAAAAAAAAAAAAAAAAABSUxNfAAAAAAAAAAAAAAAAAAAAAAAASU5GTwMAAAAUAAABowAAAA8AAAB1bml0eS1tZWRpYQAAAAAAAAAAAAAAAAAAAAAAAFQNCj/9oACQAAAAAABn//6w4j/wAANwAD//5L/xO//6s4j/9r/9E4//lVn//V///6/8j/9E5///8R/wD/1P/0j//8//lVn/Vn//6/8j/9E5///8AAAAAQU1QRTGk9f/7QJ8QaSqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq==").play();
+                        localStorage.removeItem('activeBrewDayTimer'); // Timer is voltooid
                         completeStep(stepIndex);
                     }
                 }, 1000);
@@ -4264,7 +4356,10 @@ function renderActiveBrewTimeline() {
             function pauseStepTimer() {
                 clearInterval(stepTimerInterval);
                 stepTimerInterval = null;
+                
+                // --- NIEUW: Sla de resterende tijd op en verwijder de eindtijd ---
                 const timerDisplay = document.getElementById(`timer-${currentStepIndex}`);
+                localStorage.removeItem('activeBrewDayTimer');
                 const timeParts = timerDisplay.textContent.split(':');
                 if (timeParts.length === 2) {
                     remainingTime = parseInt(timeParts[0]) * 60 + parseInt(timeParts[1]);
@@ -4281,7 +4376,26 @@ function renderActiveBrewTimeline() {
                 clearInterval(stepTimerInterval);
                 stepTimerInterval = null;
                 remainingTime = 0;
+                
+                // --- NIEUW: Verwijder de opgeslagen timer ---
+                localStorage.removeItem('activeBrewDayTimer');
+                
                 completeStep(stepIndex);
+            }
+
+            function resetBrewDay() {
+                if (confirm("Are you sure you want to reset your progress for this brew day?")) {
+                    currentBrewDay.checklist = {};
+                    saveUserSettings();
+                    
+                    // --- NIEUW: Verwijder een eventuele actieve timer ---
+                    clearInterval(stepTimerInterval);
+                    stepTimerInterval = null;
+                    remainingTime = 0;
+                    localStorage.removeItem('activeBrewDayTimer');
+
+                    renderBrewDay(currentBrewDay.brewId);
+                }
             }
 
             function completeStep(stepIndex) {
@@ -4333,14 +4447,6 @@ function renderActiveBrewTimeline() {
                 if (currentStepIndex >= brewDaySteps.length) {
                     const container = document.getElementById('brew-day-steps-container');
                     container.innerHTML += `<div class="text-center p-6 card rounded-lg mt-6"><h3 class="text-2xl font-header font-bold text-green-600">Brew Day Complete!</h3><p>Don't forget to log your OG and pitch your yeast.</p></div>`;
-                }
-            }
-
-            function resetBrewDay() {
-                if (confirm("Are you sure you want to reset your progress for this brew day?")) {
-                    currentBrewDay.checklist = {};
-                    saveUserSettings();
-                    renderBrewDay(currentBrewDay.brewId);
                 }
             }
 

@@ -1725,11 +1725,14 @@ function executeDangerAction() {
 
                 const viewToShow = document.getElementById(viewId);
                 const tabToActivate = document.getElementById(tabId);
-
-                if (viewName === 'creator') {
-                   populateEquipmentProfilesDropdown();
-                } 
-
+                
+                // --- AANGEPAST: Reset de Label Designer state ---
+                // Voeg deze 'if'-statement toe.
+                if (viewName === 'labels') {
+                    // Zet de designer altijd terug naar de 'front' view als de tab wordt geopend.
+                    switchLabelDesigner('front');
+                }
+                
                 if (viewName === 'social') {
                     populateSocialRecipeDropdown();
                 }
@@ -1739,9 +1742,9 @@ function executeDangerAction() {
                     updatePreviewAspectRatio();
                 }
 
-    if (viewToShow) viewToShow.classList.remove('hidden');
-    if (tabToActivate) tabToActivate.classList.add('active');
-}
+                if (viewToShow) viewToShow.classList.remove('hidden');
+                if (tabToActivate) tabToActivate.classList.add('active');
+            }
 
             // --- Settings Management (Firebase) ---
             async function loadUserSettings() {

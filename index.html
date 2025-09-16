@@ -1610,6 +1610,15 @@ function executeDangerAction() {
             document.getElementById('logoUpload').addEventListener('change', handleLogoUpload);
             document.getElementById('removeLogoBtn').addEventListener('click', removeLogo);
             document.getElementById('labelRecipeSelect').addEventListener('change', handleLabelRecipeSelect);
+            const backLabelControls = [
+                'back-include-description', 'back-include-ingredients', 'back-include-allergens',
+                'back-include-gravity', 'back-include-yeast', 'back-include-dates', 'back-include-flavor'
+            ];
+            backLabelControls.forEach(id => {
+                document.getElementById(id).addEventListener('change', updateBackLabelPreview);
+            });
+            document.getElementById('back-brewed-by').addEventListener('input', updateBackLabelPreview);
+            document.querySelectorAll('.label-style-btn').forEach(btn => btn.addEventListener('click', () => switchLabelStyle(btn.dataset.style)));
             document.querySelectorAll('.label-style-btn').forEach(btn => btn.addEventListener('click', () => switchLabelStyle(btn.dataset.style)));
             document.getElementById('generate-print-btn').addEventListener('click', generatePrintPage);
             document.querySelectorAll('.orientation-btn').forEach(btn => {
@@ -5111,6 +5120,86 @@ function populateSocialRecipeDropdown() {
                 }
             }
 
+            function updateBackLabelPreview() {
+                const backPreview = document.getElementById('back-label-preview');
+                const select = document.getElementById('labelRecipeSelect');
+                const selectedBrew = brews.find(b => b.id === select.value);
+
+                if (!selectedBrew) {
+                    backPreview.innerHTML = '<p class="text-center text-app-secondary/80">Select a recipe to generate back label content.</p>';
+                    return;
+                }
+
+                let htmlParts = [];
+                const markdown = selectedBrew.recipeMarkdown;
+                const logData = selectedBrew.logData || {};
+
+                // --- Bouw de content op basis van de checkboxes ---
+                if (document.getElementById('back-include-description').checked) {
+                    const descMatch = markdown.match(/## Description\n([\s\S]*?)(?=\n##|$)/);
+                    if (descMatch && descMatch[1]) {
+                        htmlParts.push(`<p>${descMatch[1].trim()}</p>`);
+                    }
+                }
+                
+                if (document.getElementById('back-include-ingredients').checked) {
+                    const ingredients = parseIngredientsFromMarkdown(markdown);
+                    if (ingredients.length > 0) {
+                        let ingredientsHtml = '<div><strong>Ingredients:</strong><ul class="list-disc pl-4">';
+                        ingredients.forEach(ing => {
+                            ingredientsHtml += `<li>${ing.name}</li>`;
+                        });
+                        ingredientsHtml += '</ul></div>';
+                        htmlParts.push(ingredientsHtml);
+                    }
+                }
+                
+                if (document.getElementById('back-include-gravity').checked) {
+                    if (logData.targetOG && logData.targetFG) {
+                        htmlParts.push(`<p><strong>OG:</strong> ${logData.targetOG} | <strong>FG:</strong> ${logData.targetFG}</p>`);
+                    }
+                }
+
+                if (document.getElementById('back-include-yeast').checked) {
+                    const yeast = parseIngredientsFromMarkdown(markdown).find(i => i.name.toLowerCase().includes('yeast'));
+                    if (yeast) {
+                        htmlParts.push(`<p><strong>Yeast:</strong> ${yeast.name}</p>`);
+                    }
+                }
+
+                if (document.getElementById('back-include-dates').checked) {
+                    let datesText = '<strong>Brewed:</strong> ';
+                    datesText += logData.brewDate ? new Date(logData.brewDate).toLocaleDateString() : 'N/A';
+                    const cellarEntry = cellar.find(c => c.brewId === selectedBrew.id);
+                    if (cellarEntry && cellarEntry.bottlingDate) {
+                        datesText += ` | <strong>Bottled:</strong> ${cellarEntry.bottlingDate.toDate().toLocaleDateString()}`;
+                    }
+                    htmlParts.push(`<p>${datesText}</p>`);
+                }
+
+                if (document.getElementById('back-include-flavor').checked && selectedBrew.predictedFlavorProfile) {
+                    const pf = selectedBrew.predictedFlavorProfile;
+                    htmlParts.push(`<p><strong>Flavor:</strong> Sweetness (${pf.sweetness}/5), Acidity (${pf.acidity}/5), Body (${pf.body_mouthfeel}/5)</p>`);
+                }
+                
+                if (document.getElementById('back-include-allergens').checked) {
+                    const allergens = [];
+                    if (markdown.toLowerCase().includes('sulfites')) allergens.push('sulfites');
+                    if (markdown.toLowerCase().includes('lactose')) allergens.push('lactose');
+                    if (markdown.toLowerCase().includes('gluten')) allergens.push('gluten');
+                    if (allergens.length > 0) {
+                        htmlParts.push(`<p class="mt-auto pt-2 border-t border-app">Contains: <strong>${allergens.join(', ')}</strong></p>`);
+                    }
+                }
+                
+                const brewedByText = document.getElementById('back-brewed-by').value;
+                if (brewedByText) {
+                    htmlParts.push(`<p class="mt-auto pt-2 border-t border-app">${brewedByText}</p>`);
+                }
+
+                backPreview.innerHTML = htmlParts.join('<hr class="my-2 border-dashed border-app">');
+            }
+
             function switchLabelStyle(styleName) {
                 const labelPreview = document.getElementById('label-preview');
                 
@@ -5262,41 +5351,43 @@ function populateSocialRecipeDropdown() {
                 const dateInput = document.getElementById('labelDate');
                 
                 if (!brewId) {
-                    // Maak velden leeg als de gebruiker "-- Choose --" selecteert
                     if(styleInput) styleInput.value = '';
                     if(abvInput) abvInput.value = '';
                     if(volInput) volInput.value = '';
                     if(dateInput) dateInput.value = '';
-                    updateLabelPreview();
-                    return;
+                } else {
+                    const selectedBrew = brews.find(b => b.id === brewId);
+                    if (selectedBrew) {
+                        const fullTitle = selectedBrew.recipeName;
+                        let namePart = fullTitle;
+                        let subtitlePart = '';
+
+                        if (fullTitle.includes(':')) {
+                            const parts = fullTitle.split(/:\s*(.*)/s);
+                            namePart = parts[0];
+                            subtitlePart = parts[1] || '';
+                        } else if (fullTitle.includes(' - ')) {
+                            const parts = fullTitle.split(/\s*-\s*(.*)/s);
+                            namePart = parts[0];
+                            subtitlePart = parts[1] || '';
+                        }
+                        
+                        if(styleInput) styleInput.value = subtitlePart;
+                        if(abvInput) abvInput.value = selectedBrew.logData?.finalABV?.replace('%','') || selectedBrew.logData?.targetABV?.replace('%','') || '';
+                        if(volInput) volInput.value = selectedBrew.batchSize ? selectedBrew.batchSize * 1000 : '750';
+                        
+                        const cellarEntry = cellar.find(c => c.brewId === selectedBrew.id);
+                        if (cellarEntry && cellarEntry.bottlingDate) {
+                            if(dateInput) dateInput.value = cellarEntry.bottlingDate.toDate().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+                        } else {
+                            if(dateInput) dateInput.value = '';
+                        }
+                    }
                 }
-
-                const selectedBrew = brews.find(b => b.id === brewId);
-                if (!selectedBrew) return;
-
-                // --- NIEUW: Splits de receptnaam in naam en ondertitel ---
-                const fullTitle = selectedBrew.recipeName;
-                let namePart = fullTitle;
-                let subtitlePart = '';
-
-                if (fullTitle.includes(':')) {
-                    const parts = fullTitle.split(/:\s*(.*)/s);
-                    namePart = parts[0];
-                    subtitlePart = parts[1] || '';
-                } else if (fullTitle.includes(' - ')) {
-                    const parts = fullTitle.split(/\s*-\s*(.*)/s);
-                    namePart = parts[0];
-                    subtitlePart = parts[1] || '';
-                }
-
-                // Vul de input-velden in
-                if(styleInput) styleInput.value = subtitlePart;
-                if(abvInput) abvInput.value = selectedBrew.logData?.finalABV?.replace('%','') || selectedBrew.logData?.targetABV?.replace('%','') || '';
-                if(volInput) volInput.value = selectedBrew.batchSize ? selectedBrew.batchSize * 1000 : '750';
-                if(dateInput) dateInput.value = selectedBrew.createdAt ? selectedBrew.createdAt.toDate().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '';
                 
-                // Update de visuele preview
+                // Roep beide preview-update functies aan
                 updateLabelPreview();
+                updateBackLabelPreview(); // <-- NIEUWE REGEL
             }
 
             function updateLabelPreview() {

@@ -5025,23 +5025,25 @@ function populateSocialRecipeDropdown() {
                 const backPreview = document.getElementById('back-preview-container');
 
                 if (viewToShow === 'front') {
+                    // Show FRONT controls and preview
                     frontBtn.classList.add('active');
-                    backBtn.classList.remove('active');
-                    
                     frontDesigner.classList.remove('hidden');
-                    backDesigner.classList.add('hidden');
-                    
                     frontPreview.classList.remove('hidden');
+                    
+                    // Hide BACK controls and preview
+                    backBtn.classList.remove('active');
+                    backDesigner.classList.add('hidden');
                     backPreview.classList.add('hidden');
                 } else { // 'back'
-                    frontBtn.classList.remove('active');
+                    // Show BACK controls and preview
                     backBtn.classList.add('active');
-                    
-                    frontDesigner.classList.add('hidden');
                     backDesigner.classList.remove('hidden');
-                    
-                    frontPreview.classList.add('hidden');
                     backPreview.classList.remove('hidden');
+
+                    // Hide FRONT controls and preview
+                    frontBtn.classList.remove('active');
+                    frontDesigner.classList.add('hidden');
+                    frontPreview.classList.add('hidden');
                 }
             }
             

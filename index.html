@@ -1279,7 +1279,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.0.0 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.2.1 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -3894,8 +3894,10 @@ window.renderInventory = function() {
                 const data = logData || {};
                 const fermLog = data.fermentationLog || Array.from({ length: 8 }, () => ({}));
                 
+                // AANGEPAST: We "escapen" de receptnaam om problemen met aanhalingstekens te voorkomen.
+                const escapedRecipeName = (data.recipeName || '').replace(/"/g, '&quot;');
+
                 // Variabelen om de laatst bekende waarde bij te houden.
-                // We initialiseren ze met de standaardwaarden voor de allereerste rij.
                 let lastTempValue = '18';
                 let lastSgValue = data.targetOG || '';
 
@@ -3903,7 +3905,7 @@ window.renderInventory = function() {
                     <div class="brew-log-section" data-id="${idSuffix}">
                         <h3>Brewmaster's Log</h3>
                         <div class="log-grid">
-                            <div class="log-item"><label for="recipeName-${idSuffix}">Recipe Name:</label><input type="text" id="recipeName-${idSuffix}" value="${data.recipeName || ''}"></div>
+                            <div class="log-item"><label for="recipeName-${idSuffix}">Recipe Name:</label><input type="text" id="recipeName-${idSuffix}" value="${escapedRecipeName}"></div>
                             <div class="log-item"><label for="brewDate-${idSuffix}">Brew Date:</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}"></div>
                         </div>
                         <div class="log-grid">
@@ -3919,11 +3921,9 @@ window.renderInventory = function() {
                             <table class="fermentation-table" id="fermentationTable-${idSuffix}">
                                 <thead><tr><th>Date</th><th>Temp (°C)</th><th>S.G.</th><th>Notes</th></tr></thead>
                                 <tbody>${fermLog.map((row, index) => {
-                                    // Bepaal de te gebruiken waarde: de eigen waarde van de rij, of anders de laatst bekende waarde.
                                     const currentTempValue = row.temp || lastTempValue;
                                     const currentSgValue = row.sg || lastSgValue;
                                     
-                                    // Update de 'laatst bekende waarde' voor de VOLGENDE rij in de loop.
                                     lastTempValue = currentTempValue;
                                     lastSgValue = currentSgValue;
 

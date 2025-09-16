@@ -1475,43 +1475,23 @@ function executeDangerAction() {
                 
                 // Firebase Config
                 const firebaseConfig = {
-                    apiKey: "AIzaSyAhOOrwJCYve5XTGS6oXvhCg_l3_LcK00I",
-                    authDomain: "meandery-aa05e.firebaseapp.com",
-                    projectId: "meandery-aa05e",
-                    storageBucket: "meandery-aa05e.appspot.com",
-                    messagingSenderId: "388311971225",
-                    appId: "1:388311971225:web:e5b0e81ce18d96b4a88f08",
-                    measurementId: "G-S5CPLP80XT"
-                };
+                    apiKey: "AIzaSyAhOOrwJCYve5XTGS6oXvhCg_l3_LcK00I",
+                    authDomain: "meandery-aa05e.firebaseapp.com",
+                    projectId: "meandery-aa05e",
+                    storageBucket: "meandery-aa05e.appspot.com",
+                    messagingSenderId: "388311971225",
+                    appId: "1:388311971225:web:e5b0e81ce18d96b4a88f08",
+                    measurementId: "G-S5CPLP80XT"
+                };
 
-                try {
-                    const app = initializeApp(firebaseConfig);
-                    db = getFirestore(app);
-                    auth = getAuth(app);
-                    onAuthStateChanged(auth, async (user) => {
-                        const loginView = document.getElementById('login-view');
-                        const mainAppView = document.getElementById('dashboard-main-view');
-
-                        if (user && !user.isAnonymous) {
-                            userId = user.uid;
-                            loginView.classList.add('hidden');
-                            mainAppView.classList.remove('hidden');
-                            loadHistory();
-                            loadInventory();
-                            loadEquipmentProfiles();
-                            loadCellar();
-                            loadUserSettings();
-                        } else {
-                            loginView.classList.remove('hidden');
-                            mainAppView.classList.add('hidden');
-                            if (user && user.isAnonymous) {
-                                auth.signOut();
-                            }
-                        }
-                    });
-                } catch (e) {
-                    console.error("Firebase initialization failed.", e);
-                }
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    // The onAuthStateChanged logic that was here is now correctly placed inside the initApp function.
+                } catch (e) {
+                    console.error("Firebase initialization failed.", e);
+                }
 
                 // --- Event Listeners ---
                 document.getElementById('history-search-input').addEventListener('input', renderHistoryList);

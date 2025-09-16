@@ -2134,24 +2134,15 @@ async function clearInventory() {
                 saveButton.textContent = 'Analyzing & Saving...';
                 saveButton.disabled = true;
 
-                // De oude overhead-logica is hier verwijderd. We slaan enkel de ingrediëntenkost op.
                 const totalBatchCost = parseIngredientsAndCalculateCost(currentRecipeMarkdown, inventory, parseFloat(document.getElementById('batchSize').value) || 5);
-
                 const brewDaySteps = parseStepsForBrewDay(currentRecipeMarkdown);
                 const predictedProfile = await getPredictedFlavorProfile(currentRecipeMarkdown);
                 const logData = getLogDataFromDOM('recipe-output');
                 const batchSize = parseFloat(document.getElementById('batchSize').value) || 5;
                 const brewData = {
-                    userId: userId,
-                    recipeName: logData.recipeName || "Untitled Brew",
-                    recipeMarkdown: currentRecipeMarkdown,
-                    logData: logData,
-                    createdAt: new Date(),
-                    batchSize: batchSize,
-                    totalCost: totalBatchCost, // Dit is nu enkel de ingrediëntenkost
-                    isBottled: false,
-                    predictedFlavorProfile: predictedProfile,
-                    brewDaySteps: brewDaySteps
+                    userId: userId, recipeName: logData.recipeName || "Untitled Brew", recipeMarkdown: currentRecipeMarkdown,
+                    logData: logData, createdAt: new Date(), batchSize: batchSize, totalCost: totalBatchCost,
+                    isBottled: false, predictedFlavorProfile: predictedProfile, brewDaySteps: brewDaySteps
                 };
 
                 try {
@@ -2160,17 +2151,21 @@ async function clearInventory() {
                     const docRef = await addDoc(brewsCol, brewData);
                     
                     const buttonContainer = saveButton.parentElement;
+                    // Remove old button if it exists
+                    const oldStartBtn = buttonContainer.querySelector('.start-brew-day-from-creator');
+                    if (oldStartBtn) oldStartBtn.remove();
                     
                     const startBrewDayBtn = document.createElement('button');
                     startBrewDayBtn.textContent = 'Start Brew Day';
-                    startBrewDayBtn.className = 'w-full mt-4 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors btn';
-                    startBrewDayBtn.onclick = () => startBrewDay(docRef.id);
+                    startBrewDayBtn.className = 'w-full mt-4 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors btn start-brew-day-from-creator';
+                    
+                    // AANGEPAST: Roep de correcte window functie aan
+                    startBrewDayBtn.onclick = () => window.startBrewDay(docRef.id); 
+                    
                     buttonContainer.appendChild(startBrewDayBtn);
-
                     saveButton.textContent = 'Saved!';
                     saveButton.classList.replace('bg-green-700', 'bg-gray-500');
                     showToast("Recipe saved to History!", "success");
-
                     promptToUpdateInventory(currentRecipeMarkdown);
 
                 } catch (error) {
@@ -5017,36 +5012,42 @@ function populateSocialRecipeDropdown() {
             }
 
             // --- NIEUW: Label Generator Functies ---
-            function switchLabelDesigner(viewToShow) {
-                const frontBtn = document.getElementById('edit-front-label-btn');
-                const backBtn = document.getElementById('edit-back-label-btn');
-                const frontDesigner = document.getElementById('front-label-designer');
-                const backDesigner = document.getElementById('back-label-designer');
-                const frontPreview = document.getElementById('front-preview-container');
-                const backPreview = document.getElementById('back-preview-container');
+            // --- Label Generator Listeners (CLEANED UP) ---
+                document.getElementById('edit-front-label-btn').addEventListener('click', () => switchLabelDesigner('front'));
+                document.getElementById('edit-back-label-btn').addEventListener('click', () => switchLabelDesigner('back'));
+                document.getElementById('logoUpload').addEventListener('change', handleLogoUpload);
+                document.getElementById('removeLogoBtn').addEventListener('click', removeLogo);
+                document.getElementById('labelRecipeSelect').addEventListener('change', handleLabelRecipeSelect);
+                
+                // Back label checkboxes and text input
+                const backLabelControls = [
+                    'back-include-description', 'back-include-ingredients', 'back-include-allergens',
+                    'back-include-gravity', 'back-include-yeast', 'back-include-dates', 'back-include-flavor'
+                ];
+                backLabelControls.forEach(id => {
+                    document.getElementById(id).addEventListener('change', updateBackLabelPreview);
+                });
+                document.getElementById('back-brewed-by').addEventListener('input', updateBackLabelPreview);
 
-                if (viewToShow === 'front') {
-                    // Show FRONT controls and preview
-                    frontBtn.classList.add('active');
-                    frontDesigner.classList.remove('hidden');
-                    frontPreview.classList.remove('hidden');
-                    
-                    // Hide BACK controls and preview
-                    backBtn.classList.remove('active');
-                    backDesigner.classList.add('hidden');
-                    backPreview.classList.add('hidden');
-                } else { // 'back'
-                    // Show BACK controls and preview
-                    backBtn.classList.add('active');
-                    backDesigner.classList.remove('hidden');
-                    backPreview.classList.remove('hidden');
+                // Style, Orientation, and Format controls
+                document.querySelectorAll('.label-style-btn').forEach(btn => btn.addEventListener('click', () => switchLabelStyle(btn.dataset.style)));
+                document.querySelectorAll('.orientation-btn').forEach(btn => btn.addEventListener('click', () => setLabelOrientation(btn.dataset.orientation)));
+                document.getElementById('generate-print-btn').addEventListener('click', generatePrintPage);
+                
+                // Front label text inputs
+                ['labelStyle', 'labelAbv', 'labelVol', 'labelDate'].forEach(id => {
+                    document.getElementById(id).addEventListener('keyup', updateLabelPreview);
+                });
 
-                    // Hide FRONT controls and preview
-                    frontBtn.classList.remove('active');
-                    frontDesigner.classList.add('hidden');
-                    frontPreview.classList.add('hidden');
-                }
-            }
+                // Format dropdown and custom inputs
+                const formatSelect = document.getElementById('labelFormatSelect');
+                formatSelect.addEventListener('change', (e) => {
+                    document.getElementById('custom-format-inputs').classList.toggle('hidden', e.target.value !== 'custom');
+                    updatePreviewAspectRatio();
+                });
+                ['customWidth', 'customHeight', 'customCols', 'customRows', 'customMarginTop', 'customMarginLeft'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', updatePreviewAspectRatio);
+                });
             
             function handleLogoUpload(event) {
                 const file = event.target.files[0];
@@ -5085,51 +5086,51 @@ function populateSocialRecipeDropdown() {
             }  
 
             function updateLabelPreview() {
+                // Haal alle input-elementen op
                 const select = document.getElementById('labelRecipeSelect');
-                const selectedBrew = brews.find(b => b.id === select.value);
-                const fullTitle = (select.options[select.selectedIndex] && select.value) ? select.options[select.selectedIndex].text : 'Mead Name';
+                const styleInput = document.getElementById('labelStyle');
+                const abvInput = document.getElementById('labelAbv');
+                const volInput = document.getElementById('labelVol');
+                const dateInput = document.getElementById('labelDate');
 
+                // Haal alle preview-elementen op
+                const namePreview = document.getElementById('label-name-preview');
+                const stylePreview = document.getElementById('label-style-preview');
+                const abvPreview = document.getElementById('label-abv-preview');
+                const volPreview = document.getElementById('label-vol-preview');
+                const datePreview = document.getElementById('label-date-preview');
+                const ogPreview = document.getElementById('label-og-preview');
+                const fgPreview = document.getElementById('label-fg-preview');
+                const yeastPreview = document.getElementById('label-yeast-preview');
+                
+                // Update naam en ondertitel
+                const selectedOption = select.options[select.selectedIndex];
+                const fullTitle = (selectedOption && selectedOption.value) ? selectedOption.text : 'Mead Name';
                 let namePart = fullTitle;
-                if (fullTitle.includes(':')) { namePart = fullTitle.split(':')[0]; } 
-                else if (fullTitle.includes(' - ')) { namePart = fullTitle.split(' - ')[0]; }
+
+                if (fullTitle.includes(':')) {
+                    namePart = fullTitle.split(':')[0];
+                } else if (fullTitle.includes(' - ')) {
+                    namePart = fullTitle.split(' - ')[0];
+                }
                 
-                document.getElementById('label-name-preview').textContent = namePart;
-                document.getElementById('label-style-preview').textContent = document.getElementById('labelStyle').value || 'Style / Subtitle';
+                namePreview.textContent = namePart;
+                stylePreview.textContent = styleInput.value || 'Style / Subtitle';
                 
-                const date = document.getElementById('labelDate').value || 'Bottling Date';
-                const abv = document.getElementById('labelAbv').value || 'ABV';
-                const volValue = parseFloat(document.getElementById('labelVol').value);
-                const vol = !isNaN(volValue) ? (volValue >= 1000 ? `${(volValue / 1000).toFixed(1)} L` : `${volValue} ml`) : 'VOL';
+                // Update overige details
+                abvPreview.textContent = abvInput.value || 'ABV';
+                const volValue = parseFloat(volInput.value);
+                volPreview.textContent = !isNaN(volValue) ? (volValue >= 1000 ? `${(volValue / 1000).toFixed(1)} L` : `${volValue} ml`) : 'VOL';
+                datePreview.textContent = dateInput.value || 'Bottling Date';
 
-                document.getElementById('label-date-preview').textContent = date;
-                document.getElementById('label-abv-preview').textContent = abv;
-                document.getElementById('label-vol-preview').textContent = vol;
-
-                const allergensContainer = document.getElementById('label-allergens-container');
-                const ogContainer = document.getElementById('label-og-preview');
-                const fgContainer = document.getElementById('label-fg-preview');
-                const yeastContainer = document.getElementById('label-yeast-preview');
-
-                if (selectedBrew) {
-                    ogContainer.textContent = selectedBrew.logData?.targetOG || 'N/A';
-                    fgContainer.textContent = selectedBrew.logData?.actualFG || selectedBrew.logData?.targetFG || 'N/A';
+                // Update 'Professional' stijl velden
+                const selectedBrew = brews.find(b => b.id === select.value);
+                if (selectedBrew && ogPreview && fgPreview && yeastPreview) {
+                    ogPreview.textContent = selectedBrew.logData?.targetOG || 'N/A';
+                    fgPreview.textContent = selectedBrew.logData?.actualFG || selectedBrew.logData?.targetFG || 'N/A';
                     const ingredients = parseIngredientsFromMarkdown(selectedBrew.recipeMarkdown);
-                    yeastContainer.textContent = ingredients.find(i => i.name.toLowerCase().includes('yeast'))?.name.replace('Yeast','').trim() || 'N/A';
-
-                    const allergens = [];
-                    const markdown = selectedBrew.recipeMarkdown.toLowerCase();
-                    if (markdown.includes('metabisulfite')) allergens.push('sulfites');
-                    if (markdown.includes('lactose')) allergens.push('lactose');
-                    if (markdown.includes('barley') || markdown.includes('malt')) allergens.push('gluten');
-
-                    if (allergens.length > 0) {
-                        allergensContainer.innerHTML = `Contains: <strong>${allergens.join(', ')}</strong>`;
-                        allergensContainer.classList.remove('hidden');
-                    } else {
-                        allergensContainer.classList.add('hidden');
-                    }
-                } else {
-                    if (allergensContainer) allergensContainer.classList.add('hidden');
+                    const yeast = ingredients.find(i => i.name.toLowerCase().includes('yeast'));
+                    yeastPreview.textContent = yeast ? yeast.name.replace('Yeast','').trim() : 'N/A';
                 }
             }
 

@@ -1661,8 +1661,10 @@ function executeDangerAction() {
     troubleshootBtn.addEventListener('click', getTroubleshootingAdvice);
     
             // Label Generator Listeners
+            document.getElementById('edit-front-label-btn').addEventListener('click', () => switchLabelDesigner('front')); 
+            document.getElementById('edit-back-label-btn').addEventListener('click', () => switchLabelDesigner('back'));
             document.getElementById('logoUpload').addEventListener('change', handleLogoUpload);
-            document.getElementById('removeLogoBtn').addEventListener('click', removeLogo); // NIEUWE REGEL
+            document.getElementById('removeLogoBtn').addEventListener('click', removeLogo);
             document.getElementById('labelRecipeSelect').addEventListener('change', handleLabelRecipeSelect);
             document.querySelectorAll('.label-style-btn').forEach(btn => btn.addEventListener('click', () => switchLabelStyle(btn.dataset.style)));
             document.getElementById('generate-print-btn').addEventListener('click', generatePrintPage);
@@ -5059,6 +5061,25 @@ function populateSocialRecipeDropdown() {
             }
 
             // --- NIEUW: Label Generator Functies ---
+            function switchLabelDesigner(viewToShow) {
+    const frontBtn = document.getElementById('edit-front-label-btn');
+    const backBtn = document.getElementById('edit-back-label-btn');
+    const frontDesigner = document.getElementById('front-label-designer');
+    const backDesigner = document.getElementById('back-label-designer');
+
+    if (viewToShow === 'front') {
+        frontBtn.classList.add('active');
+        backBtn.classList.remove('active');
+        frontDesigner.classList.remove('hidden');
+        backDesigner.classList.add('hidden');
+    } else { // 'back'
+        frontBtn.classList.remove('active');
+        backBtn.classList.add('active');
+        frontDesigner.classList.add('hidden');
+        backDesigner.classList.remove('hidden');
+    }
+}
+            
             function handleLogoUpload(event) {
                 const file = event.target.files[0];
                 if (file) {

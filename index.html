@@ -701,6 +701,11 @@
                  <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 70vh;">
                     <div id="history-list-container">
                         <h2 class="text-3xl font-header font-bold mb-4 text-center">Brew History</h2>
+                        
+                        <div class="mb-4">
+                            <input type="text" id="history-search-input" placeholder="Search recipes by name..." class="w-full p-3 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                        </div>
+                        
                         <div id="history-list" class="space-y-4">
                             </div>
                     </div>
@@ -1408,6 +1413,42 @@
                 document.getElementById('prompt-modal').classList.add('hidden');
             }
 
+            let dangerAction = null; // Holds the function to execute on confirmation
+
+function showDangerModal(action, confirmationText) {
+    dangerAction = action;
+    document.getElementById('danger-confirm-text').textContent = confirmationText;
+    document.getElementById('danger-confirm-input').value = '';
+    document.getElementById('danger-modal').classList.remove('hidden');
+    checkDangerConfirmation(); // Initial check
+}
+
+function hideDangerModal() {
+    document.getElementById('danger-modal').classList.add('hidden');
+    dangerAction = null;
+}
+
+function checkDangerConfirmation() {
+    const input = document.getElementById('danger-confirm-input').value;
+    const requiredText = document.getElementById('danger-confirm-text').textContent;
+    const confirmBtn = document.getElementById('danger-confirm-btn');
+
+    if (input === requiredText) {
+        confirmBtn.disabled = false;
+        confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    } else {
+        confirmBtn.disabled = true;
+        confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+}
+
+function executeDangerAction() {
+    if (typeof dangerAction === 'function') {
+        dangerAction();
+    }
+    hideDangerModal();
+}
+
             async function signInWithGoogle() {
                 const provider = new GoogleAuthProvider();
                 try {
@@ -1526,10 +1567,14 @@
 
 
     // --- Event Listeners ---
+    document.getElementById('history-search-input').addEventListener('input', renderHistoryList);
     document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
+    document.getElementById('danger-cancel-btn').addEventListener('click', hideDangerModal);
+    document.getElementById('danger-confirm-btn').addEventListener('click', executeDangerAction);
+    document.getElementById('danger-confirm-input').addEventListener('input', checkDangerConfirmation);
     document.getElementById('customDescription').addEventListener('input', handleDescriptionInput);
     document.getElementById('close-prompt-modal-btn').addEventListener('click', hidePromptModal);
-    document.getElementById('prompt-modal').addEventListener('click', function(e) { // <-- VOEG DIT BLOK TOE
+    document.getElementById('prompt-modal').addEventListener('click', function(e) {
         if (e.target.id === 'prompt-modal') {
             hidePromptModal();
         }
@@ -1831,8 +1876,8 @@
             }
 
             async function clearCollection(collectionName, confirmFirst = true) {
-                if (confirmFirst && !confirm(`DANGER: This will permanently delete all your ${collectionName}. This cannot be undone. Are you sure?`)) {
-                    return false;
+    if (confirmFirst && !confirm(`DANGER: This will permanently delete all your ${collectionName}. This cannot be undone. Are you sure?`)) {
+        return false;
                 }
                 if (!userId) return false;
                 const appId = 'meandery-aa05e';
@@ -1848,16 +1893,22 @@
             }
 
             async function clearHistory() {
-                if (await clearCollection('brews')) {
-                    showToast('Brew history cleared.', 'success');
-                }
-            }
-            
-            async function clearInventory() {
-                if (await clearCollection('inventory')) {
-                    showToast('Inventory cleared.', 'success');
-                }
-            }
+    const action = async () => {
+        if (await clearCollection('brews', false)) { // 'false' to skip the old confirm
+            showToast('Brew history cleared.', 'success');
+        }
+    };
+    showDangerModal(action, "DELETE HISTORY");
+}
+
+async function clearInventory() {
+    const action = async () => {
+        if (await clearCollection('inventory', false)) { // 'false' to skip the old confirm
+            showToast('Inventory cleared.', 'success');
+        }
+    };
+    showDangerModal(action, "DELETE INVENTORY");
+}
 
             // --- Core AI Functions ---
             async function performApiCall(prompt, schema = null) {
@@ -2174,11 +2225,26 @@
             }
 
             function renderHistoryList() {
+                // AANGEPAST: Haal de zoekterm op
+                const searchTerm = document.getElementById('history-search-input').value.toLowerCase();
+                
+                // AANGEPAST: Filter de `brews` array
+                const filteredBrews = brews.filter(brew => 
+                    (brew.recipeName || 'Untitled Brew').toLowerCase().includes(searchTerm)
+                );
+
                 if (brews.length === 0) {
                     historyList.innerHTML = `<p class="text-center text-app-secondary/80">You haven't saved any brews yet. Go create one!</p>`;
                     return;
                 }
-                historyList.innerHTML = brews.map(brew => `
+                
+                // AANGEPAST: Toon een bericht als er geen zoekresultaten zijn
+                if (filteredBrews.length === 0) {
+                    historyList.innerHTML = `<p class="text-center text-app-secondary/80">No recipes found matching your search.</p>`;
+                    return;
+                }
+
+                historyList.innerHTML = filteredBrews.map(brew => `
                     <div class="p-4 card rounded-lg cursor-pointer hover:bg-app-primary" onclick="window.showBrewDetail('${brew.id}')">
                         <h4 class="font-bold text-lg font-header">${brew.recipeName || 'Untitled Brew'}</h4>
                         <p class="text-sm text-app-secondary/80">Saved on: ${brew.createdAt.toDate().toLocaleDateString()}</p>
@@ -5270,6 +5336,17 @@ function populateSocialRecipeDropdown() {
             <button id="close-prompt-modal-btn" class="text-2xl font-bold hover:text-red-500">&times;</button>
         </div>
         <pre id="prompt-modal-content" class="whitespace-pre-wrap text-sm bg-app-primary p-4 rounded text-app-primary" style="font-family: monospace;"></pre>
+    </div>
+</div>
+<div id="danger-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div class="bg-app-tertiary p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h3 class="text-xl font-header font-bold text-red-600 mb-4">Are you absolutely sure?</h3>
+        <p class="text-app-secondary mb-4">This action is irreversible. All associated data will be permanently deleted. To confirm, please type "<strong id="danger-confirm-text" class="text-red-500"></strong>" in the box below.</p>
+        <input type="text" id="danger-confirm-input" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-red-500 text-app-primary mb-4">
+        <div class="flex justify-end gap-4">
+            <button id="danger-cancel-btn" class="px-6 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500 btn">Cancel</button>
+            <button id="danger-confirm-btn" class="px-6 py-2 rounded-lg bg-red-700 text-white font-bold btn opacity-50 cursor-not-allowed" disabled>Confirm Deletion</button>
+        </div>
     </div>
 </div>
 </body>

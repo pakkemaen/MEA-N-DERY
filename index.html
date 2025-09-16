@@ -983,70 +983,72 @@
                 </div>
 
                 <div class="flex flex-col lg:flex-row gap-8">
-                    <aside id="front-label-designer" class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg">
-                        <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app">Front Label Designer</h2>
-                        <div class="space-y-4">
-                            <div>
-                                <label for="labelRecipeSelect" class="block text-sm font-bold mb-1">Select Recipe</label>
-                                <select id="labelRecipeSelect" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                                    <option value="">-- Choose a Saved Recipe --</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="labelStyle" class="block text-sm font-bold mb-1">Style / Subtitle</label>
-                                <input type="text" id="labelStyle" placeholder="e.g., Lavender & Lemon Melomel" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
+                    <div class="lg:w-1/3">
+                        <aside id="front-label-designer" class="bg-app-secondary p-6 rounded-lg shadow-lg">
+                            <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app">Front Label Designer</h2>
+                            <div class="space-y-4">
                                 <div>
-                                    <label for="labelAbv" class="block text-sm font-bold mb-1">ABV (%)</label>
-                                    <input type="text" id="labelAbv" placeholder="12.5" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                                    <label for="labelRecipeSelect" class="block text-sm font-bold mb-1">Select Recipe</label>
+                                    <select id="labelRecipeSelect" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                                        <option value="">-- Choose a Saved Recipe --</option>
+                                    </select>
                                 </div>
                                 <div>
-                                    <label for="labelVol" class="block text-sm font-bold mb-1">Volume (ml)</label>
-                                    <input type="text" id="labelVol" placeholder="750" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                                    <label for="labelStyle" class="block text-sm font-bold mb-1">Style / Subtitle</label>
+                                    <input type="text" id="labelStyle" placeholder="e.g., Lavender & Lemon Melomel" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
                                 </div>
-                            </div>
-                            <div>
-                                <label for="labelDate" class="block text-sm font-bold mb-1">Bottling Date</label>
-                                <input type="text" id="labelDate" placeholder="August 2025" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                            </div>
-                            <div>
-                                <label for="logoUpload" class="block text-sm font-bold mb-1">Upload Your Logo</label>
-                                <input type="file" id="logoUpload" accept="image/*" class="w-full text-sm text-app-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-app-primary file:text-app-brand hover:file:bg-app-tertiary">
-                                <button id="removeLogoBtn" class="hidden text-xs text-red-500 hover:underline mt-2">Remove logo</button>
-                            </div>
-                            <div class="pt-4 border-t border-app space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="labelAbv" class="block text-sm font-bold mb-1">ABV (%)</label>
+                                        <input type="text" id="labelAbv" placeholder="12.5" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                                    </div>
+                                    <div>
+                                        <label for="labelVol" class="block text-sm font-bold mb-1">Volume (ml)</label>
+                                        <input type="text" id="labelVol" placeholder="750" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                                    </div>
+                                </div>
                                 <div>
-                                    <label class="block text-sm font-bold mb-2">Choose a Style</label>
-                                    <div class="grid grid-cols-3 gap-2">
-                                        <button class="label-style-btn p-2 border-2 border-app-brand rounded-lg text-app-brand btn" data-style="minimalist">Minimalist</button>
-                                        <button class="label-style-btn p-2 border rounded-lg btn" data-style="industrial">Industrial</button>
-                                        <button class="label-style-btn p-2 border rounded-lg btn" data-style="professional">Professional</button>
+                                    <label for="labelDate" class="block text-sm font-bold mb-1">Bottling Date</label>
+                                    <input type="text" id="labelDate" placeholder="August 2025" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                                </div>
+                                <div>
+                                    <label for="logoUpload" class="block text-sm font-bold mb-1">Upload Your Logo</label>
+                                    <input type="file" id="logoUpload" accept="image/*" class="w-full text-sm text-app-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-app-primary file:text-app-brand hover:file:bg-app-tertiary">
+                                    <button id="removeLogoBtn" class="hidden text-xs text-red-500 hover:underline mt-2">Remove logo</button>
+                                </div>
+                                <div class="pt-4 border-t border-app space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-bold mb-2">Choose a Style</label>
+                                        <div class="grid grid-cols-3 gap-2">
+                                            <button class="label-style-btn p-2 border-2 border-app-brand rounded-lg text-app-brand btn" data-style="minimalist">Minimalist</button>
+                                            <button class="label-style-btn p-2 border rounded-lg btn" data-style="industrial">Industrial</button>
+                                            <button class="label-style-btn p-2 border rounded-lg btn" data-style="professional">Professional</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </aside>
+                        </aside>
 
-                    <aside id="back-label-designer" class="hidden lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg">
-                        <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app">Back Label Content</h2>
-                        <div class="space-y-4">
-                            <p class="text-sm text-app-secondary mb-4">Select the information you want to include on the back label. The content will be automatically generated from the selected recipe.</p>
-                            <div class="space-y-3">
-                                <div class="flex items-center"><input type="checkbox" id="back-include-description" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand"><label for="back-include-description" class="ml-3 block text-sm font-bold">Short Description</label></div>
-                                <div class="flex items-center"><input type="checkbox" id="back-include-ingredients" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand" checked><label for="back-include-ingredients" class="ml-3 block text-sm font-bold">Ingredient List</label></div>
-                                <div class="flex items-center"><input type="checkbox" id="back-include-allergens" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand" checked><label for="back-include-allergens" class="ml-3 block text-sm font-bold">Allergen Info</label></div>
-                                <div class="flex items-center"><input type="checkbox" id="back-include-gravity" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand"><label for="back-include-gravity" class="ml-3 block text-sm font-bold">OG / FG</label></div>
-                                <div class="flex items-center"><input type="checkbox" id="back-include-yeast" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand"><label for="back-include-yeast" class="ml-3 block text-sm font-bold">Yeast Strain</label></div>
-                                <div class="flex items-center"><input type="checkbox" id="back-include-dates" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand"><label for="back-include-dates" class="ml-3 block text-sm font-bold">Brew & Bottling Dates</label></div>
-                                <div class="flex items-center"><input type="checkbox" id="back-include-flavor" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand"><label for="back-include-flavor" class="ml-3 block text-sm font-bold">Predicted Flavor Profile</label></div>
+                        <aside id="back-label-designer" class="hidden bg-app-secondary p-6 rounded-lg shadow-lg">
+                            <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app">Back Label Content</h2>
+                            <div class="space-y-4">
+                                <p class="text-sm text-app-secondary mb-4">Select the information you want to include on the back label. The content will be automatically generated from the selected recipe.</p>
+                                <div class="space-y-3">
+                                    <div class="flex items-center"><input type="checkbox" id="back-include-description" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand"><label for="back-include-description" class="ml-3 block text-sm font-bold">Short Description</label></div>
+                                    <div class="flex items-center"><input type="checkbox" id="back-include-ingredients" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand" checked><label for="back-include-ingredients" class="ml-3 block text-sm font-bold">Ingredient List</label></div>
+                                    <div class="flex items-center"><input type="checkbox" id="back-include-allergens" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand" checked><label for="back-include-allergens" class="ml-3 block text-sm font-bold">Allergen Info</label></div>
+                                    <div class="flex items-center"><input type="checkbox" id="back-include-gravity" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand"><label for="back-include-gravity" class="ml-3 block text-sm font-bold">OG / FG</label></div>
+                                    <div class="flex items-center"><input type="checkbox" id="back-include-yeast" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand"><label for="back-include-yeast" class="ml-3 block text-sm font-bold">Yeast Strain</label></div>
+                                    <div class="flex items-center"><input type="checkbox" id="back-include-dates" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand"><label for="back-include-dates" class="ml-3 block text-sm font-bold">Brew & Bottling Dates</label></div>
+                                    <div class="flex items-center"><input type="checkbox" id="back-include-flavor" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand"><label for="back-include-flavor" class="ml-3 block text-sm font-bold">Predicted Flavor Profile</label></div>
+                                </div>
+                                <div class="pt-4 border-t border-app">
+                                    <label for="back-brewed-by" class="block text-sm font-bold mb-2">"Brewed by" Text (Optional)</label>
+                                    <input type="text" id="back-brewed-by" placeholder="e.g., Brewed & bottled by [Your Name]" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                                </div>
                             </div>
-                            <div class="pt-4 border-t border-app">
-                                <label for="back-brewed-by" class="block text-sm font-bold mb-2">"Brewed by" Text (Optional)</label>
-                                <input type="text" id="back-brewed-by" placeholder="e.g., Brewed & bottled by [Your Name]" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                            </div>
-                        </div>
-                    </aside>
+                        </aside>
+                    </div>
 
                     <main class="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
                         <h2 class="text-2xl font-header font-bold mb-2 text-center">Live Preview</h2>
@@ -1101,68 +1103,6 @@
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                    </main>
-                </div>
-            </div>
-            <div id="water-view" class="hidden mt-4">
-                <div class="flex flex-col lg:flex-row gap-8">
-                    <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg">
-                        <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app">Water Profile</h2>
-                        <div class="space-y-4">
-                            <div>
-                                <label for="waterSource" class="block text-sm font-bold mb-2">Select Water Profile</label>
-                                <select id="waterSource" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                                    <option value="spa">Spa Reine</option>
-                                    <option value="chaudfontaine">Chaudfontaine</option>
-                                    <option value="valvert">Valvert</option>
-                                    <option value="bru">Bru</option>
-                                    <option value="villers">Villers</option>
-                                    <option value="tap">Tap Water (Enter your own)</option>
-                                    <option value="manual">Manual Entry / Target Profile</option>
-                                </select>
-                            </div>
-                            <div id="manualWaterProfile" class="hidden space-y-2 pt-4 border-t border-app">
-                                 <h4 class="font-bold text-center">Enter Manual Profile (mg/L)</h4>
-                                 <div class="grid grid-cols-2 gap-2">
-                                    <div><label for="manual_ca">Ca</label><input type="number" id="manual_ca" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                    <div><label for="manual_mg">Mg</label><input type="number" id="manual_mg" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                    <div><label for="manual_na">Na</label><input type="number" id="manual_na" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                    <div><label for="manual_so4">SO4</label><input type="number" id="manual_so4" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                    <div><label for="manual_cl">Cl</label><input type="number" id="manual_cl" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                    <div><label for="manual_hco3">HCO3</label><input type="number" id="manual_hco3" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                 </div>
-                            </div>
-                            <button id="fetchWaterProfileBtn" class="w-full bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">Fetch Profile</button>
-                            <div id="waterProfileDisplay" class="mt-4 p-4 card rounded-lg">
-                                <h4 class="font-bold font-header text-lg mb-2">Active Mineral Profile (mg/L)</h4>
-                                <ul class="space-y-1 text-sm text-app-primary">
-                                    <li><strong>Calcium (Ca):</strong> <span id="val-ca">--</span></li>
-                                    <li><strong>Magnesium (Mg):</strong> <span id="val-mg">--</span></li>
-                                    <li><strong>Sodium (Na):</strong> <span id="val-na">--</span></li>
-                                    <li><strong>Sulfate (SO4):</strong> <span id="val-so4">--</span></li>
-                                    <li><strong>Chloride (Cl):</strong> <span id="val-cl">--</span></li>
-                                    <li><strong>Bicarbonate (HCO3):</strong> <span id="val-hco3">--</span></li>
-                                </ul>
-                            </div>
-                        </div>
-                    </aside>
-                    <main class="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 70vh;">
-                        <h2 class="text-3xl font-header font-bold mb-4 text-center">AI Adjustment Recommendations</h2>
-                        <div class="space-y-4 mb-6">
-                            <div>
-                                <label for="meadTargetProfile" class="block text-sm font-bold mb-2">Desired Mead Character</label>
-                                <select id="meadTargetProfile" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                                    <option value="balanced">Balanced / All-Purpose</option>
-                                    <option value="dry_crisp">Dry & Crisp (e.g., Traditional, Saison)</option>
-                                    <option value="rich_full">Rich & Full-bodied (e.g., Sweet Melomel, Quad)</option>
-                                    <option value="hoppy_braggot">Hoppy Braggot (IPA style)</option>
-                                </select>
-                            </div>
-                            <button id="getWaterAdviceBtn" class="w-full bg-purple-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-800 btn">Get Brewing Advice</button>
-                        </div>
-                        <div id="water-advice-output" class="prose max-w-none text-app-primary">
-                            <p class="text-center text-app-secondary/80">Select a water source and a desired mead character, then ask the Alchemist for advice.</p>
                         </div>
                     </main>
                 </div>
@@ -5068,23 +5008,23 @@ function populateSocialRecipeDropdown() {
 
             // --- NIEUW: Label Generator Functies ---
             function switchLabelDesigner(viewToShow) {
-    const frontBtn = document.getElementById('edit-front-label-btn');
-    const backBtn = document.getElementById('edit-back-label-btn');
-    const frontDesigner = document.getElementById('front-label-designer');
-    const backDesigner = document.getElementById('back-label-designer');
+                const frontBtn = document.getElementById('edit-front-label-btn');
+                const backBtn = document.getElementById('edit-back-label-btn');
+                const frontDesigner = document.getElementById('front-label-designer');
+                const backDesigner = document.getElementById('back-label-designer');
 
-    if (viewToShow === 'front') {
-        frontBtn.classList.add('active');
-        backBtn.classList.remove('active');
-        frontDesigner.classList.remove('hidden');
-        backDesigner.classList.add('hidden');
-    } else { // 'back'
-        frontBtn.classList.remove('active');
-        backBtn.classList.add('active');
-        frontDesigner.classList.add('hidden');
-        backDesigner.classList.remove('hidden');
-    }
-}
+                if (viewToShow === 'front') {
+                    frontBtn.classList.add('active');
+                    backBtn.classList.remove('active');
+                    frontDesigner.classList.remove('hidden');
+                    backDesigner.classList.add('hidden');
+                } else { // 'back'
+                    frontBtn.classList.remove('active');
+                    backBtn.classList.add('active');
+                    frontDesigner.classList.add('hidden');
+                    backDesigner.classList.remove('hidden');
+                }
+            }
             
             function handleLogoUpload(event) {
                 const file = event.target.files[0];

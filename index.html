@@ -440,7 +440,7 @@
     <div id="login-view" class="fixed inset-0 bg-app-primary flex items-center justify-center z-50">
         <div class="text-center p-8 max-w-md mx-auto">
             <h1 class="text-6xl font-header text-app-header">MEA<span class="text-app-brand">(N)</span>DERY</h1>
-            <p class="text-app-secondary mt-2 mb-8">Your AI Brewbuddy</p>
+            <p class="text-app-secondary mt-2 mb-8">Brewbuddy</p>
             <div class="card p-8 rounded-lg">
                 <h2 class="text-2xl font-bold mb-4">Welcome</h2>
                 <p class="text-app-secondary mb-6">Please sign in to access your brewing data.</p>
@@ -729,10 +729,10 @@
              <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
              <div class="bg-app-secondary p-4 rounded-b-lg shadow-inner">
                 <nav class="flex space-x-2 overflow-x-auto">
-                    <button id="inventory-sub-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold">Inventory</button>
-                    <button id="equipment-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Equipment Profiles</button>
-                    <button id="cellar-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Cellar</button>
-                    <button id="financials-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Financials</button>
+                    <button id="inventory-sub-tab" class="sub-tab active ...">Inventory</button>
+                    <button id="equipment-sub-tab" class="sub-tab ...">Equipment Profiles</button>
+                    <button id="packaging-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Packaging</button> <button id="cellar-sub-tab" class="sub-tab ...">Cellar</button>
+                    <button id="financials-sub-tab" class="sub-tab ...">Financials</button>
                 </nav>
             </div>
             <div id="inventory-view" class="mt-4">
@@ -787,6 +787,23 @@
                         <div id="inventory-list"></div>
                     </main>
                 </div>
+            </div>
+            <div id="packaging-view" class="hidden mt-4">
+                 <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 70vh;">
+                     <h2 class="text-3xl font-header font-bold mb-6 text-center">Packaging Stock & Costs</h2>
+                     <p class="text-center text-app-secondary/80 mb-8 max-w-2xl mx-auto">
+                         Voer hier de totale hoeveelheid en de totale prijs in die u betaald heeft voor uw verpakkingsmaterialen. De app berekent automatisch de kost per stuk wanneer u een batch bottelt.
+                     </p>
+
+                     <div id="packaging-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                         </div>
+
+                     <div class="mt-8 text-center">
+                         <button id="save-packaging-btn" class="w-full max-w-xs bg-app-action text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 btn">
+                             Save Packaging Costs
+                         </button>
+                     </div>
+                 </div>
             </div>
             <div id="equipment-view" class="hidden mt-4">
                 <div class="flex flex-col lg:flex-row gap-8">
@@ -1279,7 +1296,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.2.1 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.4 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -1307,6 +1324,17 @@
             let costChart = null; // To hold the chart instance
             let fermChartInstance = null;
             let html5QrcodeScanner = null;
+
+            let packagingCosts = {}; // Houdt de geladen kosten vast
+            const PACKAGING_ITEMS = [
+                { id: 'bottle_750', name: '750ml Bottle' },
+                { id: 'bottle_500', name: '500ml Bottle' },
+                { id: 'bottle_330', name: '330ml Bottle' },
+                { id: 'bottle_250', name: '250ml Bottle' },
+                { id: 'cork', name: 'Cork' },
+                { id: 'crown_cap', name: 'Crown Cap' },
+                { id: 'label', name: 'Label' }
+            ]; 
             
             const labelFormats = {
                 'herma_4453': { name: 'Herma 4453', width_mm: 99.1, height_mm: 139, cols: 2, rows: 2, top_margin_mm: 10, left_margin_mm: 5.45 },
@@ -1353,10 +1381,22 @@
                 logoUploadInput, labelPreview;
 
             function handleStyleChange() {
-                const style = styleSelect.value;
-                fruitSection.classList.toggle('hidden', !style.includes('melomel'));
-                spiceSection.classList.toggle('hidden', !style.includes('metheglin'));
-                braggotSection.classList.toggle('hidden', !style.includes('braggot'));            
+               const style = styleSelect.value;
+               const isMelomel = style.includes('melomel');
+               const isMetheglin = style.includes('metheglin');
+               const isBraggot = style.includes('braggot');
+
+               fruitSection.classList.toggle('hidden', !isMelomel);
+               spiceSection.classList.toggle('hidden', !isMetheglin);
+               braggotSection.classList.toggle('hidden', !isBraggot);
+
+               // NIEUW: Reset de vinkjes als de sectie verborgen wordt
+               if (!isMelomel) {
+                   document.querySelectorAll('#fruit-section input:checked').forEach(cb => cb.checked = false);
+               }
+               if (!isMetheglin) {
+                   document.querySelectorAll('#spice-section input:checked').forEach(cb => cb.checked = false);
+               }
             }
 
             function handleDescriptionInput() {
@@ -1375,8 +1415,11 @@
 
                 // Schakel alle invoervelden in de container daadwerkelijk uit of in
                 optionsContainer.querySelectorAll('input, select, checkbox').forEach(el => {
-                    el.disabled = hasText;
-                });
+                    // Schakel alles uit, BEHALVE het "useInventory" vinkje
+                    if (el.id !== 'useInventory') {
+                        el.disabled = hasText;
+                    }
+                });;
             }
 
             function handleInventoryToggle(e) {
@@ -1459,6 +1502,70 @@ function executeDangerAction() {
                     showToast(`Login failed: ${error.message}`, "error");
                 }
             }
+
+            function renderPackagingUI() {
+    const formContainer = document.getElementById('packaging-form');
+    if (!formContainer) return;
+    
+    formContainer.innerHTML = PACKAGING_ITEMS.map(item => {
+        const itemData = packagingCosts[item.id] || { qty: 0, price: 0 };
+        return `
+            <div class="card p-4 rounded-lg">
+                <label class="block text-lg font-bold mb-2">${item.name}</label>
+                <div class="space-y-3">
+                    <div>
+                        <label for="${item.id}_qty" class="block text-xs text-app-secondary">Total Quantity in Stock</label>
+                        <input type="number" id="${item.id}_qty" value="${itemData.qty}" placeholder="e.g., 100" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                    </div>
+                    <div>
+                        <label for="${item.id}_price" class="block text-xs text-app-secondary">Total Price Paid (${userSettings.currencySymbol || '€'})</label>
+                        <input type="number" step="0.01" id="${item.id}_price" value="${itemData.price}" placeholder="e.g., 15.50" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function loadPackagingCosts() {
+    if (!userId) return;
+    const appId = 'meandery-aa05e';
+    const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
+    try {
+        const docSnap = await getDoc(settingsDocRef);
+        if (docSnap.exists()) {
+            packagingCosts = docSnap.data();
+        } else {
+            // Maak een leeg object als er nog geen data is
+            packagingCosts = {};
+        }
+        renderPackagingUI(); // Bouw de UI op met de geladen data
+    } catch (error) {
+        console.error("Error loading packaging costs:", error);
+    }
+}
+
+async function savePackagingCosts() {
+    if (!userId) return;
+    const appId = 'meandery-aa05e';
+    const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
+    
+    const dataToSave = {};
+    PACKAGING_ITEMS.forEach(item => {
+        const qty = parseFloat(document.getElementById(`${item.id}_qty`).value) || 0;
+        const price = parseFloat(document.getElementById(`${item.id}_price`).value) || 0;
+        dataToSave[item.id] = { qty, price };
+    });
+
+    try {
+        await setDoc(settingsDocRef, dataToSave);
+        packagingCosts = dataToSave; // Update de lokale state
+        showToast('Packaging costs saved successfully!', 'success');
+    } catch (error) {
+        console.error("Error saving packaging costs:", error);
+        showToast('Failed to save packaging costs.', 'error');
+    }
+}
 
             // --- Initialization ---
             function initApp() {
@@ -1548,6 +1655,7 @@ function executeDangerAction() {
         loadEquipmentProfiles();
         loadCellar();
         loadUserSettings();
+        loadPackagingCosts();
 
     } else {
         // Geen gebruiker of anonieme gebruiker -> toon login-scherm
@@ -1569,6 +1677,7 @@ function executeDangerAction() {
     // --- Event Listeners ---
     document.getElementById('history-search-input').addEventListener('input', renderHistoryList);
     document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
+    document.getElementById('save-packaging-btn').addEventListener('click', savePackagingCosts);
     document.getElementById('danger-cancel-btn').addEventListener('click', hideDangerModal);
     document.getElementById('danger-confirm-btn').addEventListener('click', executeDangerAction);
     document.getElementById('danger-confirm-input').addEventListener('input', checkDangerConfirmation);
@@ -2071,9 +2180,26 @@ async function clearInventory() {
                     }
 
                     if (customDescription.trim() !== '') {
-                        prompt = `${personaAndConstraints} ${equipmentPrompt} A user wants to create a unique mead from scratch. Their primary instruction is a text description. You MUST prioritize this description to generate the recipe. Any other form fields should be IGNORED, except for the Batch Size. The user's description is: "${customDescription}" The recipe must be for a ${batchSize}-liter batch. Based ONLY on the user's description and the batch size, create a detailed, world-class mead recipe. Infer the style, ABV, sweetness, honey type, and other ingredients from their text. If they don't specify something like ABV, make an expert recommendation that fits their description.`;
+                        const currency = userSettings.currencySymbol || '€';
+                        const inventoryString = inventory.map(item => {
+                            let costPerUnit = 0;
+                            let baseUnit = item.unit;
+                            if (item.qty > 0 && item.price > 0) { costPerUnit = item.price / item.qty; }
+                            if (item.unit === 'kg') { costPerUnit /= 1000; baseUnit = 'g'; } 
+                            else if (item.unit === 'L') { costPerUnit /= 1000; baseUnit = 'ml'; }
+                            return `${item.name}: ${item.qty} ${item.unit} available`;
+                    }).join('; ');
+
+                    prompt = `${personaAndConstraints} ${equipmentPrompt} A user wants to create a unique mead from a text description.
+
+                    Their detailed description is: "${customDescription}"
+
+                    Here is the user's current inventory: [${inventoryString}].
+
+                    Your primary goal is to create a recipe for a ${batchSize}-liter batch that perfectly matches the user's text description. However, you MUST prioritize using the ingredients available in their inventory if they are suitable for the recipe. If a key ingredient from the description is not in stock, you are allowed to suggest they purchase it. All other form fields below the description should be ignored.`;
+
                     } else if (useInventory) {
-                         const currency = userSettings.currencySymbol || '€';
+                        const currency = userSettings.currencySymbol || '€';
                         const useBudget = getValue('useBudget', false);
                         const maxBudget = getValue('maxBudget');
 
@@ -2126,19 +2252,21 @@ async function clearInventory() {
                         }
                     }
                     
+                    // In de functie buildPrompt(), zoek en vervang dit hele blok:
+
                     prompt += `\n\nFor the final output, generate a full recipe suitable for an experienced homebrewer. 
-                    
-                    SPECIAL INSTRUCTION: If the recipe includes ingredients with a high oil content (like nuts, cacao nibs, coffee beans), you MUST include a specific warning in the 'Brewer's Notes'. This warning should explain the risk of oils (rancidity, loss of head retention) and recommend the best practice for adding them. The recommended best practice is to add these ingredients ONLY during secondary fermentation, never in primary. You should also suggest a method to mitigate the oils, such as toasting the ingredients first or making an alcohol-based tincture. Furthermore, you should suggest alternative oil-free products that can achieve a similar flavor profile, such as natural flavor extracts or defatted nut powders.
+    
+                    SPECIAL INSTRUCTION: If the recipe includes ingredients with a high oil content (like nuts, cacao nibs, coffee beans), you MUST include a specific warning in the 'Brewer's Notes'. This warning should explain the risk             of oils (rancidity, loss of head retention) and recommend the best practice for adding them. The recommended best practice is to add these ingredients ONLY during secondary fermentation, never in primary. You should also suggest a method to mitigate the oils, such as toasting the ingredients first or making an alcohol-based tincture. Furthermore, you should suggest alternative oil-free products that can achieve a similar flavor profile, such as natural flavor extracts or defatted nut powders.
 
                     - The user's preferred nutrient schedule is "${nutrientProtocol}". Use this as a guideline, but you are free to recommend a more optimal schedule (like TOSNA) in the 'Brewer's Notes' if it is better suited for this specific recipe, and explain why.
-                    - Provide specific ingredient quantities scaled for the batch size.
-                    - Detail a no-heat method for must preparation.
-                    - Include recommendations for a specific yeast strain. Give advice on aging.
-                    - For the 'Ingredients' section, you MUST format it as a Markdown table with columns: | Ingredient | Quantity | Unit |. This is essential.
-                    - Format the rest of the response in Markdown with a clear and descriptive title and clear headings for 'Description', 'Ingredients', 'Instructions', and 'Brewer's Notes'.
-                    - You MUST explicitly state the Target OG, Target FG, and Target ABV in the description, for example: 'Target OG: 1.110, Target FG: 1.015, Target ABV: 12.5%'. This is a mandatory part of the output.
+                   - Provide specific ingredient quantities scaled for the batch size.
+                   - Detail a no-heat method for must preparation.
+                   - Include recommendations for a specific yeast strain. Give advice on aging.
+                   - For the 'Ingredients' section, you MUST format it as a Markdown table with columns: | Ingredient | Quantity | Unit |. This is essential.
+                   - For the recipe title, you MUST create a short, creative, and thematic name, followed by a descriptive subtitle. The format must be 'Name: Subtitle'. For example, 'The Black Sunset: A dark cherry mead' or 'Abbey Orchard - Belgian Tripel Cyser'. This title MUST be the main heading of the recipe (using a single # in Markdown).
+                   - You MUST explicitly state the Target OG, Target FG, and Target ABV in the description, for example: 'Target OG: 1.110, Target FG: 1.015, Target ABV: 12.5%'. This is a mandatory part of the output.
 
-                    Finally, after the 'Brewer's Notes', add a new heading '## Recommended Water'. Based on the style of the mead recipe you just generated, recommend a suitable, commercially available Belgian bottled water. Use your knowledge of available brands beyond the examples. Explain in 1-2 sentences WHY it is a good choice. Examples of water profiles (minerals in mg/L) are: Spa Reine (Ca 5, Mg 2, Na 3, SO4 4, Cl 5, HCO3 17) or Chaudfontaine (Ca 65, Mg 18, Na 44, SO4 40, Cl 35, HCO3 305).`;
+                   Finally, after the 'Brewer's Notes', add a new heading '## Recommended Water'. Based on the style of the mead recipe you just generated, recommend a suitable, commercially available Belgian bottled water. Use your knowledge of available brands beyond the examples. Explain in 1-2 sentences WHY it is a good choice. Examples of water profiles (minerals in mg/L) are: Spa Reine (Ca 5, Mg 2, Na 3, SO4 4, Cl 5, HCO3 17) or Chaudfontaine (Ca 65, Mg 18, Na 44, SO4 40, Cl 35, HCO3 305).`;
                     
                     return prompt;
                 } catch (error) {
@@ -3472,41 +3600,42 @@ window.renderInventory = function() {
                     if (bottlesData.length === 0) throw new Error("Please enter a quantity for at least one bottle size.");
 
                     // --- NIEUW: Kostenberekening en Inventaris Update ---
-                    const packagingCosts = getPackagingCosts();
-                    let totalPackagingCost = 0;
-                    const inventoryUpdates = [];
+    const packagingCostsPerUnit = getPackagingCosts();
+    let totalPackagingCost = 0;
 
-                    bottlesData.forEach(bottle => {
-                        const bottleCost = packagingCosts[bottle.size.toString()] || 0;
-                        const closureCost = bottle.size >= 750 ? packagingCosts.cork : packagingCosts.crown_cap;
-                        const labelCost = packagingCosts.label;
-                        totalPackagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
+    bottlesData.forEach(bottle => {
+        const bottleCost = packagingCostsPerUnit[bottle.size.toString()] || 0;
+        const closureCost = bottle.size >= 750 ? packagingCostsPerUnit.cork : packagingCostsPerUnit.crown_cap;
+        const labelCost = packagingCostsPerUnit.label;
+        totalPackagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
+    });
+    
+    let finalTotalCost = originalBrew.totalCost || 0;
 
-                        // Bereid inventaris updates voor
-                        inventoryUpdates.push({ name: `${bottle.size}ml Bottle`, qty: bottle.quantity });
-                        inventoryUpdates.push({ name: bottle.size >= 750 ? 'Cork' : 'Crown Cap', qty: bottle.quantity });
-                        inventoryUpdates.push({ name: 'Label', qty: bottle.quantity });
-                    });
+    if (totalPackagingCost > 0) {
+        if (confirm(`The calculated packaging cost for this session is ${userSettings.currencySymbol || '€'}${totalPackagingCost.toFixed(2)}. \n\nDo you want to add this to the batch's total cost and update the stock?`)) {
+            finalTotalCost += totalPackagingCost;
 
-                    let finalTotalCost = originalBrew.totalCost || 0;
-
-                    if (totalPackagingCost > 0) {
-                        if (confirm(`The calculated packaging cost for this session is ${userSettings.currencySymbol || '€'}${totalPackagingCost.toFixed(2)}. \n\nDo you want to add this to the batch's total cost and deduct the items from inventory?`)) {
-                            finalTotalCost += totalPackagingCost;
-
-                            // Inventaris aftrekken
-                            const batch = writeBatch(db);
-                            inventoryUpdates.forEach(update => {
-                                const item = inventory.find(i => i.name === update.name);
-                                if (item && item.qty >= update.qty) {
-                                    const itemRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'inventory', item.id);
-                                    batch.update(itemRef, { qty: item.qty - update.qty });
-                                }
-                            });
-                            await batch.commit();
-                            showToast("Packaging items deducted from inventory.", "success");
-                        }
-                    }
+            // Voorraad aftrekken
+            const updatedPackagingStock = { ...packagingCosts };
+            bottlesData.forEach(bottle => {
+                const bottleId = `bottle_${bottle.size}`;
+                const closureId = bottle.size >= 750 ? 'cork' : 'crown_cap';
+                
+                if (updatedPackagingStock[bottleId]) updatedPackagingStock[bottleId].qty -= bottle.quantity;
+                if (updatedPackagingStock[closureId]) updatedPackagingStock[closureId].qty -= bottle.quantity;
+                if (updatedPackagingStock.label) updatedPackagingStock.label.qty -= bottle.quantity;
+            });
+            
+            // Sla de nieuwe voorraad op (dit vervangt de oude savePackagingCosts-aanroep)
+            const appId = 'meandery-aa05e';
+            const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
+            await setDoc(settingsDocRef, updatedPackagingStock);
+            packagingCosts = updatedPackagingStock;
+            
+            showToast("Packaging stock updated.", "success");
+        }
+    }
                     
                     const bottlingDate = new Date(document.getElementById('bottlingDate').value);
                     const agingPrompt = `You are a mead aging expert. Based on the following mead recipe and a bottling date of ${bottlingDate.toISOString().split('T')[0]}, determine a recommended 'peak flavor' or 'best before' date. Provide a short justification (1 sentence) and the date in YYYY-MM-DD format. Recipe:\n\n---\n${originalBrew.recipeMarkdown}`;
@@ -4878,26 +5007,27 @@ function populateSocialRecipeDropdown() {
             }
 
             function getPackagingCosts() {
-                const costs = {
-                    '750': 0, '500': 0, '330': 0, '250': 0,
-                    'cork': 0, 'crown_cap': 0, 'label': 0
-                };
-                
-                const findCost = (name) => {
-                    const item = inventory.find(i => i.name.toLowerCase() === name.toLowerCase());
-                    return item && item.qty > 0 ? (item.price / item.qty) : 0;
-                };
+    const calculatedCosts = {};
+    
+    PACKAGING_ITEMS.forEach(item => {
+        const itemData = packagingCosts[item.id];
+        let costPerUnit = 0;
+        if (itemData && itemData.qty > 0 && itemData.price > 0) {
+            costPerUnit = itemData.price / itemData.qty;
+        }
+        
+        // Specifieke mapping voor de bottel-logica
+        if (item.id === 'bottle_750') calculatedCosts['750'] = costPerUnit;
+        if (item.id === 'bottle_500') calculatedCosts['500'] = costPerUnit;
+        if (item.id === 'bottle_330') calculatedCosts['330'] = costPerUnit;
+        if (item.id === 'bottle_250') calculatedCosts['250'] = costPerUnit;
+        if (item.id === 'cork') calculatedCosts['cork'] = costPerUnit;
+        if (item.id === 'crown_cap') calculatedCosts['crown_cap'] = costPerUnit;
+        if (item.id === 'label') calculatedCosts['label'] = costPerUnit;
+    });
 
-                costs['750'] = findCost('750ml Bottle');
-                costs['500'] = findCost('500ml Bottle');
-                costs['330'] = findCost('330ml Bottle');
-                costs['250'] = findCost('250ml Bottle');
-                costs['cork'] = findCost('Cork');
-                costs['crown_cap'] = findCost('Crown Cap');
-                costs['label'] = findCost('Label');
-                
-                return costs;
-            }
+    return calculatedCosts;
+}
 
             function updateCostAnalysis() {
                 const currency = userSettings.currencySymbol || '€';

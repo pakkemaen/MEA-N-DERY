@@ -729,11 +729,11 @@
              <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
              <div class="bg-app-secondary p-4 rounded-b-lg shadow-inner">
                 <nav class="flex space-x-2 overflow-x-auto whitespace-nowrap">
-                    <button id="inventory-sub-tab" class="sub-tab active ...">Inventory</button>
-                    <button id="equipment-sub-tab" class="sub-tab ...">Equipment</button>
-                    <button id="packaging-sub-tab" class="sub-tab ...">Packaging</button> 
-                    <button id="cellar-sub-tab" class="sub-tab ...">Cellar</button>
-                    <button id="financials-sub-tab" class="sub-tab ...">Financials</button>
+                    <button id="inventory-sub-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold">Inventory</button>
+                    <button id="equipment-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Equipment</button>
+                    <button id="packaging-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Packaging</button>
+                    <button id="cellar-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Cellar</button>
+                    <button id="financials-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Financials</button>
                 </nav>
             </div>
             <div id="inventory-view" class="mt-4">
@@ -790,12 +790,39 @@
                 </div>
             </div>
             <div id="packaging-view" class="hidden mt-4">
-                <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
-                    <h2 class="text-3xl font-header font-bold mb-6 text-center">Packaging Stock & Costs</h2>
-                    <div id="packaging-list" class="space-y-2">
-                        </div>
+                <div class="flex flex-col lg:flex-row gap-8">
+        
+                    <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg">
+                        <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app">Add Packaging Stock</h2>
+                        <form id="packaging-add-form" class="space-y-4">
+                            <div>
+                                <label for="packaging-item-select" class="block text-sm font-bold mb-2">Packaging Material</label>
+                                <select id="packaging-item-select" required class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                                    </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="packaging-item-qty" class="block text-sm font-bold mb-2">Quantity Added</label>
+                                    <input type="number" id="packaging-item-qty" step="1" min="0" placeholder="e.g., 24" required class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                                </div>
+                               <div>
+                                   <label for="packaging-item-price" class="block text-sm font-bold mb-2">Total Price Paid (€)</label>
+                                   <input type="number" id="packaging-item-price" step="0.01" min="0" placeholder="e.g., 18.50" required class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                               </div>
+                            </div>
+                            <button type="submit" class="w-full bg-app-action text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-all duration-300 shadow-md btn">
+                                Add to Stock
+                            </button>
+                        </form>
+                    </aside>
+        
+                    <main class="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg inventory-panel overflow-y-auto" style="max-height: 70vh;">
+                       <h2 class="text-3xl font-header font-bold mb-4 text-center">Current Packaging Stock</h2>
+                       <div id="packaging-list" class="space-y-2">
+                           </div>
+                    </main>
                 </div>
-            </div>
+            </div>             
             <div id="equipment-view" class="hidden mt-4">
                 <div class="flex flex-col lg:flex-row gap-8">
                     <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg">
@@ -1287,7 +1314,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.4.2 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.4.3 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -1494,6 +1521,16 @@ function executeDangerAction() {
                 }
             }
 
+
+            function populatePackagingDropdown() {
+                const select = document.getElementById('packaging-item-select');
+                if (!select) return;
+
+                select.innerHTML = PACKAGING_ITEMS.map(item => 
+                   `<option value="${item.id}">${item.name}</option>`
+                ).join('');
+            }
+
             function renderPackagingUI() {
                 const listContainer = document.getElementById('packaging-list');
                 if (!listContainer) return;
@@ -1523,6 +1560,36 @@ function executeDangerAction() {
                }).join('');
            }
 
+           // VOEG DEZE NIEUWE FUNCTIE TOE
+           async function addPackagingStock(e) {
+               e.preventDefault();
+               if (!userId) return;
+
+               const itemId = document.getElementById('packaging-item-select').value;
+               const qtyAdded = parseFloat(document.getElementById('packaging-item-qty').value) || 0;
+               const priceAdded = parseFloat(document.getElementById('packaging-item-price').value) || 0;
+
+               if (!itemId || qtyAdded <= 0 || priceAdded < 0) {
+                  showToast("Please fill in all fields with valid numbers.", "error");
+                  return;
+               }
+
+              // Haal de huidige voorraad op of start op 0
+              const currentStock = packagingCosts[itemId] || { qty: 0, price: 0 };
+    
+              // Tel de nieuwe voorraad erbij op
+              currentStock.qty += qtyAdded;
+              currentStock.price += priceAdded;
+
+              packagingCosts[itemId] = currentStock;
+
+              // Sla de volledige, bijgewerkte voorraad op
+              await savePackagingCosts(); 
+    
+             // Reset het formulier voor de volgende invoer
+             document.getElementById('packaging-add-form').reset();
+           }
+
 async function loadPackagingCosts() {
     if (!userId) return;
     const appId = 'meandery-aa05e';
@@ -1536,27 +1603,22 @@ async function loadPackagingCosts() {
             packagingCosts = {};
         }
         renderPackagingUI(); // Bouw de UI op met de geladen data
+        populatePackagingDropdown();
     } catch (error) {
         console.error("Error loading packaging costs:", error);
     }
 }
 
+            // VERVANG DE VOLLEDIGE OUDE savePackagingCosts FUNCTIE
 async function savePackagingCosts() {
     if (!userId) return;
     const appId = 'meandery-aa05e';
     const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
     
-    const dataToSave = {};
-    PACKAGING_ITEMS.forEach(item => {
-        const qty = parseFloat(document.getElementById(`${item.id}_qty`).value) || 0;
-        const price = parseFloat(document.getElementById(`${item.id}_price`).value) || 0;
-        dataToSave[item.id] = { qty, price };
-    });
-
     try {
-        await setDoc(settingsDocRef, dataToSave);
-        packagingCosts = dataToSave; // Update de lokale state
-        showToast('Packaging costs saved successfully!', 'success');
+        await setDoc(settingsDocRef, packagingCosts);
+        showToast('Packaging stock updated successfully!', 'success');
+        renderPackagingUI(); // Belangrijk: ververs de lijstweergave na elke wijziging
     } catch (error) {
         console.error("Error saving packaging costs:", error);
         showToast('Failed to save packaging costs.', 'error');
@@ -1673,6 +1735,7 @@ async function savePackagingCosts() {
     // --- Event Listeners ---
     document.getElementById('history-search-input').addEventListener('input', renderHistoryList);
     document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
+    document.getElementById('packaging-add-form').addEventListener('submit', addPackagingStock);
     document.getElementById('danger-cancel-btn').addEventListener('click', hideDangerModal);
     document.getElementById('danger-confirm-btn').addEventListener('click', executeDangerAction);
     document.getElementById('danger-confirm-input').addEventListener('input', checkDangerConfirmation);

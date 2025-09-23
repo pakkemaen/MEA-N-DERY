@@ -1320,7 +1320,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.6.0 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.6.1 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -3893,6 +3893,7 @@ async function bottleBatch(e) {
         const bottlesData = [
             { size: 750, quantity: parseInt(document.getElementById('qty750').value) || 0, price: null },
             { size: 500, quantity: parseInt(document.getElementById('qty500').value) || 0, price: null },
+            { size: 450, quantity: parseInt(document.getElementById('qty450').value) || 0, price: null },
             { size: 330, quantity: parseInt(document.getElementById('qty330').value) || 0, price: null },
             { size: 250, quantity: parseInt(document.getElementById('qty250').value) || 0, price: null },
             { 
@@ -3911,7 +3912,7 @@ async function bottleBatch(e) {
 
         bottlesData.forEach(bottle => {
             totalLabelsNeeded += bottle.quantity;
-            // Controleer standaard flessen
+            // Controleer de voorraad van standaard flessen
             if (bottle.price === null) {
                 const stockId = `bottle_${bottle.size}`;
                 const currentStock = packagingCosts[stockId]?.qty || 0;
@@ -3925,7 +3926,7 @@ async function bottleBatch(e) {
             else { closuresNeeded.crown_cap_26 += bottle.quantity; }
         });
 
-        // Controleer sluitingen en etiketten
+        // Controleer de voorraad van sluitingen en etiketten
         const currentCorkStock = packagingCosts['cork']?.qty || 0;
         if (closuresNeeded.cork > currentCorkStock) outOfStockItems.push(`${closuresNeeded.cork} cork(s) (only ${currentCorkStock} in stock)`);
         

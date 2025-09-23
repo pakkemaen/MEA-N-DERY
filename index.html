@@ -29,7 +29,7 @@
             --accent-color: #a89a87;
             --header-color: #4a3c2c;
             --brand-color: #8F8C79;
-            --action-color: #b45309; /* Stronger action color */
+            --action-color: #b45309;      /* Stronger action color */
             --danger-color: #ef4444;
             --success-color: #22c55e;
             --info-color: #3b82f6;
@@ -332,94 +332,94 @@
         #label-allergens-container { font-style: normal; font-size: 0.7rem; color: #666; }
 
         .timeline-container {
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-    padding: 1rem 0;
-}
-.timeline-connector {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background-color: var(--border-color);
-    transform: translateY(-50%);
-    z-index: 1;
-}
-.timeline-progress {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    background-color: var(--brand-color);
-    transition: width 0.5s ease-in-out;
-}
-.timeline-item {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 25%; /* 4 items */
-}
-.timeline-node {
-    width: 20px;
-    height: 20px;
-    background-color: var(--bg-tertiary);
-    border: 4px solid var(--border-color);
-    border-radius: 50%;
-    transition: all 0.3s;
-}
-.timeline-item.active .timeline-node {
-    background-color: var(--brand-color);
-    border-color: var(--brand-color);
-}
-.timeline-label {
-    margin-top: 0.75rem;
-    font-size: 0.8rem;
-    text-align: center;
-    font-weight: 600;
-}
-.timeline-item.active .timeline-label {
-    color: var(--text-primary);
-}
-.timeline-item .timeline-label {
-    color: var(--text-secondary);
-}
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem 0;
+        }
+        .timeline-connector {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background-color: var(--border-color);
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+        .timeline-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background-color: var(--brand-color);
+            transition: width 0.5s ease-in-out;
+        }
+        .timeline-item {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 25%; /* 4 items */
+        }
+        .timeline-node {
+            width: 20px;
+            height: 20px;
+            background-color: var(--bg-tertiary);
+            border: 4px solid var(--border-color);
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+        .timeline-item.active .timeline-node {
+            background-color: var(--brand-color);
+            border-color: var(--brand-color);
+        }
+        .timeline-label {
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            text-align: center;
+            font-weight: 600;
+        }
+        .timeline-item.active .timeline-label {
+            color: var(--text-primary);
+        }
+        .timeline-item .timeline-label {
+            color: var(--text-secondary);
+        }
 
-.step-item {
-    border-left: 3px solid var(--border-color);
-    transition: all 0.3s;
-}
-.step-item.active {
-    border-left-color: var(--brand-color);
-    background-color: var(--bg-primary);
-}
-.step-item.completed {
-    border-left-color: var(--success-color);
-    opacity: 0.6;
-}
-.step-item.completed .step-title {
-    text-decoration: line-through;
-}
-.step-title {
-    font-weight: 600;
-    font-size: 1.1rem;
-}
-.timer-display {
-    font-size: 1.5rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-}
-.progress-bar-bg {
-    background-color: var(--border-color);
-}
-.progress-bar-fg {
-    background-color: var(--brand-color);
-    transition: width 0.5s ease-in-out;
-}
-/* EINDE: STYLES FOR BREW DAY TIMER */
+        .step-item {
+            border-left: 3px solid var(--border-color);
+            transition: all 0.3s;
+        }
+        .step-item.active {
+            border-left-color: var(--brand-color);
+            background-color: var(--bg-primary);
+        }
+        .step-item.completed {
+            border-left-color: var(--success-color);
+            opacity: 0.6;
+        }
+        .step-item.completed .step-title {
+            text-decoration: line-through;
+        }
+        .step-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        .timer-display {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+        .progress-bar-bg {
+            background-color: var(--border-color);
+        }
+        .progress-bar-fg {
+            background-color: var(--brand-color);
+            transition: width 0.5s ease-in-out;
+        }
+        /* EINDE: STYLES FOR BREW DAY TIMER */
   
 </style>
     <!-- Service Worker Registration -->
@@ -783,7 +783,7 @@
                             <button type="submit" class="w-full bg-app-action text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-all duration-300 shadow-md btn">Add Ingredient</button>
                         </form>
                     </aside>
-                    <main class="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg inventory-panel overflow-y-auto" style="max-height: 70vh;">
+                    <main id="packaging-stock-container" class="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg inventory-panel overflow-y-auto" style="max-height: 70vh;">
                         <h2 class="text-3xl font-header font-bold mb-4 text-center">Current Stock</h2>
                         <div id="inventory-list"></div>
                     </main>
@@ -1314,7 +1314,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.4.3 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.5.0 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -1533,31 +1533,44 @@ function executeDangerAction() {
 
             function renderPackagingUI() {
                 const listContainer = document.getElementById('packaging-list');
-                if (!listContainer) return;
-                const currency = userSettings.currencySymbol || '€';
+                const stockContainer = document.getElementById('packaging-stock-container'); // Het nieuwe ID
+                if (!listContainer || !stockContainer) return;
 
-                listContainer.innerHTML = PACKAGING_ITEMS.map(item => {
-                    const itemData = packagingCosts[item.id] || { qty: 0, price: 0 };
-                    const costPerUnit = (itemData.qty > 0 && itemData.price > 0) ? (itemData.price / itemData.qty).toFixed(2) : '0.00';
+                // Controleer of er voorraad is
+                const hasStock = PACKAGING_ITEMS.some(item => packagingCosts[item.id] && packagingCosts[item.id].qty > 0);
 
-                    return `
-                        <div id="pkg-item-${item.id}" class="p-3 card rounded-md">
-                           <div class="flex justify-between items-center">
-                               <div>
-                                  <p class="font-bold">${item.name}</p>
-                                  <p class="text-sm text-app-secondary/80">Cost per unit: ${currency}${costPerUnit}</p>
-                               </div>
-                               <div class="flex items-center gap-4">
-                                   <span class="font-semibold">${itemData.qty} items - ${currency}${itemData.price.toFixed(2)} total</span>
-                                   <div class="flex gap-2">
-                                       <button onclick="window.editPackagingItem('${item.id}')" class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
-                                       <button onclick="window.clearPackagingItem('${item.id}')" class="text-red-600 hover:text-red-800 text-sm">Clear</button>
-                                  </div>
+                // Verberg de hele sectie als er geen voorraad is
+                stockContainer.classList.toggle('hidden', !hasStock);
+
+                if (hasStock) {
+                    // Als er wel voorraad is, bouw dan de lijst op zoals voorheen
+                    const currency = userSettings.currencySymbol || '€';
+                    listContainer.innerHTML = PACKAGING_ITEMS.map(item => {
+                        const itemData = packagingCosts[item.id] || { qty: 0, price: 0 };
+                        const costPerUnit = (itemData.qty > 0 && itemData.price > 0) ? (itemData.price / itemData.qty).toFixed(2) : '0.00';
+
+                        return `
+                           <div id="pkg-item-${item.id}" class="p-3 card rounded-md">
+                               <div class="flex justify-between items-center">
+                                   <div>
+                                       <p class="font-bold">${item.name}</p>
+                                       <p class="text-sm text-app-secondary/80">Cost per unit: ${currency}${costPerUnit}</p>
+                                   </div>
+                                   <div class="flex items-center gap-4">
+                                       <span class="font-semibold">${itemData.qty} items - ${currency}${itemData.price.toFixed(2)} total</span>
+                                       <div class="flex gap-2">
+                                           <button onclick="window.editPackagingItem('${item.id}')" class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
+                                           <button onclick="window.clearPackagingItem('${item.id}')" class="text-red-600 hover:text-red-800 text-sm">Clear</button>
+                                       </div>
+                                   </div>
                                </div>
                            </div>
-                       </div>
-                   `;
-               }).join('');
+                       `;
+                   }).join('');
+               } else {
+                   // Maak de lijst leeg als er geen voorraad is (voor de zekerheid)
+                   listContainer.innerHTML = '';
+               }
            }
 
            // VOEG DEZE NIEUWE FUNCTIE TOE

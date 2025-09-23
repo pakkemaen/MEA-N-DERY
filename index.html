@@ -2653,21 +2653,19 @@ async function clearInventory() {
     const logHtml = getBrewLogHtml(brew.logData, brew.id);
     const currency = userSettings.currencySymbol || '€';
 
-    let costHtml = '';
-    if (brew.totalCost !== undefined && brew.totalCost > 0) {
-        const totalBottlesInBatch = brew.isBottled 
-            ? (cellar.find(c => c.brewId === brew.id)?.bottles.reduce((acc, b) => acc + b.quantity, 0) || (brew.batchSize / 0.75))
-            : (brew.batchSize / 0.75);
-        const costPerBottle = totalBottlesInBatch > 0 ? brew.totalCost / totalBottlesInBatch : 0;
-        
-        costHtml = `
-            <div class="mt-6 p-4 bg-amber-50 rounded-lg dark:bg-opacity-10">
-                <h3 class="font-header text-lg text-stone-800 dark:text-amber-200">Batch Cost Analysis</h3>
-                <p class="text-stone-800 dark:text-amber-200"><strong>Total Batch Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</p>
-                <p class="text-stone-800 dark:text-amber-200"><strong>Avg. Cost Per Bottle (all sizes):</strong> ${currency}${costPerBottle.toFixed(2)}</p>
-            </div>
-        `;
-    }
+let costHtml = '';
+if (brew.totalCost !== undefined && brew.totalCost > 0) {
+    // NIEUW: Berekening van kost per liter
+    const costPerLiter = brew.batchSize > 0 ? brew.totalCost / brew.batchSize : 0;
+    
+    costHtml = `
+        <div class="mt-6 p-4 bg-amber-50 rounded-lg dark:bg-opacity-10">
+            <h3 class="font-header text-lg text-stone-800 dark:text-amber-200">Batch Cost Analysis</h3>
+            <p class="text-stone-800 dark:text-amber-200"><strong>Total Ingredient Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</p>
+            <p class="text-stone-800 dark:text-amber-200"><strong>Cost Per Liter:</strong> ${currency}${costPerLiter.toFixed(2)}</p>
+        </div>
+    `;
+}
 
                 let socialPostsHtml = '';
                 if (brew.socialMediaPosts && brew.socialMediaPosts.length > 0) {
@@ -3635,47 +3633,41 @@ window.renderInventory = function() {
             }
 
             function renderCellar() {
-                const listDiv = document.getElementById('cellar-list');
-                const currency = userSettings.currencySymbol || '€';
+    const listDiv = document.getElementById('cellar-list');
+    const currency = userSettings.currencySymbol || '€';
 
-                if (cellar.length === 0) {
-                    listDiv.innerHTML = `<p class="text-center text-app-secondary/80">Your cellar is empty. Bottle a batch from your history to add it here!</p>`;
-                    return;
-                }
-                
-                // Haal de kosten van verpakkingsmateriaal eenmalig op
-                const packagingCosts = getPackagingCosts();
+    if (cellar.length === 0) {
+        listDiv.innerHTML = `<p class="text-center text-app-secondary/80">Your cellar is empty. Bottle a batch from your history to add it here!</p>`;
+        return;
+    }
+    
+    const packagingCostsPerUnit = getPackagingCosts();
 
-                listDiv.innerHTML = cellar.map(item => {
-                    const totalBottlesInBatch = item.bottles.reduce((acc, b) => acc + b.quantity, 0);
-                    const ingredientCostPerBottle = (item.ingredientCost || 0) / totalBottlesInBatch;
-                    const bottlingDateStr = item.bottlingDate ? item.bottlingDate.toDate().toLocaleDateString() : 'No date';
+    listDiv.innerHTML = cellar.map(item => {
+        const totalBottlesInBatch = item.bottles.reduce((acc, b) => acc + b.quantity, 0);
+        const ingredientCostPerBottle = totalBottlesInBatch > 0 ? (item.ingredientCost || 0) / totalBottlesInBatch : 0;
+        const bottlingDateStr = item.bottlingDate ? item.bottlingDate.toDate().toLocaleDateString() : 'No date';
 
-                    const bottleDetailsHtml = (item.bottles && Array.isArray(item.bottles)) ? item.bottles.map(b => {
-                        // --- Bereken de kost per fles ---
-                        let closureCost = 0;
-                        // AANGEPAST: Gebruikt nu de correcte, slimme logica
-                        if (b.size >= 750) {
-                            closureCost = packagingCostsPerUnit.cork || 0;
-                        } else if (b.size >= 500) {
-                            closureCost = packagingCostsPerUnit.crown_cap_29 || 0;
-                        } else {
-                            closureCost = packagingCostsPerUnit.crown_cap_26 || 0;
-                        }
-                        const bottleCost = packagingCostsPerUnit[b.size.toString()] || 0;
-                        const labelCost = packagingCostsPerUnit.label || 0;
-                        const finalCostPerBottle = ingredientCostPerBottle + bottleCost + closureCost + labelCost;
-                        const costText = finalCostPerBottle > 0 ? `<span class="font-bold">${currency}${finalCostPerBottle.toFixed(2)}/st</span>` : '';
+        const bottleDetailsHtml = (item.bottles && Array.isArray(item.bottles)) ? item.bottles.map(b => {
+            let closureCost = 0;
+            if (b.size >= 750) { closureCost = packagingCostsPerUnit.cork || 0; } 
+            else if (b.size >= 500) { closureCost = packagingCostsPerUnit.crown_cap_29 || 0; } 
+            else { closureCost = packagingCostsPerUnit.crown_cap_26 || 0; }
+            
+            const bottleCost = packagingCostsPerUnit[b.size.toString()] || 0;
+            const labelCost = packagingCostsPerUnit.label || 0;
+            const finalCostPerBottle = ingredientCostPerBottle + bottleCost + closureCost + labelCost;
+            const costText = finalCostPerBottle > 0 ? `<span class="font-bold">${currency}${finalCostPerBottle.toFixed(2)}/st</span>` : '';
 
-                        return `
-                        <div class="flex items-center justify-between text-sm py-1">
-                            <span>${b.quantity} x ${b.size}ml</span>
-                            <div class="flex items-center gap-4">
-                                ${costText}
-                                <button onclick="window.consumeBottle('${item.id}', ${b.size})" class="text-xs bg-app-action text-white px-2 py-1 rounded hover:opacity-80 btn">-1 Bottle</button>
-                            </div>
-                        </div>
-                    `}).join('') : `<p class="text-sm">${totalBottlesInBatch} bottles (old format)</p>`;
+            return `
+            <div class="flex items-center justify-between text-sm py-1">
+                <span>${b.quantity} x ${b.size}ml</span>
+                <div class="flex items-center gap-4">
+                    ${costText}
+                    <button onclick="window.consumeBottle('${item.id}', ${b.size})" class="text-xs bg-app-action text-white px-2 py-1 rounded hover:opacity-80 btn">-1 Bottle</button>
+                </div>
+            </div>`;
+        }).join('') : `<p class="text-sm">${totalBottlesInBatch} bottles (old format)</p>`;
 
                     const adviceHtml = item.peakFlavorDate ? `
                         <div class="mt-3 pt-3 border-t border-app">
@@ -3686,25 +3678,26 @@ window.renderInventory = function() {
                         </div> ` : '';
 
                     return `
-                    <div class="p-4 card rounded-lg">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h4 class="font-bold text-lg font-header">${item.recipeName}</h4>
-                                <p class="text-sm text-app-secondary">Bottled on: ${bottlingDateStr}</p>
-                            </div>
-                            <div class="text-right flex-shrink-0 ml-4">
-                                <p class="text-2xl font-bold text-app-brand">${totalBottlesInBatch} <span class="text-base font-normal">total</span></p>
-                            </div>
-                        </div>
-                        <div class="mt-3 space-y-2">${bottleDetailsHtml}</div>
-                        ${adviceHtml}
-                        <div class="text-right mt-3 border-t border-app pt-2 flex justify-end items-center gap-4">
-                             <button onclick="window.setTastingReminder('${item.id}')" class="text-blue-600 hover:text-blue-800 text-xs font-semibold">Set Reminder</button>
-                             <button onclick="window.deleteCellarItem('${item.id}', '${item.recipeName}')" class="text-red-600 hover:text-red-800 text-xs font-semibold">Delete Batch</button>
-                        </div>
-                    </div>
-                    `}).join('');
-            }
+        <div class="p-4 card rounded-lg">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h4 class="font-bold text-lg font-header">${item.recipeName}</h4>
+                    <p class="text-sm text-app-secondary">Bottled on: ${bottlingDateStr}</p>
+                </div>
+                <div class="text-right flex-shrink-0 ml-4">
+                    <p class="text-2xl font-bold text-app-brand">${totalBottlesInBatch} <span class="text-base font-normal">total</span></p>
+                </div>
+            </div>
+            <div class="mt-3 space-y-2">${bottleDetailsHtml}</div>
+            ${adviceHtml}
+            <div class="text-right mt-3 border-t border-app pt-2 flex justify-end items-center gap-4">
+                 <button onclick="window.setTastingReminder('${item.id}')" class="text-blue-600 hover:text-blue-800 text-xs font-semibold">Set Reminder</button>
+                 <button onclick="window.deleteCellarItem('${item.id}', '${item.recipeName}')" class="text-red-600 hover:text-red-800 text-xs font-semibold">Delete Batch</button>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
 
             // --- Kalender Herinnering Functies ---
             window.setTastingReminder = function(cellarItemId) {
@@ -3884,7 +3877,7 @@ window.renderInventory = function() {
             }
 
             // BottleBatch FUNCTIE
-// DEFINITIEVE, VOLLEDIG CORRECTE bottleBatch FUNCTIE
+// VERVANG DE VOLLEDIGE OUDE bottleBatch FUNCTIE
 async function bottleBatch(e) {
     e.preventDefault();
     if (!currentBrewToBottleId) return;
@@ -3906,7 +3899,7 @@ async function bottleBatch(e) {
             { 
                 size: parseInt(document.getElementById('customSize').value) || 0, 
                 quantity: parseInt(document.getElementById('customQty').value) || 0,
-                price: parseFloat(document.getElementById('customPrice').value) || 0 // Lees custom prijs
+                price: parseFloat(document.getElementById('customPrice').value) || 0
             }
         ].filter(b => b.quantity > 0 && b.size > 0);
 
@@ -3916,85 +3909,64 @@ async function bottleBatch(e) {
         let totalPackagingCost = 0;
 
         bottlesData.forEach(bottle => {
-            // --- NIEUWE LOGICA: Gebruik de custom prijs als die er is, anders zoek de standaardprijs op ---
             const bottleCost = bottle.price !== null ? bottle.price : (packagingCostsPerUnit[bottle.size.toString()] || 0);
-            
             let closureCost = 0;
-            if (bottle.size >= 750) {
-                closureCost = packagingCostsPerUnit.cork || 0;
-            } else if (bottle.size >= 500) {
-                closureCost = packagingCostsPerUnit.crown_cap_29 || 0;
-            } else {
-                closureCost = packagingCostsPerUnit.crown_cap_26 || 0;
-            }
-            
+            if (bottle.size >= 750) { closureCost = packagingCostsPerUnit.cork || 0; } 
+            else if (bottle.size >= 500) { closureCost = packagingCostsPerUnit.crown_cap_29 || 0; } 
+            else { closureCost = packagingCostsPerUnit.crown_cap_26 || 0; }
             const labelCost = packagingCostsPerUnit.label || 0;
             totalPackagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
         });
         
-        let finalTotalCost = originalBrew.totalCost || 0;
+        let finalTotalCost = (originalBrew.totalCost || 0) + totalPackagingCost;
 
-        if (totalPackagingCost > 0) {
-            if (confirm(`The calculated packaging cost for this session is ${userSettings.currencySymbol || '€'}${totalPackagingCost.toFixed(2)}. \n\nDo you want to add this to the batch's total cost and update the stock?`)) {
-                finalTotalCost += totalPackagingCost;
-
-                const updatedPackagingStock = { ...packagingCosts };
-                bottlesData.forEach(bottle => {
+        if (confirm(`The calculated packaging cost for this session is ${userSettings.currencySymbol || '€'}${totalPackagingCost.toFixed(2)}. The new total batch cost will be ${userSettings.currencySymbol || '€'}${finalTotalCost.toFixed(2)}. Do you want to continue?`)) {
+            const updatedPackagingStock = { ...packagingCosts };
+            bottlesData.forEach(bottle => {
+                if(bottle.price === null) { // Alleen voorraad afschrijven voor standaard flessen
                     const bottleId = `bottle_${bottle.size}`;
-                    
-                    let closureId = 'label'; 
-                    if (bottle.size >= 750) {
-                        closureId = 'cork';
-                    } else if (bottle.size >= 500) {
-                        closureId = 'crown_cap_29';
-                    } else {
-                        closureId = 'crown_cap_26';
-                    }
-                    
-                    // Verminder enkel voorraad als het een gekend type is (custom flessen worden niet afgeschreven)
                     if (updatedPackagingStock[bottleId]) updatedPackagingStock[bottleId].qty -= bottle.quantity;
-                    if (updatedPackagingStock[closureId]) updatedPackagingStock[closureId].qty -= bottle.quantity;
-                    if (updatedPackagingStock.label) updatedPackagingStock.label.qty -= bottle.quantity;
-                });
-                
-                const appId = 'meandery-aa05e';
-                const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
-                await setDoc(settingsDocRef, updatedPackagingStock);
-                packagingCosts = updatedPackagingStock;
-                
-                showToast("Packaging stock updated.", "success");
-            }
+                }
+                let closureId; 
+                if (bottle.size >= 750) { closureId = 'cork'; } 
+                else if (bottle.size >= 500) { closureId = 'crown_cap_29'; } 
+                else { closureId = 'crown_cap_26'; }
+                if (updatedPackagingStock[closureId]) updatedPackagingStock[closureId].qty -= bottle.quantity;
+                if (updatedPackagingStock.label) updatedPackagingStock.label.qty -= bottle.quantity;
+            });
+            
+            const appId = 'meandery-aa05e';
+            const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
+            await setDoc(settingsDocRef, updatedPackagingStock);
+            packagingCosts = updatedPackagingStock;
+            showToast("Packaging stock updated.", "success");
+
+            const bottlingDate = new Date(document.getElementById('bottlingDate').value);
+            const cellarData = {
+                userId: userId, 
+                brewId: currentBrewToBottleId, 
+                recipeName: originalBrew.recipeName,
+                bottlingDate: bottlingDate, 
+                bottles: bottlesData.map(({price, ...rest}) => rest),
+                totalBatchCost: finalTotalCost,
+                ingredientCost: originalBrew.totalCost || 0
+            };
+
+            const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar');
+            await addDoc(cellarCol, cellarData);
+
+            const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId);
+            await updateDoc( brewDocRef, { isBottled: true, totalCost: finalTotalCost });
+            
+            hideBottlingModal();
+            switchMainView('management');
+            switchSubView('cellar', 'management-main-view');
+            showToast("Batch bottled and added to cellar!", "success");
+        } else {
+             throw new Error("Bottling cancelled by user.");
         }
-        
-        // ... de rest van de functie (opslaan naar cellar, etc.) blijft hetzelfde ...
-        const bottlingDate = new Date(document.getElementById('bottlingDate').value);
-        const agingPrompt = `You are a mead aging expert. Based on the following mead recipe and a bottling date of ${bottlingDate.toISOString().split('T')[0]}, determine a recommended 'peak flavor' or 'best before' date. Provide a short justification (1 sentence) and the date in YYYY-MM-DD format. Recipe:\n\n---\n${originalBrew.recipeMarkdown}`;
-        const agingAdvice = await performApiCall(agingPrompt);
-        const dateMatch = agingAdvice.match(/(\d{4}-\d{2}-\d{2})/);
-        const justificationMatch = agingAdvice.match(/Justification:\s*(.*)/i);
-        
-        const cellarData = {
-            userId: userId, brewId: currentBrewToBottleId, recipeName: originalBrew.recipeName,
-            bottlingDate: bottlingDate, bottles: bottlesData.map(({price, ...rest}) => rest), // Verwijder de tijdelijke prijs
-            peakFlavorDate: dateMatch ? dateMatch[1] : null,
-            peakFlavorJustification: justificationMatch ? justificationMatch[1] : agingAdvice,
-            totalBatchCost: finalTotalCost,
-            ingredientCost: originalBrew.totalCost || 0
-        };
-
-        const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar');
-        await addDoc(cellarCol, cellarData);
-
-        const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId);
-        await updateDoc( brewDocRef, { isBottled: true, totalCost: finalTotalCost });
-        
-        hideBottlingModal();
-        switchMainView('management');
-        switchSubView('cellar', 'management-main-view');
-        showToast("Batch bottled and added to cellar!", "success");
-
     } catch (error) {
-        console.error("FATAL: Error adding batch to cellar: ", error);
+        console.error("Error during bottling process: ", error);
         showToast(error.message, "error");
     } finally {
         submitButton.disabled = false;

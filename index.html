@@ -1320,7 +1320,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.5.8 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.6.0 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2646,41 +2646,28 @@ async function clearInventory() {
             }
 
             window.showBrewDetail = function(brewId) {
-                const brew = brews.find(b => b.id === brewId);
-                if (!brew) return;
+    const brew = brews.find(b => b.id === brewId);
+    if (!brew) return;
 
-                const recipeHtml = marked.parse(brew.recipeMarkdown);
-                const logHtml = getBrewLogHtml(brew.logData, brew.id);
-                const currency = userSettings.currencySymbol || '€';
+    const recipeHtml = marked.parse(brew.recipeMarkdown);
+    const logHtml = getBrewLogHtml(brew.logData, brew.id);
+    const currency = userSettings.currencySymbol || '€';
 
-                historyDetailContainer.innerHTML = `
-                    <button onclick="window.goBackToHistoryList()" class="mb-4 ...">&larr; Back to History</button>
-                    <div class="print-button-container ... no-print">
-                        <button onclick="window.showBrewPrompt('${brew.id}')" class="bg-indigo-600 ...">
-                            Show AI Prompt
-                        </button>
-                    </div>
-                `;
-                
-                let costHtml = '';
-                if (brew.totalCost !== undefined && brew.totalCost > 0) {
-                    const totalBottlesInBatch = brew.isBottled 
-                        ? (cellar.find(c => c.brewId === brew.id)?.bottles.reduce((acc, b) => acc + b.quantity, 0) || (brew.batchSize / 0.75))
-                        : (brew.batchSize / 0.75);
-
-                    const costPerBottle = totalBottlesInBatch > 0 ? brew.totalCost / totalBottlesInBatch : 0;
-                    
-                    costHtml = `
-                        <div class="mt-6 p-4 bg-amber-50 rounded-lg dark:bg-opacity-10">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-header text-lg text-stone-800 dark:text-amber-200">Batch Cost Analysis</h3>
-                                <button onclick="window.recalculateBatchCost('${brew.id}')" class="text-xs bg-amber-600 text-white px-2 py-1 rounded hover:opacity-80 btn">Recalculate Cost</button>
-                            </div>
-                            <p class="text-stone-800 dark:text-amber-200"><strong>Total Batch Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</p>
-                            <p class="text-stone-800 dark:text-amber-200"><strong>Avg. Cost Per 750ml Bottle:</strong> ${currency}${costPerBottle.toFixed(2)}</p>
-                        </div>
-                    `;
-                }
+    let costHtml = '';
+    if (brew.totalCost !== undefined && brew.totalCost > 0) {
+        const totalBottlesInBatch = brew.isBottled 
+            ? (cellar.find(c => c.brewId === brew.id)?.bottles.reduce((acc, b) => acc + b.quantity, 0) || (brew.batchSize / 0.75))
+            : (brew.batchSize / 0.75);
+        const costPerBottle = totalBottlesInBatch > 0 ? brew.totalCost / totalBottlesInBatch : 0;
+        
+        costHtml = `
+            <div class="mt-6 p-4 bg-amber-50 rounded-lg dark:bg-opacity-10">
+                <h3 class="font-header text-lg text-stone-800 dark:text-amber-200">Batch Cost Analysis</h3>
+                <p class="text-stone-800 dark:text-amber-200"><strong>Total Batch Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</p>
+                <p class="text-stone-800 dark:text-amber-200"><strong>Avg. Cost Per Bottle (all sizes):</strong> ${currency}${costPerBottle.toFixed(2)}</p>
+            </div>
+        `;
+    }
 
                 let socialPostsHtml = '';
                 if (brew.socialMediaPosts && brew.socialMediaPosts.length > 0) {
@@ -2743,11 +2730,11 @@ async function clearInventory() {
 
                 historyDetailContainer.innerHTML = `
                     <button onclick="window.goBackToHistoryList()" class="mb-4 text-app-brand hover:underline no-print">&larr; Back to History</button>
-                    <div class="print-button-container text-right mb-4 flex flex-wrap justify-end gap-2 no-print">
-                        <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors btn flex items-center"> Clone Recipe </button>
+                    <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
+                        <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors btn flex items-center justify-center"> Clone Recipe </button>
                         <button onclick="window.startBrewDay('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Start New Batch</button>
                         <button onclick="window.showBottlingModal('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Bottle Batch</button>
-                        <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded-lg hover:bg-red-800 transition-colors btn flex items-center"> Delete Recipe </button>
+                        <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded-lg hover:bg-red-800 transition-colors btn flex items-center justify-center"> Delete Recipe </button>
                     </div>
                     <div class="recipe-content">${recipeHtml}</div>
                     ${costHtml}
@@ -2982,6 +2969,10 @@ async function clearInventory() {
                     const brewDocRef = doc(db, 'artifacts', appId, 'users', userId, 'brews', brewId);
                     await updateDoc(brewDocRef, { logData: logData });
                     showToast('Log updated successfully!', 'success');
+        
+                    // Ververs de detailweergave om de grafiek te tonen
+                    showBrewDetail(brewId);
+
                  } catch(error) {
                     console.error("Error updating log:", error);
                     showToast('Failed to update log.', 'error');
@@ -3662,11 +3653,18 @@ window.renderInventory = function() {
 
                     const bottleDetailsHtml = (item.bottles && Array.isArray(item.bottles)) ? item.bottles.map(b => {
                         // --- Bereken de kost per fles ---
-                        const bottleCost = packagingCosts[b.size.toString()] || 0;
-                        const closureCost = b.size >= 750 ? packagingCosts.cork : packagingCosts.crown_cap;
-                        const labelCost = packagingCosts.label;
-                        const totalPackagingCostPerBottle = bottleCost + closureCost + labelCost;
-                        const finalCostPerBottle = ingredientCostPerBottle + totalPackagingCostPerBottle;
+                        let closureCost = 0;
+                        // AANGEPAST: Gebruikt nu de correcte, slimme logica
+                        if (b.size >= 750) {
+                            closureCost = packagingCostsPerUnit.cork || 0;
+                        } else if (b.size >= 500) {
+                            closureCost = packagingCostsPerUnit.crown_cap_29 || 0;
+                        } else {
+                            closureCost = packagingCostsPerUnit.crown_cap_26 || 0;
+                        }
+                        const bottleCost = packagingCostsPerUnit[b.size.toString()] || 0;
+                        const labelCost = packagingCostsPerUnit.label || 0;
+                        const finalCostPerBottle = ingredientCostPerBottle + bottleCost + closureCost + labelCost;
                         const costText = finalCostPerBottle > 0 ? `<span class="font-bold">${currency}${finalCostPerBottle.toFixed(2)}/st</span>` : '';
 
                         return `
@@ -4346,58 +4344,56 @@ async function bottleBatch(e) {
                 };
             }
 
-            function getBrewLogHtml(logData, idSuffix = 'new') {
-                const data = logData || {};
-                const fermLog = data.fermentationLog || Array.from({ length: 8 }, () => ({}));
-                
-                // AANGEPAST: We "escapen" de receptnaam om problemen met aanhalingstekens te voorkomen.
-                const escapedRecipeName = (data.recipeName || '').replace(/"/g, '&quot;');
+function getBrewLogHtml(logData, idSuffix = 'new') {
+    const data = logData || {};
+    const fermLog = data.fermentationLog || Array.from({ length: 8 }, () => ({}));
+    const escapedRecipeName = (data.recipeName || '').replace(/"/g, '&quot;');
+    
+    // NIEUW: De oninput functie om de OG te kopiëren
+    const copyOgToLogScript = `
+        const ogInput = document.getElementById('actualOG-${idSuffix}');
+        const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input');
+        if (ogInput && firstSgInput) {
+            firstSgInput.value = ogInput.value;
+        }
+    `;
 
-                // Variabelen om de laatst bekende waarde bij te houden.
-                let lastTempValue = '18';
-                let lastSgValue = data.targetOG || '';
-
-                return `
-                    <div class="brew-log-section" data-id="${idSuffix}">
-                        <h3>Brewmaster's Log</h3>
-                        <div class="log-grid">
-                            <div class="log-item"><label for="recipeName-${idSuffix}">Recipe Name:</label><input type="text" id="recipeName-${idSuffix}" value="${escapedRecipeName}"></div>
-                            <div class="log-item"><label for="brewDate-${idSuffix}">Brew Date:</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}"></div>
-                        </div>
-                        <div class="log-grid">
-                             <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${data.targetOG || ''}"></div>
-                             <div class="log-item"><label for="actualOG-${idSuffix}">Actual OG:</label><input type="text" id="actualOG-${idSuffix}" value="${data.actualOG || ''}"></div>
-                             <div class="log-item"><label for="targetFG-${idSuffix}">Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${data.targetFG || ''}"></div>
-                            <div class="log-item"><label for="actualFG-${idSuffix}">Actual FG:</label><input type="text" id="actualFG-${idSuffix}" value="${data.actualFG || ''}"></div>
-                             <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${data.targetABV || ''}"></div>
-                            <div class="log-item"><label for="finalABV-${idSuffix}">Final ABV:</label><input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}"></div>
-                        </div>
-                        <div class="log-item">
-                            <label>Fermentation Log</label>
-                            <table class="fermentation-table" id="fermentationTable-${idSuffix}">
-                                <thead><tr><th>Date</th><th>Temp (°C)</th><th>S.G.</th><th>Notes</th></tr></thead>
-                                <tbody>${fermLog.map((row, index) => {
-                                    const currentTempValue = row.temp || lastTempValue;
-                                    const currentSgValue = row.sg || lastSgValue;
-                                    
-                                    lastTempValue = currentTempValue;
-                                    lastSgValue = currentSgValue;
-
-                                    return `<tr>
-                                        <td><input type="date" value="${row.date || ''}" class="w-full"></td>
-                                        <td><input type="number" step="0.5" placeholder="18.5" value="${currentTempValue}" class="w-full text-center"></td>
-                                        <td><input type="number" step="0.001" placeholder="1.050" value="${currentSgValue}" class="w-full text-center"></td>
-                                        <td><input type="text" value="${row.notes || ''}"></td>
-                                    </tr>`;
-                                }).join('')}</tbody>
-                            </table>
-                        </div>
-                        <div class="log-item"><label for="agingNotes-${idSuffix}">Aging & Conditioning Notes:</label><textarea id="agingNotes-${idSuffix}" rows="4" placeholder="Secondary additions, clearing, bulk aging time, etc.">${data.agingNotes || ''}</textarea></div>
-                        <div class="log-item"><label for="bottlingNotes-${idSuffix}">Bottling / Kegging Notes:</label><textarea id="bottlingNotes-${idSuffix}" rows="3" placeholder="Bottling date, final volume, carbonation method, etc.">${data.bottlingNotes || ''}</textarea></div>
-                        <div class="log-item"><label for="tastingNotes-${idSuffix}">Final Tasting Notes:</label><textarea id="tastingNotes-${idSuffix}" rows="6" placeholder="Aroma, appearance, flavor, mouthfeel, overall impression...">${data.tastingNotes || ''}</textarea></div>
-                    </div>
-                `;
-            }
+    return `
+        <div class="brew-log-section" data-id="${idSuffix}">
+            <h3>Brewmaster's Log</h3>
+            <div class="log-grid">
+                <div class="log-item"><label for="recipeName-${idSuffix}">Recipe Name:</label><input type="text" id="recipeName-${idSuffix}" value="${escapedRecipeName}"></div>
+                <div class="log-item"><label for="brewDate-${idSuffix}">Brew Date:</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}"></div>
+            </div>
+            <div class="log-grid">
+                 <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${data.targetOG || ''}"></div>
+                 <div class="log-item">
+                    <label for="actualOG-${idSuffix}">Actual OG:</label>
+                    <input type="text" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" oninput="${copyOgToLogScript}">
+                 </div>
+                 <div class="log-item"><label for="targetFG-${idSuffix}">Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${data.targetFG || ''}"></div>
+                <div class="log-item"><label for="actualFG-${idSuffix}">Actual FG:</label><input type="text" id="actualFG-${idSuffix}" value="${data.actualFG || ''}"></div>
+                 <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${data.targetABV || ''}"></div>
+                <div class="log-item"><label for="finalABV-${idSuffix}">Final ABV:</label><input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}"></div>
+            </div>
+            <div class="log-item">
+                <label>Fermentation Log</label>
+                <table class="fermentation-table" id="fermentationTable-${idSuffix}">
+                    <thead><tr><th class="w-1/4">Date</th><th class="w-1/6">Temp (°C)</th><th class="w-1/5">S.G.</th><th class="w-2/5">Notes</th></tr></thead>
+                    <tbody>${fermLog.map(row => `<tr>
+                            <td><input type="date" value="${row.date || ''}" class="w-full"></td>
+                            <td><input type="number" step="0.5" placeholder="18.5" value="${row.temp || '18'}" class="w-full text-center"></td>
+                            <td><input type="number" step="0.001" placeholder="1.050" value="${row.sg || ''}" class="w-full text-center"></td>
+                            <td><input type="text" value="${row.notes || ''}"></td>
+                        </tr>`).join('')}</tbody>
+                </table>
+            </div>
+            <div class="log-item"><label for="agingNotes-${idSuffix}">Aging & Conditioning Notes:</label><textarea id="agingNotes-${idSuffix}" rows="4" placeholder="...">${data.agingNotes || ''}</textarea></div>
+            <div class="log-item"><label for="bottlingNotes-${idSuffix}">Bottling / Kegging Notes:</label><textarea id="bottlingNotes-${idSuffix}" rows="3" placeholder="...">${data.bottlingNotes || ''}</textarea></div>
+            <div class="log-item"><label for="tastingNotes-${idSuffix}">Final Tasting Notes:</label><textarea id="tastingNotes-${idSuffix}" rows="6" placeholder="...">${data.tastingNotes || ''}</textarea></div>
+        </div>
+    `;
+}
 
             // --- Functie voor de Actieve Batch Tijdlijn ---
 function renderActiveBrewTimeline() {

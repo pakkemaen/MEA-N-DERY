@@ -1314,7 +1314,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.5.0 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.5.1 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -1533,7 +1533,7 @@ function executeDangerAction() {
 
             function renderPackagingUI() {
                 const listContainer = document.getElementById('packaging-list');
-                const stockContainer = document.getElementById('packaging-stock-container'); // Het nieuwe ID
+                const stockContainer = document.getElementById('packaging-stock-container');
                 if (!listContainer || !stockContainer) return;
 
                 // Controleer of er voorraad is
@@ -1545,31 +1545,32 @@ function executeDangerAction() {
                 if (hasStock) {
                     // Als er wel voorraad is, bouw dan de lijst op zoals voorheen
                     const currency = userSettings.currencySymbol || '€';
-                    listContainer.innerHTML = PACKAGING_ITEMS.map(item => {
-                        const itemData = packagingCosts[item.id] || { qty: 0, price: 0 };
-                        const costPerUnit = (itemData.qty > 0 && itemData.price > 0) ? (itemData.price / itemData.qty).toFixed(2) : '0.00';
+                    listContainer.innerHTML = PACKAGING_ITEMS
+                        .filter(item => packagingCosts[item.id] && packagingCosts[item.id].qty > 0)
+                        .map(item => {
+                            const itemData = packagingCosts[item.id]; // We weten nu zeker dat deze data bestaat
+                            const costPerUnit = (itemData.qty > 0 && itemData.price > 0) ? (itemData.price / itemData.qty).toFixed(2) : '0.00';
 
-                        return `
-                           <div id="pkg-item-${item.id}" class="p-3 card rounded-md">
-                               <div class="flex justify-between items-center">
-                                   <div>
-                                       <p class="font-bold">${item.name}</p>
-                                       <p class="text-sm text-app-secondary/80">Cost per unit: ${currency}${costPerUnit}</p>
-                                   </div>
-                                   <div class="flex items-center gap-4">
-                                       <span class="font-semibold">${itemData.qty} items - ${currency}${itemData.price.toFixed(2)} total</span>
-                                       <div class="flex gap-2">
-                                           <button onclick="window.editPackagingItem('${item.id}')" class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
-                                           <button onclick="window.clearPackagingItem('${item.id}')" class="text-red-600 hover:text-red-800 text-sm">Clear</button>
+                            return `
+                               <div id="pkg-item-${item.id}" class="p-3 card rounded-md">
+                                   <div class="flex justify-between items-center">
+                                       <div>
+                                           <p class="font-bold">${item.name}</p>
+                                           <p class="text-sm text-app-secondary/80">Cost per unit: ${currency}${costPerUnit}</p>
+                                       </div>
+                                       <div class="flex items-center gap-4">
+                                           <span class="font-semibold">${itemData.qty} items - ${currency}${itemData.price.toFixed(2)} total</span>
+                                           <div class="flex gap-2">
+                                               <button onclick="window.editPackagingItem('${item.id}')" class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
+                                              <button onclick="window.clearPackagingItem('${item.id}')" class="text-red-600 hover:text-red-800 text-sm">Clear</button>
+                                           </div>
                                        </div>
                                    </div>
                                </div>
-                           </div>
-                       `;
-                   }).join('');
+                           `;
+                       }).join('');
                } else {
-                   // Maak de lijst leeg als er geen voorraad is (voor de zekerheid)
-                   listContainer.innerHTML = '';
+                  listContainer.innerHTML = '';
                }
            }
 

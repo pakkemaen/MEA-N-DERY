@@ -1328,7 +1328,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.5.5 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.5.6 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -1364,7 +1364,8 @@
                 { id: 'bottle_330', name: '330ml Bottle' },
                 { id: 'bottle_250', name: '250ml Bottle' },
                 { id: 'cork', name: 'Cork' },
-                { id: 'crown_cap', name: 'Crown Cap' },
+                { id: 'crown_cap_26', name: 'Crown Cap 26mm' },
+                { id: 'crown_cap_29', name: 'Crown Cap 29mm' },
                 { id: 'label', name: 'Label' }
             ]; 
             
@@ -3881,6 +3882,7 @@ window.renderInventory = function() {
                 currentBrewToBottleId = null;
             }
 
+            // BottleBatch FUNCTIE
             async function bottleBatch(e) {
                 e.preventDefault();
                 if (!currentBrewToBottleId) return;
@@ -3889,11 +3891,12 @@ window.renderInventory = function() {
                 const originalButtonText = submitButton.innerHTML;
                 submitButton.disabled = true;
                 submitButton.innerHTML = '<div class="loader" style="height:20px; width:20px; border-width: 2px; margin: 0 auto;"></div>';
-                
+    
                 try {
                     const originalBrew = brews.find(b => b.id === currentBrewToBottleId);
                     if (!originalBrew) throw new Error("Could not find the original recipe to bottle.");
 
+                    // Voeg hier de 450ml fles toe aan de te controleren data
                     const bottlesData = [
                         { size: 750, quantity: parseInt(document.getElementById('qty750').value) || 0 },
                         { size: 500, quantity: parseInt(document.getElementById('qty500').value) || 0 },
@@ -3904,57 +3907,73 @@ window.renderInventory = function() {
 
                     if (bottlesData.length === 0) throw new Error("Please enter a quantity for at least one bottle size.");
 
-                    // --- Kostenberekening en Inventaris Update ---
-    const packagingCostsPerUnit = getPackagingCosts();
-    let totalPackagingCost = 0;
+                    const packagingCostsPerUnit = getPackagingCosts();
+                    let totalPackagingCost = 0;
 
-    bottlesData.forEach(bottle => {
-        const bottleCost = packagingCostsPerUnit[bottle.size.toString()] || 0;
-        const closureCost = bottle.size >= 750 ? packagingCostsPerUnit.cork : packagingCostsPerUnit.crown_cap;
-        const labelCost = packagingCostsPerUnit.label;
-        totalPackagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
-    });
-    
-    let finalTotalCost = originalBrew.totalCost || 0;
-
-    if (totalPackagingCost > 0) {
-        if (confirm(`The calculated packaging cost for this session is ${userSettings.currencySymbol || '€'}${totalPackagingCost.toFixed(2)}. \n\nDo you want to add this to the batch's total cost and update the stock?`)) {
-            finalTotalCost += totalPackagingCost;
-
-            // Voorraad aftrekken
-            const updatedPackagingStock = { ...packagingCosts };
-            bottlesData.forEach(bottle => {
-                const bottleId = `bottle_${bottle.size}`;
-                const closureId = bottle.size >= 750 ? 'cork' : 'crown_cap';
-                
-                if (updatedPackagingStock[bottleId]) updatedPackagingStock[bottleId].qty -= bottle.quantity;
-                if (updatedPackagingStock[closureId]) updatedPackagingStock[closureId].qty -= bottle.quantity;
-                if (updatedPackagingStock.label) updatedPackagingStock.label.qty -= bottle.quantity;
-            });
+                    bottlesData.forEach(bottle => {
+                        const bottleCost = packagingCostsPerUnit[bottle.size.toString()] || 0;
             
-            // Sla de nieuwe voorraad op
-            const appId = 'meandery-aa05e';
-            const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
-            await setDoc(settingsDocRef, updatedPackagingStock);
-            packagingCosts = updatedPackagingStock;
+                        // --- NIEUWE, SLIMMERE LOGICA VOOR SLUITINGEN ---
+                        let closureCost = 0;
+                        if (bottle.size >= 750) {
+                           closureCost = packagingCostsPerUnit.cork || 0;
+                        } else if (bottle.size >= 500) { // Flessen van 500ml en groter (maar kleiner dan 750ml)
+                           closureCost = packagingCostsPerUnit.crown_cap_29 || 0;
+                        } else { // Kleinere flessen (450ml, 330ml, etc.)
+                           closureCost = packagingCostsPerUnit.crown_cap_26 || 0;
+                        }
             
-            showToast("Packaging stock updated.", "success");
-        }
-    }
+                        const labelCost = packagingCostsPerUnit.label || 0;
+                        totalPackagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
+                    });
+        
+                    let finalTotalCost = originalBrew.totalCost || 0;
+
+                    if (totalPackagingCost > 0) {
+                        if (confirm(`The calculated packaging cost for this session is ${userSettings.currencySymbol || '€'}${totalPackagingCost.toFixed(2)}. \n\nDo you want to add this to the batch's total cost and update the stock?`)) {
+                            finalTotalCost += totalPackagingCost;
+
+                            const updatedPackagingStock = { ...packagingCosts };
+                            bottlesData.forEach(bottle => {
+                                const bottleId = `bottle_${bottle.size}`;
                     
+                                // --- OOK HIER DE SLIMME LOGICA TOEPASSEN ---
+                                let closureId = 'label'; // Default to something that exists
+                                if (bottle.size >= 750) {
+                                    closureId = 'cork';
+                                } else if (bottle.size >= 500) {
+                                    closureId = 'crown_cap_29';
+                                } else {
+                                    closureId = 'crown_cap_26';
+                                }
+                    
+                                if (updatedPackagingStock[bottleId]) updatedPackagingStock[bottleId].qty -= bottle.quantity;
+                                if (updatedPackagingStock[closureId]) updatedPackagingStock[closureId].qty -= bottle.quantity;
+                                if (updatedPackagingStock.label) updatedPackagingStock.label.qty -= bottle.quantity;
+                            });
+                
+                            const appId = 'meandery-aa05e';
+                            const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
+                            await setDoc(settingsDocRef, updatedPackagingStock);
+                            packagingCosts = updatedPackagingStock;
+                
+                            showToast("Packaging stock updated.", "success");
+                        }
+                    }
+        
                     const bottlingDate = new Date(document.getElementById('bottlingDate').value);
                     const agingPrompt = `You are a mead aging expert. Based on the following mead recipe and a bottling date of ${bottlingDate.toISOString().split('T')[0]}, determine a recommended 'peak flavor' or 'best before' date. Provide a short justification (1 sentence) and the date in YYYY-MM-DD format. Recipe:\n\n---\n${originalBrew.recipeMarkdown}`;
                     const agingAdvice = await performApiCall(agingPrompt);
-                    const dateMatch = agingAdvice.match(/(\d{4}-\d{2}-\d{2})/);
-                    const justificationMatch = agingAdvice.match(/Justification:\s*(.*)/i);
-                    
+                    const dateMatch = agingAdvice.match(/(\\d{4}-\\d{2}-\\d{2})/);
+                    const justificationMatch = agingAdvice.match(/Justification:\\s*(.*)/i);
+        
                     const cellarData = {
                         userId: userId, brewId: currentBrewToBottleId, recipeName: originalBrew.recipeName,
                         bottlingDate: bottlingDate, bottles: bottlesData,
                         peakFlavorDate: dateMatch ? dateMatch[1] : null,
                         peakFlavorJustification: justificationMatch ? justificationMatch[1] : agingAdvice,
-                        totalBatchCost: finalTotalCost, // Sla de definitieve kosten op
-                        ingredientCost: originalBrew.totalCost || 0 // Bewaar ook de oorspronkelijke kosten
+                        totalBatchCost: finalTotalCost,
+                        ingredientCost: originalBrew.totalCost || 0
                     };
 
                     const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar');
@@ -3962,7 +3981,7 @@ window.renderInventory = function() {
 
                     const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId);
                     await updateDoc( brewDocRef, { isBottled: true, totalCost: finalTotalCost });
-                    
+        
                     hideBottlingModal();
                     switchMainView('management');
                     switchSubView('cellar', 'management-main-view');
@@ -5306,28 +5325,31 @@ function populateSocialRecipeDropdown() {
                 return ingredients;
             }
 
+            // getPackagingCosts FUNCTIE
             function getPackagingCosts() {
-    const calculatedCosts = {};
+                const calculatedCosts = {};
     
-    PACKAGING_ITEMS.forEach(item => {
-        const itemData = packagingCosts[item.id];
-        let costPerUnit = 0;
-        if (itemData && itemData.qty > 0 && itemData.price > 0) {
-            costPerUnit = itemData.price / itemData.qty;
-        }
+                PACKAGING_ITEMS.forEach(item => {
+                    const itemData = packagingCosts[item.id];
+                    let costPerUnit = 0;
+                    if (itemData && itemData.qty > 0 && itemData.price > 0) {
+                        costPerUnit = itemData.price / itemData.qty;
+                    }
         
-        // Specifieke mapping voor de bottel-logica
-        if (item.id === 'bottle_750') calculatedCosts['750'] = costPerUnit;
-        if (item.id === 'bottle_500') calculatedCosts['500'] = costPerUnit;
-        if (item.id === 'bottle_330') calculatedCosts['330'] = costPerUnit;
-        if (item.id === 'bottle_250') calculatedCosts['250'] = costPerUnit;
-        if (item.id === 'cork') calculatedCosts['cork'] = costPerUnit;
-        if (item.id === 'crown_cap') calculatedCosts['crown_cap'] = costPerUnit;
-        if (item.id === 'label') calculatedCosts['label'] = costPerUnit;
-    });
-
-    return calculatedCosts;
-}
+                    // Specifieke mapping voor de bottel-logica
+                    if (item.id === 'bottle_750') calculatedCosts['750'] = costPerUnit;
+                    if (item.id === 'bottle_500') calculatedCosts['500'] = costPerUnit;
+                    if (item.id === 'bottle_450') calculatedCosts['450'] = costPerUnit; // <-- NIEUW
+                    if (item.id === 'bottle_330') calculatedCosts['330'] = costPerUnit;
+                    if (item.id === 'bottle_250') calculatedCosts['250'] = costPerUnit;
+                    if (item.id === 'cork') calculatedCosts['cork'] = costPerUnit;
+                    if (item.id === 'crown_cap_26') calculatedCosts['crown_cap_26'] = costPerUnit; // <-- AANGEPAST
+                    if (item.id === 'crown_cap_29') calculatedCosts['crown_cap_29'] = costPerUnit; // <-- NIEUW
+                    if (item.id === 'label') calculatedCosts['label'] = costPerUnit;
+                });
+ 
+                return calculatedCosts;
+            }
 
             function updateCostAnalysis() {
                 const currency = userSettings.currencySymbol || '€';

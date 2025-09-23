@@ -783,7 +783,7 @@
                             <button type="submit" class="w-full bg-app-action text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-all duration-300 shadow-md btn">Add Ingredient</button>
                         </form>
                     </aside>
-                    <main id="packaging-stock-container" class="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg inventory-panel overflow-y-auto" style="max-height: 70vh;">
+                    <main id="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg inventory-panel overflow-y-auto" style="max-height: 70vh;">
                         <h2 class="text-3xl font-header font-bold mb-4 text-center">Current Stock</h2>
                         <div id="inventory-list"></div>
                     </main>
@@ -1118,7 +1118,7 @@
                 </div>
             </div>
             <div id="water-view" class="hidden mt-4">
-                <div class="flex flex-col lg:flex-row gap-8">
+                <div class="flex flex-col lg:flex-row gap-8 lg:items-start">
                     <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg flex flex-col" style="max-height: 80vh;">
                         <h2 class="text-2xl font-header font-bold mb-4 border-b pb-4 border-app">Water Management</h2>
     
@@ -1327,7 +1327,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.5.2 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.5.3 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -1877,24 +1877,24 @@ async function findWaterProfileWithAI() {
             labelPreview = document.getElementById('label-preview');
 
             // Your web app's Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyAhOOrwJCYve5XTGS6oXvhCg_l3_LcK00I",
-      authDomain: "meandery-aa05e.firebaseapp.com",
-      projectId: "meandery-aa05e",
-      storageBucket: "meandery-aa05e.appspot.com",
-      messagingSenderId: "388311971225",
-      appId: "1:388311971225:web:e5b0e81ce18d96b4a88f08",
-      measurementId: "G-S5CPLP80XT"
-    };
+            const firebaseConfig = {
+              apiKey: "AIzaSyAhOOrwJCYve5XTGS6oXvhCg_l3_LcK00I",
+              authDomain: "meandery-aa05e.firebaseapp.com",
+              projectId: "meandery-aa05e",
+              storageBucket: "meandery-aa05e.appspot.com",
+              messagingSenderId: "388311971225",
+              appId: "1:388311971225:web:e5b0e81ce18d96b4a88f08",
+              measurementId: "G-S5CPLP80XT"
+            };
 
-    try {
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
 
-        onAuthStateChanged(auth, async (user) => {
-    const loginView = document.getElementById('login-view');
-    const mainAppView = document.getElementById('dashboard-main-view');
+                onAuthStateChanged(auth, async (user) => {
+            const loginView = document.getElementById('login-view');
+            const mainAppView = document.getElementById('dashboard-main-view');
 
     if (user && !user.isAnonymous) {
         // Gebruiker is succesvol ingelogd met Google

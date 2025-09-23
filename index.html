@@ -85,7 +85,7 @@
             font-size: 0.6rem;
         }
 
-        /* NIEUW: Roteer de inhoud van het label mee */
+        // Roteer de inhoud van het label mee
         #label-preview.horizontal > * {
             transform: rotate(-90deg);
         }
@@ -297,7 +297,7 @@
         }
 
         #label-preview { border: 2px dashed var(--border-color); transition: all 0.3s; }
-        /* --- NIEUWE DEFINITIEVE LABEL STIJLEN --- */
+        /* --- LABEL STIJLEN --- */
 
         /* Stijl 1: Minimalist (Standaard) */
         .label-minimalist {
@@ -772,8 +772,8 @@
                             </div>
                             <div>
                                 <label for="itemCategory" class="block text-sm font-bold mb-2">Category</label>
-                                <select id="itemCategory" class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
-                                    <option>Honey</option><option>Yeast</option><option>Nutrient</option><option>Malt Extract</option><option>Fruit</option><option>Spice</option><option>Adjunct</option><option>Chemical</option>
+                                <select id="itemCategory" class="w-full p-2 ...">
+                                       <option>Honey</option><option>Yeast</option><option>Nutrient</option><option>Malt Extract</option><option>Fruit</option><option>Spice</option><option>Adjunct</option><option>Chemical</option>                  <option>Water</option>
                                 </select>
                             </div>
                             <div>
@@ -1119,43 +1119,56 @@
             </div>
             <div id="water-view" class="hidden mt-4">
                 <div class="flex flex-col lg:flex-row gap-8">
-                    <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg">
-                        <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app">Water Profile</h2>
-                        <div class="space-y-4">
-                            <div>
-                                <label for="waterSource" class="block text-sm font-bold mb-2">Select Water Profile</label>
-                                <select id="waterSource" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                                    <option value="spa">Spa Reine</option>
-                                    <option value="chaudfontaine">Chaudfontaine</option>
-                                    <option value="valvert">Valvert</option>
-                                    <option value="bru">Bru</option>
-                                    <option value="villers">Villers</option>
-                                    <option value="tap">Tap Water (Enter your own)</option>
-                                    <option value="manual">Manual Entry / Target Profile</option>
-                                </select>
+                    <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg flex flex-col" style="max-height: 80vh;">
+                        <h2 class="text-2xl font-header font-bold mb-4 border-b pb-4 border-app">Water Management</h2>
+    
+                        <div class="mb-4">
+                            <label for="waterSource" class="block text-sm font-bold mb-2">Select Water Profile</label>
+                            <select id="waterSource" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                                   </select>
+                        </div>
+                        <div id="waterProfileDisplay" class="mb-4 p-4 card rounded-lg">
+                            <h4 class="font-bold font-header text-lg mb-2">Active Mineral Profile (mg/L)</h4>
+                            <ul class="space-y-1 text-sm text-app-primary">
+                                <li><strong>Ca:</strong> <span id="val-ca">--</span></li>
+                                <li><strong>Mg:</strong> <span id="val-mg">--</span></li>
+                                <li><strong>Na:</strong> <span id="val-na">--</span></li>
+                                <li><strong>SO4:</strong> <span id="val-so4">--</span></li>
+                                <li><strong>Cl:</strong> <span id="val-cl">--</span></li>
+                                <li><strong>HCO3:</strong> <span id="val-hco3">--</span></li>
+                            </ul>
+                        </div>
+    
+                        <hr class="border-app my-4">
+
+                        <div id="ai-water-search-section" class="mb-4">
+                            <h3 class="text-xl font-header font-bold mb-4">Find Profile with AI</h3>
+                            <div class="flex gap-2">
+                                <input type="text" id="ai-water-search-name" placeholder="e.g., Orval, Mont Roucous" class="flex-grow p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                                <button id="ai-water-search-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 btn">Find</button>
                             </div>
-                            <div id="manualWaterProfile" class="hidden space-y-2 pt-4 border-t border-app">
-                                 <h4 class="font-bold text-center">Enter Manual Profile (mg/L)</h4>
-                                 <div class="grid grid-cols-2 gap-2">
-                                    <div><label for="manual_ca">Ca</label><input type="number" id="manual_ca" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                    <div><label for="manual_mg">Mg</label><input type="number" id="manual_mg" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                    <div><label for="manual_na">Na</label><input type="number" id="manual_na" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                    <div><label for="manual_so4">SO4</label><input type="number" id="manual_so4" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                    <div><label for="manual_cl">Cl</label><input type="number" id="manual_cl" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                    <div><label for="manual_hco3">HCO3</label><input type="number" id="manual_hco3" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                 </div>
-                            </div>
-                            <button id="fetchWaterProfileBtn" class="w-full bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">Fetch Profile</button>
-                            <div id="waterProfileDisplay" class="mt-4 p-4 card rounded-lg">
-                                <h4 class="font-bold font-header text-lg mb-2">Active Mineral Profile (mg/L)</h4>
-                                <ul class="space-y-1 text-sm text-app-primary">
-                                    <li><strong>Calcium (Ca):</strong> <span id="val-ca">--</span></li>
-                                    <li><strong>Magnesium (Mg):</strong> <span id="val-mg">--</span></li>
-                                    <li><strong>Sodium (Na):</strong> <span id="val-na">--</span></li>
-                                    <li><strong>Sulfate (SO4):</strong> <span id="val-so4">--</span></li>
-                                    <li><strong>Chloride (Cl):</strong> <span id="val-cl">--</span></li>
-                                    <li><strong>Bicarbonate (HCO3):</strong> <span id="val-hco3">--</span></li>
-                                </ul>
+                        </div>
+    
+                        <form id="water-profile-form" class="space-y-2 pt-4 border-t border-app">
+                            <input type="hidden" id="water-profile-id"> <h4 class="font-bold text-center">Add or Edit a Profile</h4>
+                        <div>
+                            <label for="water-profile-name">Profile Name</label>
+                            <input type="text" id="water-profile-name" required placeholder="e.g., My Tap Water" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div><label for="manual_ca">Ca</label><input type="number" id="manual_ca" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
+                            <div><label for="manual_mg">Mg</label><input type="number" id="manual_mg" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
+                            <div><label for="manual_na">Na</label><input type="number" id="manual_na" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
+                            <div><label for="manual_so4">SO4</label><input type="number" id="manual_so4" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
+                            <div><label for="manual_cl">Cl</label><input type="number" id="manual_cl" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
+                            <div><label for="manual_hco3">HCO3</label><input type="number" id="manual_hco3" class="w-full p-1 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
+                        </div>
+                        <button type="submit" class="w-full mt-4 bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">Save Custom Profile</button>
+                    </form>
+    
+                    <div class="mt-auto pt-4 flex-grow overflow-y-auto">
+                        <h3 class="text-xl font-header font-bold mt-4 mb-2">My Saved Profiles</h3>
+                        <div id="user-water-profiles-list" class="space-y-2">
                             </div>
                         </div>
                     </aside>
@@ -1314,7 +1327,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.5.1 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.5.2 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -1358,6 +1371,13 @@
                 'herma_4453': { name: 'Herma 4453', width_mm: 99.1, height_mm: 139, cols: 2, rows: 2, top_margin_mm: 10, left_margin_mm: 5.45 },
                 'avery_l7165': { name: 'Avery L7165', width_mm: 99.1, height_mm: 67.7, cols: 2, rows: 4, top_margin_mm: 11.1, left_margin_mm: 5.45 },
                 'herma_10730': { name: 'Herma 10730', width_mm: 99.1, height_mm: 33.8, cols: 2, rows: 8, top_margin_mm: 10, left_margin_mm: 5.45 },
+            };
+
+            let userWaterProfiles = []; // Voor de opgeslagen waterprofielen
+            const BUILT_IN_WATER_PROFILES = { // Hernoemd van waterData
+                spa: { name: 'Spa Reine', ca: 5, mg: 2, na: 3, so4: 4, cl: 5, hco3: 17 },
+                chaudfontaine: { name: 'Chaudfontaine', ca: 65, mg: 18, na: 44, so4: 40, cl: 35, hco3: 305 },
+                // ... voeg hier de andere ingebouwde waters toe met een 'name' eigenschap
             };
 
             // --- Toast Notification Helper ---
@@ -1408,7 +1428,7 @@
                spiceSection.classList.toggle('hidden', !isMetheglin);
                braggotSection.classList.toggle('hidden', !isBraggot);
 
-               // NIEUW: Reset de vinkjes als de sectie verborgen wordt
+               // Reset de vinkjes als de sectie verborgen wordt
                if (!isMelomel) {
                    document.querySelectorAll('#fruit-section input:checked').forEach(cb => cb.checked = false);
                }
@@ -1562,7 +1582,7 @@ function executeDangerAction() {
                                            <span class="font-semibold">${itemData.qty} items - ${currency}${itemData.price.toFixed(2)} total</span>
                                            <div class="flex gap-2">
                                                <button onclick="window.editPackagingItem('${item.id}')" class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
-                                              <button onclick="window.clearPackagingItem('${item.id}')" class="text-red-600 hover:text-red-800 text-sm">Clear</button>
+                                               <button onclick="window.clearPackagingItem('${item.id}')" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
                                            </div>
                                        </div>
                                    </div>
@@ -1574,7 +1594,6 @@ function executeDangerAction() {
                }
            }
 
-           // VOEG DEZE NIEUWE FUNCTIE TOE
            async function addPackagingStock(e) {
                e.preventDefault();
                if (!userId) return;
@@ -1623,7 +1642,7 @@ async function loadPackagingCosts() {
     }
 }
 
-            // VERVANG DE VOLLEDIGE OUDE savePackagingCosts FUNCTIE
+            // SavePackagingCosts FUNCTIE
 async function savePackagingCosts() {
     if (!userId) return;
     const appId = 'meandery-aa05e';
@@ -1636,6 +1655,171 @@ async function savePackagingCosts() {
     } catch (error) {
         console.error("Error saving packaging costs:", error);
         showToast('Failed to save packaging costs.', 'error');
+    }
+}
+
+// --- NIEUWE FUNCTIES VOOR WATERPROFIELBEHEER ---
+
+// Laadt de profielen van de gebruiker uit Firestore
+async function loadUserWaterProfiles() {
+    if (!userId) return;
+    const appId = 'meandery-aa05e';
+    const profilesCol = collection(db, 'artifacts', appId, 'users', userId, 'waterProfiles');
+    
+    onSnapshot(query(profilesCol), (snapshot) => {
+        userWaterProfiles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        populateWaterDropdown();
+        renderUserWaterProfilesList();
+    });
+}
+
+// Vult de dropdown met ingebouwde en eigen profielen
+function populateWaterDropdown() {
+    const select = document.getElementById('waterSource');
+    if (!select) return;
+    
+    select.innerHTML = `
+        <optgroup label="Built-in Profiles">
+            ${Object.entries(BUILT_IN_WATER_PROFILES).map(([id, profile]) => `<option value="builtin_${id}">${profile.name}</option>`).join('')}
+        </optgroup>
+        <optgroup label="My Profiles">
+            ${userWaterProfiles.map(profile => `<option value="user_${profile.id}">${profile.name}</option>`).join('')}
+        </optgroup>
+    `;
+}
+
+// Toont de lijst met eigen profielen
+function renderUserWaterProfilesList() {
+    const listDiv = document.getElementById('user-water-profiles-list');
+    if (!listDiv) return;
+    if (userWaterProfiles.length === 0) {
+        listDiv.innerHTML = `<p class="text-sm text-app-secondary/80 text-center">You have no saved profiles.</p>`;
+        return;
+    }
+    listDiv.innerHTML = userWaterProfiles.map(p => `
+        <div class="flex justify-between items-center p-2 card rounded-md text-sm">
+            <span>${p.name}</span>
+            <div>
+                <button onclick="window.editWaterProfile('${p.id}')" class="text-blue-600 hover:text-blue-800">Edit</button>
+                <button onclick="window.deleteWaterProfile('${p.id}')" class="text-red-600 hover:text-red-800 ml-2">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Slaat een nieuw of bewerkt profiel op
+async function saveWaterProfile(e) {
+    e.preventDefault();
+    if (!userId) return;
+    
+    const profileId = document.getElementById('water-profile-id').value;
+    const profileData = {
+        name: document.getElementById('water-profile-name').value,
+        ca: parseFloat(document.getElementById('manual_ca').value) || 0,
+        mg: parseFloat(document.getElementById('manual_mg').value) || 0,
+        na: parseFloat(document.getElementById('manual_na').value) || 0,
+        so4: parseFloat(document.getElementById('manual_so4').value) || 0,
+        cl: parseFloat(document.getElementById('manual_cl').value) || 0,
+        hco3: parseFloat(document.getElementById('manual_hco3').value) || 0,
+    };
+    if (!profileData.name) {
+        showToast("Profile name is required.", "error");
+        return;
+    }
+    
+    const appId = 'meandery-aa05e';
+    const profilesCol = collection(db, 'artifacts', appId, 'users', userId, 'waterProfiles');
+    
+    try {
+        if (profileId) { // Update
+            await setDoc(doc(profilesCol, profileId), profileData);
+        } else { // Nieuw
+            await addDoc(profilesCol, profileData);
+        }
+        showToast("Water profile saved!", "success");
+        document.getElementById('water-profile-form').reset();
+        document.getElementById('water-profile-id').value = '';
+    } catch (error) {
+        showToast("Error saving profile.", "error");
+        console.error(error);
+    }
+}
+
+// Vult het formulier om een profiel te bewerken
+window.editWaterProfile = function(profileId) {
+    const profile = userWaterProfiles.find(p => p.id === profileId);
+    if (!profile) return;
+    document.getElementById('water-profile-id').value = profile.id;
+    document.getElementById('water-profile-name').value = profile.name;
+    document.getElementById('manual_ca').value = profile.ca;
+    document.getElementById('manual_mg').value = profile.mg;
+    document.getElementById('manual_na').value = profile.na;
+    document.getElementById('manual_so4').value = profile.so4;
+    document.getElementById('manual_cl').value = profile.cl;
+    document.getElementById('manual_hco3').value = profile.hco3;
+    document.getElementById('water-profile-name').focus();
+}
+
+// Verwijdert een profiel
+window.deleteWaterProfile = async function(profileId) {
+    if (!userId || !confirm("Are you sure you want to delete this water profile?")) return;
+    try {
+        const appId = 'meandery-aa05e';
+        await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'waterProfiles', profileId));
+        showToast("Profile deleted.", "success");
+    } catch (error) {
+        showToast("Error deleting profile.", "error");
+    }
+}
+
+// VOEG DEZE NIEUWE AI-FUNCTIE TOE
+async function findWaterProfileWithAI() {
+    const searchBtn = document.getElementById('ai-water-search-btn');
+    const searchInput = document.getElementById('ai-water-search-name');
+    const brandName = searchInput.value;
+
+    if (!brandName.trim()) {
+        showToast("Please enter a brand name to search.", "error");
+        return;
+    }
+
+    searchBtn.disabled = true;
+    searchBtn.textContent = '...';
+
+    const prompt = `Find the typical mineral water profile for a brand named "${brandName}". Provide the results for Calcium (ca), Magnesium (mg), Sodium (na), Sulfate (so4), Chloride (cl), and Bicarbonate (hco3) in mg/L. Respond ONLY with a valid JSON object matching the specified schema. If you cannot find the profile, respond with a JSON object where all values are 0.`;
+    const schema = {
+        type: "OBJECT",
+        properties: {
+            "ca": { "type": "NUMBER" }, "mg": { "type": "NUMBER" },
+            "na": { "type": "NUMBER" }, "so4": { "type": "NUMBER" },
+            "cl": { "type": "NUMBER" }, "hco3": { "type": "NUMBER" }
+        },
+        required: ["ca", "mg", "na", "so4", "cl", "hco3"]
+    };
+
+    try {
+        const jsonResponse = await performApiCall(prompt, schema);
+        const profile = JSON.parse(jsonResponse);
+
+        if (profile.ca === 0 && profile.mg === 0) {
+            showToast(`Could not find a profile for "${brandName}".`, 'info');
+        } else {
+            // Vul het formulier in met de gevonden data
+            document.getElementById('water-profile-name').value = brandName;
+            document.getElementById('manual_ca').value = profile.ca;
+            document.getElementById('manual_mg').value = profile.mg;
+            document.getElementById('manual_na').value = profile.na;
+            document.getElementById('manual_so4').value = profile.so4;
+            document.getElementById('manual_cl').value = profile.cl;
+            document.getElementById('manual_hco3').value = profile.hco3;
+            showToast(`Profile for "${brandName}" found! Review and save.`, 'success');
+        }
+    } catch (error) {
+        showToast("AI search failed. Please try again.", "error");
+        console.error(error);
+    } finally {
+        searchBtn.disabled = false;
+        searchBtn.textContent = 'Find';
     }
 }
 
@@ -1670,7 +1854,6 @@ async function savePackagingCosts() {
             historyListContainer = document.getElementById('history-list-container');
             inventoryForm = document.getElementById('inventory-form');
             inventoryList = document.getElementById('inventory-list');
-            fetchWaterProfileBtn = document.getElementById('fetchWaterProfileBtn');
             getWaterAdviceBtn = document.getElementById('getWaterAdviceBtn');
             getYeastAdviceBtn = document.getElementById('getYeastAdviceBtn');
             waterSourceSelect = document.getElementById('waterSource');
@@ -1728,6 +1911,7 @@ async function savePackagingCosts() {
         loadCellar();
         loadUserSettings();
         loadPackagingCosts();
+        loadUserWaterProfiles();
 
     } else {
         // Geen gebruiker of anonieme gebruiker -> toon login-scherm
@@ -1755,6 +1939,9 @@ async function savePackagingCosts() {
     document.getElementById('danger-confirm-input').addEventListener('input', checkDangerConfirmation);
     document.getElementById('customDescription').addEventListener('input', handleDescriptionInput);
     document.getElementById('close-prompt-modal-btn').addEventListener('click', hidePromptModal);
+    document.getElementById('water-profile-form').addEventListener('submit', saveWaterProfile);
+    document.getElementById('waterSource').addEventListener('change', handleWaterSourceChange);
+    document.getElementById('ai-water-search-btn').addEventListener('click', findWaterProfileWithAI);
     document.getElementById('prompt-modal').addEventListener('click', function(e) {
         if (e.target.id === 'prompt-modal') {
             hidePromptModal();
@@ -1805,7 +1992,6 @@ async function savePackagingCosts() {
     document.getElementById('generate-social-from-recipe-btn').addEventListener('click', runSocialMediaGenerator);
     
     // Water tab buttons
-    fetchWaterProfileBtn.addEventListener('click', fetchWaterProfile);
     waterSourceSelect.addEventListener('change', handleWaterSourceChange);
     getWaterAdviceBtn.addEventListener('click', getWaterAdvice);
 
@@ -1824,7 +2010,7 @@ async function savePackagingCosts() {
     
             // Label Generator Listeners
             document.getElementById('logoUpload').addEventListener('change', handleLogoUpload);
-            document.getElementById('removeLogoBtn').addEventListener('click', removeLogo); // NIEUWE REGEL
+            document.getElementById('removeLogoBtn').addEventListener('click', removeLogo);
             document.getElementById('labelRecipeSelect').addEventListener('change', handleLabelRecipeSelect);
             document.querySelectorAll('.label-style-btn').forEach(btn => btn.addEventListener('click', () => switchLabelStyle(btn.dataset.style)));
             document.getElementById('generate-print-btn').addEventListener('click', generatePrintPage);
@@ -2179,7 +2365,7 @@ async function clearInventory() {
                     if (!prompt) { 
                         throw new Error("Could not build the prompt. A required input field might be missing.");
                     }
-                    lastGeneratedPrompt = prompt; // <-- NIEUW: Sla de prompt op
+                    lastGeneratedPrompt = prompt; // Sla de prompt op
                     currentRecipeMarkdown = await performApiCall(prompt);
                     
                     const recipeHtml = marked.parse(currentRecipeMarkdown);
@@ -2275,6 +2461,14 @@ async function clearInventory() {
                         const useBudget = getValue('useBudget', false);
                         const maxBudget = getValue('maxBudget');
 
+                        // Zoek naar water in de inventaris
+                        const waterInInventory = inventory.filter(item => item.category === 'Water');
+                        let waterPromptInstruction = '';
+                        if (waterInInventory.length > 0) {
+                            const waterNames = waterInInventory.map(item => `${item.name} (${item.qty} ${item.unit})`).join(', ');
+                            waterPromptInstruction = `\n\nWATER CONSTRAINT: The user has the following bottled water in stock: [${waterNames}]. You MUST use one of these as the base water for the recipe. Recommend which one is best suited for the style.`;
+                        }
+
                         const inventoryString = inventory.map(item => {
                             let costPerUnit = 0;
                             let baseUnit = item.unit;
@@ -2291,6 +2485,9 @@ async function clearInventory() {
                         - Target ABV: Approximately ${getValue('abv', '12')}%
                         - Desired Final Sweetness: ${getValue('sweetness', 'Semi-Sweet')}
                         - Overall Style Inspiration: ${getValue('style', 'Traditional')}`;
+
+                        // Voeg de water-instructie toe indien van toepassing
+                        prompt += waterPromptInstruction;
                         
                         if (useBudget && maxBudget) {
                             prompt += `\n\nCRUCIAL CONSTRAINT: The total cost of the ingredients for this recipe MUST NOT EXCEED ${maxBudget} ${currency}. You must use the provided ingredient costs to calculate this and stay within budget. In the Brewer's Notes, briefly state the calculated total cost of the recipe.`;
@@ -2702,7 +2899,7 @@ async function clearInventory() {
             }
 
             window.clearPackagingItem = function(itemId) {
-                if (confirm("Are you sure you want to clear the data for this item? This will set quantity and price to 0.")) {
+                if (confirm("Are you sure you want to delete the data for this item? This will set quantity and price to 0.")) {
                    packagingCosts[itemId] = { qty: 0, price: 0 };
                    savePackagingCosts();
                 }
@@ -3216,7 +3413,7 @@ window.renderInventory = function() {
             }
 
 
-            // --- NIEUW: Automatische Inventaris Update Functies ---
+            // --- Automatische Inventaris Update Functies ---
             function promptToUpdateInventory(markdown) {
                 if (confirm("Recipe saved! Do you want to automatically deduct the used ingredients from your inventory?")) {
                     updateInventoryFromRecipe(markdown);
@@ -3459,7 +3656,7 @@ window.renderInventory = function() {
                     const bottlingDateStr = item.bottlingDate ? item.bottlingDate.toDate().toLocaleDateString() : 'No date';
 
                     const bottleDetailsHtml = (item.bottles && Array.isArray(item.bottles)) ? item.bottles.map(b => {
-                        // --- NIEUW: Bereken de kost per fles ---
+                        // --- Bereken de kost per fles ---
                         const bottleCost = packagingCosts[b.size.toString()] || 0;
                         const closureCost = b.size >= 750 ? packagingCosts.cork : packagingCosts.crown_cap;
                         const labelCost = packagingCosts.label;
@@ -3506,7 +3703,7 @@ window.renderInventory = function() {
                     `}).join('');
             }
 
-            // --- NIEUW: Kalender Herinnering Functies ---
+            // --- Kalender Herinnering Functies ---
             window.setTastingReminder = function(cellarItemId) {
                 const item = cellar.find(c => c.id === cellarItemId);
                 if (!item) return;
@@ -3562,7 +3759,7 @@ window.renderInventory = function() {
                 URL.revokeObjectURL(url);
             }
 
-            // --- NIEUW: Barcode Scanner Functies ---
+            // --- Barcode Scanner Functies ---
             function startScanner() {
                 document.getElementById('barcode-scanner-container').classList.remove('hidden');
 
@@ -3706,7 +3903,7 @@ window.renderInventory = function() {
 
                     if (bottlesData.length === 0) throw new Error("Please enter a quantity for at least one bottle size.");
 
-                    // --- NIEUW: Kostenberekening en Inventaris Update ---
+                    // --- Kostenberekening en Inventaris Update ---
     const packagingCostsPerUnit = getPackagingCosts();
     let totalPackagingCost = 0;
 
@@ -3734,7 +3931,7 @@ window.renderInventory = function() {
                 if (updatedPackagingStock.label) updatedPackagingStock.label.qty -= bottle.quantity;
             });
             
-            // Sla de nieuwe voorraad op (dit vervangt de oude savePackagingCosts-aanroep)
+            // Sla de nieuwe voorraad op
             const appId = 'meandery-aa05e';
             const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
             await setDoc(settingsDocRef, updatedPackagingStock);
@@ -3980,38 +4177,33 @@ window.renderInventory = function() {
                 villers: { ca: 106.1, mg: 11.1, na: 8, so4: 48.8, cl: 19.9, hco3: 340.4 }
             };
 
+            // VERVANG DE OUDE handleWaterSourceChange
             function handleWaterSourceChange() {
-                // AANGEPAST: Toon de handmatige invoer voor zowel 'manual' als 'tap'
-                const isManualOrTap = waterSourceSelect.value === 'manual' || waterSourceSelect.value === 'tap';
-                manualWaterProfileDiv.classList.toggle('hidden', !isManualOrTap);
+                const select = document.getElementById('waterSource');
+                const selectedValue = select.value;
+                const [type, id] = selectedValue.split('_');
 
-                const buttonText = (waterSourceSelect.value === 'manual' || waterSourceSelect.value === 'tap') 
-                    ? 'Apply Manual Profile' 
-                    : 'Fetch Profile';
-                fetchWaterProfileBtn.textContent = buttonText;
+                let profile;
+                if (type === 'builtin') {
+                   profile = BUILT_IN_WATER_PROFILES[id];
+                } else if (type === 'user') {
+                   profile = userWaterProfiles.find(p => p.id === id);
+                }  
+
+                if (profile) {
+                   currentWaterProfile = profile;
+                   updateWaterProfileDisplay(profile);
+                }
             }
 
-            function fetchWaterProfile() {
-                const source = waterSourceSelect.value;
-                if (source === 'manual') {
-                    currentWaterProfile = {
-                        ca: parseFloat(document.getElementById('manual_ca').value) || 0,
-                        mg: parseFloat(document.getElementById('manual_mg').value) || 0,
-                        na: parseFloat(document.getElementById('manual_na').value) || 0,
-                        so4: parseFloat(document.getElementById('manual_so4').value) || 0,
-                        cl: parseFloat(document.getElementById('manual_cl').value) || 0,
-                        hco3: parseFloat(document.getElementById('manual_hco3').value) || 0,
-                    };
-                } else {
-                    currentWaterProfile = waterData[source];
-                }
-                
-                document.getElementById('val-ca').textContent = currentWaterProfile.ca;
-                document.getElementById('val-mg').textContent = currentWaterProfile.mg;
-                document.getElementById('val-na').textContent = currentWaterProfile.na;
-                document.getElementById('val-so4').textContent = currentWaterProfile.so4;
-                document.getElementById('val-cl').textContent = currentWaterProfile.cl;
-                document.getElementById('val-hco3').textContent = currentWaterProfile.hco3;
+            // VOEG DEZE KLEINE HELPER-FUNCTIE TOE
+            function updateWaterProfileDisplay(profile) {
+                document.getElementById('val-ca').textContent = profile.ca;
+                document.getElementById('val-mg').textContent = profile.mg;
+                document.getElementById('val-na').textContent = profile.na;
+                document.getElementById('val-so4').textContent = profile.so4;
+                document.getElementById('val-cl').textContent = profile.cl;
+                document.getElementById('val-hco3').textContent = profile.hco3;
             }
 
             async function getWaterAdvice() {
@@ -4424,7 +4616,7 @@ function renderActiveBrewTimeline() {
                 }
             }
 
-            // --- Nieuwe State Management voor de Brouwdag Timer ---
+            // --- State Management voor de Brouwdag Timer ---
             let brewDaySteps = [];
             let currentStepIndex = 0;
             let stepTimerInterval = null;
@@ -4528,7 +4720,7 @@ function renderActiveBrewTimeline() {
             function initializeBrewDayState(steps) {
                 brewDaySteps = steps;
                 
-                // --- NIEUW: Controleer op een opgeslagen timer ---
+                // --- Controleer op een opgeslagen timer ---
                 const savedTimer = localStorage.getItem('activeBrewDayTimer');
                 if (savedTimer) {
                     const { brewId, stepIndex, endTime } = JSON.parse(savedTimer);
@@ -4561,7 +4753,7 @@ function renderActiveBrewTimeline() {
 
                 let timeLeft = resumeTime !== null ? resumeTime : brewDaySteps[stepIndex].duration;
                 
-                // --- NIEUW: Sla de eindtijd van de timer op ---
+                // --- Sla de eindtijd van de timer op ---
                 const endTime = Date.now() + timeLeft * 1000;
                 const timerState = { brewId: currentBrewDay.brewId, stepIndex: stepIndex, endTime: endTime };
                 localStorage.setItem('activeBrewDayTimer', JSON.stringify(timerState));
@@ -4593,7 +4785,7 @@ function renderActiveBrewTimeline() {
                 clearInterval(stepTimerInterval);
                 stepTimerInterval = null;
                 
-                // --- NIEUW: Sla de resterende tijd op en verwijder de eindtijd ---
+                // --- Sla de resterende tijd op en verwijder de eindtijd ---
                 const timerDisplay = document.getElementById(`timer-${currentStepIndex}`);
                 localStorage.removeItem('activeBrewDayTimer');
                 const timeParts = timerDisplay.textContent.split(':');
@@ -4613,7 +4805,7 @@ function renderActiveBrewTimeline() {
                 stepTimerInterval = null;
                 remainingTime = 0;
                 
-                // --- NIEUW: Verwijder de opgeslagen timer ---
+                // --- Verwijder de opgeslagen timer ---
                 localStorage.removeItem('activeBrewDayTimer');
                 
                 completeStep(stepIndex);
@@ -4624,7 +4816,7 @@ function renderActiveBrewTimeline() {
                     currentBrewDay.checklist = {};
                     saveUserSettings();
                     
-                    // --- NIEUW: Verwijder een eventuele actieve timer ---
+                    // --- Verwijder een eventuele actieve timer ---
                     clearInterval(stepTimerInterval);
                     stepTimerInterval = null;
                     remainingTime = 0;
@@ -4762,7 +4954,7 @@ function renderActiveBrewTimeline() {
                         }).join('');
                         html += `</div>`;
                         
-                        // --- NIEUW: Knop om items aan inventaris toe te voegen ---
+                        // --- Knop om items aan inventaris toe te voegen ---
                         html += `
                             <div class="mt-6 pt-4 border-t border-app">
                                 <button id="add-to-inventory-btn" onclick="window.addMissingItemsToInventory('${brew.id}')" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 btn text-sm">
@@ -4895,7 +5087,7 @@ window.startActualBrewDay = function(brewId) {
     switchSubView('brewing', 'brewing-main-view');
 }
 
-            // --- Social Media Functies (Volledig Vernieuwd) ---
+            // --- Social Media Functies ---
 
             window.generateSocialContent = async function(brewId) {
                 const socialView = document.getElementById('social-view');
@@ -5040,7 +5232,7 @@ function populateSocialRecipeDropdown() {
                     // Stap 1: Genereer de prompt voor de afbeelding
                     const generatedImagePrompt = await performApiCall(imagePrompt);
 
-                    // --- NIEUW: Stap 2: Genereer de daadwerkelijke afbeelding ---
+                    // Stap 2: Genereer de daadwerkelijke afbeelding
                     const apiKey = userSettings.apiKey;
                     if (!apiKey) throw new Error("API Key not found in settings.");
 
@@ -5276,7 +5468,7 @@ function populateSocialRecipeDropdown() {
                 }
             }
 
-            // --- NIEUW: Label Generator Functies ---
+            // --- Label Generator Functies ---
             function handleLogoUpload(event) {
                 const file = event.target.files[0];
                 if (file) {
@@ -5286,7 +5478,7 @@ function populateSocialRecipeDropdown() {
                         logoPreview.src = e.target.result;
                         logoPreview.classList.remove('hidden');
                         
-                        // NIEUW: Maak de 'verwijder' knop zichtbaar
+                        // Maak de 'verwijder' knop zichtbaar
                         document.getElementById('removeLogoBtn').classList.remove('hidden');
 
                         updateLabelPreview();
@@ -5525,7 +5717,7 @@ function populateSocialRecipeDropdown() {
                 const selectedBrew = brews.find(b => b.id === brewId);
                 if (!selectedBrew) return;
 
-                // --- NIEUW: Splits de receptnaam in naam en ondertitel ---
+                // --- Splits de receptnaam in naam en ondertitel ---
                 const fullTitle = selectedBrew.recipeName;
                 let namePart = fullTitle;
                 let subtitlePart = '';
@@ -5596,7 +5788,7 @@ function populateSocialRecipeDropdown() {
                     if(ogPreview) ogPreview.textContent = selectedBrew.logData?.targetOG || 'N/A';
                     if(fgPreview) fgPreview.textContent = selectedBrew.logData?.actualFG || selectedBrew.logData?.targetFG || 'N/A';
                     
-                    // --- NIEUW: Allergenen logica ---
+                    // --- Allergenen logica ---
                     const allergens = [];
                     const markdown = selectedBrew.recipeMarkdown.toLowerCase();
                     if (markdown.includes('metabisulfite')) allergens.push('sulfites');

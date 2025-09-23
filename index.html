@@ -3877,7 +3877,6 @@ window.renderInventory = function() {
             }
 
             // BottleBatch FUNCTIE
-// VERVANG DE VOLLEDIGE OUDE bottleBatch FUNCTIE
 async function bottleBatch(e) {
     e.preventDefault();
     if (!currentBrewToBottleId) return;
@@ -3905,6 +3904,45 @@ async function bottleBatch(e) {
 
         if (bottlesData.length === 0) throw new Error("Please enter a quantity for at least one bottle size.");
 
+        // --- NIEUW: VOORRAADCONTROLE ---
+        const outOfStockItems = [];
+        let totalLabelsNeeded = 0;
+        const closuresNeeded = { cork: 0, crown_cap_26: 0, crown_cap_29: 0 };
+
+        bottlesData.forEach(bottle => {
+            totalLabelsNeeded += bottle.quantity;
+            // Controleer standaard flessen
+            if (bottle.price === null) {
+                const stockId = `bottle_${bottle.size}`;
+                const currentStock = packagingCosts[stockId]?.qty || 0;
+                if (bottle.quantity > currentStock) {
+                    outOfStockItems.push(`${bottle.quantity} x ${bottle.size}ml bottle(s) (only ${currentStock} in stock)`);
+                }
+            }
+            // Tel de benodigde sluitingen
+            if (bottle.size >= 750) { closuresNeeded.cork += bottle.quantity; }
+            else if (bottle.size >= 500) { closuresNeeded.crown_cap_29 += bottle.quantity; }
+            else { closuresNeeded.crown_cap_26 += bottle.quantity; }
+        });
+
+        // Controleer sluitingen en etiketten
+        const currentCorkStock = packagingCosts['cork']?.qty || 0;
+        if (closuresNeeded.cork > currentCorkStock) outOfStockItems.push(`${closuresNeeded.cork} cork(s) (only ${currentCorkStock} in stock)`);
+        
+        const currentCC26Stock = packagingCosts['crown_cap_26']?.qty || 0;
+        if (closuresNeeded.crown_cap_26 > currentCC26Stock) outOfStockItems.push(`${closuresNeeded.crown_cap_26} x 26mm cap(s) (only ${currentCC26Stock} in stock)`);
+        
+        const currentCC29Stock = packagingCosts['crown_cap_29']?.qty || 0;
+        if (closuresNeeded.crown_cap_29 > currentCC29Stock) outOfStockItems.push(`${closuresNeeded.crown_cap_29} x 29mm cap(s) (only ${currentCC29Stock} in stock)`);
+        
+        const currentLabelStock = packagingCosts['label']?.qty || 0;
+        if (totalLabelsNeeded > currentLabelStock) outOfStockItems.push(`${totalLabelsNeeded} label(s) (only ${currentLabelStock} in stock)`);
+        
+        if (outOfStockItems.length > 0) {
+            throw new Error(`Not enough stock. Missing:\n- ${outOfStockItems.join('\n- ')}`);
+        }
+        // --- EINDE VOORRAADCONTROLE ---
+        
         const packagingCostsPerUnit = getPackagingCosts();
         let totalPackagingCost = 0;
 
@@ -3923,7 +3961,7 @@ async function bottleBatch(e) {
         if (confirm(`The calculated packaging cost for this session is ${userSettings.currencySymbol || '€'}${totalPackagingCost.toFixed(2)}. The new total batch cost will be ${userSettings.currencySymbol || '€'}${finalTotalCost.toFixed(2)}. Do you want to continue?`)) {
             const updatedPackagingStock = { ...packagingCosts };
             bottlesData.forEach(bottle => {
-                if(bottle.price === null) { // Alleen voorraad afschrijven voor standaard flessen
+                if(bottle.price === null) { 
                     const bottleId = `bottle_${bottle.size}`;
                     if (updatedPackagingStock[bottleId]) updatedPackagingStock[bottleId].qty -= bottle.quantity;
                 }
@@ -3939,8 +3977,7 @@ async function bottleBatch(e) {
             const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
             await setDoc(settingsDocRef, updatedPackagingStock);
             packagingCosts = updatedPackagingStock;
-            showToast("Packaging stock updated.", "success");
-
+            
             const bottlingDate = new Date(document.getElementById('bottlingDate').value);
             const cellarData = {
                 userId: userId, 
@@ -3959,9 +3996,9 @@ async function bottleBatch(e) {
             await updateDoc( brewDocRef, { isBottled: true, totalCost: finalTotalCost });
             
             hideBottlingModal();
+            showToast("Batch bottled and added to cellar!", "success");
             switchMainView('management');
             switchSubView('cellar', 'management-main-view');
-            showToast("Batch bottled and added to cellar!", "success");
         } else {
              throw new Error("Bottling cancelled by user.");
         }

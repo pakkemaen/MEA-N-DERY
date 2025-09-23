@@ -1328,7 +1328,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.5.6 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.5.7 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -3883,118 +3883,123 @@ window.renderInventory = function() {
             }
 
             // BottleBatch FUNCTIE
-            async function bottleBatch(e) {
-                e.preventDefault();
-                if (!currentBrewToBottleId) return;
+// DEFINITIEVE, VOLLEDIG CORRECTE bottleBatch FUNCTIE
+async function bottleBatch(e) {
+    e.preventDefault();
+    if (!currentBrewToBottleId) return;
 
-                const submitButton = e.target.querySelector('button[type="submit"]');
-                const originalButtonText = submitButton.innerHTML;
-                submitButton.disabled = true;
-                submitButton.innerHTML = '<div class="loader" style="height:20px; width:20px; border-width: 2px; margin: 0 auto;"></div>';
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<div class="loader" style="height:20px; width:20px; border-width: 2px; margin: 0 auto;"></div>';
     
-                try {
-                    const originalBrew = brews.find(b => b.id === currentBrewToBottleId);
-                    if (!originalBrew) throw new Error("Could not find the original recipe to bottle.");
+    try {
+        const originalBrew = brews.find(b => b.id === currentBrewToBottleId);
+        if (!originalBrew) throw new Error("Could not find the original recipe to bottle.");
 
-                    // Voeg hier de 450ml fles toe aan de te controleren data
-                    const bottlesData = [
-                        { size: 750, quantity: parseInt(document.getElementById('qty750').value) || 0 },
-                        { size: 500, quantity: parseInt(document.getElementById('qty500').value) || 0 },
-                        { size: 330, quantity: parseInt(document.getElementById('qty330').value) || 0 },
-                        { size: 250, quantity: parseInt(document.getElementById('qty250').value) || 0 },
-                        { size: parseInt(document.getElementById('customSize').value) || 0, quantity: parseInt(document.getElementById('customQty').value) || 0 }
-                    ].filter(b => b.quantity > 0 && b.size > 0);
-
-                    if (bottlesData.length === 0) throw new Error("Please enter a quantity for at least one bottle size.");
-
-                    const packagingCostsPerUnit = getPackagingCosts();
-                    let totalPackagingCost = 0;
-
-                    bottlesData.forEach(bottle => {
-                        const bottleCost = packagingCostsPerUnit[bottle.size.toString()] || 0;
-            
-                        // --- NIEUWE, SLIMMERE LOGICA VOOR SLUITINGEN ---
-                        let closureCost = 0;
-                        if (bottle.size >= 750) {
-                           closureCost = packagingCostsPerUnit.cork || 0;
-                        } else if (bottle.size >= 500) { // Flessen van 500ml en groter (maar kleiner dan 750ml)
-                           closureCost = packagingCostsPerUnit.crown_cap_29 || 0;
-                        } else { // Kleinere flessen (450ml, 330ml, etc.)
-                           closureCost = packagingCostsPerUnit.crown_cap_26 || 0;
-                        }
-            
-                        const labelCost = packagingCostsPerUnit.label || 0;
-                        totalPackagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
-                    });
-        
-                    let finalTotalCost = originalBrew.totalCost || 0;
-
-                    if (totalPackagingCost > 0) {
-                        if (confirm(`The calculated packaging cost for this session is ${userSettings.currencySymbol || '€'}${totalPackagingCost.toFixed(2)}. \n\nDo you want to add this to the batch's total cost and update the stock?`)) {
-                            finalTotalCost += totalPackagingCost;
-
-                            const updatedPackagingStock = { ...packagingCosts };
-                            bottlesData.forEach(bottle => {
-                                const bottleId = `bottle_${bottle.size}`;
-                    
-                                // --- OOK HIER DE SLIMME LOGICA TOEPASSEN ---
-                                let closureId = 'label'; // Default to something that exists
-                                if (bottle.size >= 750) {
-                                    closureId = 'cork';
-                                } else if (bottle.size >= 500) {
-                                    closureId = 'crown_cap_29';
-                                } else {
-                                    closureId = 'crown_cap_26';
-                                }
-                    
-                                if (updatedPackagingStock[bottleId]) updatedPackagingStock[bottleId].qty -= bottle.quantity;
-                                if (updatedPackagingStock[closureId]) updatedPackagingStock[closureId].qty -= bottle.quantity;
-                                if (updatedPackagingStock.label) updatedPackagingStock.label.qty -= bottle.quantity;
-                            });
-                
-                            const appId = 'meandery-aa05e';
-                            const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
-                            await setDoc(settingsDocRef, updatedPackagingStock);
-                            packagingCosts = updatedPackagingStock;
-                
-                            showToast("Packaging stock updated.", "success");
-                        }
-                    }
-        
-                    const bottlingDate = new Date(document.getElementById('bottlingDate').value);
-                    const agingPrompt = `You are a mead aging expert. Based on the following mead recipe and a bottling date of ${bottlingDate.toISOString().split('T')[0]}, determine a recommended 'peak flavor' or 'best before' date. Provide a short justification (1 sentence) and the date in YYYY-MM-DD format. Recipe:\n\n---\n${originalBrew.recipeMarkdown}`;
-                    const agingAdvice = await performApiCall(agingPrompt);
-                    const dateMatch = agingAdvice.match(/(\\d{4}-\\d{2}-\\d{2})/);
-                    const justificationMatch = agingAdvice.match(/Justification:\\s*(.*)/i);
-        
-                    const cellarData = {
-                        userId: userId, brewId: currentBrewToBottleId, recipeName: originalBrew.recipeName,
-                        bottlingDate: bottlingDate, bottles: bottlesData,
-                        peakFlavorDate: dateMatch ? dateMatch[1] : null,
-                        peakFlavorJustification: justificationMatch ? justificationMatch[1] : agingAdvice,
-                        totalBatchCost: finalTotalCost,
-                        ingredientCost: originalBrew.totalCost || 0
-                    };
-
-                    const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar');
-                    await addDoc(cellarCol, cellarData);
-
-                    const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId);
-                    await updateDoc( brewDocRef, { isBottled: true, totalCost: finalTotalCost });
-        
-                    hideBottlingModal();
-                    switchMainView('management');
-                    switchSubView('cellar', 'management-main-view');
-                    showToast("Batch bottled and added to cellar!", "success");
-
-                } catch (error) {
-                    console.error("FATAL: Error adding batch to cellar: ", error);
-                    showToast(error.message, "error");
-                } finally {
-                    submitButton.disabled = false;
-                    submitButton.innerHTML = originalButtonText;
-                }
+        const bottlesData = [
+            { size: 750, quantity: parseInt(document.getElementById('qty750').value) || 0, price: null },
+            { size: 500, quantity: parseInt(document.getElementById('qty500').value) || 0, price: null },
+            { size: 330, quantity: parseInt(document.getElementById('qty330').value) || 0, price: null },
+            { size: 250, quantity: parseInt(document.getElementById('qty250').value) || 0, price: null },
+            { 
+                size: parseInt(document.getElementById('customSize').value) || 0, 
+                quantity: parseInt(document.getElementById('customQty').value) || 0,
+                price: parseFloat(document.getElementById('customPrice').value) || 0 // Lees custom prijs
             }
+        ].filter(b => b.quantity > 0 && b.size > 0);
+
+        if (bottlesData.length === 0) throw new Error("Please enter a quantity for at least one bottle size.");
+
+        const packagingCostsPerUnit = getPackagingCosts();
+        let totalPackagingCost = 0;
+
+        bottlesData.forEach(bottle => {
+            // --- NIEUWE LOGICA: Gebruik de custom prijs als die er is, anders zoek de standaardprijs op ---
+            const bottleCost = bottle.price !== null ? bottle.price : (packagingCostsPerUnit[bottle.size.toString()] || 0);
+            
+            let closureCost = 0;
+            if (bottle.size >= 750) {
+                closureCost = packagingCostsPerUnit.cork || 0;
+            } else if (bottle.size >= 500) {
+                closureCost = packagingCostsPerUnit.crown_cap_29 || 0;
+            } else {
+                closureCost = packagingCostsPerUnit.crown_cap_26 || 0;
+            }
+            
+            const labelCost = packagingCostsPerUnit.label || 0;
+            totalPackagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
+        });
+        
+        let finalTotalCost = originalBrew.totalCost || 0;
+
+        if (totalPackagingCost > 0) {
+            if (confirm(`The calculated packaging cost for this session is ${userSettings.currencySymbol || '€'}${totalPackagingCost.toFixed(2)}. \n\nDo you want to add this to the batch's total cost and update the stock?`)) {
+                finalTotalCost += totalPackagingCost;
+
+                const updatedPackagingStock = { ...packagingCosts };
+                bottlesData.forEach(bottle => {
+                    const bottleId = `bottle_${bottle.size}`;
+                    
+                    let closureId = 'label'; 
+                    if (bottle.size >= 750) {
+                        closureId = 'cork';
+                    } else if (bottle.size >= 500) {
+                        closureId = 'crown_cap_29';
+                    } else {
+                        closureId = 'crown_cap_26';
+                    }
+                    
+                    // Verminder enkel voorraad als het een gekend type is (custom flessen worden niet afgeschreven)
+                    if (updatedPackagingStock[bottleId]) updatedPackagingStock[bottleId].qty -= bottle.quantity;
+                    if (updatedPackagingStock[closureId]) updatedPackagingStock[closureId].qty -= bottle.quantity;
+                    if (updatedPackagingStock.label) updatedPackagingStock.label.qty -= bottle.quantity;
+                });
+                
+                const appId = 'meandery-aa05e';
+                const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
+                await setDoc(settingsDocRef, updatedPackagingStock);
+                packagingCosts = updatedPackagingStock;
+                
+                showToast("Packaging stock updated.", "success");
+            }
+        }
+        
+        // ... de rest van de functie (opslaan naar cellar, etc.) blijft hetzelfde ...
+        const bottlingDate = new Date(document.getElementById('bottlingDate').value);
+        const agingPrompt = `You are a mead aging expert. Based on the following mead recipe and a bottling date of ${bottlingDate.toISOString().split('T')[0]}, determine a recommended 'peak flavor' or 'best before' date. Provide a short justification (1 sentence) and the date in YYYY-MM-DD format. Recipe:\n\n---\n${originalBrew.recipeMarkdown}`;
+        const agingAdvice = await performApiCall(agingPrompt);
+        const dateMatch = agingAdvice.match(/(\d{4}-\d{2}-\d{2})/);
+        const justificationMatch = agingAdvice.match(/Justification:\s*(.*)/i);
+        
+        const cellarData = {
+            userId: userId, brewId: currentBrewToBottleId, recipeName: originalBrew.recipeName,
+            bottlingDate: bottlingDate, bottles: bottlesData.map(({price, ...rest}) => rest), // Verwijder de tijdelijke prijs
+            peakFlavorDate: dateMatch ? dateMatch[1] : null,
+            peakFlavorJustification: justificationMatch ? justificationMatch[1] : agingAdvice,
+            totalBatchCost: finalTotalCost,
+            ingredientCost: originalBrew.totalCost || 0
+        };
+
+        const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar');
+        await addDoc(cellarCol, cellarData);
+
+        const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId);
+        await updateDoc( brewDocRef, { isBottled: true, totalCost: finalTotalCost });
+        
+        hideBottlingModal();
+        switchMainView('management');
+        switchSubView('cellar', 'management-main-view');
+        showToast("Batch bottled and added to cellar!", "success");
+
+    } catch (error) {
+        console.error("FATAL: Error adding batch to cellar: ", error);
+        showToast(error.message, "error");
+    } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
+    }
+}
 
             // --- Calculator Functions ---
             function calculateABV() {
@@ -5840,51 +5845,56 @@ function populateSocialRecipeDropdown() {
    <div id="bottling-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-app-tertiary p-8 rounded-lg shadow-xl w-full max-w-lg"> <h3 class="text-2xl font-header font-bold mb-6">Bottle Batch</h3>
         <form id="bottling-form">
-            <div class="space-y-6">
+    <div class="space-y-6">
+        <div>
+            <label for="bottlingDate" class="block text-sm font-bold mb-2">Bottling Date</label>
+            <input type="date" id="bottlingDate" required class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+        </div>
+        <div>
+            <label class="block text-sm font-bold mb-2">Number of Bottles (Standard Sizes)</label>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                    <label for="bottlingDate" class="block text-sm font-bold mb-2">Bottling Date</label>
-                    <input type="date" id="bottlingDate" required class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                    <label for="qty750" class="block text-xs text-app-secondary">750ml</label>
+                    <input type="number" id="qty750" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold mb-2">Number of Bottles (Standard Sizes)</label>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                            <label for="qty750" class="block text-xs text-app-secondary">750ml</label>
-                            <input type="number" id="qty750" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
-                        </div>
-                        <div>
-                            <label for="qty500" class="block text-xs text-app-secondary">500ml</label>
-                            <input type="number" id="qty500" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
-                        </div>
-                        <div>
-                            <label for="qty330" class="block text-xs text-app-secondary">330ml</label>
-                            <input type="number" id="qty330" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
-                        </div>
-                        <div>
-                            <label for="qty250" class="block text-xs text-app-secondary">250ml</label>
-                            <input type="number" id="qty250" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
-                        </div>
-                    </div>
+                    <label for="qty500" class="block text-xs text-app-secondary">500ml</label>
+                    <input type="number" id="qty500" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
                 </div>
-                <div class="border-t border-app pt-4">
-                    <label class="block text-sm font-bold mb-2">Custom Size (Optional)</label>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                             <label for="customSize" class="block text-xs text-app-secondary">Size (ml)</label>
-                            <input type="number" id="customSize" min="0" step="1" placeholder="e.g., 1000" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
-                        </div>
-                        <div>
-                             <label for="customQty" class="block text-xs text-app-secondary">Quantity</label>
-                            <input type="number" id="customQty" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
-                        </div>
-                    </div>
+                <div>
+                    <label for="qty330" class="block text-xs text-app-secondary">330ml</label>
+                    <input type="number" id="qty330" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                </div>
+                <div>
+                    <label for="qty250" class="block text-xs text-app-secondary">250ml</label>
+                    <input type="number" id="qty250" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
                 </div>
             </div>
-            <div class="flex justify-end gap-4 mt-8">
-                <button type="button" onclick="window.hideBottlingModal()" class="px-6 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500 btn">Cancel</button>
-                <button type="submit" class="px-6 py-2 rounded-lg bg-app-action text-white font-bold hover:opacity-90 btn">Add to Cellar</button>
+        </div>
+
+        <div class="border-t border-app pt-4">
+            <label class="block text-sm font-bold mb-2">Custom Size (Optional)</label>
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                     <label for="customSize" class="block text-xs text-app-secondary">Size (ml)</label>
+                    <input type="number" id="customSize" min="0" step="1" placeholder="e.g., 450" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                </div>
+                <div>
+                     <label for="customQty" class="block text-xs text-app-secondary">Quantity</label>
+                    <input type="number" id="customQty" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                </div>
+                <div>
+                     <label for="customPrice" class="block text-xs text-app-secondary">Cost per Bottle (€)</label>
+                    <input type="number" id="customPrice" min="0" step="0.01" placeholder="0.65" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                </div>
             </div>
-        </form>
+        </div>
+    </div>
+    <div class="flex justify-end gap-4 mt-8">
+        <button type="button" onclick="window.hideBottlingModal()" class="px-6 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500 btn">Cancel</button>
+        <button type="submit" class="px-6 py-2 rounded-lg bg-app-action text-white font-bold hover:opacity-90 btn">Add to Cellar</button>
+    </div>
+</form>
     </div>
 </div>
 <div id="prompt-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">

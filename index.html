@@ -3955,7 +3955,7 @@ async function bottleBatch(e) {
                 totalBatchCost: finalTotalCost,
                 ingredientCost: originalBrew.totalCost || 0,
                 peakFlavorDate: null,
-                peakFlavorJustification: 'AI advice could not be generated.'
+                peakFlavorJustification: 'Advice could not be generated.'
             };
 
             try {
@@ -4005,6 +4005,7 @@ Peak Date: 2027-09-24`;
         submitButton.innerHTML = originalButtonText;
     }
 }
+
             // --- Calculator Functions ---
             function calculateABV() {
                 const og = parseFloat(document.getElementById('og').value);

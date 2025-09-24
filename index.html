@@ -808,7 +808,7 @@
                         </form>
                     </aside>
         
-                    <main id="packaging-stock-container" class="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg inventory-panel overflow-y-auto" style="max-height: 70vh;">
+                    <main id="packaging-stock-container" class="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg inventory-panel lg:overflow-y-auto lg:max-h-[70vh]">
                        <h2 class="text-3xl font-header font-bold mb-4 text-center">Current Packaging Stock</h2>
                        <div id="packaging-list" class="space-y-2">
                            </div>
@@ -2668,7 +2668,7 @@ async function clearInventory() {
 
     let socialPostsHtml = '';
     if (brew.socialMediaPosts && brew.socialMediaPosts.length > 0) {
-        socialPostsHtml = `<div class="mt-6 pt-4 border-t-2 border-app-brand no-print"> ... </div>`; // Ingekorte weergave
+        socialPostsHtml = `<div class="mt-6 pt-4 border-t-2 border-app-brand no-print"> ... </div>`;
     }
 
     const flavorWheelTitle = brew.predictedFlavorProfile ? 'Predicted Flavor Profile' : 'Flavor Profile Analysis';
@@ -2712,11 +2712,14 @@ async function clearInventory() {
         
         ${socialPostsHtml}
         
-        <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4 no-print">
-            <button onclick="window.tweakRecipe('${brew.id}')" class="w-full bg-purple-700 text-white py-3 px-4 rounded-lg hover:bg-purple-800 btn">Tweak from Tasting Notes</button>
-            <button onclick="window.toggleScaleUI('${brew.id}')" class="w-full bg-blue-700 text-white py-3 px-4 rounded-lg hover:bg-blue-800 btn">Scale Recipe</button>    
-            <button onclick="window.linkToBacksweetenCalc('${brew.id}')" class="w-full bg-stone-500 text-white py-3 px-4 rounded-lg hover:bg-stone-600 btn">Backsweeten this Batch</button>
-            <button onclick="window.linkToDilutionCalc('${brew.id}')" class="w-full bg-stone-500 text-white py-3 px-4 rounded-lg hover:bg-stone-600 btn">Dilute this Batch</button>
+        <div class="mt-6 pt-4 border-t-2 border-app no-print">
+             <h3 class="text-2xl font-header font-bold text-center mb-4">AI Adjustments</h3>
+             <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4 no-print">
+                <button onclick="window.tweakRecipe('${brew.id}')" class="w-full bg-purple-700 text-white py-3 px-4 rounded-lg hover:bg-purple-800 btn">Tweak from Tasting Notes</button>
+                <button onclick="window.toggleScaleUI('${brew.id}')" class="w-full bg-blue-700 text-white py-3 px-4 rounded-lg hover:bg-blue-800 btn">Scale Recipe</button>    
+                <button onclick="window.linkToBacksweetenCalc('${brew.id}')" class="w-full bg-stone-500 text-white py-3 px-4 rounded-lg hover:bg-stone-600 btn">Backsweeten this Batch</button>
+                <button onclick="window.linkToDilutionCalc('${brew.id}')" class="w-full bg-stone-500 text-white py-3 px-4 rounded-lg hover:bg-stone-600 btn">Dilute this Batch</button>
+             </div>
         </div>
         
         <div id="scale-ui-${brew.id}" class="hidden mt-4 p-4 card no-print">
@@ -3837,7 +3840,6 @@ async function bottleBatch(e) {
         const bottlesData = [
             { size: 750, quantity: parseInt(document.getElementById('qty750').value) || 0, price: null },
             { size: 500, quantity: parseInt(document.getElementById('qty500').value) || 0, price: null },
-            { size: 450, quantity: parseInt(document.getElementById('qty450').value) || 0, price: null },
             { size: 330, quantity: parseInt(document.getElementById('qty330').value) || 0, price: null },
             { size: 250, quantity: parseInt(document.getElementById('qty250').value) || 0, price: null },
             { 
@@ -4343,15 +4345,17 @@ function getBrewLogHtml(logData, idSuffix = 'new') {
             </div>
             <div class="log-item">
                 <label>Fermentation Log</label>
-                <table class="fermentation-table table-fixed" id="fermentationTable-${idSuffix}">
-                    <thead><tr><th style="width: 110px;">Date</th><th style="width: 70px;">Temp (°C)</th><th style="width: 80px;">S.G.</th><th>Notes</th></tr></thead>
-                    <tbody>${fermLog.map(row => `<tr>
-                            <td><input type="date" value="${row.date || ''}" class="w-full"></td>
-                            <td><input type="number" step="0.5" placeholder="18.5" value="${row.temp || '18'}" class="w-full text-center"></td>
-                            <td><input type="number" step="0.001" placeholder="1.050" value="${row.sg || ''}" class="w-full text-center"></td>
-                            <td><input type="text" value="${row.notes || ''}"></td>
-                        </tr>`).join('')}</tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="fermentation-table table-fixed w-full" id="fermentationTable-${idSuffix}" style="min-width: 500px;">
+                        <thead><tr><th style="width: 120px;">Date</th><th style="width: 80px;">Temp (°C)</th><th style="width: 90px;">S.G.</th><th>Notes</th></tr></thead>
+                        <tbody>${fermLog.map(row => `<tr>
+                                <td><input type="date" value="${row.date || ''}" class="w-full"></td>
+                                <td><input type="number" step="0.5" placeholder="18.5" value="${row.temp || '18'}" class="w-full text-center"></td>
+                                <td><input type="number" step="0.001" placeholder="1.050" value="${row.sg || ''}" class="w-full text-center"></td>
+                                <td><input type="text" value="${row.notes || ''}" class="w-full"></td>
+                            </tr>`).join('')}</tbody>
+                    </table>
+                </div>
             </div>
             <div class="log-item"><label for="agingNotes-${idSuffix}">Aging & Conditioning Notes:</label><textarea id="agingNotes-${idSuffix}" rows="4" placeholder="...">${data.agingNotes || ''}</textarea></div>
             <div class="log-item"><label for="bottlingNotes-${idSuffix}">Bottling / Kegging Notes:</label><textarea id="bottlingNotes-${idSuffix}" rows="3" placeholder="...">${data.bottlingNotes || ''}</textarea></div>
@@ -5807,15 +5811,26 @@ function populateSocialRecipeDropdown() {
             </select>
         </div>
         <div>
-            <label class="block text-sm font-bold mb-2">Number of Bottles (Standard Sizes)</label>
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div><label for="qty750" class="block text-xs text-app-secondary">750ml</label><input type="number" id="qty750" ...></div>
-                <div><label for="qty500" class="block text-xs text-app-secondary">500ml</label><input type="number" id="qty500" ...></div>
-                <div><label for="qty450" class="block text-xs text-app-secondary">450ml</label><input type="number" id="qty450" ...></div>
-                <div><label for="qty330" class="block text-xs text-app-secondary">330ml</label><input type="number" id="qty330" ...></div>
-                <div><label for="qty250" class="block text-xs text-app-secondary">250ml</label><input type="number" id="qty250" ...></div>
-            </div>
+    <label class="block text-sm font-bold mb-2">Number of Bottles (Standard Sizes)</label>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+            <label for="qty750" class="block text-xs text-app-secondary">750ml</label>
+            <input type="number" id="qty750" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
         </div>
+        <div>
+            <label for="qty500" class="block text-xs text-app-secondary">500ml</label>
+            <input type="number" id="qty500" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
+        </div>
+        <div>
+            <label for="qty330" class="block text-xs text-app-secondary">330ml</label>
+            <input type="number" id="qty330" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
+        </div>
+        <div>
+            <label for="qty250" class="block text-xs text-app-secondary">250ml</label>
+            <input type="number" id="qty250" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
+        </div>
+    </div>
+</div>
 
         <div class="border-t border-app pt-4">
             <label class="block text-sm font-bold mb-2">Custom Size (Optional)</label>

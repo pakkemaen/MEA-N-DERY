@@ -1378,28 +1378,29 @@
             };
 
             // --- Toast Notification Helper ---
-            function showToast(message, type = 'info') {
-                let backgroundColor;
-                switch(type) {
-                    case 'success':
-                        backgroundColor = "linear-gradient(to right, #22c55e, #16a34a)";
-                        break;
-                    case 'error':
-                        backgroundColor = "linear-gradient(to right, #ef4444, #dc2626)";
-                        break;
-                    default:
-                        backgroundColor = "linear-gradient(to right, #6b7280, #4b5563)";
-                }
-                Toastify({
-                    text: message,
-                    duration: 4000,
-                    close: true,
-                    gravity: "top",
-                    position: "right",
-                    stopOnFocus: true,
-                    style: { background: backgroundColor, borderRadius: "8px" }
-                }).showToast();
-            }
+            function showToast(message, type = 'info', duration = 4000) {
+    let backgroundColor;
+    switch(type) {
+        case 'success':
+            backgroundColor = "linear-gradient(to right, #22c55e, #16a34a)";
+            break;
+        case 'error':
+            backgroundColor = "linear-gradient(to right, #ef4444, #dc2626)";
+            break;
+        default: // 'info' or any other type
+            backgroundColor = "linear-gradient(to right, #3b82f6, #2563eb)";
+    }
+    Toastify({
+        text: message.replace(/\n/g, '<br>'), // Vervang newlines met <br> voor leesbaarheid
+        duration: duration, // Gebruik de meegegeven duur
+        close: true,
+        gravity: "top",
+        position: "right",
+        stopOnFocus: true,
+        escapeMarkup: false, // Sta HTML toe (voor de <br>)
+        style: { background: backgroundColor, borderRadius: "8px" }
+    }).showToast();
+}
 
             // --- UI Elements ---
             let dashboardMainView, creatorView, brewingView, historyView, inventoryView, 
@@ -1596,7 +1597,6 @@ async function addPackagingStock(e) {
     e.preventDefault();
     if (!userId) return;
 
-    // --- DEBUG LOGICA MET POP-UP ---
     let debugMessage = "--- Debug Log: Add Packaging Stock ---\n\n";
 
     const itemId = document.getElementById('packaging-item-select').value;
@@ -1609,8 +1609,6 @@ async function addPackagingStock(e) {
 
     if (!itemId || qtyAdded <= 0) {
         showToast("Please fill in a valid material and quantity.", "error");
-        debugMessage += "Validation failed. Aborting.";
-        alert(debugMessage); // Toon de info, zelfs bij een fout
         return;
     }
 
@@ -1622,10 +1620,9 @@ async function addPackagingStock(e) {
     const newPrice = currentPrice + priceAdded;
     debugMessage += `New Calculated Stock (After):\n  - Qty: ${newQty}\n  - Price: ${newPrice}`;
     
-    // Toon de volledige debug informatie in een pop-up
-    alert(debugMessage);
+    // Toon de debug informatie in een permanente toast
+    showToast(debugMessage, 'info', -1); // -1 betekent dat de toast blijft staan tot weggeklikt
     
-    // De rest van de functie wordt uitgevoerd nadat u op "OK" klikt
     packagingCosts[itemId] = { qty: newQty, price: newPrice };
     
     await savePackagingCosts(); 

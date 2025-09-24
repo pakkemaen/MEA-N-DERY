@@ -813,6 +813,9 @@
                        <div id="packaging-list" class="space-y-2">
                            </div>
                     </main>
+</div> <div id="debug-output-container" class="mt-8 p-4 card rounded-lg bg-app-primary border-2 border-red-500">
+                    <pre id="debug-output" class="text-xs whitespace-pre-wrap"></pre>
+                </div>
                 </div>
             </div>             
             <div id="equipment-view" class="hidden mt-4">
@@ -1588,34 +1591,46 @@ function executeDangerAction() {
                }
            }
 
-           async function addPackagingStock(e) {
+           ```javascript
+async function addPackagingStock(e) {
     e.preventDefault();
     if (!userId) return;
+
+    // --- Start van de functie ---
+    const debugOutput = document.getElementById('debug-output');
+    debugOutput.innerHTML = "Starting process..."; // Reset de output
+    let logMessages = "<h3>Debug Log: Add Packaging Stock</h3>\n";
 
     const itemId = document.getElementById('packaging-item-select').value;
     const qtyAdded = parseFloat(document.getElementById('packaging-item-qty').value) || 0;
     const priceAdded = parseFloat(document.getElementById('packaging-item-price').value) || 0;
+    
+    logMessages += `<strong>Selected Item ID:</strong> ${itemId}\n`;
+    logMessages += `<strong>Quantity to Add:</strong> ${qtyAdded}\n`;
+    logMessages += `<strong>Price to Add:</strong> ${priceAdded}\n\n`;
 
-    if (!itemId || qtyAdded <= 0) { // Prijs mag 0 zijn
+    if (!itemId || qtyAdded <= 0) {
         showToast("Please fill in a valid material and quantity.", "error");
+        logMessages += "<strong style='color:red;'>Validation failed. Aborting.</strong>";
+        debugOutput.innerHTML = logMessages;
         return;
     }
 
-    // Haal de huidige waarden expliciet op, met 0 als standaard
     const currentQty = packagingCosts[itemId]?.qty || 0;
     const currentPrice = packagingCosts[itemId]?.price || 0;
+    logMessages += `<strong>Current Stock (Before):</strong>\n  - Qty: ${currentQty}\n  - Price: ${currentPrice}\n\n`;
 
-    // Bereken de nieuwe totalen
     const newQty = currentQty + qtyAdded;
     const newPrice = currentPrice + priceAdded;
-
-    // Werk het packagingCosts object bij met de nieuwe, berekende waarden
+    logMessages += `<strong>New Calculated Stock (After):</strong>\n  - Qty: ${newQty}\n  - Price: ${newPrice}\n\n`;
+    
     packagingCosts[itemId] = { qty: newQty, price: newPrice };
-
-    // Sla de volledige, bijgewerkte voorraad op
+    logMessages += "Global packagingCosts object updated. Saving to database...";
+    
+    debugOutput.innerHTML = logMessages; // Toon de log voordat we opslaan
+    
     await savePackagingCosts(); 
     
-    // Reset het formulier voor de volgende invoer
     document.getElementById('packaging-add-form').reset();
 }
 

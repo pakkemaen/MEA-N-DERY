@@ -2520,22 +2520,26 @@ async function clearInventory() {
                     }
 
                     prompt += `\n\nFor the final output, generate a full recipe suitable for an experienced homebrewer. 
-        
-                    CRUCIAL INSTRUCTIONS:
-                   - You MUST determine the most optimal nutrient protocol (e.g., TOSNA, staggered additions) for this specific recipe. You are the expert; do not ask the user for their preference. In the 'Instructions' or 'Brewer's Notes', you must explain your choice and provide a precise schedule.
-                   - You MUST calculate the required Yeast Assimilable Nitrogen (YAN) based on the recipe's OG and ingredients. You must not ask the user to calculate it. The nutrient schedule you provide must be based on this calculation.
-                   - For the 'Ingredients' section, you MUST format it as a Markdown table with columns: | Ingredient | Quantity | Unit |. This is essential.
-                   - For the recipe title, you MUST create a short, creative, and thematic name, followed by a descriptive subtitle. The format must be 'Name: Subtitle'.
-                   - You MUST explicitly state the Target OG, Target FG, and Target ABV in the description.
+    
+        SPECIAL INSTRUCTION: If the recipe includes ingredients with a high oil content (like nuts, cacao nibs, coffee beans), you MUST include a specific warning in the 'Brewer's Notes'. This warning should explain the risk of oils (rancidity, loss of head retention) and recommend the best practice for adding them (ONLY in secondary fermentation). You should also suggest methods to mitigate oils (toasting, tinctures) and suggest oil-free alternatives.
 
-                   Finally, after the 'Brewer's Notes', add a new heading '## Recommended Water'. Based on the style, recommend a suitable, commercially available Belgian bottled water.`;
+        CRUCIAL FORMATTING RULES:
+        - The main recipe title MUST be the very first line of your response and MUST start with a single hashtag (#).
+        - You are FORBIDDEN from using a single hashtag (#) for any other heading in the entire response. All other headings like 'Description', 'Ingredients', 'Instructions', 'Brewer's Notes', and 'Recommended Water' MUST use double hashtags (##).
+        - You MUST determine the most optimal nutrient protocol (e.g., TOSNA, staggered additions) for this specific recipe.
+        - You MUST calculate the required Yeast Assimilable Nitrogen (YAN) based on the recipe's OG and ingredients. Do not ask the user to calculate it.
+        - The 'Ingredients' section MUST be a Markdown table with columns: | Ingredient | Quantity | Unit |.
+        - The recipe title MUST follow the format 'Name: Subtitle'.
+        - You MUST explicitly state the Target OG, Target FG, and Target ABV in the description.
+
+        The final section of your response MUST be '## Recommended Water'.`;
         
-                   return prompt;
-               } catch (error) {
-                   console.error("Error building prompt:", error);
-                   throw new Error(`Failed to build the prompt. (Details: ${error.message})`);
-               }
-            }
+        return prompt;
+    } catch (error) {
+        console.error("Error building prompt:", error);
+        throw new Error(`Failed to build the prompt. (Details: ${error.message})`);
+    }
+}
             
             // --- Firestore & History Functions ---
             window.saveBrewToHistory = async function() {
@@ -2672,11 +2676,11 @@ async function clearInventory() {
         <button onclick="window.goBackToHistoryList()" class="mb-4 text-app-brand hover:underline no-print">&larr; Back to History</button>
         
         <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
-            <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-700 ... btn ..."> Clone Recipe </button>
-            <button onclick="window.startBrewDay('${brew.id}')" class="bg-app-action ... btn">Start New Batch</button>
-            <button onclick="window.showBottlingModal('${brew.id}')" class="bg-app-action ... btn">Bottle Batch</button>
-            <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 ... btn ..."> Delete Recipe </button>
-        </div>
+    <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors btn flex items-center justify-center"> Clone Recipe </button>
+    <button onclick="window.startBrewDay('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Start New Batch</button>
+    <button onclick="window.showBottlingModal('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Bottle Batch</button>
+    <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded-lg hover:bg-red-800 transition-colors btn flex items-center justify-center"> Delete Recipe </button>
+</div>
         
         <div class="recipe-content">${recipeHtml}</div>
         ${costHtml}

@@ -3579,8 +3579,10 @@ window.renderInventory = function() {
     const packagingCostsPerUnit = getPackagingCosts();
 
     listDiv.innerHTML = cellar.map(item => {
-        const totalLitersInBatch = (item.bottles.reduce((acc, b) => acc + (b.quantity * b.size), 0)) / 1000;
-        const ingredientCostPerLiter = totalLitersInBatch > 0 ? (item.ingredientCost || 0) / totalLitersInBatch : 0;
+        const originalBrew = brews.find(b => b.id === item.brewId);
+        const originalBatchSize = originalBrew ? originalBrew.batchSize : 1; // Fallback
+        const ingredientCostPerLiter = originalBatchSize > 0 ? (item.ingredientCost || 0) / originalBatchSize : 0;
+
         const bottlingDateStr = item.bottlingDate ? item.bottlingDate.toDate().toLocaleDateString() : 'No date';
 
         const bottleDetailsHtml = (item.bottles && Array.isArray(item.bottles)) ? item.bottles.map(b => {
@@ -3610,7 +3612,7 @@ window.renderInventory = function() {
 
         const adviceHtml = item.peakFlavorDate ? `
             <div class="mt-3 pt-3 border-t border-app">
-                <p class="text-sm font-bold text-app-primary">Alchemist's Aging Advice:</p>
+                <p class="text-sm font-bold text-app-primary">Aging Advice:</p>
                 <p class="text-sm text-app-secondary/90">
                     <span class="font-semibold">Peak Flavor around: ${item.peakFlavorDate}.</span> ${item.peakFlavorJustification || ''}
                 </p>
@@ -3942,16 +3944,31 @@ async function bottleBatch(e) {
                 totalBatchCost: finalTotalCost,
                 ingredientCost: originalBrew.totalCost || 0,
                 peakFlavorDate: null,
-                peakFlavorJustification: 'AI advice could not be generated.'
+                peakFlavorJustification: 'Advice could not be generated.'
             };
 
             try {
-                const agingPrompt = `You are a mead aging expert. Based on the following mead recipe and a bottling date of ${bottlingDate.toISOString().split('T')[0]}, determine a recommended 'peak flavor' or 'best before' date. Provide a short justification (1 sentence) and the date in YYYY-MM-DD format. Recipe:\n\n---\n${originalBrew.recipeMarkdown}`;
+                const agingPrompt = `Analyze the following mead recipe. Based on the ingredients and style, determine a recommended 'peak flavor' date, assuming it was bottled on ${bottlingDate.toISOString().split('T')[0]}.
+
+Recipe Markdown:
+---
+${originalBrew.recipeMarkdown}
+---
+
+CRUCIAL: Your response MUST contain two parts:
+1. A "Justification:" line with a single sentence explaining your reasoning.
+2. A "Peak Date:" line with only the date in YYYY-MM-DD format.
+Example:
+Justification: Bochets with dark fruit benefit from at least two years of aging to mellow.
+Peak Date: 2027-09-24`;
+
                 const agingAdvice = await performApiCall(agingPrompt);
-                const dateMatch = agingAdvice.match(/(\d{4}-\d{2}-\d{2})/);
-                const justificationMatch = agingAdvice.match(/Justification:\s*(.*)/i);
+                const dateMatch = agingAdvice.match(/Peak Date:\s*(\d{4}-\d{2}-\d{2})/);
+                const justificationMatch = agingAdvice.match(/Justification:\s*(.*)/);
+                
                 if (dateMatch) cellarData.peakFlavorDate = dateMatch[1];
                 if (justificationMatch) cellarData.peakFlavorJustification = justificationMatch[1];
+
             } catch (aiError) {
                 console.error("AI aging advice failed, but bottling will continue:", aiError);
             }

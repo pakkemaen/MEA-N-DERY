@@ -1589,33 +1589,35 @@ function executeDangerAction() {
            }
 
            async function addPackagingStock(e) {
-               e.preventDefault();
-               if (!userId) return;
+    e.preventDefault();
+    if (!userId) return;
 
-               const itemId = document.getElementById('packaging-item-select').value;
-               const qtyAdded = parseFloat(document.getElementById('packaging-item-qty').value) || 0;
-               const priceAdded = parseFloat(document.getElementById('packaging-item-price').value) || 0;
+    const itemId = document.getElementById('packaging-item-select').value;
+    const qtyAdded = parseFloat(document.getElementById('packaging-item-qty').value) || 0;
+    const priceAdded = parseFloat(document.getElementById('packaging-item-price').value) || 0;
 
-               if (!itemId || qtyAdded <= 0 || priceAdded < 0) {
-                  showToast("Please fill in all fields with valid numbers.", "error");
-                  return;
-               }
+    if (!itemId || qtyAdded <= 0) { // Prijs mag 0 zijn
+        showToast("Please fill in a valid material and quantity.", "error");
+        return;
+    }
 
-              // Haal de huidige voorraad op of start op 0
-              const currentStock = packagingCosts[itemId] || { qty: 0, price: 0 };
+    // Haal de huidige waarden expliciet op, met 0 als standaard
+    const currentQty = packagingCosts[itemId]?.qty || 0;
+    const currentPrice = packagingCosts[itemId]?.price || 0;
+
+    // Bereken de nieuwe totalen
+    const newQty = currentQty + qtyAdded;
+    const newPrice = currentPrice + priceAdded;
+
+    // Werk het packagingCosts object bij met de nieuwe, berekende waarden
+    packagingCosts[itemId] = { qty: newQty, price: newPrice };
+
+    // Sla de volledige, bijgewerkte voorraad op
+    await savePackagingCosts(); 
     
-              // Tel de nieuwe voorraad erbij op
-              currentStock.qty += qtyAdded;
-              currentStock.price += priceAdded;
-
-              packagingCosts[itemId] = currentStock;
-
-              // Sla de volledige, bijgewerkte voorraad op
-              await savePackagingCosts(); 
-    
-             // Reset het formulier voor de volgende invoer
-             document.getElementById('packaging-add-form').reset();
-           }
+    // Reset het formulier voor de volgende invoer
+    document.getElementById('packaging-add-form').reset();
+}
 
 async function loadPackagingCosts() {
     if (!userId) return;
@@ -3813,7 +3815,6 @@ window.renderInventory = function() {
                 currentBrewToBottleId = null;
             }
 
-            // BottleBatch FUNCTIE
 async function bottleBatch(e) {
     e.preventDefault();
     if (!currentBrewToBottleId) return;
@@ -3830,7 +3831,6 @@ async function bottleBatch(e) {
         const bottlesData = [
             { size: 750, quantity: parseInt(document.getElementById('qty750').value) || 0, price: null },
             { size: 500, quantity: parseInt(document.getElementById('qty500').value) || 0, price: null },
-            { size: 450, quantity: parseInt(document.getElementById('qty450').value) || 0, price: null },
             { size: 330, quantity: parseInt(document.getElementById('qty330').value) || 0, price: null },
             { size: 250, quantity: parseInt(document.getElementById('qty250').value) || 0, price: null },
             { 
@@ -3888,6 +3888,7 @@ async function bottleBatch(e) {
         bottlesData.forEach(bottle => {
             const bottleCost = bottle.price !== null ? bottle.price : (packagingCostsPerUnit[bottle.size.toString()] || 0);
             let closureCost = 0;
+
             if (closureType === 'auto') {
                 if (bottle.size >= 750) { closureCost = packagingCostsPerUnit.cork || 0; } 
                 else if (bottle.size >= 500) { closureCost = packagingCostsPerUnit.crown_cap_29 || 0; } 
@@ -3895,6 +3896,7 @@ async function bottleBatch(e) {
             } else {
                 closureCost = packagingCostsPerUnit[closureType] || 0;
             }
+
             const labelCost = packagingCostsPerUnit.label || 0;
             totalPackagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
         });
@@ -3910,7 +3912,7 @@ async function bottleBatch(e) {
                     if (updatedPackagingStock[bottleId]) updatedPackagingStock[bottleId].qty -= bottle.quantity;
                 }
             });
-            
+
             if (closureType === 'auto') {
                  bottlesData.forEach(bottle => {
                     let closureId;
@@ -3943,7 +3945,6 @@ async function bottleBatch(e) {
                 peakFlavorJustification: 'AI advice could not be generated.'
             };
 
-            // Veilige AI-aanroep voor rijpingsadvies
             try {
                 const agingPrompt = `You are a mead aging expert. Based on the following mead recipe and a bottling date of ${bottlingDate.toISOString().split('T')[0]}, determine a recommended 'peak flavor' or 'best before' date. Provide a short justification (1 sentence) and the date in YYYY-MM-DD format. Recipe:\n\n---\n${originalBrew.recipeMarkdown}`;
                 const agingAdvice = await performApiCall(agingPrompt);

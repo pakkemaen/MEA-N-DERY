@@ -775,7 +775,7 @@
                             <button type="submit" class="w-full bg-app-action text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-all duration-300 shadow-md btn">Add Ingredient</button>
                         </form>
                     </aside>
-                    <main id="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg inventory-panel overflow-y-auto" style="max-height: 70vh;">
+                    <main class="lg:w-2/3 bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg inventory-panel overflow-y-auto" style="max-height: 70vh;">
                         <h2 class="text-3xl font-header font-bold mb-4 text-center">Current Stock</h2>
                         <div id="inventory-list"></div>
                     </main>
@@ -813,9 +813,6 @@
                        <div id="packaging-list" class="space-y-2">
                            </div>
                     </main>
-</div> <div id="debug-output-container" class="mt-8 p-4 card rounded-lg bg-app-primary border-2 border-red-500">
-                    <pre id="debug-output" class="text-xs whitespace-pre-wrap"></pre>
-                </div>
                 </div>
             </div>             
             <div id="equipment-view" class="hidden mt-4">
@@ -1596,15 +1593,9 @@ async function addPackagingStock(e) {
     e.preventDefault();
     if (!userId) return;
 
-    let debugMessage = "--- Debug Log: Add Packaging Stock ---\n\n";
-
     const itemId = document.getElementById('packaging-item-select').value;
     const qtyAdded = parseFloat(document.getElementById('packaging-item-qty').value) || 0;
     const priceAdded = parseFloat(document.getElementById('packaging-item-price').value) || 0;
-    
-    debugMessage += `Selected Item ID: ${itemId}\n`;
-    debugMessage += `Quantity to Add: ${qtyAdded}\n`;
-    debugMessage += `Price to Add: ${priceAdded}\n\n`;
 
     if (!itemId || qtyAdded <= 0) {
         showToast("Please fill in a valid material and quantity.", "error");
@@ -1613,14 +1604,9 @@ async function addPackagingStock(e) {
 
     const currentQty = packagingCosts[itemId]?.qty || 0;
     const currentPrice = packagingCosts[itemId]?.price || 0;
-    debugMessage += `Current Stock (Before):\n  - Qty: ${currentQty}\n  - Price: ${currentPrice}\n\n`;
 
     const newQty = currentQty + qtyAdded;
     const newPrice = currentPrice + priceAdded;
-    debugMessage += `New Calculated Stock (After):\n  - Qty: ${newQty}\n  - Price: ${newPrice}`;
-    
-    // Toon de debug informatie in een permanente toast
-    showToast(debugMessage, 'info', -1); // -1 betekent dat de toast blijft staan tot weggeklikt
     
     packagingCosts[itemId] = { qty: newQty, price: newPrice };
     

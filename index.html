@@ -1596,38 +1596,37 @@ async function addPackagingStock(e) {
     e.preventDefault();
     if (!userId) return;
 
-    // --- Start van de functie ---
-    const debugOutput = document.getElementById('debug-output');
-    debugOutput.innerHTML = "Starting process..."; // Reset de output
-    let logMessages = "<h3>Debug Log: Add Packaging Stock</h3>\n";
+    // --- DEBUG LOGICA MET POP-UP ---
+    let debugMessage = "--- Debug Log: Add Packaging Stock ---\n\n";
 
     const itemId = document.getElementById('packaging-item-select').value;
     const qtyAdded = parseFloat(document.getElementById('packaging-item-qty').value) || 0;
     const priceAdded = parseFloat(document.getElementById('packaging-item-price').value) || 0;
     
-    logMessages += `<strong>Selected Item ID:</strong> ${itemId}\n`;
-    logMessages += `<strong>Quantity to Add:</strong> ${qtyAdded}\n`;
-    logMessages += `<strong>Price to Add:</strong> ${priceAdded}\n\n`;
+    debugMessage += `Selected Item ID: ${itemId}\n`;
+    debugMessage += `Quantity to Add: ${qtyAdded}\n`;
+    debugMessage += `Price to Add: ${priceAdded}\n\n`;
 
     if (!itemId || qtyAdded <= 0) {
         showToast("Please fill in a valid material and quantity.", "error");
-        logMessages += "<strong style='color:red;'>Validation failed. Aborting.</strong>";
-        debugOutput.innerHTML = logMessages;
+        debugMessage += "Validation failed. Aborting.";
+        alert(debugMessage); // Toon de info, zelfs bij een fout
         return;
     }
 
     const currentQty = packagingCosts[itemId]?.qty || 0;
     const currentPrice = packagingCosts[itemId]?.price || 0;
-    logMessages += `<strong>Current Stock (Before):</strong>\n  - Qty: ${currentQty}\n  - Price: ${currentPrice}\n\n`;
+    debugMessage += `Current Stock (Before):\n  - Qty: ${currentQty}\n  - Price: ${currentPrice}\n\n`;
 
     const newQty = currentQty + qtyAdded;
     const newPrice = currentPrice + priceAdded;
-    logMessages += `<strong>New Calculated Stock (After):</strong>\n  - Qty: ${newQty}\n  - Price: ${newPrice}\n\n`;
+    debugMessage += `New Calculated Stock (After):\n  - Qty: ${newQty}\n  - Price: ${newPrice}`;
     
+    // Toon de volledige debug informatie in een pop-up
+    alert(debugMessage);
+    
+    // De rest van de functie wordt uitgevoerd nadat u op "OK" klikt
     packagingCosts[itemId] = { qty: newQty, price: newPrice };
-    logMessages += "Global packagingCosts object updated. Saving to database...";
-    
-    debugOutput.innerHTML = logMessages; // Toon de log voordat we opslaan
     
     await savePackagingCosts(); 
     

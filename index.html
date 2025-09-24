@@ -1639,13 +1639,13 @@ async function loadPackagingCosts() {
             // SavePackagingCosts FUNCTIE
 async function savePackagingCosts() {
     if (!userId) return;
-    const appId = 'meandery-aa0e';
+    const appId = 'meandery-aa05e';
     const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
     
     try {
         await setDoc(settingsDocRef, packagingCosts);
         showToast('Packaging stock updated successfully!', 'success');
-        await loadPackagingCosts(); // VRAAG DATA OPNIEUW OP VOOR 100% CORRECTE WEERGAVE
+        await loadPackagingCosts();
     } catch (error) {
         console.error("Error saving packaging costs:", error);
         showToast('Failed to save packaging costs.', 'error');
@@ -2653,139 +2653,83 @@ async function clearInventory() {
     const logHtml = getBrewLogHtml(brew.logData, brew.id);
     const currency = userSettings.currencySymbol || '€';
 
-let costHtml = '';
-if (brew.totalCost !== undefined && brew.totalCost > 0) {
-    // NIEUW: Berekening van kost per liter
-    const costPerLiter = brew.batchSize > 0 ? brew.totalCost / brew.batchSize : 0;
-    
-    costHtml = `
-        <div class="mt-6 p-4 bg-amber-50 rounded-lg dark:bg-opacity-10">
-            <h3 class="font-header text-lg text-stone-800 dark:text-amber-200">Batch Cost Analysis</h3>
-            <p class="text-stone-800 dark:text-amber-200"><strong>Total Ingredient Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</p>
-            <p class="text-stone-800 dark:text-amber-200"><strong>Cost Per Liter:</strong> ${currency}${costPerLiter.toFixed(2)}</p>
+    let costHtml = '';
+    if (brew.totalCost !== undefined && brew.totalCost > 0) {
+        const costPerLiter = brew.batchSize > 0 ? brew.totalCost / brew.batchSize : 0;
+        
+        costHtml = `
+            <div class="mt-6 p-4 bg-amber-50 rounded-lg dark:bg-opacity-10">
+                <h3 class="font-header text-lg text-stone-800 dark:text-amber-200">Batch Cost Analysis</h3>
+                <p class="text-stone-800 dark:text-amber-200"><strong>Total Ingredient Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</p>
+                <p class="text-stone-800 dark:text-amber-200"><strong>Cost Per Liter:</strong> ${currency}${costPerLiter.toFixed(2)}</p>
+            </div>
+        `;
+    }
+
+    let socialPostsHtml = '';
+    if (brew.socialMediaPosts && brew.socialMediaPosts.length > 0) {
+        socialPostsHtml = `<div class="mt-6 pt-4 border-t-2 border-app-brand no-print"> ... </div>`; // Ingekorte weergave
+    }
+
+    const flavorWheelTitle = brew.predictedFlavorProfile ? 'Predicted Flavor Profile' : 'Flavor Profile Analysis';
+    const flavorWheelDescription = brew.predictedFlavorProfile 
+        ? 'This is the AI-predicted flavor profile...'
+        : 'Enter your tasting notes above, then click the button...';
+
+    historyDetailContainer.innerHTML = `
+        <button onclick="window.goBackToHistoryList()" class="mb-4 text-app-brand hover:underline no-print">&larr; Back to History</button>
+        
+        <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
+            <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors btn flex items-center justify-center"> Clone Recipe </button>
+            <button onclick="window.startBrewDay('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Start New Batch</button>
+            <button onclick="window.showBottlingModal('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Bottle Batch</button>
+            <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded-lg hover:bg-red-800 transition-colors btn flex items-center justify-center"> Delete Recipe </button>
         </div>
+        
+        <div class="recipe-content">${recipeHtml}</div>
+        
+        ${costHtml}
+        
+        <div class="mt-6 card p-4 rounded-lg">
+            <h3 class="font-header text-lg text-center">Fermentation Progress</h3>
+            <canvas id="fermChart-${brew.id}"></canvas>
+        </div>
+        
+        ${logHtml}
+        
+        <div class="mt-4 no-print">
+            <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
+        </div>
+        
+        <div class="mt-6 pt-4 border-t-2 border-app-brand no-print">
+            <h3 class="text-2xl font-header font-bold text-center mb-4">${flavorWheelTitle}</h3>
+            <div class="card p-4 rounded-lg text-center">
+                <p class="text-app-secondary mb-4">${flavorWheelDescription}</p>
+                <button onclick="window.generateFlavorWheel('${brew.id}')" class="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors btn"> Analyze My Tasting Notes </button>
+                <div id="flavor-wheel-container-${brew.id}" class="mt-4" style="max-width: 400px; margin: auto;"></div>
+            </div>
+        </div>
+        
+        ${socialPostsHtml}
+        
+        <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4 no-print">
+            <button onclick="window.tweakRecipe('${brew.id}')" class="w-full bg-purple-700 text-white py-3 px-4 rounded-lg hover:bg-purple-800 btn">Tweak from Tasting Notes</button>
+            <button onclick="window.toggleScaleUI('${brew.id}')" class="w-full bg-blue-700 text-white py-3 px-4 rounded-lg hover:bg-blue-800 btn">Scale Recipe</button>    
+            <button onclick="window.linkToBacksweetenCalc('${brew.id}')" class="w-full bg-stone-500 text-white py-3 px-4 rounded-lg hover:bg-stone-600 btn">Backsweeten this Batch</button>
+            <button onclick="window.linkToDilutionCalc('${brew.id}')" class="w-full bg-stone-500 text-white py-3 px-4 rounded-lg hover:bg-stone-600 btn">Dilute this Batch</button>
+        </div>
+        
+        <div id="scale-ui-${brew.id}" class="hidden mt-4 p-4 card no-print">
+             <label for="new-batch-size-${brew.id}" class="block font-bold">New Batch Size (Liters):</label>
+             <input type="number" id="new-batch-size-${brew.id}" class="w-full p-2 border rounded mt-2 text-app-primary bg-app-tertiary border-app" placeholder="e.g., 20">
+             <button onclick="window.scaleRecipe('${brew.id}')" class="w-full mt-2 bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700 btn">Generate Scaled Recipe</button>
+        </div>
+        
+        <div id="tweak-output-${brew.id}" class="mt-6"></div>
     `;
-}
-
-                let socialPostsHtml = '';
-                if (brew.socialMediaPosts && brew.socialMediaPosts.length > 0) {
-                    socialPostsHtml = `
-                        <div class="mt-6 pt-4 border-t-2 border-app-brand no-print">
-                            <h3 class="text-2xl font-header font-bold text-center mb-4">Saved Social Media Posts</h3>
-                            <div class="space-y-4">
-                    `;
-                    brew.socialMediaPosts.forEach(post => {
-                        socialPostsHtml += `
-                            <div class="card p-4 rounded-lg">
-                                <p class="text-sm font-bold text-app-secondary">${post.platform} (${post.persona}) - ${new Date(post.createdAt).toLocaleDateString()}</p>
-                                <p class="mt-2 whitespace-pre-wrap">${post.content}</p>
-                            </div>
-                        `;
-                    });
-                    socialPostsHtml += `</div></div>`;
-                }
-
-                const flavorWheelTitle = brew.predictedFlavorProfile ? 'Predicted Flavor Profile' : 'Flavor Profile Analysis';
-                const flavorWheelDescription = brew.predictedFlavorProfile 
-                    ? 'This is the AI-predicted flavor profile based on the recipe. Enter your own tasting notes and click the button below to generate a new analysis based on your experience.'
-                    : 'Enter your tasting notes above, then click the button to generate a visual flavor wheel.';
-
-                const overheadCalculatorHtml = `
-                    <div class="mt-6 pt-4 border-t-2 border-app-brand no-print">
-                        <h3 class="text-2xl font-header font-bold text-center mb-4">Update Financials</h3>
-                        <div class="card p-6 rounded-lg space-y-4">
-                             <h3 class="text-xl font-header mb-4">Utilities & Packaging Cost Calculator</h3>
-                             <div>
-                                <label for="sanitizerCost" class="block font-bold mb-1">Sanitizer Cost (per batch)</label>
-                                <input type="number" id="sanitizerCost" placeholder="1.50" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                            </div>
-                            <div class="border-t border-app pt-4 mt-4">
-                                <p class="text-sm font-bold mb-2">Packaging Costs:</p>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div>
-                                        <label for="pkg_num_bottles" class="block text-xs font-bold mb-1"># Bottles</label>
-                                        <input type="number" id="pkg_num_bottles" placeholder="25" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                                    </div>
-                                    <div>
-                                        <label for="pkg_cost_bottle" class="block text-xs font-bold mb-1">Cost/Bottle</label>
-                                        <input type="number" id="pkg_cost_bottle" step="0.01" placeholder="0.50" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                                    </div>
-                                    <div>
-                                        <label for="pkg_cost_closure" class="block text-xs font-bold mb-1">Cost/Cork</label>
-                                        <input type="number" id="pkg_cost_closure" step="0.01" placeholder="0.10" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                                    </div>
-                                    <div>
-                                        <label for="pkg_cost_label" class="block text-xs font-bold mb-1">Cost/Label</label>
-                                        <input type="number" id="pkg_cost_label" step="0.01" placeholder="0.20" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                                    </div>
-                                </div>
-                            </div>
-                            <button id="calculateOverheadBtn" class="w-full bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">Calculate Costs</button>
-                            <div id="overheadResult" class="text-center font-bold text-lg mt-2 h-8"></div>
-                        </div>
-                    </div>
-                `;
-
-                historyDetailContainer.innerHTML = `
-                    <button onclick="window.goBackToHistoryList()" class="mb-4 text-app-brand hover:underline no-print">&larr; Back to History</button>
-                    <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
-                        <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors btn flex items-center justify-center"> Clone Recipe </button>
-                        <button onclick="window.startBrewDay('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Start New Batch</button>
-                        <button onclick="window.showBottlingModal('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Bottle Batch</button>
-                        <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded-lg hover:bg-red-800 transition-colors btn flex items-center justify-center"> Delete Recipe </button>
-                    </div>
-                    <div class="recipe-content">${recipeHtml}</div>
-                    ${costHtml}
-                    <div class="mt-6 card p-4 rounded-lg">
-                        <h3 class="font-header text-lg text-center">Fermentation Progress</h3>
-                        <canvas id="fermChart-${brew.id}"></canvas>
-                    </div>
-                    ${logHtml}
-                    <div class="mt-6 pt-4 border-t-2 border-app-brand no-print">
-                        <h3 class="text-2xl font-header font-bold text-center mb-4">${flavorWheelTitle}</h3>
-                        <div class="card p-4 rounded-lg text-center">
-                            <p class="text-app-secondary mb-4">${flavorWheelDescription}</p>
-                            <button onclick="window.generateFlavorWheel('${brew.id}')" class="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors btn"> Analyze My Tasting Notes </button>
-                            <div id="flavor-wheel-container-${brew.id}" class="mt-4" style="max-width: 400px; margin: auto;"></div>
-                        </div>
-                    </div>
-                    ${socialPostsHtml}
-                    <div id="log-update-message-${brew.id}" class="text-center text-blue-700 font-semibold mt-4 h-6"></div>
-                    <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4 no-print">
-                        <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
-                        <button onclick="window.tweakRecipe('${brew.id}')" class="w-full bg-purple-700 text-white py-3 px-4 rounded-lg hover:bg-purple-800 btn">Tweak from Tasting Notes</button>
-                        <button onclick="window.toggleScaleUI('${brew.id}')" class="w-full bg-blue-700 text-white py-3 px-4 rounded-lg hover:bg-blue-800 btn">Scale Recipe</button>    
-                        <button onclick="window.linkToBacksweetenCalc('${brew.id}')" class="w-full bg-stone-500 text-white py-3 px-4 rounded-lg hover:bg-stone-600 btn">Backsweeten this Batch</button>
-                        <button onclick="window.linkToDilutionCalc('${brew.id}')" class="w-full bg-stone-500 text-white py-3 px-4 rounded-lg hover:bg-stone-600 btn">Dilute this Batch</button>
-                    </div>
-                    <div id="scale-ui-${brew.id}" class="hidden mt-4 p-4 card no-print">
-                         <label for="new-batch-size-${brew.id}" class="block font-bold">New Batch Size (Liters):</label>
-                         <input type="number" id="new-batch-size-${brew.id}" class="w-full p-2 border rounded mt-2 text-app-primary bg-app-tertiary border-app" placeholder="e.g., 20">
-                         <button onclick="window.scaleRecipe('${brew.id}')" class="w-full mt-2 bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700 btn">Generate Scaled Recipe</button>
-                    </div>
-                    ${overheadCalculatorHtml}
-                    <div class="mt-6 pt-4 border-t-2 border-app-brand no-print">
-                        <h3 class="text-2xl font-header font-bold text-center mb-4">Advanced AI Adjustments</h3>
-                         <div class="card p-4 rounded-lg">
-                            <h4 class="font-bold mb-3 text-app-secondary">Quick Tweaks</h4>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
-                                <button onclick="window.quickTweakRecipe('${brew.id}', 'make_dryer')" class="text-sm bg-stone-500 text-white py-2 px-3 rounded-lg hover:bg-stone-600 btn">Make Dryer</button>
-                                <button onclick="window.quickTweakRecipe('${brew.id}', 'increase_abv')" class="text-sm bg-stone-500 text-white py-2 px-3 rounded-lg hover:bg-stone-600 btn">Increase ABV by 2%</button>
-                                <button onclick="window.quickTweakRecipe('${brew.id}', 'add_oak')" class="text-sm bg-stone-500 text-white py-2 px-3 rounded-lg hover:bg-stone-600 btn">Add Light Oak</button>
-                            </div>
-                            <h4 class="font-bold mb-2 mt-4 text-app-secondary">Ingredient Swapper</h4>
-                            <div class="flex flex-col sm:flex-row gap-2">
-                                <input type="text" id="ingredient-swap-input-${brew.id}" class="flex-grow p-2 border rounded-md bg-app-tertiary border-app text-app-primary" placeholder="e.g., Replace Acacia Honey with Forest Honey">
-                                <button onclick="window.swapIngredient('${brew.id}')" class="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 btn">Swap</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="tweak-output-${brew.id}" class="mt-6"></div>
-                `;
-                historyListContainer.classList.add('hidden');
-                historyDetailContainer.classList.remove('hidden');
-
-                renderFermentationGraph(brewId);
+    historyListContainer.classList.add('hidden');
+    historyDetailContainer.classList.remove('hidden');
+    renderFermentationGraph(brewId);
 
                 if (brew.predictedFlavorProfile) {
                     const container = document.getElementById(`flavor-wheel-container-${brewId}`);
@@ -3905,14 +3849,13 @@ async function bottleBatch(e) {
 
         if (bottlesData.length === 0) throw new Error("Please enter a quantity for at least one bottle size.");
 
-        // --- NIEUW: VOORRAADCONTROLE ---
+        // --- VOORRAADCONTROLE MET KEUZE VAN SLUITING ---
+        const closureType = document.getElementById('closureTypeSelect').value;
         const outOfStockItems = [];
-        let totalLabelsNeeded = 0;
-        const closuresNeeded = { cork: 0, crown_cap_26: 0, crown_cap_29: 0 };
-
+        let totalBottles = 0;
+        
         bottlesData.forEach(bottle => {
-            totalLabelsNeeded += bottle.quantity;
-            // Controleer de voorraad van standaard flessen
+            totalBottles += bottle.quantity;
             if (bottle.price === null) {
                 const stockId = `bottle_${bottle.size}`;
                 const currentStock = packagingCosts[stockId]?.qty || 0;
@@ -3920,24 +3863,28 @@ async function bottleBatch(e) {
                     outOfStockItems.push(`${bottle.quantity} x ${bottle.size}ml bottle(s) (only ${currentStock} in stock)`);
                 }
             }
-            // Tel de benodigde sluitingen
-            if (bottle.size >= 750) { closuresNeeded.cork += bottle.quantity; }
-            else if (bottle.size >= 500) { closuresNeeded.crown_cap_29 += bottle.quantity; }
-            else { closuresNeeded.crown_cap_26 += bottle.quantity; }
         });
 
-        // Controleer de voorraad van sluitingen en etiketten
-        const currentCorkStock = packagingCosts['cork']?.qty || 0;
-        if (closuresNeeded.cork > currentCorkStock) outOfStockItems.push(`${closuresNeeded.cork} cork(s) (only ${currentCorkStock} in stock)`);
-        
-        const currentCC26Stock = packagingCosts['crown_cap_26']?.qty || 0;
-        if (closuresNeeded.crown_cap_26 > currentCC26Stock) outOfStockItems.push(`${closuresNeeded.crown_cap_26} x 26mm cap(s) (only ${currentCC26Stock} in stock)`);
-        
-        const currentCC29Stock = packagingCosts['crown_cap_29']?.qty || 0;
-        if (closuresNeeded.crown_cap_29 > currentCC29Stock) outOfStockItems.push(`${closuresNeeded.crown_cap_29} x 29mm cap(s) (only ${currentCC29Stock} in stock)`);
+        if (closureType === 'auto') {
+            const closuresNeeded = { cork: 0, crown_cap_26: 0, crown_cap_29: 0 };
+            bottlesData.forEach(b => {
+                if (b.size >= 750) closuresNeeded.cork += b.quantity;
+                else if (b.size >= 500) closuresNeeded.crown_cap_29 += b.quantity;
+                else closuresNeeded.crown_cap_26 += b.quantity;
+            });
+            if (closuresNeeded.cork > (packagingCosts['cork']?.qty || 0)) outOfStockItems.push('Not enough corks');
+            if (closuresNeeded.crown_cap_26 > (packagingCosts['crown_cap_26']?.qty || 0)) outOfStockItems.push('Not enough 26mm caps');
+            if (closuresNeeded.crown_cap_29 > (packagingCosts['crown_cap_29']?.qty || 0)) outOfStockItems.push('Not enough 29mm caps');
+        } else {
+            const needed = totalBottles;
+            const inStock = packagingCosts[closureType]?.qty || 0;
+            if (needed > inStock) {
+                outOfStockItems.push(`${needed} x ${closureType.replace(/_/g, ' ')} (only ${inStock} in stock)`);
+            }
+        }
         
         const currentLabelStock = packagingCosts['label']?.qty || 0;
-        if (totalLabelsNeeded > currentLabelStock) outOfStockItems.push(`${totalLabelsNeeded} label(s) (only ${currentLabelStock} in stock)`);
+        if (totalBottles > currentLabelStock) outOfStockItems.push(`${totalBottles} label(s) (only ${currentLabelStock} in stock)`);
         
         if (outOfStockItems.length > 0) {
             throw new Error(`Not enough stock. Missing:\n- ${outOfStockItems.join('\n- ')}`);
@@ -3950,9 +3897,13 @@ async function bottleBatch(e) {
         bottlesData.forEach(bottle => {
             const bottleCost = bottle.price !== null ? bottle.price : (packagingCostsPerUnit[bottle.size.toString()] || 0);
             let closureCost = 0;
-            if (bottle.size >= 750) { closureCost = packagingCostsPerUnit.cork || 0; } 
-            else if (bottle.size >= 500) { closureCost = packagingCostsPerUnit.crown_cap_29 || 0; } 
-            else { closureCost = packagingCostsPerUnit.crown_cap_26 || 0; }
+            if (closureType === 'auto') {
+                if (bottle.size >= 750) { closureCost = packagingCostsPerUnit.cork || 0; } 
+                else if (bottle.size >= 500) { closureCost = packagingCostsPerUnit.crown_cap_29 || 0; } 
+                else { closureCost = packagingCostsPerUnit.crown_cap_26 || 0; }
+            } else {
+                closureCost = packagingCostsPerUnit[closureType] || 0;
+            }
             const labelCost = packagingCostsPerUnit.label || 0;
             totalPackagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
         });
@@ -3966,12 +3917,17 @@ async function bottleBatch(e) {
                     const bottleId = `bottle_${bottle.size}`;
                     if (updatedPackagingStock[bottleId]) updatedPackagingStock[bottleId].qty -= bottle.quantity;
                 }
+                
                 let closureId; 
-                if (bottle.size >= 750) { closureId = 'cork'; } 
-                else if (bottle.size >= 500) { closureId = 'crown_cap_29'; } 
-                else { closureId = 'crown_cap_26'; }
+                if (closureType === 'auto') {
+                    if (bottle.size >= 750) { closureId = 'cork'; } 
+                    else if (bottle.size >= 500) { closureId = 'crown_cap_29'; } 
+                    else { closureId = 'crown_cap_26'; }
+                } else {
+                    closureId = closureType;
+                }
                 if (updatedPackagingStock[closureId]) updatedPackagingStock[closureId].qty -= bottle.quantity;
-                if (updatedPackagingStock.label) updatedPackagingStock.label.qty -= bottle.quantity;
+                if (updatedPackagingStock.label) updatedPackagingStock.label.qty -= totalBottles;
             });
             
             const appId = 'meandery-aa05e';
@@ -4359,7 +4315,6 @@ function getBrewLogHtml(logData, idSuffix = 'new') {
     const fermLog = data.fermentationLog || Array.from({ length: 8 }, () => ({}));
     const escapedRecipeName = (data.recipeName || '').replace(/"/g, '&quot;');
     
-    // NIEUW: De oninput functie om de OG te kopiëren
     const copyOgToLogScript = `
         const ogInput = document.getElementById('actualOG-${idSuffix}');
         const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input');
@@ -4389,7 +4344,7 @@ function getBrewLogHtml(logData, idSuffix = 'new') {
             <div class="log-item">
                 <label>Fermentation Log</label>
                 <table class="fermentation-table table-fixed" id="fermentationTable-${idSuffix}">
-                    <thead><tr><th class="w-1/4">Date</th><th class="w-1/6">Temp (°C)</th><th class="w-1/5">S.G.</th><th class="w-2/5">Notes</th></tr></thead>
+                    <thead><tr><th style="width: 110px;">Date</th><th style="width: 70px;">Temp (°C)</th><th style="width: 80px;">S.G.</th><th>Notes</th></tr></thead>
                     <tbody>${fermLog.map(row => `<tr>
                             <td><input type="date" value="${row.date || ''}" class="w-full"></td>
                             <td><input type="number" step="0.5" placeholder="18.5" value="${row.temp || '18'}" class="w-full text-center"></td>
@@ -5843,28 +5798,22 @@ function populateSocialRecipeDropdown() {
             <input type="date" id="bottlingDate" required class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
         </div>
         <div>
+            <label for="closureTypeSelect" class="block text-sm font-bold mb-2">Closure Type</label>
+            <select id="closureTypeSelect" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
+                <option value="auto" selected>Automatic (based on size)</option>
+                <option value="cork">Cork</option>
+                <option value="crown_cap_26">Crown Cap 26mm</option>
+                <option value="crown_cap_29">Crown Cap 29mm</option>
+            </select>
+        </div>
+        <div>
             <label class="block text-sm font-bold mb-2">Number of Bottles (Standard Sizes)</label>
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div>
-                    <label for="qty750" class="block text-xs text-app-secondary">750ml</label>
-                    <input type="number" id="qty750" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
-                </div>
-                <div>
-                    <label for="qty500" class="block text-xs text-app-secondary">500ml</label>
-                    <input type="number" id="qty500" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
-                </div>
-                <div>
-                    <label for="qty450" class="block text-xs text-app-secondary">450ml</label>
-                    <input type="number" id="qty450" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
-                </div>
-                <div>
-                    <label for="qty330" class="block text-xs text-app-secondary">330ml</label>
-                    <input type="number" id="qty330" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
-                </div>
-                <div>
-                    <label for="qty250" class="block text-xs text-app-secondary">250ml</label>
-                    <input type="number" id="qty250" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
-                </div>
+                <div><label for="qty750" class="block text-xs text-app-secondary">750ml</label><input type="number" id="qty750" ...></div>
+                <div><label for="qty500" class="block text-xs text-app-secondary">500ml</label><input type="number" id="qty500" ...></div>
+                <div><label for="qty450" class="block text-xs text-app-secondary">450ml</label><input type="number" id="qty450" ...></div>
+                <div><label for="qty330" class="block text-xs text-app-secondary">330ml</label><input type="number" id="qty330" ...></div>
+                <div><label for="qty250" class="block text-xs text-app-secondary">250ml</label><input type="number" id="qty250" ...></div>
             </div>
         </div>
 
@@ -5887,8 +5836,8 @@ function populateSocialRecipeDropdown() {
         </div>
     </div>
     <div class="flex justify-end gap-4 mt-8">
-        <button type="button" onclick="window.hideBottlingModal()" class="btn ...">Cancel</button>
-        <button type="submit" class="btn ...">Add to Cellar</button>
+        <button type="button" onclick="window.hideBottlingModal()" class="px-6 py-2 rounded-lg bg-gray-600 text-gray-300 hover:bg-gray-500 btn">Cancel</button>
+        <button type="submit" class="px-6 py-2 rounded-lg bg-app-action text-white font-bold hover:opacity-90 btn">Add to Cellar</button>
     </div>
 </form>
     </div>

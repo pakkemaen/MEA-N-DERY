@@ -813,9 +813,6 @@
                        <div id="packaging-list" class="space-y-2">
                            </div>
                     </main>
-</div> <div id="debug-output-container" class="mt-8 p-4 card rounded-lg bg-app-primary border-2 border-red-500">
-                    <pre id="debug-output" class="text-xs whitespace-pre-wrap"></pre>
-                </div>
                 </div>
             </div>             
             <div id="equipment-view" class="hidden mt-4">
@@ -1378,29 +1375,28 @@
             };
 
             // --- Toast Notification Helper ---
-            function showToast(message, type = 'info', duration = 4000) {
-    let backgroundColor;
-    switch(type) {
-        case 'success':
-            backgroundColor = "linear-gradient(to right, #22c55e, #16a34a)";
-            break;
-        case 'error':
-            backgroundColor = "linear-gradient(to right, #ef4444, #dc2626)";
-            break;
-        default: // 'info' or any other type
-            backgroundColor = "linear-gradient(to right, #3b82f6, #2563eb)";
-    }
-    Toastify({
-        text: message.replace(/\n/g, '<br>'), // Vervang newlines met <br> voor leesbaarheid
-        duration: duration, // Gebruik de meegegeven duur
-        close: true,
-        gravity: "top",
-        position: "right",
-        stopOnFocus: true,
-        escapeMarkup: false, // Sta HTML toe (voor de <br>)
-        style: { background: backgroundColor, borderRadius: "8px" }
-    }).showToast();
-}
+            function showToast(message, type = 'info') {
+                let backgroundColor;
+                switch(type) {
+                    case 'success':
+                        backgroundColor = "linear-gradient(to right, #22c55e, #16a34a)";
+                        break;
+                    case 'error':
+                        backgroundColor = "linear-gradient(to right, #ef4444, #dc2626)";
+                        break;
+                    default:
+                        backgroundColor = "linear-gradient(to right, #6b7280, #4b5563)";
+                }
+                Toastify({
+                    text: message,
+                    duration: 4000,
+                    close: true,
+                    gravity: "top",
+                    position: "right",
+                    stopOnFocus: true,
+                    style: { background: backgroundColor, borderRadius: "8px" }
+                }).showToast();
+            }
 
             // --- UI Elements ---
             let dashboardMainView, creatorView, brewingView, historyView, inventoryView, 
@@ -1592,41 +1588,34 @@ function executeDangerAction() {
                }
            }
 
-           ```javascript
-async function addPackagingStock(e) {
+           async function addPackagingStock(e) {
     e.preventDefault();
     if (!userId) return;
-
-    let debugMessage = "--- Debug Log: Add Packaging Stock ---\n\n";
 
     const itemId = document.getElementById('packaging-item-select').value;
     const qtyAdded = parseFloat(document.getElementById('packaging-item-qty').value) || 0;
     const priceAdded = parseFloat(document.getElementById('packaging-item-price').value) || 0;
-    
-    debugMessage += `Selected Item ID: ${itemId}\n`;
-    debugMessage += `Quantity to Add: ${qtyAdded}\n`;
-    debugMessage += `Price to Add: ${priceAdded}\n\n`;
 
-    if (!itemId || qtyAdded <= 0) {
+    if (!itemId || qtyAdded <= 0) { // Prijs mag 0 zijn
         showToast("Please fill in a valid material and quantity.", "error");
         return;
     }
 
+    // Haal de huidige waarden expliciet op, met 0 als standaard
     const currentQty = packagingCosts[itemId]?.qty || 0;
     const currentPrice = packagingCosts[itemId]?.price || 0;
-    debugMessage += `Current Stock (Before):\n  - Qty: ${currentQty}\n  - Price: ${currentPrice}\n\n`;
 
+    // Bereken de nieuwe totalen
     const newQty = currentQty + qtyAdded;
     const newPrice = currentPrice + priceAdded;
-    debugMessage += `New Calculated Stock (After):\n  - Qty: ${newQty}\n  - Price: ${newPrice}`;
-    
-    // Toon de debug informatie in een permanente toast
-    showToast(debugMessage, 'info', -1); // -1 betekent dat de toast blijft staan tot weggeklikt
-    
+
+    // Werk het packagingCosts object bij met de nieuwe, berekende waarden
     packagingCosts[itemId] = { qty: newQty, price: newPrice };
-    
+
+    // Sla de volledige, bijgewerkte voorraad op
     await savePackagingCosts(); 
     
+    // Reset het formulier voor de volgende invoer
     document.getElementById('packaging-add-form').reset();
 }
 
@@ -3590,6 +3579,7 @@ window.renderInventory = function() {
     const packagingCostsPerUnit = getPackagingCosts();
 
     listDiv.innerHTML = cellar.map(item => {
+        // --- NIEUWE LOGICA ---
         const originalBrew = brews.find(b => b.id === item.brewId);
         const originalBatchSize = originalBrew ? originalBrew.batchSize : 1; // Fallback
         const ingredientCostPerLiter = originalBatchSize > 0 ? (item.ingredientCost || 0) / originalBatchSize : 0;
@@ -3649,6 +3639,7 @@ window.renderInventory = function() {
         </div>
         `;
     }).join('');
+}
 
             // --- Kalender Herinnering Functies ---
             window.setTastingReminder = function(cellarItemId) {
@@ -3954,31 +3945,16 @@ async function bottleBatch(e) {
                 totalBatchCost: finalTotalCost,
                 ingredientCost: originalBrew.totalCost || 0,
                 peakFlavorDate: null,
-                peakFlavorJustification: 'Advice could not be generated.'
+                peakFlavorJustification: 'AI advice could not be generated.'
             };
 
             try {
-                const agingPrompt = `Analyze the following mead recipe. Based on the ingredients and style, determine a recommended 'peak flavor' date, assuming it was bottled on ${bottlingDate.toISOString().split('T')[0]}.
-
-Recipe Markdown:
----
-${originalBrew.recipeMarkdown}
----
-
-CRUCIAL: Your response MUST contain two parts:
-1. A "Justification:" line with a single sentence explaining your reasoning.
-2. A "Peak Date:" line with only the date in YYYY-MM-DD format.
-Example:
-Justification: Bochets with dark fruit benefit from at least two years of aging to mellow.
-Peak Date: 2027-09-24`;
-
+                const agingPrompt = `You are a mead aging expert. Based on the following mead recipe and a bottling date of ${bottlingDate.toISOString().split('T')[0]}, determine a recommended 'peak flavor' or 'best before' date. Provide a short justification (1 sentence) and the date in YYYY-MM-DD format. Recipe:\n\n---\n${originalBrew.recipeMarkdown}`;
                 const agingAdvice = await performApiCall(agingPrompt);
-                const dateMatch = agingAdvice.match(/Peak Date:\s*(\d{4}-\d{2}-\d{2})/);
-                const justificationMatch = agingAdvice.match(/Justification:\s*(.*)/);
-                
+                const dateMatch = agingAdvice.match(/(\d{4}-\d{2}-\d{2})/);
+                const justificationMatch = agingAdvice.match(/Justification:\s*(.*)/i);
                 if (dateMatch) cellarData.peakFlavorDate = dateMatch[1];
                 if (justificationMatch) cellarData.peakFlavorJustification = justificationMatch[1];
-
             } catch (aiError) {
                 console.error("AI aging advice failed, but bottling will continue:", aiError);
             }

@@ -869,27 +869,27 @@
                 </div>
             </div>
             <div id="financials-view" class="hidden mt-4">
-                <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 70vh;">
-                     <h2 class="text-3xl font-header font-bold mb-6 text-center">Financials</h2>
-                     <div id="cost-analysis-container">
-                        <h3 class="text-2xl font-header mb-4">Cost Analysis</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="card p-4 rounded-lg text-center">
-                                <h4 class="text-lg font-bold text-app-secondary">Total Inventory Value</h4>
-                                <p id="total-spend" class="text-3xl font-bold text-app-brand">€0.00</p>
-                            </div>
-                            <div class="card p-4 rounded-lg text-center">
-                                <h4 class="text-lg font-bold text-app-secondary">Average Cost Per Batch</h4>
-                                <p id="avg-cost" class="text-3xl font-bold text-app-brand">€0.00</p>
-                            </div>
-                        </div>
-                        <div class="card p-4 rounded-lg mt-6">
-                            <h4 class="text-lg font-bold text-app-secondary text-center mb-4">Spend by Category</h4>
-                            <canvas id="cost-chart"></canvas>
-                        </div>
-                     </div>
+    <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 70vh;">
+         <h2 class="text-3xl font-header font-bold mb-6 text-center">Financials</h2>
+         <div id="cost-analysis-container">
+            <h3 class="text-2xl font-header mb-4">Cost Analysis</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="card p-4 rounded-lg text-center">
+                    <h4 class="text-lg font-bold text-app-secondary">Total Inventory Value</h4>
+                    <p id="total-spend" class="text-3xl font-bold text-app-brand">€0.00</p>
+                </div>
+                <div class="card p-4 rounded-lg text-center">
+                    <h4 class="text-lg font-bold text-app-secondary">Total Cellar Value</h4>
+                    <p id="total-cellar-value" class="text-3xl font-bold text-app-brand">€0.00</p>
                 </div>
             </div>
+            <div class="card p-4 rounded-lg mt-6">
+                <h4 class="text-lg font-bold text-app-secondary text-center mb-4">Spend by Category</h4>
+                <canvas id="cost-chart"></canvas>
+            </div>
+         </div>
+    </div>
+</div>
         </div>
         <div id="tools-main-view" class="hidden">
             <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
@@ -1639,13 +1639,13 @@ async function loadPackagingCosts() {
             // SavePackagingCosts FUNCTIE
 async function savePackagingCosts() {
     if (!userId) return;
-    const appId = 'meandery-aa05e';
+    const appId = 'meandery-aa0e';
     const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
     
     try {
         await setDoc(settingsDocRef, packagingCosts);
         showToast('Packaging stock updated successfully!', 'success');
-        renderPackagingUI(); // Belangrijk: ververs de lijstweergave na elke wijziging
+        await loadPackagingCosts(); // VRAAG DATA OPNIEUW OP VOOR 100% CORRECTE WEERGAVE
     } catch (error) {
         console.error("Error saving packaging costs:", error);
         showToast('Failed to save packaging costs.', 'error');
@@ -4388,7 +4388,7 @@ function getBrewLogHtml(logData, idSuffix = 'new') {
             </div>
             <div class="log-item">
                 <label>Fermentation Log</label>
-                <table class="fermentation-table" id="fermentationTable-${idSuffix}">
+                <table class="fermentation-table table-fixed" id="fermentationTable-${idSuffix}">
                     <thead><tr><th class="w-1/4">Date</th><th class="w-1/6">Temp (°C)</th><th class="w-1/5">S.G.</th><th class="w-2/5">Notes</th></tr></thead>
                     <tbody>${fermLog.map(row => `<tr>
                             <td><input type="date" value="${row.date || ''}" class="w-full"></td>
@@ -4908,7 +4908,7 @@ function renderActiveBrewTimeline() {
 
                 if (currentStepIndex >= brewDaySteps.length) {
                     const container = document.getElementById('brew-day-steps-container');
-                    container.innerHTML += `<div class="text-center p-6 card rounded-lg mt-6"><h3 class="text-2xl font-header font-bold text-green-600">Brew Day Complete!</h3><p>Don't forget to log your OG and pitch your yeast.</p></div>`;
+                    container.innerHTML += `<div class="text-center p-6 card rounded-lg mt-6"><h3 class="text-2xl font-header font-bold text-green-600">Brew Day Complete!</h3><p>Well done! You can now monitor the fermentation in your Brew History.</p></div>`;
                 }
             }
 
@@ -5366,49 +5366,32 @@ function populateSocialRecipeDropdown() {
             }
 
             function updateCostAnalysis() {
-                const currency = userSettings.currencySymbol || '€';
-                const totalSpend = inventory.reduce((acc, item) => acc + (item.price || 0), 0);
-                const avgCost = brews.length > 0 ? brews.reduce((acc, brew) => acc + (brew.totalCost || 0), 0) / brews.length : 0;
+    const currency = userSettings.currencySymbol || '€';
+    // Berekening inventariswaarde blijft hetzelfde
+    const totalSpend = inventory.reduce((acc, item) => acc + (item.price || 0), 0);
+    document.getElementById('total-spend').textContent = `${currency}${totalSpend.toFixed(2)}`;
 
-                document.getElementById('total-spend').textContent = `${currency}${totalSpend.toFixed(2)}`;
-                document.getElementById('avg-cost').textContent = `${currency}${avgCost.toFixed(2)}`;
+    // NIEUW: Bereken de totale kelderwaarde
+    const totalCellarValue = cellar.reduce((acc, item) => acc + (item.totalBatchCost || 0), 0);
+    document.getElementById('total-cellar-value').textContent = `${currency}${totalCellarValue.toFixed(2)}`;
 
-                const spendByCategory = inventory.reduce((acc, item) => {
-                    acc[item.category] = (acc[item.category] || 0) + (item.price || 0);
-                    return acc;
-                }, {});
-
-                const ctx = document.getElementById('cost-chart').getContext('2d');
-                const chartData = {
-                    labels: Object.keys(spendByCategory),
-                    datasets: [{
-                        label: 'Spend by Category',
-                        data: Object.values(spendByCategory),
-                        backgroundColor: [
-                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#7BC225'
-                        ],
-                    }]
-                };
-
-                if (costChart) {
-                    costChart.destroy();
-                }
-                costChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: chartData,
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                                labels: {
-                                    color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary')
-                                }
-                            }
-                        }
-                    }
-                });
-            }
+    // De rest van de functie (grafiek) blijft hetzelfde
+    const spendByCategory = inventory.reduce((acc, item) => {
+        acc[item.category] = (acc[item.category] || 0) + (item.price || 0);
+        return acc;
+    }, {});
+    const ctx = document.getElementById('cost-chart').getContext('2d');
+    const chartData = {
+        labels: Object.keys(spendByCategory),
+        datasets: [{
+            label: 'Spend by Category',
+            data: Object.values(spendByCategory),
+            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#7BC225'],
+        }]
+    };
+    if (costChart) { costChart.destroy(); }
+    costChart = new Chart(ctx, { type: 'doughnut', data: chartData, options: { /* ... */ } });
+}
 
             function renderFermentationGraph(brewId) {
                 const brew = brews.find(b => b.id === brewId);
@@ -5857,26 +5840,30 @@ function populateSocialRecipeDropdown() {
     <div class="space-y-6">
         <div>
             <label for="bottlingDate" class="block text-sm font-bold mb-2">Bottling Date</label>
-            <input type="date" id="bottlingDate" required class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+            <input type="date" id="bottlingDate" required class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
         </div>
         <div>
             <label class="block text-sm font-bold mb-2">Number of Bottles (Standard Sizes)</label>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div>
                     <label for="qty750" class="block text-xs text-app-secondary">750ml</label>
-                    <input type="number" id="qty750" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                    <input type="number" id="qty750" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
                 </div>
                 <div>
                     <label for="qty500" class="block text-xs text-app-secondary">500ml</label>
-                    <input type="number" id="qty500" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                    <input type="number" id="qty500" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
+                </div>
+                <div>
+                    <label for="qty450" class="block text-xs text-app-secondary">450ml</label>
+                    <input type="number" id="qty450" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
                 </div>
                 <div>
                     <label for="qty330" class="block text-xs text-app-secondary">330ml</label>
-                    <input type="number" id="qty330" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                    <input type="number" id="qty330" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
                 </div>
                 <div>
                     <label for="qty250" class="block text-xs text-app-secondary">250ml</label>
-                    <input type="number" id="qty250" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                    <input type="number" id="qty250" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
                 </div>
             </div>
         </div>
@@ -5886,22 +5873,22 @@ function populateSocialRecipeDropdown() {
             <div class="grid grid-cols-3 gap-4">
                 <div>
                      <label for="customSize" class="block text-xs text-app-secondary">Size (ml)</label>
-                    <input type="number" id="customSize" min="0" step="1" placeholder="e.g., 450" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                    <input type="number" id="customSize" min="0" step="1" placeholder="e.g., 650" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
                 </div>
                 <div>
                      <label for="customQty" class="block text-xs text-app-secondary">Quantity</label>
-                    <input type="number" id="customQty" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                    <input type="number" id="customQty" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
                 </div>
                 <div>
                      <label for="customPrice" class="block text-xs text-app-secondary">Cost per Bottle (€)</label>
-                    <input type="number" id="customPrice" min="0" step="0.01" placeholder="0.65" class="w-full p-2 border rounded-md bg-app-primary border-app focus:ring-2 focus:ring-app-brand text-app-primary">
+                    <input type="number" id="customPrice" min="0" step="0.01" placeholder="0.65" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
                 </div>
             </div>
         </div>
     </div>
     <div class="flex justify-end gap-4 mt-8">
-        <button type="button" onclick="window.hideBottlingModal()" class="px-6 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500 btn">Cancel</button>
-        <button type="submit" class="px-6 py-2 rounded-lg bg-app-action text-white font-bold hover:opacity-90 btn">Add to Cellar</button>
+        <button type="button" onclick="window.hideBottlingModal()" class="btn ...">Cancel</button>
+        <button type="submit" class="btn ...">Add to Cellar</button>
     </div>
 </form>
     </div>

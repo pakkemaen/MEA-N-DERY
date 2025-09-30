@@ -3850,7 +3850,7 @@ async function bottleBatch(e) {
                     outOfStockItems.push(`${bottle.quantity} x ${bottle.size}ml bottle(s) (only ${currentStock} in stock)`);
                 }
             }
-        });
+        })
 
         if (closureType === 'auto') {
             const closuresNeeded = { cork: 0, crown_cap_26: 0, crown_cap_29: 0 };
@@ -3899,28 +3899,44 @@ async function bottleBatch(e) {
         let finalTotalCost = (originalBrew.totalCost || 0) + totalPackagingCost;
 
         if (confirm(`The calculated packaging cost is ${userSettings.currencySymbol || '€'}${totalPackagingCost.toFixed(2)}. The new total batch cost will be ${userSettings.currencySymbol || '€'}${finalTotalCost.toFixed(2)}. Do you want to continue?`)) {
-            const updatedPackagingStock = { ...packagingCosts };
-            
+            const updatedPackagingStock = JSON.parse(JSON.stringify(packagingCosts)); // Veilige kopie
+
+            const deductFromStock = (stock, itemId, quantity) => {
+                if (stock[itemId] && stock[itemId].qty > 0) {
+                    const costPerUnit = stock[itemId].price / stock[itemId].qty;
+                    const costToDeduct = costPerUnit * quantity;
+                    
+                    stock[itemId].qty -= quantity;
+                    stock[itemId].price -= costToDeduct;
+
+                    // Voorkom negatieve waarden door afrondingsfouten
+                    if (stock[itemId].qty <= 0) {
+                        stock[itemId].qty = 0;
+                        stock[itemId].price = 0;
+                    }
+                }
+            };
+
+            // Schrijf standaard flessen af
             bottlesData.forEach(bottle => {
                 if(bottle.price === null) { 
-                    const bottleId = `bottle_${bottle.size}`;
-                    if (updatedPackagingStock[bottleId]) updatedPackagingStock[bottleId].qty -= bottle.quantity;
+                    deductFromStock(updatedPackagingStock, `bottle_${bottle.size}`, bottle.quantity);
                 }
             });
 
+            // Schrijf sluitingen en etiketten af
             if (closureType === 'auto') {
                  bottlesData.forEach(bottle => {
                     let closureId;
                     if (bottle.size >= 750) { closureId = 'cork'; } 
                     else if (bottle.size >= 500) { closureId = 'crown_cap_29'; } 
                     else { closureId = 'crown_cap_26'; }
-                    if (updatedPackagingStock[closureId]) updatedPackagingStock[closureId].qty -= bottle.quantity;
+                    deductFromStock(updatedPackagingStock, closureId, bottle.quantity);
                  });
             } else {
-                if (updatedPackagingStock[closureType]) updatedPackagingStock[closureType].qty -= totalBottles;
+                deductFromStock(updatedPackagingStock, closureType, totalBottles);
             }
-
-            if (updatedPackagingStock.label) updatedPackagingStock.label.qty -= totalBottles;
+            deductFromStock(updatedPackagingStock, 'label', totalBottles);
             
             const appId = 'meandery-aa05e';
             const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
@@ -3968,9 +3984,6 @@ Peak Date: 2027-09-24`;
 
             const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar');
             await addDoc(cellarCol, cellarData);
-
-            const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId);
-            await updateDoc( brewDocRef, { isBottled: true, totalCost: finalTotalCost });
             
             hideBottlingModal();
             showToast("Batch bottled and added to cellar!", "success");

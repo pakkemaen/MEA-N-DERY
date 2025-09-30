@@ -2534,7 +2534,7 @@ async function clearInventory() {
         - The recipe title MUST follow the format 'Name: Subtitle'.
         - You MUST explicitly state the Target OG, Target FG, and Target ABV in the description.
 
-        The final section of your response MUST be '## Recommended Water'.`;
+        The final section of your response MUST be '## Recommended Water'. In this section, you must recommend a suitable, commercially available Belgian bottled water (e.g., Spa Reine, Chaudfontaine, Valvert, etc.) that best fits the generated recipe's style. You must also explain in 1-2 sentences WHY it is a good choice.`;
         
         return prompt;
     } catch (error) {
@@ -4681,10 +4681,12 @@ window.showBrewDay2Detail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
+    // Stel de actieve brouwdag in, zodat de checklist weet welk brouwsel we aanpassen
+    currentBrewDay = userSettings.currentBrewDay?.brewId === brewId ? userSettings.currentBrewDay : { brewId: brewId, checklist: {} };
+
     const view = document.getElementById('brew-day-2-view');
     const allSteps = brew.brewDaySteps || [];
     
-    // Vind de resterende stappen (alles na de primaire fermentatie)
     const secondaryStartIndex = allSteps.findIndex(step => 
         /rack|transfer|secondary|bottle|cold crash|age|stabilize/i.test(step.title)
     );
@@ -4692,12 +4694,33 @@ window.showBrewDay2Detail = function(brewId) {
     let secondaryStepsHtml = '<p class="text-center text-app-secondary/80">No specific secondary steps found. Ready to bottle?</p>';
     if (secondaryStartIndex !== -1) {
         const secondarySteps = allSteps.slice(secondaryStartIndex);
-        secondaryStepsHtml = secondarySteps.map((step, index) => `
-            <div class="step-item p-4 rounded-r-lg mb-3">
-                <p class="step-title">${secondaryStartIndex + index + 1}. ${step.title}</p>
-                <p class="text-sm text-app-secondary">${step.description}</p>
-            </div>
-        `).join('');
+        
+        // --- NIEUWE LOGICA: Bouw interactieve stappen ---
+        secondaryStepsHtml = secondarySteps.map((step, index) => {
+            const originalIndex = secondaryStartIndex + index;
+            const isCompleted = currentBrewDay.checklist[`step-${originalIndex}`] || false;
+
+            // We gebruiken hier enkel de "Mark as Complete" knop, geen timers
+            const buttonsHtml = `
+                <button data-action="completeStep" data-step="${originalIndex}" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 btn">Mark as Complete</button>
+            `;
+
+            return `
+                <div id="step-${originalIndex}" class="step-item p-4 rounded-r-lg mb-3 ${isCompleted ? 'completed' : ''}">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="step-title">${originalIndex + 1}. ${step.title}</p>
+                            <p class="text-sm text-app-secondary">${step.description}</p>
+                        </div>
+                        <div class="text-right flex-shrink-0 ml-4">
+                            <div class="space-x-2" id="controls-${originalIndex}">
+                                ${isCompleted ? '<span class="text-sm font-bold text-green-600">✓ Completed</span>' : buttonsHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     const logHtml = getBrewLogHtml(brew.logData, brew.id);
@@ -4709,7 +4732,7 @@ window.showBrewDay2Detail = function(brewId) {
             
             <div class="mb-6">
                 <h3 class="text-xl font-header mb-2">Remaining Steps</h3>
-                ${secondaryStepsHtml}
+                <div id="brew-day-steps-container">${secondaryStepsHtml}</div>
             </div>
             
             <div class="text-center my-6">
@@ -4754,33 +4777,36 @@ window.showBrewDay2Detail = function(brewId) {
 
             // --- Gecentraliseerde Event Listener voor de Brouwdag ---
             function setupBrewDayEventListeners() {
-                // Gebruik Event Delegation: één listener voor de hele container.
-                brewDayContent.addEventListener('click', function(e) {
-                    const target = e.target.closest('button[data-action]');
-                    if (!target) return; // Klik was niet op een actieknop
+    // AANGEPAST: Luister nu naar de hele 'brewing-main-view' in plaats van enkel 'brew-day-content'
+    const viewContainer = document.getElementById('brewing-main-view');
+    if (!viewContainer) return;
 
-                    const action = target.dataset.action;
-                    const stepIndex = parseInt(target.dataset.step);
+    viewContainer.addEventListener('click', function(e) {
+        const target = e.target.closest('button[data-action]');
+        if (!target) return; 
 
-                    switch(action) {
-                        case 'startTimer':
-                            startStepTimer(stepIndex);
-                            break;
-                        case 'pauseTimer':
-                            pauseStepTimer();
-                            break;
-                        case 'skipTimer':
-                            skipTimer(stepIndex);
-                            break;
-                        case 'completeStep':
-                            completeStep(stepIndex);
-                            break;
-                        case 'resetBrewDay':
-                            resetBrewDay();
-                            break;
-                    }
-                });
-            }
+        const action = target.dataset.action;
+        const stepIndex = parseInt(target.dataset.step);
+
+        switch(action) {
+            case 'startTimer':
+                startStepTimer(stepIndex);
+                break;
+            case 'pauseTimer':
+                pauseStepTimer();
+                break;
+            case 'skipTimer':
+                skipTimer(stepIndex);
+                break;
+            case 'completeStep':
+                completeStep(stepIndex);
+                break;
+            case 'resetBrewDay':
+                resetBrewDay();
+                break;
+        }
+    });
+}
 
             function parseStepsForBrewDay(markdown) {
                 let steps = [];

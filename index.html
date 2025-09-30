@@ -4560,63 +4560,79 @@ function renderActiveBrewTimeline() {
             }
 
             function renderBrewDay(brewId) {
-                const brew = brews.find(b => b.id === brewId);
-                if (!brew) {
-                    brewDayContent.innerHTML = `<p class="text-center text-red-500">Could not find the selected brew. Please start a new one.</p>`;
-                    return;
-                }
+    const brew = brews.find(b => b.id === brewId);
+    if (!brew) {
+        brewDayContent.innerHTML = `<p class="text-center text-red-500">Could not find the selected brew. Please start a new one.</p>`;
+        return;
+    }
 
-                // Genereer de stappen uit het recept.
-                const steps = generateBrewDaySteps(brew);
-                if (!steps || steps.length === 0) {
-                     brewDayContent.innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2><p class="text-center text-app-secondary/80">Could not parse steps from this recipe. Ensure it has an 'Instructions' section with a list.</p>`;
-                     return;
-                }
+    const allSteps = brew.brewDaySteps || [];
+    if (allSteps.length === 0) {
+         brewDayContent.innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2><p class="text-center text-app-secondary/80">Could not parse steps from this recipe. Ensure it has an 'Instructions' section with a list.</p>`;
+         return;
+    }
 
-                let stepsHtml = steps.map((step, index) => {
-                    const timerHtml = step.duration > 0 ? `<p class="timer-display my-2" id="timer-${index}">${formatTime(step.duration)}</p>` : '';
-                    const buttonsHtml = step.duration > 0 ? `
-                        <button data-action="startTimer" data-step="${index}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Start Timer</button>
-                    ` : `
-                        <button data-action="completeStep" data-step="${index}" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 btn">Mark as Complete</button>
-                    `;
+    // Vind het begin van de secundaire fase op basis van keywords
+    const secondaryStartIndex = allSteps.findIndex(step => 
+        /rack|transfer|secondary|bottle|cold crash|age/i.test(step.title)
+    );
 
-                    return `
-                        <div id="step-${index}" class="step-item p-4 rounded-r-lg mb-3">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <p class="step-title">${index + 1}. ${step.title}</p>
-                                    <p class="text-sm text-app-secondary">${step.description}</p>
-                                </div>
-                                <div class="text-right">
-                                    ${timerHtml}
-                                    <div class="space-x-2" id="controls-${index}">
-                                        ${buttonsHtml}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+    // Toon alle stappen als er geen keyword wordt gevonden, anders enkel de primaire stappen
+    const primarySteps = secondaryStartIndex === -1 ? allSteps : allSteps.slice(0, secondaryStartIndex);
 
-                brewDayContent.innerHTML = `
-                    <h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2>
-                    <div class="mb-4">
-                        <div class="progress-bar-bg w-full h-2 rounded-full">
-                            <div id="brew-day-progress" class="progress-bar-fg h-2 rounded-full" style="width: 0%;"></div>
+    let stepsHtml = primarySteps.map((step, index) => {
+        const timerHtml = step.duration > 0 ? `<p class="timer-display my-2" id="timer-${index}">${formatTime(step.duration)}</p>` : '';
+        const buttonsHtml = step.duration > 0 ? `
+            <button data-action="startTimer" data-step="${index}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Start Timer</button>
+        ` : `
+            <button data-action="completeStep" data-step="${index}" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 btn">Mark as Complete</button>
+        `;
+
+        return `
+            <div id="step-${index}" class="step-item p-4 rounded-r-lg mb-3">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="step-title">${index + 1}. ${step.title}</p>
+                        <p class="text-sm text-app-secondary">${step.description}</p>
+                    </div>
+                    <div class="text-right">
+                        ${timerHtml}
+                        <div class="space-x-2" id="controls-${index}">
+                            ${buttonsHtml}
                         </div>
                     </div>
-                    <div id="brew-day-steps-container">
-                        ${stepsHtml}
-                    </div>
-                     <div class="text-center mt-6">
-                        <button data-action="resetBrewDay" class="text-sm bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 btn">Reset and Start Over</button>
-                    </div>
-                `;
+                </div>
+            </div>
+        `;
+    }).join('');
 
-                // Initialiseer de status van de brouwdag.
-                initializeBrewDayState(steps);
-            }
+    // Haal het invulbare logboek op
+    const logHtml = getBrewLogHtml(brew.logData, brew.id);
+
+    brewDayContent.innerHTML = `
+        <h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2>
+        <div class="mb-4">
+            <div class="progress-bar-bg w-full h-2 rounded-full">
+                <div id="brew-day-progress" class="progress-bar-fg h-2 rounded-full" style="width: 0%;"></div>
+            </div>
+        </div>
+        <div id="brew-day-steps-container">
+            ${stepsHtml}
+        </div>
+        <div class="text-center mt-6">
+            <button data-action="resetBrewDay" class="text-sm bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 btn">Reset and Start Over</button>
+        </div>
+
+        <hr class="my-8 border-app">
+
+        ${logHtml}
+        <div class="mt-4 no-print">
+            <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
+        </div>
+    `;
+
+    initializeBrewDayState(primarySteps);
+}
 
             window.deleteBrew = async function(brewId) {
                 if (!userId) return;
@@ -5100,11 +5116,12 @@ window.checkShoppingList = function(brewId) {
 }
 
 window.startActualBrewDay = function(brewId) {
-    // Deze functie doet wat de oude startBrewDay deed
     currentBrewDay = { brewId: brewId, checklist: {} };
-    saveUserSettings();
+    saveUserSettings(); // Sla de actieve brouwdag op
     renderBrewDay(brewId);
-    switchSubView('brewing', 'brewing-main-view');
+    
+    // AANGEPAST: Navigeer naar de nieuwe 'brew-day-1' tab
+    switchSubView('brew-day-1', 'brewing-main-view');
 }
 
             // --- Social Media Functies ---

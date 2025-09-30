@@ -2379,6 +2379,7 @@ async function clearInventory() {
         
         const recipeHtml = marked.parse(currentRecipeMarkdown);
         
+        // DEZE HTML BEVAT NU NIET MEER HET LOGBOEK
         const fullHtml = `
             <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
                 <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
@@ -2405,7 +2406,7 @@ async function clearInventory() {
         generateBtn.disabled = false;
         generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
     }
-}           
+}          
 
             function buildPrompt() {
                 try {

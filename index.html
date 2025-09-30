@@ -455,7 +455,7 @@
         
         <header class="text-center mb-4 no-print">
             <h1 class="text-5xl font-header text-app-header">MEA<span class="text-app-brand">(N)</span>DERY</h1>
-            <p class="text-app-secondary mt-2">AI Brewbuddy</p>
+            <p class="text-app-secondary mt-2">Brewbuddy</p>
         </header>
 
         <!-- Main Content Area -->
@@ -2071,31 +2071,33 @@ window.showBrewPrompt = function(brewId) {
             }
 
             function switchSubView(viewName, parentViewId) {
-                const parentView = document.getElementById(parentViewId);
-                parentView.querySelectorAll('[id$="-view"]').forEach(v => v.classList.add('hidden'));
-                parentView.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+    const parentView = document.getElementById(parentViewId);
+    parentView.querySelectorAll('[id$="-view"]').forEach(v => v.classList.add('hidden'));
+    parentView.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
 
-                const viewId = `${viewName}-view`;
-                const tabId = `${viewName}-sub-tab`;
+    const viewId = `${viewName}-view`;
+    const tabId = `${viewName}-sub-tab`;
 
-                const viewToShow = document.getElementById(viewId);
-                const tabToActivate = document.getElementById(tabId);
-
-                if (viewName === 'creator') {
-                   populateEquipmentProfilesDropdown();
-                } 
-
-                if (viewName === 'social') {
-                    populateSocialRecipeDropdown();
-                }
-
-                if (viewName === 'labels') {
-                    populateLabelRecipeDropdown();
-                    updatePreviewAspectRatio();
-                }
+    const viewToShow = document.getElementById(viewId);
+    const tabToActivate = document.getElementById(tabId);
 
     if (viewToShow) viewToShow.classList.remove('hidden');
     if (tabToActivate) tabToActivate.classList.add('active');
+
+    if (viewName === 'brew-day-2') {
+        renderBrewDay2();
+    }
+
+    if (viewName === 'creator') {
+        populateEquipmentProfilesDropdown();
+    } 
+    if (viewName === 'social') {
+        populateSocialRecipeDropdown();
+    }
+    if (viewName === 'labels') {
+        populateLabelRecipeDropdown();
+        updatePreviewAspectRatio();
+    }
 }
 
             // --- Settings Management (Firebase) ---
@@ -4632,6 +4634,97 @@ function renderActiveBrewTimeline() {
     initializeBrewDayState(primarySteps);
 }
 
+// VOEG DEZE TWEE NIEUWE FUNCTIES TOE
+
+function renderBrewDay2() {
+    const view = document.getElementById('brew-day-2-view');
+    if (!view) return;
+
+    // Vind alle brouwsels die gestart zijn maar nog niet gebotteld
+    const secondaryBrews = brews.filter(b => b.logData && b.logData.brewDate && !b.isBottled);
+
+    if (secondaryBrews.length === 0) {
+        view.innerHTML = `
+            <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
+                <h2 class="text-3xl font-header font-bold mb-4 text-center">Secondary / Aging</h2>
+                <p class="text-center text-app-secondary/80">You have no batches currently in the secondary or aging phase.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const listHtml = secondaryBrews.map(brew => {
+        const brewDate = new Date(brew.logData.brewDate);
+        const daysInFermentation = Math.floor((new Date() - brewDate) / (1000 * 60 * 60 * 24));
+        return `
+            <div class="p-4 card rounded-lg cursor-pointer hover:bg-app-primary" onclick="window.showBrewDay2Detail('${brew.id}')">
+                <h4 class="font-bold text-lg font-header">${brew.recipeName || 'Untitled Brew'}</h4>
+                <p class="text-sm text-app-secondary/80">Started on: ${brewDate.toLocaleDateString()} (${daysInFermentation} days ago)</p>
+            </div>
+        `;
+    }).join('');
+
+    view.innerHTML = `
+        <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-header font-bold mb-6 text-center">Secondary / Aging</h2>
+            <div id="brew-day-2-list" class="space-y-4">
+                ${listHtml}
+            </div>
+        </div>
+    `;
+}
+
+window.showBrewDay2Detail = function(brewId) {
+    const brew = brews.find(b => b.id === brewId);
+    if (!brew) return;
+
+    const view = document.getElementById('brew-day-2-view');
+    const allSteps = brew.brewDaySteps || [];
+    
+    // Vind de resterende stappen
+    const secondaryStartIndex = allSteps.findIndex(step => 
+        /rack|transfer|secondary|bottle|cold crash|age|stabilize/i.test(step.title)
+    );
+
+    let secondaryStepsHtml = '<p class="text-center text-app-secondary/80">No specific secondary steps found. Ready to bottle?</p>';
+    if (secondaryStartIndex !== -1) {
+        const secondarySteps = allSteps.slice(secondaryStartIndex);
+        secondaryStepsHtml = secondarySteps.map((step, index) => `
+            <div class="step-item p-4 rounded-r-lg mb-3">
+                <p class="step-title">${secondaryStartIndex + index + 1}. ${step.title}</p>
+                <p class="text-sm text-app-secondary">${step.description}</p>
+            </div>
+        `).join('');
+    }
+
+    const logHtml = getBrewLogHtml(brew.logData, brew.id);
+
+    view.innerHTML = `
+        <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
+            <button onclick="renderBrewDay2()" class="mb-4 text-app-brand hover:underline no-print">&larr; Back to Secondary List</button>
+            <h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName}</h2>
+            
+            <div class="mb-6">
+                <h3 class="text-xl font-header mb-2">Remaining Steps</h3>
+                ${secondaryStepsHtml}
+            </div>
+            
+            <div class="text-center my-6">
+                <button onclick="window.showBottlingModal('${brew.id}')" class="bg-app-action text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 btn">
+                    Bottle This Batch
+                </button>
+            </div>
+
+            <hr class="my-8 border-app">
+
+            ${logHtml}
+            <div class="mt-4 no-print">
+                <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
+            </div>
+        </div>
+    `;
+}
+
             window.deleteBrew = async function(brewId) {
                 if (!userId) return;
                 const brewToDelete = brews.find(b => b.id === brewId);
@@ -4907,9 +5000,18 @@ function renderActiveBrewTimeline() {
                 });
 
                 if (currentStepIndex >= brewDaySteps.length) {
-                    const container = document.getElementById('brew-day-steps-container');
-                    container.innerHTML += `<div class="text-center p-6 card rounded-lg mt-6"><h3 class="text-2xl font-header font-bold text-green-600">Brew Day Complete!</h3><p>Well done! You can now monitor the fermentation in your Brew History.</p></div>`;
-                }
+    const container = document.getElementById('brew-day-steps-container');
+    container.innerHTML += `
+        <div class="text-center p-6 card rounded-lg mt-6">
+            <h3 class="text-2xl font-header font-bold text-green-600">Phase 1 Complete!</h3>
+            <p class="my-2">Great! The primary fermentation steps are done.</p>
+            <p class="text-app-secondary mb-4">The next steps for this batch (secondary fermentation, aging) can be found on the 'Brew Day 2' tab.</p>
+            <button onclick="switchSubView('brew-day-2', 'brewing-main-view')" class="bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">
+                Go to Brew Day 2
+            </button>
+        </div>
+    `;
+}
             }
 
             function formatTime(seconds) {

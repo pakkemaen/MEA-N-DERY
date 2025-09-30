@@ -4561,26 +4561,27 @@ function renderActiveBrewTimeline() {
 
             function renderBrewDay(brewId) {
     const brew = brews.find(b => b.id === brewId);
+    const brewDayContent = document.getElementById('brew-day-content');
     if (!brew) {
-        brewDayContent.innerHTML = `<p class="text-center text-red-500">Could not find the selected brew. Please start a new one.</p>`;
+        brewDayContent.innerHTML = `<p class="text-center text-red-500">Could not find the selected brew.</p>`;
         return;
     }
 
     const allSteps = brew.brewDaySteps || [];
     if (allSteps.length === 0) {
-         brewDayContent.innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2><p class="text-center text-app-secondary/80">Could not parse steps from this recipe. Ensure it has an 'Instructions' section with a list.</p>`;
+         brewDayContent.innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2><p class="text-center text-app-secondary/80">Could not parse steps from this recipe.</p>`;
          return;
     }
 
-    // Vind het begin van de secundaire fase op basis van keywords
+    // VERBETERD: We zoeken nu naar meer trefwoorden
     const secondaryStartIndex = allSteps.findIndex(step => 
-        /rack|transfer|secondary|bottle|cold crash|age/i.test(step.title)
+        /rack|transfer|secondary|bottle|cold crash|age|stabilize/i.test(step.title)
     );
 
-    // Toon alle stappen als er geen keyword wordt gevonden, anders enkel de primaire stappen
     const primarySteps = secondaryStartIndex === -1 ? allSteps : allSteps.slice(0, secondaryStartIndex);
 
     let stepsHtml = primarySteps.map((step, index) => {
+        const isCompleted = currentBrewDay.checklist[`step-${index}`] || false;
         const timerHtml = step.duration > 0 ? `<p class="timer-display my-2" id="timer-${index}">${formatTime(step.duration)}</p>` : '';
         const buttonsHtml = step.duration > 0 ? `
             <button data-action="startTimer" data-step="${index}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Start Timer</button>
@@ -4589,16 +4590,16 @@ function renderActiveBrewTimeline() {
         `;
 
         return `
-            <div id="step-${index}" class="step-item p-4 rounded-r-lg mb-3">
+            <div id="step-${index}" class="step-item p-4 rounded-r-lg mb-3 ${isCompleted ? 'completed' : ''}">
                 <div class="flex justify-between items-center">
                     <div>
                         <p class="step-title">${index + 1}. ${step.title}</p>
                         <p class="text-sm text-app-secondary">${step.description}</p>
                     </div>
-                    <div class="text-right">
+                    <div class="text-right flex-shrink-0 ml-4">
                         ${timerHtml}
                         <div class="space-x-2" id="controls-${index}">
-                            ${buttonsHtml}
+                            ${isCompleted ? '<span class="text-sm font-bold text-green-600">✓ Completed</span>' : buttonsHtml}
                         </div>
                     </div>
                 </div>
@@ -4606,7 +4607,6 @@ function renderActiveBrewTimeline() {
         `;
     }).join('');
 
-    // Haal het invulbare logboek op
     const logHtml = getBrewLogHtml(brew.logData, brew.id);
 
     brewDayContent.innerHTML = `
@@ -4622,9 +4622,7 @@ function renderActiveBrewTimeline() {
         <div class="text-center mt-6">
             <button data-action="resetBrewDay" class="text-sm bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 btn">Reset and Start Over</button>
         </div>
-
         <hr class="my-8 border-app">
-
         ${logHtml}
         <div class="mt-4 no-print">
             <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
@@ -5116,12 +5114,15 @@ window.checkShoppingList = function(brewId) {
 }
 
 window.startActualBrewDay = function(brewId) {
-    currentBrewDay = { brewId: brewId, checklist: {} };
-    saveUserSettings(); // Sla de actieve brouwdag op
-    renderBrewDay(brewId);
-    
-    // AANGEPAST: Navigeer naar de nieuwe 'brew-day-1' tab
+    // STAP 1: Navigeer EERST naar de juiste tab.
     switchSubView('brew-day-1', 'brewing-main-view');
+
+    // STAP 2: Update de 'huidige brouwdag' status.
+    currentBrewDay = { brewId: brewId, checklist: {} };
+    saveUserSettings();
+    
+    // STAP 3: Render DAARNA de inhoud in de nu zichtbare view.
+    renderBrewDay(brewId);
 }
 
             // --- Social Media Functies ---

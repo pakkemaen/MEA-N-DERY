@@ -2365,52 +2365,47 @@ async function clearInventory() {
             }
 
                 async function generateRecipe() {
-                recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
-                generateBtn.disabled = true;
-                generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
+    generateBtn.disabled = true;
+    generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
-                try {
-                    const prompt = buildPrompt();
-                    if (!prompt) { 
-                        throw new Error("Could not build the prompt. A required input field might be missing.");
-                    }
-                    lastGeneratedPrompt = prompt; // Sla de prompt op
-                    currentRecipeMarkdown = await performApiCall(prompt);
-                    
-                    const recipeHtml = marked.parse(currentRecipeMarkdown);
-                    const parsedData = parseRecipeData(currentRecipeMarkdown);
-                    
-                    const fullHtml = `
-                        <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
-                            <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
-                                Show AI Prompt
-                            </button>
-                            <button onclick="window.printEmptyLog()" class="bg-stone-500 text-white py-2 px-4 rounded-lg hover:bg-stone-600 transition-colors btn">
-                                Print Empty Log
-                            </button>
-                            <button onclick="window.print()" class="bg-stone-600 text-white py-2 px-4 rounded-lg hover:bg-stone-700 transition-colors btn">
-                                Print Recipe & Log
-                            </button>
-                        </div>
-                        <div class="recipe-content">${recipeHtml}</div>
-                        <div class="mt-6 no-print">
-                            <button id="saveBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-800 transition-colors btn">
-                                Save to Brew History
-                            </button>
-                        </div>
-                        ${getBrewLogHtml(parsedData, 'new')}
-                    `;
-                    recipeOutput.innerHTML = fullHtml;
-                    document.getElementById('saveBtn').addEventListener('click', saveBrewToHistory);
+    try {
+        const prompt = buildPrompt();
+        if (!prompt) { 
+            throw new Error("Could not build the prompt. A required input field might be missing.");
+        }
+        lastGeneratedPrompt = prompt;
+        currentRecipeMarkdown = await performApiCall(prompt);
+        
+        const recipeHtml = marked.parse(currentRecipeMarkdown);
+        
+        const fullHtml = `
+            <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
+                <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
+                    Show AI Prompt
+                </button>
+                <button onclick="window.print()" class="bg-stone-600 text-white py-2 px-4 rounded-lg hover:bg-stone-700 transition-colors btn">
+                    Print Recipe
+                </button>
+            </div>
+            <div class="recipe-content">${recipeHtml}</div>
+            <div class="mt-6 no-print">
+                <button id="saveBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-800 transition-colors btn">
+                    Save to Brew History
+                </button>
+            </div>
+        `;
+        recipeOutput.innerHTML = fullHtml;
+        document.getElementById('saveBtn').addEventListener('click', saveBrewToHistory);
 
-                } catch (error) {
-                    console.error("Error calling Gemini API:", error);
-                    recipeOutput.innerHTML = `<p class="text-center text-red-600 font-bold">Sorry, the Alchemist is busy. Please try again.</p><p class="text-center text-sm text-app-secondary/80">${error.message}</p>`;
-                } finally {
-                    generateBtn.disabled = false;
-                    generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                }
-            }           
+    } catch (error) {
+        console.error("Error calling Gemini API:", error);
+        recipeOutput.innerHTML = `<p class="text-center text-red-600 font-bold">Sorry, the Alchemist is busy. Please try again.</p><p class="text-center text-sm text-app-secondary/80">${error.message}</p>`;
+    } finally {
+        generateBtn.disabled = false;
+        generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+}           
 
             function buildPrompt() {
                 try {
@@ -2548,61 +2543,63 @@ async function clearInventory() {
             
             // --- Firestore & History Functions ---
             window.saveBrewToHistory = async function() {
-                if (!userId || !currentRecipeMarkdown) {
-                    showToast("Cannot save. No user identified or no recipe generated.", "error");
-                    return;
-                }
-                const saveButton = document.getElementById('saveBtn');
-                saveButton.textContent = 'Analyzing & Saving...';
-                saveButton.disabled = true;
+    if (!userId || !currentRecipeMarkdown) {
+        showToast("Cannot save. No user identified or no recipe generated.", "error");
+        return;
+    }
+    const saveButton = document.getElementById('saveBtn');
+    saveButton.textContent = 'Analyzing & Saving...';
+    saveButton.disabled = true;
 
-                // De oude overhead-logica is hier verwijderd. We slaan enkel de ingrediëntenkost op.
-                const totalBatchCost = parseIngredientsAndCalculateCost(currentRecipeMarkdown, inventory, parseFloat(document.getElementById('batchSize').value) || 5);
+    const totalBatchCost = parseIngredientsAndCalculateCost(currentRecipeMarkdown, inventory, parseFloat(document.getElementById('batchSize').value) || 5);
+    const brewDaySteps = parseStepsForBrewDay(currentRecipeMarkdown);
+    const predictedProfile = await getPredictedFlavorProfile(currentRecipeMarkdown);
+    
+    // De initiële logboekgegevens worden nu direct uit het recept gehaald
+    const initialLogData = parseRecipeData(currentRecipeMarkdown);
+    initialLogData.fermentationLog = Array.from({ length: 8 }, () => ({})); // Maak een leeg logboek
+    
+    const batchSize = parseFloat(document.getElementById('batchSize').value) || 5;
+    const brewData = {
+        userId: userId,
+        recipeName: initialLogData.recipeName || "Untitled Brew",
+        recipeMarkdown: currentRecipeMarkdown,
+        prompt: lastGeneratedPrompt,
+        logData: initialLogData,
+        createdAt: new Date(),
+        batchSize: batchSize,
+        totalCost: totalBatchCost,
+        isBottled: false,
+        predictedFlavorProfile: predictedProfile,
+        brewDaySteps: brewDaySteps
+    };
 
-                const brewDaySteps = parseStepsForBrewDay(currentRecipeMarkdown);
-                const predictedProfile = await getPredictedFlavorProfile(currentRecipeMarkdown);
-                const logData = getLogDataFromDOM('recipe-output');
-                const batchSize = parseFloat(document.getElementById('batchSize').value) || 5;
-                const brewData = {
-                    userId: userId,
-                    recipeName: logData.recipeName || "Untitled Brew",
-                    recipeMarkdown: currentRecipeMarkdown,
-                    prompt: lastGeneratedPrompt,
-                    logData: logData,
-                    createdAt: new Date(),
-                    batchSize: batchSize,
-                    totalCost: totalBatchCost, // Dit is nu enkel de ingrediëntenkost
-                    isBottled: false,
-                    predictedFlavorProfile: predictedProfile,
-                    brewDaySteps: brewDaySteps
-                };
+    try {
+        const appId = 'meandery-aa05e';
+        const brewsCol = collection(db, 'artifacts', appId, 'users', userId, 'brews');
+        const docRef = await addDoc(brewsCol, brewData);
+        
+        const buttonContainer = saveButton.parentElement;
+        
+        const startBrewDayBtn = document.createElement('button');
+        startBrewDayBtn.textContent = 'Start Brew Day';
+        startBrewDayBtn.className = 'w-full mt-4 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors btn';
+        startBrewDayBtn.onclick = () => startBrewDay(docRef.id);
+        buttonContainer.appendChild(startBrewDayBtn);
 
-                try {
-                    const appId = 'meandery-aa05e';
-                    const brewsCol = collection(db, 'artifacts', appId, 'users', userId, 'brews');
-                    const docRef = await addDoc(brewsCol, brewData);
-                    
-                    const buttonContainer = saveButton.parentElement;
-                    
-                    const startBrewDayBtn = document.createElement('button');
-                    startBrewDayBtn.textContent = 'Start Brew Day';
-                    startBrewDayBtn.className = 'w-full mt-4 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors btn';
-                    startBrewDayBtn.onclick = () => startBrewDay(docRef.id);
-                    buttonContainer.appendChild(startBrewDayBtn);
+        saveButton.textContent = 'Saved!';
+        saveButton.classList.replace('bg-green-700', 'bg-gray-500');
+        showToast("Recipe saved to History!", "success");
 
-                    saveButton.textContent = 'Saved!';
-                    saveButton.classList.replace('bg-green-700', 'bg-gray-500');
-                    showToast("Recipe saved to History!", "success");
+        promptToUpdateInventory(currentRecipeMarkdown);
 
-                    promptToUpdateInventory(currentRecipeMarkdown);
-
-                } catch (error) {
-                    console.error("Error saving brew:", error);
-                    showToast("Error saving recipe.", "error");
-                    saveButton.textContent = 'Save to Brew History';
-                    saveButton.disabled = false;
-                }
-            }
+    } catch (error) {
+        console.error("Error saving brew:", error);
+        showToast("Error saving recipe.", "error");
+        saveButton.textContent = 'Save to Brew History';
+        saveButton.disabled = false;
+    }
+}
 
             function loadHistory() {
                 if (!userId) return;

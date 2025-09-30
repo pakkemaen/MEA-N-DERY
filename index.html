@@ -4685,7 +4685,7 @@ window.showBrewDay2Detail = function(brewId) {
     const view = document.getElementById('brew-day-2-view');
     const allSteps = brew.brewDaySteps || [];
     
-    // Vind de resterende stappen
+    // Vind de resterende stappen (alles na de primaire fermentatie)
     const secondaryStartIndex = allSteps.findIndex(step => 
         /rack|transfer|secondary|bottle|cold crash|age|stabilize/i.test(step.title)
     );

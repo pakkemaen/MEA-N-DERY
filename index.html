@@ -514,16 +514,16 @@
         </div>
 
         <div id="brewing-main-view" class="hidden">
-            <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
-            <div class="bg-app-secondary p-4 rounded-b-lg shadow-inner">
-                <nav class="flex space-x-2 overflow-x-auto whitespace-nowrap">
-                    <button id="creator-sub-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold">Creator</button>
-                    <button id="shopping-list-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Shopping List</button>
-                    <button id="brew-day-1-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Brew Day 1</button>
-                    <button id="brew-day-2-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Brew Day 2</button>
-                    <button id="history-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">History</button>
-            </nav>
-            </div>
+    <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
+    <div class="bg-app-secondary p-4 rounded-b-lg shadow-inner">
+        <nav class="flex space-x-2 overflow-x-auto whitespace-nowrap">
+            <button id="creator-sub-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold">Creator</button>
+            <button id="shopping-list-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Shopping List</button>
+            <button id="brew-day-1-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Brew Day 1</button>
+            <button id="brew-day-2-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Brew Day 2</button>
+            <button id="history-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">History</button>
+        </nav>
+    </div>
             <div id="creator-view">
                 <div class="flex flex-col lg:flex-row gap-8 mt-4">
                     <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg control-panel overflow-y-auto" style="max-height: 70vh;">
@@ -680,20 +680,22 @@
                     </main>
                 </div>
             </div>
+
             <div id="brew-day-1-view" class="hidden mt-4">
-    <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 80vh;">
-        <div id="brew-day-content">
-            <h2 class="text-3xl font-header font-bold mb-4 text-center">Brew Day Assistant</h2>
-            <p class="text-center text-app-secondary/80">Generate a recipe or load one from history, then click "Start Brew Day" to begin.</p>
+        <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 80vh;">
+            <div id="brew-day-content">
+                <h2 class="text-3xl font-header font-bold mb-4 text-center">Brew Day 1 - Primary Fermentation</h2>
+                <p class="text-center text-app-secondary/80">Generate a recipe, click "Start New Batch", and the relevant steps will appear here.</p>
+            </div>
         </div>
     </div>
-</div>
-<div id="brew-day-2-view" class="hidden mt-4">
-    <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 80vh;">
-        <h2 class="text-3xl font-header font-bold mb-4 text-center">Secondary / Aging</h2>
-        <p class="text-center text-app-secondary/80">This section will show your batches that are in the secondary fermentation or aging phase.</p>
+
+    <div id="brew-day-2-view" class="hidden mt-4">
+        <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 80vh;">
+            <h2 class="text-3xl font-header font-bold mb-4 text-center">Brew Day 2 - Secondary / Aging</h2>
+            <p class="text-center text-app-secondary/80">This section will show your batches that are in the secondary fermentation or aging phase.</p>
+        </div>
     </div>
-</div>
             <div id="history-view" class="hidden mt-4">
                  <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 70vh;">
                     <div id="history-list-container">

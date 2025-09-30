@@ -2618,6 +2618,39 @@ async function clearInventory() {
     }
 }
 
+window.freeformTweakRecipe = async function(brewId) {
+    const brew = brews.find(b => b.id === brewId);
+    if (!brew) return;
+    
+    const tweakRequest = document.getElementById(`tweak-request-${brew.id}`).value;
+    if (!tweakRequest.trim()) {
+        alert("Please enter your tweak request in the text box.");
+        return;
+    }
+    
+    const tweakOutput = document.getElementById(`tweak-output-${brew.id}`);
+    tweakOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">The Alchemist is tweaking your recipe...</p>';
+
+    const prompt = `You are an expert mead maker. A user wants to tweak the following original recipe based on their request.
+
+Original Recipe Markdown:
+---
+${brew.recipeMarkdown}
+---
+
+User's Tweak Request: "${tweakRequest}"
+
+Generate the complete, new, and improved recipe that incorporates the user's request. Ensure the output is fully formatted in Markdown, including a new creative title in 'Name: Subtitle' format, and a complete ingredient table.`;
+
+    try {
+        const tweakedMarkdown = await performApiCall(prompt);
+        tweakOutput.innerHTML = `<div class="mt-4 p-4 border-t-2 border-purple-700">${marked.parse(tweakedMarkdown)}</div>`;
+    } catch (error) {
+        console.error("Error tweaking recipe:", error);
+        tweakOutput.innerHTML = `<p class="text-center text-red-500">Could not get a tweaked recipe: ${error.message}</p>`;
+    }
+}
+
             function loadHistory() {
                 if (!userId) return;
                 const appId = 'meandery-aa05e';
@@ -2639,32 +2672,32 @@ async function clearInventory() {
             }
 
             function renderHistoryList() {
-                // AANGEPAST: Haal de zoekterm op
-                const searchTerm = document.getElementById('history-search-input').value.toLowerCase();
-                
-                // AANGEPAST: Filter de `brews` array
-                const filteredBrews = brews.filter(brew => 
-                    (brew.recipeName || 'Untitled Brew').toLowerCase().includes(searchTerm)
-                );
+    const searchTerm = document.getElementById('history-search-input').value.toLowerCase();
+    
+    // NIEUW: Filter de lijst om enkel gebottelde recepten te tonen
+    const bottledBrews = brews.filter(brew => brew.isBottled);
 
-                if (brews.length === 0) {
-                    historyList.innerHTML = `<p class="text-center text-app-secondary/80">You haven't saved any brews yet. Go create one!</p>`;
-                    return;
-                }
-                
-                // AANGEPAST: Toon een bericht als er geen zoekresultaten zijn
-                if (filteredBrews.length === 0) {
-                    historyList.innerHTML = `<p class="text-center text-app-secondary/80">No recipes found matching your search.</p>`;
-                    return;
-                }
+    const filteredBrews = bottledBrews.filter(brew => 
+        (brew.recipeName || 'Untitled Brew').toLowerCase().includes(searchTerm)
+    );
 
-                historyList.innerHTML = filteredBrews.map(brew => `
-                    <div class="p-4 card rounded-lg cursor-pointer hover:bg-app-primary" onclick="window.showBrewDetail('${brew.id}')">
-                        <h4 class="font-bold text-lg font-header">${brew.recipeName || 'Untitled Brew'}</h4>
-                        <p class="text-sm text-app-secondary/80">Saved on: ${brew.createdAt.toDate().toLocaleDateString()}</p>
-                    </div>
-                `).join('');
-            }
+    if (bottledBrews.length === 0) {
+        historyList.innerHTML = `<p class="text-center text-app-secondary/80">You have no bottled brews in your history yet.</p>`;
+        return;
+    }
+    
+    if (filteredBrews.length === 0) {
+        historyList.innerHTML = `<p class="text-center text-app-secondary/80">No bottled recipes found matching your search.</p>`;
+        return;
+    }
+
+    historyList.innerHTML = filteredBrews.map(brew => `
+        <div class="p-4 card rounded-lg cursor-pointer hover:bg-app-primary" onclick="window.showBrewDetail('${brew.id}')">
+            <h4 class="font-bold text-lg font-header">${brew.recipeName || 'Untitled Brew'}</h4>
+            <p class="text-sm text-app-secondary/80">Saved on: ${brew.createdAt.toDate().toLocaleDateString()}</p>
+        </div>
+    `).join('');
+}
 
             window.showBrewDetail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
@@ -2695,11 +2728,10 @@ async function clearInventory() {
         <button onclick="window.goBackToHistoryList()" class="mb-4 text-app-brand hover:underline no-print">&larr; Back to History</button>
         
         <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
-    <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors btn flex items-center justify-center"> Clone Recipe </button>
-    <button onclick="window.startBrewDay('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Start New Batch</button>
-    <button onclick="window.showBottlingModal('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Bottle Batch</button>
-    <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded-lg hover:bg-red-800 transition-colors btn flex items-center justify-center"> Delete Recipe </button>
-</div>
+            <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors btn flex items-center justify-center"> Clone Recipe </button>
+            <button onclick="window.startBrewDay('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Start New Batch</button>
+            <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded-lg hover:bg-red-800 transition-colors btn flex items-center justify-center"> Delete Recipe </button>
+        </div>
         
         <div class="recipe-content">${recipeHtml}</div>
         ${costHtml}
@@ -2720,19 +2752,12 @@ async function clearInventory() {
         </div>
         
         <div class="mt-6 pt-4 border-t-2 border-app no-print">
-             <h3 class="text-2xl font-header font-bold text-center mb-4">AI Adjustments</h3>
-             <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4 no-print">
-                <button onclick="window.tweakRecipe('${brew.id}')" class="w-full bg-purple-700 text-white py-3 px-4 rounded-lg hover:bg-purple-800 btn">Tweak from Tasting Notes</button>
-                <button onclick="window.toggleScaleUI('${brew.id}')" class="w-full bg-blue-700 text-white py-3 px-4 rounded-lg hover:bg-blue-800 btn">Scale Recipe</button>    
-                <button onclick="window.linkToBacksweetenCalc('${brew.id}')" class="w-full bg-stone-500 text-white py-3 px-4 rounded-lg hover:bg-stone-600 btn">Backsweeten this Batch</button>
-                <button onclick="window.linkToDilutionCalc('${brew.id}')" class="w-full bg-stone-500 text-white py-3 px-4 rounded-lg hover:bg-stone-600 btn">Dilute this Batch</button>
+             <h3 class="text-2xl font-header font-bold text-center mb-4">Tweak Recipe with AI</h3>
+             <div class="card p-4 rounded-lg">
+                <label for="tweak-request-${brew.id}" class="block text-sm font-bold mb-2">Describe what you want to change:</label>
+                <textarea id="tweak-request-${brew.id}" rows="3" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary" placeholder="e.g., 'Make this recipe for 20 liters', or 'Replace the apples with pears and add cinnamon'"></textarea>
+                <button onclick="window.freeformTweakRecipe('${brew.id}')" class="w-full mt-3 bg-purple-700 text-white py-3 px-4 rounded-lg hover:bg-purple-800 btn">Generate Tweaked Recipe</button>
              </div>
-        </div>
-        
-        <div id="scale-ui-${brew.id}" class="hidden mt-4 p-4 card no-print">
-             <label for="new-batch-size-${brew.id}" class="block font-bold">New Batch Size (Liters):</label>
-             <input type="number" id="new-batch-size-${brew.id}" class="w-full p-2 border rounded mt-2 text-app-primary bg-app-tertiary border-app" placeholder="e.g., 20">
-             <button onclick="window.scaleRecipe('${brew.id}')" class="w-full mt-2 bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700 btn">Generate Scaled Recipe</button>
         </div>
         
         <div id="tweak-output-${brew.id}" class="mt-6"></div>
@@ -2848,33 +2873,6 @@ async function clearInventory() {
                    savePackagingCosts();
                 }
             }
-       
-            window.toggleScaleUI = function(brewId) {
-                const scaleUI = document.getElementById(`scale-ui-${brewId}`);
-                scaleUI.classList.toggle('hidden');;
-            }
-            
-            window.scaleRecipe = async function(brewId) {
-                const brew = brews.find(b => b.id === brewId);
-                const newSize = document.getElementById(`new-batch-size-${brew.id}`).value;
-                if (!brew || !newSize || isNaN(parseFloat(newSize))) {
-                    console.error("Invalid new batch size.");
-                    return;
-                }
-
-                const tweakOutput = document.getElementById(`tweak-output-${brew.id}`);
-                tweakOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">The Alchemist is scaling your recipe...</p>';
-
-                const prompt = `You are an expert mead maker. Take the following mead recipe and scale it to a new batch size of ${newSize} liters. Adjust all ingredient quantities proportionally. Keep the instructions and brewer's notes the same, but update any references to volume. Format the response in Markdown, making sure the ingredients list is a Markdown table with columns: | Ingredient | Quantity | Unit |. Here is the original recipe:\n\n---\n${brew.recipeMarkdown}`;
-                
-                try {
-                    const scaledMarkdown = await performApiCall(prompt);
-                    tweakOutput.innerHTML = `<div class="mt-4 p-4 border-t-2 border-teal-700">${marked.parse(scaledMarkdown)}</div>`;
-                } catch (error) {
-                    console.error("Error scaling recipe:", error);
-                    tweakOutput.innerHTML = `<p class="text-center text-red-500">Could not scale the recipe: ${error.message}</p>`;
-                }
-            }
 
             window.cloneBrew = async function(brewId) {
                 const originalBrew = brews.find(b => b.id === brewId);
@@ -2929,30 +2927,6 @@ async function clearInventory() {
                     console.error("Error updating log:", error);
                     showToast('Failed to update log.', 'error');
                  }
-            }
-            
-            window.tweakRecipe = async function(brewId) {
-                const brew = brews.find(b => b.id === brewId);
-                if (!brew) return;
-                
-                const tweakOutput = document.getElementById(`tweak-output-${brew.id}`);
-                tweakOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">The Alchemist is rethinking your recipe...</p>';
-
-                const tastingNotes = document.getElementById(`tastingNotes-${brew.id}`).value;
-                if (!tastingNotes.trim()) {
-                    tweakOutput.innerHTML = `<p class="text-center text-red-500">Please enter some tasting notes before tweaking!</p>`;
-                    return;
-                }
-
-                const prompt = `You are an expert mead maker. A user has brewed the following mead recipe:\n\n---\n${brew.recipeMarkdown}\n---\n\nThey have provided these tasting notes on the finished product: "${tastingNotes}".\n\nBased on their notes, provide specific suggestions for improvement and generate a new, revised recipe that addresses their feedback. Format the response in Markdown.`;
-
-                try {
-                    const tweakedMarkdown = await performApiCall(prompt);
-                    tweakOutput.innerHTML = `<div class="mt-4 p-4 border-t-2 border-amber-700">${marked.parse(tweakedMarkdown)}</div>`;
-                } catch (error) {
-                    console.error("Error tweaking recipe:", error);
-                    tweakOutput.innerHTML = `<p class="text-center text-red-500">Could not get a tweaked recipe: ${error.message}</p>`;
-                }
             }
 
             window.saveSocialPost = async function() {

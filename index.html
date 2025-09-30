@@ -4552,18 +4552,6 @@ function renderActiveBrewTimeline() {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    // Controleer of er al een brouwdag is. Zo niet, zet de datum op vandaag en sla op.
-    if (!brew.logData.brewDate) {
-        brew.logData.brewDate = new Date().toISOString().split('T')[0];
-        try {
-            const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
-            await updateDoc(brewDocRef, { logData: brew.logData });
-            showToast("Brew date set to today!", "info");
-        } catch (error) {
-            console.error("Could not auto-set brew date:", error);
-        }
-    }
-
     // Navigeer eerst naar de shopping list om de ingrediënten te controleren
     switchMainView('brewing');
     switchSubView('shopping-list', 'brewing-main-view');
@@ -4620,7 +4608,9 @@ function renderActiveBrewTimeline() {
     }).join('');
 
     // Haal het invulbare logboek op
-    const logHtml = getBrewLogHtml(brew.logData, brew.id);
+    const parsedTargets = parseRecipeData(brew.recipeMarkdown);
+    const combinedLogData = { ...brew.logData, ...parsedTargets };
+    const logHtml = getBrewLogHtml(combinedLogData, brew.id);
 
     brewDayContent.innerHTML = `
         <h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2>
@@ -5018,8 +5008,8 @@ window.showBrewDay2Detail = function(brewId) {
         <div class="text-center p-6 card rounded-lg mt-6">
             <h3 class="text-2xl font-header font-bold text-green-600">Phase 1 Complete!</h3>
             <p class="my-2">Great! The primary fermentation steps are done.</p>
-            <p class="text-app-secondary mb-4">The next steps for this batch (secondary fermentation, aging) can be found on the 'Brew Day 2' tab.</p>
-            <button onclick="switchSubView('brew-day-2', 'brewing-main-view')" class="bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">
+            <p class="text-app-secondary mb-4">The next steps for this batch can now be found on the 'Brew Day 2' tab.</p>
+            <button onclick="window.switchSubView('brew-day-2', 'brewing-main-view')" class="bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">
                 Go to Brew Day 2
             </button>
         </div>
@@ -5228,15 +5218,25 @@ window.checkShoppingList = function(brewId) {
     document.getElementById('start-brew-day-container').classList.toggle('hidden', !allChecked);
 }
 
-window.startActualBrewDay = function(brewId) {
-    // STAP 1: Navigeer EERST naar de juiste tab.
-    switchSubView('brew-day-1', 'brewing-main-view');
+window.startActualBrewDay = async function(brewId) {
+    const brew = brews.find(b => b.id === brewId);
+    if (!brew) return;
 
-    // STAP 2: Update de 'huidige brouwdag' status.
+    // --- NIEUWE LOGICA: Zet de datum hier ---
+    if (!brew.logData.brewDate) {
+        brew.logData.brewDate = new Date().toISOString().split('T')[0];
+        try {
+            const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
+            await updateDoc(brewDocRef, { logData: brew.logData });
+            showToast("Brew date set to today!", "info");
+        } catch (error) {
+            console.error("Could not auto-set brew date:", error);
+        }
+    }
+
+    window.switchSubView('brew-day-1', 'brewing-main-view');
     currentBrewDay = { brewId: brewId, checklist: {} };
     saveUserSettings();
-    
-    // STAP 3: Render DAARNA de inhoud in de nu zichtbare view.
     renderBrewDay(brewId);
 }
 

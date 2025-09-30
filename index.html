@@ -1832,6 +1832,21 @@ window.showBrewPrompt = function(brewId) {
     modal.classList.remove('hidden');
 }
 
+function refreshCurrentChecklistView() {
+    // Controleer welke view momenteel zichtbaar is
+    const brewDay1View = document.getElementById('brew-day-1-view');
+    const brewDay2View = document.getElementById('brew-day-2-view');
+
+    if (brewDay1View && !brewDay1View.classList.contains('hidden')) {
+        // We zijn op Brew Day 1, update de UI met de progressiebalk
+        currentStepIndex = Object.keys(currentBrewDay.checklist).length;
+        updateUI();
+    } else if (brewDay2View && !brewDay2View.classList.contains('hidden')) {
+        // We zijn op Brew Day 2, herlaad de volledige detailweergave
+        window.showBrewDay2Detail(currentBrewDay.brewId);
+    }
+}
+
             // --- Initialization ---
             function initApp() {
 
@@ -4983,33 +4998,15 @@ window.showBrewDay2Detail = function(brewId) {
             }
 
             function completeStep(stepIndex) {
-                if (stepIndex !== currentStepIndex) return;
-                
-                if(stepTimerInterval) {
-                    clearInterval(stepTimerInterval);
-                    stepTimerInterval = null;
-                }
-                remainingTime = 0;
-                currentBrewDay.checklist[`step-${stepIndex}`] = true;
-                saveUserSettings();
+    // Verwijder de oude logica die de volgorde controleerde
+    
+    // Sla de voltooide status van de stap op
+    currentBrewDay.checklist[`step-${stepIndex}`] = true;
+    saveUserSettings();
 
-                currentStepIndex++;
-                updateUI();
-
-                // --- GECORRIGEERD: Slimme auto-start voor de volgende timer ---
-                const nextStep = brewDaySteps[currentStepIndex];
-                const lastStep = brewDaySteps[stepIndex];
-                
-                // Controleer of er een volgende stap is met een timer.
-                if (currentStepIndex < brewDaySteps.length && nextStep.duration > 0) {
-                    // Start de timer NIET als de *volgende* stap over de gist gaat.
-                    // Dit voorkomt dat de gist timer automatisch start na stap 4.
-                    const isNextStepYeast = /yeast/i.test(nextStep.title);
-                    if (!isNextStepYeast) {
-                        startStepTimer(currentStepIndex);
-                    }
-                }
-            }
+    // Roep een nieuwe functie aan die de huidige view ververst
+    refreshCurrentChecklistView();
+}
 
             function updateUI() {
                 const progress = (currentStepIndex / brewDaySteps.length) * 100;

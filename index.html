@@ -2070,7 +2070,7 @@ window.showBrewPrompt = function(brewId) {
                 }
             }
 
-            function switchSubView(viewName, parentViewId) {
+            window.switchSubView = function(viewName, parentViewId) {
     const parentView = document.getElementById(parentViewId);
     parentView.querySelectorAll('[id$="-view"]').forEach(v => v.classList.add('hidden'));
     parentView.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
@@ -4548,18 +4548,27 @@ function renderActiveBrewTimeline() {
 }
             
             // --- Brew Day Assistant Functions ---
-            window.startBrewDay = function(brewId) {
-                const brew = brews.find(b => b.id === brewId);
-                if (!brew) return;
+            window.startBrewDay = async function(brewId) {
+    const brew = brews.find(b => b.id === brewId);
+    if (!brew) return;
 
-                // Stap 1: Navigeer EERST naar de juiste view.
-                switchMainView('brewing');
-                switchSubView('shopping-list', 'brewing-main-view');
+    // Controleer of er al een brouwdag is. Zo niet, zet de datum op vandaag en sla op.
+    if (!brew.logData.brewDate) {
+        brew.logData.brewDate = new Date().toISOString().split('T')[0];
+        try {
+            const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
+            await updateDoc(brewDocRef, { logData: brew.logData });
+            showToast("Brew date set to today!", "info");
+        } catch (error) {
+            console.error("Could not auto-set brew date:", error);
+        }
+    }
 
-                // Stap 2: Genereer DAARNA de lijst in de nu zichtbare container.
-                // We zetten de 'navigate' parameter op 'false' omdat we al genavigeerd zijn.
-                generateShoppingList(brewId, false); 
-            }
+    // Navigeer eerst naar de shopping list om de ingrediënten te controleren
+    switchMainView('brewing');
+    switchSubView('shopping-list', 'brewing-main-view');
+    generateShoppingList(brewId, false);
+}
 
             function renderBrewDay(brewId) {
     const brew = brews.find(b => b.id === brewId);

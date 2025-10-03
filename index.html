@@ -1333,7 +1333,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.7.1 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.7.2 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -5308,15 +5308,23 @@ window.startActualBrewDay = async function(brewId) {
                     const socialHtml = marked.parse(processedMarkdown);
                     
                     // AANGEPAST: Voeg de save knop toe
-                    socialContainer.innerHTML = `
-                        <div>${socialHtml}</div>
-                        <div class="mt-6">
-                            <button id="save-social-post-btn" onclick="window.saveSocialPost()" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 btn text-sm">
-                                Save Post to Recipe Notes
-                            </button>
-                        </div>
-                    `;
-                    generateSocialImage(brew.recipeName, processedMarkdown);
+                    // PLAK DEZE NIEUWE CODE
+socialContainer.innerHTML = `
+    <div>${socialHtml}</div>
+    <div class="mt-6 space-y-2">
+        <button id="trigger-image-generation-btn" class="w-full bg-purple-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-800 btn">
+            Generate Image (Uses Credits)
+        </button>
+        <button id="save-social-post-btn" onclick="window.saveSocialPost()" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 btn text-sm">
+            Save Post to Recipe Notes
+        </button>
+    </div>
+`;
+
+document.getElementById('trigger-image-generation-btn').addEventListener('click', function(e) {
+    generateSocialImage(brew.recipeName, processedMarkdown);
+    e.target.style.display = 'none'; // Verberg de knop na het klikken
+});
                 } catch (error) {
                     console.error("Error generating social content:", error);
                     socialContainer.innerHTML = `<p class="text-center text-red-500">Could not generate social post: ${error.message}</p>`;
@@ -5354,15 +5362,23 @@ window.startActualBrewDay = async function(brewId) {
                     const socialHtml = marked.parse(processedMarkdown);
 
                     // AANGEPAST: Voeg de save knop toe
-                    socialContainer.innerHTML = `
-                        <div>${socialHtml}</div>
-                        <div class="mt-6">
-                            <button id="save-social-post-btn" onclick="window.saveSocialPost()" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 btn text-sm">
-                                Save Post to Recipe Notes
-                            </button>
-                        </div>
-                    `;
-                    generateSocialImage(manualInput, processedMarkdown);
+                    // PLAK DEZE NIEUWE CODE
+socialContainer.innerHTML = `
+    <div>${socialHtml}</div>
+    <div class="mt-6 space-y-2">
+        <button id="trigger-image-generation-btn" class="w-full bg-purple-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-800 btn">
+            Generate Image (Uses Credits)
+        </button>
+        <button id="save-social-post-btn" onclick="window.saveSocialPost()" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 btn text-sm">
+            Save Post to Recipe Notes
+        </button>
+    </div>
+`;
+
+document.getElementById('trigger-image-generation-btn').addEventListener('click', function(e) {
+    generateSocialImage(manualInput, processedMarkdown);
+    e.target.style.display = 'none'; // Verberg de knop na het klikken
+});
                 } catch (error) {
                     console.error("Error generating manual social content:", error);
                     socialContainer.innerHTML = `<p class="text-center text-red-500">Kon geen social media post genereren: ${error.message}</p>`;
@@ -5409,7 +5425,7 @@ function populateSocialRecipeDropdown() {
     try {
         const generatedImagePrompt = await performApiCall(imagePrompt);
         
-        const engineId = 'stable-image-core';
+        const engineId = 'stable-diffusion-xl-1024-v1-0';
         const apiHost = 'https://api.stability.ai';
         const apiUrl = `${apiHost}/v1/generation/${engineId}/text-to-image`;
         

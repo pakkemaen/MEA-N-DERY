@@ -5409,7 +5409,7 @@ function populateSocialRecipeDropdown() {
     try {
         const generatedImagePrompt = await performApiCall(imagePrompt);
         
-        const engineId = 'stable-diffusion-v1-6';
+        const engineId = 'stable-diffusion-3-medium';
         const apiHost = 'https://api.stability.ai';
         const apiUrl = `${apiHost}/v1/generation/${engineId}/text-to-image`;
         

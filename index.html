@@ -3997,6 +3997,12 @@ Peak Date: 2027-09-24`;
             // Markeer het originele brouwsel als gebotteld
             const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId);
             await updateDoc(brewDocRef, { isBottled: true });
+            // Forceer een directe update van de lokale data,
+            // zodat de UI onmiddellijk correct is.
+            const brewIndex = brews.findIndex(b => b.id === currentBrewToBottleId);
+            if (brewIndex > -1) {
+                brews[brewIndex].isBottled = true;
+            }
             
             hideBottlingModal();
             showToast("Batch bottled and added to cellar!", "success");

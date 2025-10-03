@@ -1333,7 +1333,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.7.3 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.7.4 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -1361,6 +1361,7 @@
             let costChart = null; // To hold the chart instance
             let fermChartInstance = null;
             let html5QrcodeScanner = null;
+            let customBottles = []; // Houdt de lijst met custom flessen bij
 
             let packagingCosts = {}; // Houdt de geladen kosten vast
             const PACKAGING_ITEMS = [
@@ -3808,6 +3809,8 @@ window.renderInventory = function() {
             let currentBrewToBottleId = null; 
 
             window.showBottlingModal = function(brewId) {
+                customBottles = []; // Reset de lijst
+                renderCustomBottlesList(); // Maak de UI leeg
                 currentBrewToBottleId = brewId;
                 const bottlingForm = document.getElementById('bottling-form');
                 bottlingForm.reset();
@@ -3838,11 +3841,7 @@ async function bottleBatch(e) {
             { size: 500, quantity: parseInt(document.getElementById('qty500').value) || 0, price: null },
             { size: 330, quantity: parseInt(document.getElementById('qty330').value) || 0, price: null },
             { size: 250, quantity: parseInt(document.getElementById('qty250').value) || 0, price: null },
-            { 
-                size: parseInt(document.getElementById('customSize').value) || 0, 
-                quantity: parseInt(document.getElementById('customQty').value) || 0,
-                price: parseFloat(document.getElementById('customPrice').value) || 0
-            }
+            ...customBottles
         ].filter(b => b.quantity > 0 && b.size > 0);
 
         if (bottlesData.length === 0) throw new Error("Please enter a quantity for at least one bottle size.");
@@ -3879,6 +3878,53 @@ async function bottleBatch(e) {
                 outOfStockItems.push(`${needed} x ${closureType.replace(/_/g, ' ')} (only ${inStock} in stock)`);
             }
         }
+
+        let customBottles = []; // Houdt de lijst met custom flessen bij
+
+// Functie om de lijst met custom flessen op het scherm te tekenen
+window.renderCustomBottlesList = function() {
+    const listDiv = document.getElementById('custom-bottles-list');
+    if (!listDiv) return;
+
+    if (customBottles.length === 0) {
+        listDiv.innerHTML = '';
+        return;
+    }
+
+    listDiv.innerHTML = customBottles.map((bottle, index) => `
+        <div class="flex justify-between items-center p-2 bg-app-primary rounded-md text-sm">
+            <span><strong>${bottle.quantity}x</strong> ${bottle.size}ml (at ${userSettings.currencySymbol || '€'}${bottle.price.toFixed(2)} each)</span>
+            <button type="button" onclick="window.removeCustomBottleFromList(${index})" class="text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>
+        </div>
+    `).join('');
+}
+
+// Functie die wordt aangeroepen door de '+ Add' knop
+window.addCustomBottleToList = function() {
+    const size = parseInt(document.getElementById('customSize').value) || 0;
+    const quantity = parseInt(document.getElementById('customQty').value) || 0;
+    const price = parseFloat(document.getElementById('customPrice').value) || 0;
+
+    if (size <= 0 || quantity <= 0) {
+        showToast("Please enter a valid size and quantity for the custom bottle.", "error");
+        return;
+    }
+
+    customBottles.push({ size, quantity, price });
+    renderCustomBottlesList();
+
+    // Maak de input velden leeg voor de volgende invoer
+    document.getElementById('customSize').value = '';
+    document.getElementById('customQty').value = '';
+    document.getElementById('customPrice').value = '';
+    document.getElementById('customSize').focus();
+}
+
+// Functie om een fles uit de lijst te verwijderen
+window.removeCustomBottleFromList = function(index) {
+    customBottles.splice(index, 1);
+    renderCustomBottlesList();
+}
         
         const currentLabelStock = packagingCosts['label']?.qty || 0;
         if (totalBottles > currentLabelStock) outOfStockItems.push(`${totalBottles} label(s) (only ${currentLabelStock} in stock)`);
@@ -3997,12 +4043,23 @@ Peak Date: 2027-09-24`;
             // Markeer het originele brouwsel als gebotteld
             const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId);
             await updateDoc(brewDocRef, { isBottled: true });
-            // Forceer een directe update van de lokale data,
-            // zodat de UI onmiddellijk correct is.
+
+            // Stap 1: Forceer een directe update van de lokale data.
             const brewIndex = brews.findIndex(b => b.id === currentBrewToBottleId);
             if (brewIndex > -1) {
                 brews[brewIndex].isBottled = true;
             }
+
+            // Stap 2: Ruim de actieve 'Brew Day 1' op als dit de actieve batch was.
+            if (currentBrewDay.brewId === currentBrewToBottleId) {
+                currentBrewDay = { brewId: null, checklist: {} };
+                await saveUserSettings(); // Sla de lege status op in de instellingen.
+            }
+
+            // Stap 3: Ververs de (momenteel verborgen) UI-lijsten onmiddellijk.
+            renderBrewDay2();
+            renderHistoryList();
+            renderBrewDay('none'); // Leeg de Brew Day 1 weergave
             
             hideBottlingModal();
             showToast("Batch bottled and added to cellar!", "success");
@@ -6048,23 +6105,29 @@ function populateSocialRecipeDropdown() {
     </div>
 </div>
 
-        <div class="border-t border-app pt-4">
-            <label class="block text-sm font-bold mb-2">Custom Size (Optional)</label>
-            <div class="grid grid-cols-3 gap-4">
-                <div>
-                     <label for="customSize" class="block text-xs text-app-secondary">Size (ml)</label>
-                    <input type="number" id="customSize" min="0" step="1" placeholder="e.g., 650" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
-                </div>
-                <div>
-                     <label for="customQty" class="block text-xs text-app-secondary">Quantity</label>
-                    <input type="number" id="customQty" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
-                </div>
-                <div>
-                     <label for="customPrice" class="block text-xs text-app-secondary">Cost per Bottle (€)</label>
-                    <input type="number" id="customPrice" min="0" step="0.01" placeholder="0.65" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
-                </div>
+        <div class="border-t border-app pt-4 space-y-4">
+    <div>
+        <label class="block text-sm font-bold mb-2">Add Custom Bottle Sizes</label>
+        <div class="grid grid-cols-3 gap-4">
+            <div>
+                <label for="customSize" class="block text-xs text-app-secondary">Size (ml)</label>
+                <input type="number" id="customSize" min="0" step="1" placeholder="650" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
+            </div>
+            <div>
+                <label for="customQty" class="block text-xs text-app-secondary">Quantity</label>
+                <input type="number" id="customQty" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
+            </div>
+            <div>
+                <label for="customPrice" class="block text-xs text-app-secondary">Cost/Bottle (€)</label>
+                <input type="number" id="customPrice" min="0" step="0.01" placeholder="0.65" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-primary">
             </div>
         </div>
+        <button type="button" onclick="window.addCustomBottleToList()" class="w-full mt-3 bg-blue-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-700 btn text-sm">
+            + Add This Custom Bottle to List
+        </button>
+    </div>
+    <div id="custom-bottles-list" class="space-y-2"></div>
+</div>
     </div>
     <div class="flex justify-end gap-4 mt-8">
         <button type="button" onclick="window.hideBottlingModal()" class="px-6 py-2 rounded-lg bg-gray-600 text-gray-300 hover:bg-gray-500 btn">Cancel</button>

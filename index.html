@@ -1333,7 +1333,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.7.2 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.7.3 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -3994,6 +3994,9 @@ Peak Date: 2027-09-24`;
 
             const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar');
             await addDoc(cellarCol, cellarData);
+            // Markeer het originele brouwsel als gebotteld
+            const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId);
+            await updateDoc(brewDocRef, { isBottled: true });
             
             hideBottlingModal();
             showToast("Batch bottled and added to cellar!", "success");
@@ -5443,8 +5446,8 @@ function populateSocialRecipeDropdown() {
                     }
                 ],
                 cfg_scale: 7,
-                height: 512,
-                width: 512,
+                height: 1024,
+                width: 1024,
                 steps: 30,
                 samples: 1,
             }),

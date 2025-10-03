@@ -1263,16 +1263,22 @@
                 <h2 class="text-3xl font-header font-bold mb-6 text-center">Settings</h2>
                 <div class="max-w-xl mx-auto">
                     <div class="mb-6 card p-6 rounded-lg">
-                        <h3 class="text-xl font-header font-bold mb-4">API Key</h3>
-                        <label for="apiKeyInput" class="block text-lg font-bold mb-2">Google AI API Key</label>
-                        <input type="password" id="apiKeyInput" placeholder="Enter your Google AI API key" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                        <p class="text-sm text-app-secondary mt-3">
-                            The AI features of this app require a Google AI API key to function. Your key is saved securely to your user account and is never shared with anyone.
-                        </p>
-                        <p class="text-sm text-app-secondary mt-2">
-                            You can get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-app-brand hover:underline font-semibold">Google AI Studio</a>.
-                        </p>
-                    </div>
+    <h3 class="text-xl font-header font-bold mb-4">API Keys</h3>
+    <div class="mb-4">
+        <label for="apiKeyInput" class="block text-lg font-bold mb-2">Google AI API Key (for Text)</label>
+        <input type="password" id="apiKeyInput" placeholder="Enter your Google AI API key" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+        <p class="text-sm text-app-secondary mt-2">
+            Required for recipe creation, analysis, etc. Get one from <a href="https://aistudio.google.com/app/apikey" target="_blank" ...>Google AI Studio</a>.
+        </p>
+    </div>
+    <div class="pt-4 border-t border-app">
+        <label for="imageApiKeyInput" class="block text-lg font-bold mb-2">Image Generation API Key (for Images)</label>
+        <input type="password" id="imageApiKeyInput" placeholder="Enter your Stability AI API key" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+        <p class="text-sm text-app-secondary mt-2">
+            Optional, for generating images on the Social tab. Get free credits from <a href="https://platform.stability.ai/" target="_blank" ...>Stability AI</a>.
+        </p>
+    </div>
+</div>
 
                     <div class="mb-6 card p-6 rounded-lg">
                         <h3 class="text-xl font-header font-bold mb-4">Personalization & Defaults</h3>
@@ -2117,41 +2123,40 @@ function refreshCurrentChecklistView() {
 
             // --- Settings Management (Firebase) ---
             async function loadUserSettings() {
-                if (!userId) return;
-                const appId = 'meandery-aa05e';
-                const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'main');
-                
-                try {
-                    const docSnap = await getDoc(settingsDocRef);
-                    if (docSnap.exists()) {
-                        userSettings = docSnap.data();
-                        currentBrewDay = userSettings.currentBrewDay || { brewId: null, checklist: {} };
-                        if(currentBrewDay.brewId) {
-                           renderBrewDay(currentBrewDay.brewId);
-                        }
-                    } else {
-                        // Apply default settings if none exist
-                        userSettings = { apiKey: '', defaultBatchSize: 5, currencySymbol: '€', theme: 'light' };
-                    }
-                    applySettings();
-                } catch (error) {
-                    console.error("Error loading user settings:", error);
-                }
+    if (!userId) return;
+    const appId = 'meandery-aa05e';
+    const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'main');
+    
+    try {
+        const docSnap = await getDoc(settingsDocRef);
+        if (docSnap.exists()) {
+            userSettings = docSnap.data();
+            currentBrewDay = userSettings.currentBrewDay || { brewId: null, checklist: {} };
+            if(currentBrewDay.brewId) {
+               renderBrewDay(currentBrewDay.brewId);
             }
+        } else {
+            // Voeg de nieuwe imageApiKey toe aan de standaardinstellingen
+            userSettings = { apiKey: '', imageApiKey: '', defaultBatchSize: 5, currencySymbol: '€', theme: 'light' };
+        }
+        applySettings();
+    } catch (error) {
+        console.error("Error loading user settings:", error);
+    }
+}
             
             function applySettings() {
-                // Apply settings to the UI
-                apiKeyInput.value = userSettings.apiKey || '';
-                
-                // --- FIX: Check if the element exists before changing it ---
-                const batchSizeInput = document.getElementById('batchSize');
-                if (batchSizeInput) {
-                    batchSizeInput.value = userSettings.defaultBatchSize || 5;
-                }
-                
-                defaultBatchSizeInput.value = userSettings.defaultBatchSize || 5;
-                defaultCurrencyInput.value = userSettings.currencySymbol || '€';
-                themeToggle.checked = (userSettings.theme === 'dark');
+    apiKeyInput.value = userSettings.apiKey || '';
+    document.getElementById('imageApiKeyInput').value = userSettings.imageApiKey || '';
+    
+    const batchSizeInput = document.getElementById('batchSize');
+    if (batchSizeInput) {
+        batchSizeInput.value = userSettings.defaultBatchSize || 5;
+    }
+    
+    defaultBatchSizeInput.value = userSettings.defaultBatchSize || 5;
+    defaultCurrencyInput.value = userSettings.currencySymbol || '€';
+    themeToggle.checked = (userSettings.theme === 'dark');
                 
                 const priceLabel = document.querySelector('label[for="itemPrice"]');
                 if(priceLabel) {
@@ -2162,26 +2167,29 @@ function refreshCurrentChecklistView() {
             }
 
             async function saveUserSettings() {
-                if (!userId) return;
-                const appId = 'meandery-aa05e';
-                const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'main');
-                const newSettings = {
-                    apiKey: apiKeyInput.value.trim(),
-                    defaultBatchSize: parseFloat(defaultBatchSizeInput.value) || 5,
-                    currencySymbol: defaultCurrencyInput.value.trim() || '€',
-                    theme: themeToggle.checked ? 'dark' : 'light',
-                    currentBrewDay: currentBrewDay
-                };
-                try {
-                    await setDoc(settingsDocRef, newSettings, { merge: true });
-                    userSettings = newSettings;
-                    applySettings();
-                    showToast('Settings saved successfully!', 'success');
-                } catch (error) {
-                    console.error("Error saving settings:", error);
-                    showToast('Failed to save settings.', 'error');
-                }
-            }
+    if (!userId) return;
+    const appId = 'meandery-aa05e';
+    const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'main');
+    
+    // Voeg de nieuwe imageApiKey toe aan de op te slagen data
+    const newSettings = {
+        apiKey: document.getElementById('apiKeyInput').value.trim(),
+        imageApiKey: document.getElementById('imageApiKeyInput').value.trim(), // NIEUW
+        defaultBatchSize: parseFloat(defaultBatchSizeInput.value) || 5,
+        currencySymbol: defaultCurrencyInput.value.trim() || '€',
+        theme: themeToggle.checked ? 'dark' : 'light',
+        currentBrewDay: currentBrewDay
+    };
+    try {
+        await setDoc(settingsDocRef, newSettings, { merge: true });
+        userSettings = newSettings;
+        applySettings();
+        showToast('Settings saved successfully!', 'success');
+    } catch (error) {
+        console.error("Error saving settings:", error);
+        showToast('Failed to save settings.', 'error');
+    }
+}
 
             function applyTheme(theme) {
                 if (theme === 'dark') {
@@ -3979,7 +3987,7 @@ Peak Date: 2027-09-24`;
                 if (justificationMatch) cellarData.peakFlavorJustification = justificationMatch[1];
 
             } catch (aiError) {
-                console.error("AI aging advice failed, but bottling will continue:", aiError);
+                console.error("Aging advice failed, but bottling will continue:", aiError);
             }
 
             const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar');
@@ -5282,7 +5290,7 @@ window.startActualBrewDay = async function(brewId) {
                 const platform = document.getElementById('social-platform').value;
                 const tweak = document.getElementById('social-tweak').value;
                 const negativeConstraint = " CRUCIAL: Do not wrap your response in a markdown code block using triple backticks (```).";
-                let personaPrompt = "You are an enthusiastic homebrewer sharing your passion.";
+                let personaPrompt = "You are an homebrewer sharing your passion.";
                 if (persona === 'pro_brewery') personaPrompt = "You are a social media expert for a professional craft brewery.";
                 else if (persona === 'sommelier') personaPrompt = "You are a knowledgeable mead sommelier, focusing on tasting notes and pairings.";
                 let platformPrompt = "Generate a short, engaging Instagram post. Use relevant emojis and hashtags." + negativeConstraint;
@@ -5380,63 +5388,74 @@ function populateSocialRecipeDropdown() {
 }
 
             async function generateSocialImage(title, description) {
-                const imageContainer = document.getElementById('social-image-container');
-                imageContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">De Alchemist schildert een meesterwerk...</p>';
+    const imageContainer = document.getElementById('social-image-container');
+    imageContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">The Alchemist is painting a masterpiece...</p>';
 
-                // Maak een beknopte prompt voor de afbeeldingsgenerator
-                const imagePrompt = `You are an AI image generation expert. Create a prompt for an image generator based on the following mead description. The prompt should be short, descriptive, and focus on visual elements. The final image should be a high-quality, photorealistic shot of the mead, styled as if for a professional product advertisement.
-                
-                Mead Title: "${title}"
-                Description: "${description}"
+    const imageApiKey = userSettings.imageApiKey;
+    if (!imageApiKey) {
+        imageContainer.innerHTML = `<p class="text-center text-red-500">Please enter your Image Generation API key in the Settings page first.</p>`;
+        return;
+    }
 
-                Generate ONLY the image prompt itself.`;
+    const imagePrompt = `You are an AI image generation expert. Create a short, descriptive, powerful prompt for an image generator based on the following mead. The prompt should be in English. The final image should be a high-quality, photorealistic shot of the mead in a bottle or glass, styled for a professional product advertisement.
+    
+    Mead Title: "${title}"
+    Description: "${description}"
 
-                try {
-                    // Stap 1: Genereer de prompt voor de afbeelding
-                    const generatedImagePrompt = await performApiCall(imagePrompt);
+    Generate ONLY the image prompt itself, focusing on visual elements.`;
 
-                    // Stap 2: Genereer de daadwerkelijke afbeelding
-                    const apiKey = userSettings.apiKey;
-                    if (!apiKey) throw new Error("API Key not found in settings.");
-
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-                    
-                    const payload = {
-                      instances: [{ prompt: `A photorealistic image of: ${generatedImagePrompt}` }],
-                      parameters: { "sampleCount": 1 }
-                    };
-
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                         const errorBody = await response.json();
-                         const errorMessage = errorBody?.error?.message || `Image generation failed with status ${response.status}`;
-                         throw new Error(errorMessage);
+    try {
+        const generatedImagePrompt = await performApiCall(imagePrompt);
+        
+        const engineId = 'stable-diffusion-v1-6';
+        const apiHost = 'https://api.stability.ai';
+        const apiUrl = `${apiHost}/v1/generation/${engineId}/text-to-image`;
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${imageApiKey}`
+            },
+            body: JSON.stringify({
+                text_prompts: [
+                    {
+                        "text": `A photorealistic image of: ${generatedImagePrompt}, cinematic lighting, high detail, commercial photography`
                     }
+                ],
+                cfg_scale: 7,
+                height: 512,
+                width: 512,
+                steps: 30,
+                samples: 1,
+            }),
+        });
 
-                    const result = await response.json();
-                    
-                    if (result.predictions && result.predictions[0] && result.predictions[0].bytesBase64Encoded) {
-                        const imageData = result.predictions[0].bytesBase64Encoded;
-                        const imageSrc = `data:image/png;base64,${imageData}`;
+        if (!response.ok) {
+            throw new Error(`Stability AI request failed with status ${response.status}: ${await response.text()}`);
+        }
 
-                        imageContainer.innerHTML = `
-                            <img src="${imageSrc}" alt="AI-generated image for ${title}" class="rounded-lg mx-auto shadow-lg">
-                            <p class="text-xs text-app-secondary/80 mt-2"><strong>Image Prompt:</strong> ${generatedImagePrompt}</p>
-                        `;
-                    } else {
-                        throw new Error("Invalid image data in API response.");
-                    }
+        const result = await response.json();
 
-                } catch (error) {
-                    console.error("Error generating social image:", error);
-                    imageContainer.innerHTML = `<p class="text-center text-red-500">Kon geen afbeelding genereren: ${error.message}</p>`;
-                }
-            }
+        if (result.artifacts && result.artifacts[0] && result.artifacts[0].base64) {
+            const imageData = result.artifacts[0].base64;
+            const imageSrc = `data:image/png;base64,${imageData}`;
+
+            imageContainer.innerHTML = `
+                <img src="${imageSrc}" alt="AI-generated image for ${title}" class="rounded-lg mx-auto shadow-lg">
+                <p class="text-xs text-app-secondary/80 mt-2"><strong>Image Prompt:</strong> ${generatedImagePrompt}</p>
+                <p class="text-xs text-app-secondary/60 mt-1">Generated with Stable Diffusion</p>
+            `;
+        } else {
+            throw new Error("Invalid image data in Stability AI response.");
+        }
+
+    } catch (error) {
+        console.error("Error generating social image:", error);
+        imageContainer.innerHTML = `<p class="text-center text-red-500">Could not generate image: ${error.message}</p>`;
+    }
+}
 
             // DEFINITIEVE, ROBUUSTE FUNCTIE VOOR INGREDIENTEN PARSEN
             function parseIngredientsFromMarkdown(markdown) {

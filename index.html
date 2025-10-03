@@ -1363,6 +1363,53 @@
             let html5QrcodeScanner = null;
             let customBottles = []; // Houdt de lijst met custom flessen bij
 
+            let customBottles = []; // Houdt de lijst met custom flessen bij
+
+// Functie om de lijst met custom flessen op het scherm te tekenen
+window.renderCustomBottlesList = function() {
+    const listDiv = document.getElementById('custom-bottles-list');
+    if (!listDiv) return;
+
+    if (customBottles.length === 0) {
+        listDiv.innerHTML = '';
+        return;
+    }
+
+    listDiv.innerHTML = customBottles.map((bottle, index) => `
+        <div class="flex justify-between items-center p-2 bg-app-primary rounded-md text-sm">
+            <span><strong>${bottle.quantity}x</strong> ${bottle.size}ml (at ${userSettings.currencySymbol || '€'}${bottle.price.toFixed(2)} each)</span>
+            <button type="button" onclick="window.removeCustomBottleFromList(${index})" class="text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>
+        </div>
+    `).join('');
+}
+
+// Functie die wordt aangeroepen door de '+ Add' knop
+window.addCustomBottleToList = function() {
+    const size = parseInt(document.getElementById('customSize').value) || 0;
+    const quantity = parseInt(document.getElementById('customQty').value) || 0;
+    const price = parseFloat(document.getElementById('customPrice').value) || 0;
+
+    if (size <= 0 || quantity <= 0) {
+        showToast("Please enter a valid size and quantity for the custom bottle.", "error");
+        return;
+    }
+
+    customBottles.push({ size, quantity, price });
+    renderCustomBottlesList();
+
+    // Maak de input velden leeg voor de volgende invoer
+    document.getElementById('customSize').value = '';
+    document.getElementById('customQty').value = '';
+    document.getElementById('customPrice').value = '';
+    document.getElementById('customSize').focus();
+}
+
+// Functie om een fles uit de lijst te verwijderen
+window.removeCustomBottleFromList = function(index) {
+    customBottles.splice(index, 1);
+    renderCustomBottlesList();
+}
+
             let packagingCosts = {}; // Houdt de geladen kosten vast
             const PACKAGING_ITEMS = [
                 { id: 'bottle_750', name: '750ml Bottle' },
@@ -3879,52 +3926,7 @@ async function bottleBatch(e) {
             }
         }
 
-        let customBottles = []; // Houdt de lijst met custom flessen bij
-
-// Functie om de lijst met custom flessen op het scherm te tekenen
-window.renderCustomBottlesList = function() {
-    const listDiv = document.getElementById('custom-bottles-list');
-    if (!listDiv) return;
-
-    if (customBottles.length === 0) {
-        listDiv.innerHTML = '';
-        return;
-    }
-
-    listDiv.innerHTML = customBottles.map((bottle, index) => `
-        <div class="flex justify-between items-center p-2 bg-app-primary rounded-md text-sm">
-            <span><strong>${bottle.quantity}x</strong> ${bottle.size}ml (at ${userSettings.currencySymbol || '€'}${bottle.price.toFixed(2)} each)</span>
-            <button type="button" onclick="window.removeCustomBottleFromList(${index})" class="text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>
-        </div>
-    `).join('');
-}
-
-// Functie die wordt aangeroepen door de '+ Add' knop
-window.addCustomBottleToList = function() {
-    const size = parseInt(document.getElementById('customSize').value) || 0;
-    const quantity = parseInt(document.getElementById('customQty').value) || 0;
-    const price = parseFloat(document.getElementById('customPrice').value) || 0;
-
-    if (size <= 0 || quantity <= 0) {
-        showToast("Please enter a valid size and quantity for the custom bottle.", "error");
-        return;
-    }
-
-    customBottles.push({ size, quantity, price });
-    renderCustomBottlesList();
-
-    // Maak de input velden leeg voor de volgende invoer
-    document.getElementById('customSize').value = '';
-    document.getElementById('customQty').value = '';
-    document.getElementById('customPrice').value = '';
-    document.getElementById('customSize').focus();
-}
-
-// Functie om een fles uit de lijst te verwijderen
-window.removeCustomBottleFromList = function(index) {
-    customBottles.splice(index, 1);
-    renderCustomBottlesList();
-}
+        
         
         const currentLabelStock = packagingCosts['label']?.qty || 0;
         if (totalBottles > currentLabelStock) outOfStockItems.push(`${totalBottles} label(s) (only ${currentLabelStock} in stock)`);

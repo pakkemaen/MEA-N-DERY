@@ -2239,6 +2239,20 @@ function refreshCurrentChecklistView() {
     }
 }
 
+// Slaat enkel de voortgang van de checklist op, zonder de verkeerde toast-melding.
+async function saveChecklistState() {
+    if (!userId) return;
+    const appId = 'meandery-aa05e';
+    const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'main');
+    try {
+        // Update enkel het currentBrewDay veld, en laat de rest van de settings met rust.
+        await updateDoc(settingsDocRef, { currentBrewDay: currentBrewDay });
+    } catch (error) {
+        console.error("Error saving checklist state:", error);
+        showToast('Failed to save progress.', 'error');
+    }
+}
+
             function applyTheme(theme) {
                 if (theme === 'dark') {
                     document.documentElement.classList.add('dark');
@@ -5047,7 +5061,7 @@ window.showBrewDay2Detail = function(brewId) {
             function resetBrewDay() {
                 if (confirm("Are you sure you want to reset your progress for this brew day?")) {
                     currentBrewDay.checklist = {};
-                    saveUserSettings();
+                    saveChecklistState();
                     
                     // --- Verwijder een eventuele actieve timer ---
                     clearInterval(stepTimerInterval);
@@ -5060,11 +5074,9 @@ window.showBrewDay2Detail = function(brewId) {
             }
 
             function completeStep(stepIndex) {
-    // Verwijder de oude logica die de volgorde controleerde
-    
     // Sla de voltooide status van de stap op
     currentBrewDay.checklist[`step-${stepIndex}`] = true;
-    saveUserSettings();
+    saveChecklistState();
 
     // Roep een nieuwe functie aan die de huidige view ververst
     refreshCurrentChecklistView();

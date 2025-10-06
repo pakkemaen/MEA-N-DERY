@@ -1333,7 +1333,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.7.5 - 06/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.7.6 - 06/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -5615,7 +5615,35 @@ function populateSocialRecipeDropdown() {
     document.getElementById('total-spend').textContent = `${currency}${totalSpend.toFixed(2)}`;
 
     // NIEUW: Bereken de totale kelderwaarde
-    const totalCellarValue = cellar.reduce((acc, item) => acc + (item.totalBatchCost || 0), 0);
+    const packagingCostsPerUnit = getPackagingCosts();
+
+const totalCellarValue = cellar.reduce((totalValue, cellarItem) => {
+    const originalBrew = brews.find(b => b.id === cellarItem.brewId);
+    if (!originalBrew) return totalValue; // Sla over als het originele brouwsel niet is gevonden
+
+    const ingredientCostPerLiter = (cellarItem.ingredientCost || 0) / (originalBrew.batchSize || 1);
+
+    const valueOfThisCellarItem = cellarItem.bottles.reduce((itemValue, bottle) => {
+        if (bottle.quantity <= 0) return itemValue; // Sla flessen over die niet meer op voorraad zijn
+
+        const meadCostInBottle = ingredientCostPerLiter * (bottle.size / 1000);
+
+        const bottleCost = packagingCostsPerUnit[bottle.size.toString()] || 0;
+        let closureCost = 0;
+        if (bottle.size >= 750) { closureCost = packagingCostsPerUnit.cork || 0; }
+        else if (bottle.size >= 500) { closureCost = packagingCostsPerUnit.crown_cap_29 || 0; }
+        else { closureCost = packagingCostsPerUnit.crown_cap_26 || 0; }
+        const labelCost = packagingCostsPerUnit.label || 0;
+
+        const singleBottleTotalCost = meadCostInBottle + bottleCost + closureCost + labelCost;
+
+        return itemValue + (singleBottleTotalCost * bottle.quantity);
+    }, 0);
+
+    return totalValue + valueOfThisCellarItem;
+}, 0);
+
+document.getElementById('total-cellar-value').textContent = `${currency}${totalCellarValue.toFixed(2)}`;
     document.getElementById('total-cellar-value').textContent = `${currency}${totalCellarValue.toFixed(2)}`;
 
     // De rest van de functie (grafiek) blijft hetzelfde

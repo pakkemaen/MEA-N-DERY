@@ -3377,7 +3377,7 @@ window.renderInventory = function() {
                     qty: parseFloat(document.getElementById(`edit-qty-${itemId}`).value),
                     unit: document.getElementById(`edit-unit-${itemId}`).value,
                     price: parseFloat(document.getElementById(`edit-price-${itemId}`).value),
-                    expirationDate: document.getElementById(`edit-date-${itemId}`).value || null
+                    expirationDate: document.getElementById(`edit-date-${itemId}`).value || null,
                     category: document.getElementById(`edit-category-${itemId}`).value
                 };
                 if (!updatedData.name || isNaN(updatedData.qty) || isNaN(updatedData.price)) {

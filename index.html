@@ -4429,14 +4429,7 @@ function getBrewLogHtml(logData, idSuffix = 'new') {
     const data = logData || {};
     const fermLog = data.fermentationLog || Array.from({ length: 8 }, () => ({}));
     const escapedRecipeName = (data.recipeName || '').replace(/"/g, '&quot;');
-    
-    const copyOgToLogScript = `
-        const ogInput = document.getElementById('actualOG-${idSuffix}');
-        const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input');
-        if (ogInput && firstSgInput) {
-            firstSgInput.value = ogInput.value;
-        }
-    `;
+    const copyOgToLogScript = `const ogInput = document.getElementById('actualOG-${idSuffix}'); const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input'); if (ogInput && firstSgInput) { firstSgInput.value = ogInput.value; }`;
 
     return `
         <div class="brew-log-section" data-id="${idSuffix}">

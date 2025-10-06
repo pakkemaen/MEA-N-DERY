@@ -1333,7 +1333,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.7.4 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.7.5 - 06/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -1605,7 +1605,7 @@ function executeDangerAction() {
                 ).join('');
             }
 
-            function renderPackagingUI() {
+            window.renderPackagingUI = function() {
                 const listContainer = document.getElementById('packaging-list');
                 const stockContainer = document.getElementById('packaging-stock-container');
                 if (!listContainer || !stockContainer) return;
@@ -2905,7 +2905,7 @@ Generate the complete, new, and improved recipe that incorporates the user's req
                         <p class="font-bold">${item.name}</p>
                         <div class="grid grid-cols-2 gap-2">
                             <input type="number" id="edit-qty-${itemId}" value="${qtyValue}" placeholder="Quantity" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">
-                            <input type="number" id="edit-price-${itemId}" value="${priceValue}" step="0.01" placeholder="Total Price" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">
+                            <input type="number" id="edit-price-${itemId}" value="${priceValue}" step="0.01" placeholder="Total Price (${userSettings.currencySymbol || '€'})" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">
                         </div>
                         <div class="flex gap-2">
                             <button onclick="window.updatePackagingItem('${itemId}')" class="w-full bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm btn">Save</button>
@@ -3348,10 +3348,15 @@ window.renderInventory = function() {
                 itemDiv.innerHTML = `
                     <div class="w-full space-y-2 p-2 bg-app-primary rounded">
                         <input type="text" id="edit-name-${itemId}" value="${item.name}" placeholder="Name" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">
+                        <div>
+                            <select id="edit-category-${itemId}" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">
+                                ${['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'].map(cat => `<option value="${cat}" ${item.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
+                            </select>
+                        </div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                             <input type="number" id="edit-qty-${itemId}" value="${item.qty}" step="0.01" placeholder="Quantity" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">
                             <select id="edit-unit-${itemId}" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">${unitSelectHtml}</select>
-                            <input type="number" id="edit-price-${itemId}" value="${item.price}" step="0.01" placeholder="Price" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">
+                            <input type="number" id="edit-price-${itemId}" value="${item.price}" step="0.01" placeholder="Price (${userSettings.currencySymbol || '€'})" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">
                         </div>
                         <div>
                              <label for="edit-date-${itemId}" class="text-xs text-app-secondary">Exp. Date</label>
@@ -3373,6 +3378,7 @@ window.renderInventory = function() {
                     unit: document.getElementById(`edit-unit-${itemId}`).value,
                     price: parseFloat(document.getElementById(`edit-price-${itemId}`).value),
                     expirationDate: document.getElementById(`edit-date-${itemId}`).value || null
+                    category: document.getElementById(`edit-category-${itemId}`).value
                 };
                 if (!updatedData.name || isNaN(updatedData.qty) || isNaN(updatedData.price)) {
                     showToast("Invalid input. Please check all fields.", "error");

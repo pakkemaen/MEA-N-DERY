@@ -5074,6 +5074,13 @@ window.showBrewDay2Detail = function(brewId) {
             }
 
             function completeStep(stepIndex) {
+    // Stop een eventuele actieve timer en ruim de status op.
+    if (stepTimerInterval) {
+        clearInterval(stepTimerInterval);
+        stepTimerInterval = null;
+        remainingTime = 0;
+        localStorage.removeItem('activeBrewDayTimer');
+    }
     // Sla de voltooide status van de stap op
     currentBrewDay.checklist[`step-${stepIndex}`] = true;
     saveChecklistState();

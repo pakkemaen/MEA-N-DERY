@@ -5332,6 +5332,11 @@ window.startActualBrewDay = async function(brewId) {
         try {
             const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
             await updateDoc(brewDocRef, { logData: brew.logData });
+            // Forceer een update van de lokale data, zodat de Brew Day 2 lijst direct correct is.
+            const brewIndex = brews.findIndex(b => b.id === brewId);
+            if (brewIndex > -1) {
+                brews[brewIndex].logData.brewDate = brew.logData.brewDate;
+            }
             showToast("Brew date set to today!", "info");
         } catch (error) {
             console.error("Could not auto-set brew date:", error);

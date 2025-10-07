@@ -1333,7 +1333,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.7.6 - 06/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.7.7 - 07/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2861,30 +2861,43 @@ Generate the complete, new, and improved recipe that incorporates the user's req
                 }
 
                 // Stap 1: Herbereken de ingrediëntenkost
-                const ingredientCost = parseIngredientsAndCalculateCost(brew.recipeMarkdown, inventory, brew.batchSize);
+                function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
+    let totalCost = 0;
+    // Stap 1: Gebruik de correcte, robuuste functie om ingrediënten te parsen.
+    const requiredIngredients = parseIngredientsFromMarkdown(markdown);
 
-                // Stap 2: Zoek de bottel-informatie in de 'cellar'
-                const cellarEntry = cellar.find(c => c.brewId === brewId);
-                let packagingCost = 0;
-                
-                if (cellarEntry) {
-                    // Als de batch gebotteld is, herbereken ook de verpakkingskost
-                    const packagingCosts = getPackagingCosts();
-                    cellarEntry.bottles.forEach(bottle => {
-                        const bottleCost = packagingCosts[bottle.size.toString()] || 0;
-                        const closureCost = bottle.size >= 750 ? packagingCosts.cork : packagingCosts.crown_cap;
-                        const labelCost = packagingCosts.label;
-                        packagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
-                    });
-                }
-                
-                const newTotalCost = ingredientCost + packagingCost;
-                const oldTotalCost = brew.totalCost || 0;
+    if (requiredIngredients.length === 0) {
+        console.warn("Cost calculation: No ingredients found by the parser.");
+        return 0;
+    }
 
-                if (Math.abs(newTotalCost - oldTotalCost) < 0.01) {
-                    showToast("No change in cost based on current inventory prices.", "info");
-                    return;
-                }
+    // Stap 2: Bereken de kosten op basis van de gevonden ingrediënten.
+    requiredIngredients.forEach(req => {
+        const inventoryItem = inventory.find(item => item.name.toLowerCase() === req.name.toLowerCase());
+        
+        // Ga alleen verder als het item in de inventaris is gevonden en een geldige hoeveelheid heeft.
+        if (inventoryItem && inventoryItem.qty > 0) {
+            let costPerUnit = inventoryItem.price / inventoryItem.qty;
+            const reqUnit = (req.unit || '').toLowerCase();
+            const invUnit = (inventoryItem.unit || '').toLowerCase();
+
+            // Verbeterde unit conversie
+            if (invUnit === 'kg' && reqUnit === 'g') {
+                costPerUnit /= 1000;
+            } else if (invUnit === 'g' && reqUnit === 'kg') {
+                costPerUnit *= 1000;
+            } else if (invUnit === 'l' && reqUnit === 'ml') {
+                costPerUnit /= 1000;
+            } else if (invUnit === 'ml' && reqUnit === 'l') {
+                costPerUnit *= 1000;
+            }
+            
+            totalCost += req.quantity * costPerUnit;
+        }
+    });
+
+    return totalCost;
+}
 
                 if (confirm(`The new calculated total cost is ${userSettings.currencySymbol || '€'}${newTotalCost.toFixed(2)} (was ${oldTotalCost.toFixed(2)}). Do you want to update?`)) {
                     try {

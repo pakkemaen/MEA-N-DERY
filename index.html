@@ -3282,7 +3282,7 @@ window.renderInventory = function() {
         return acc;
     }, {});
 
-    const categories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical'];
+    const categories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
     const currency = userSettings.currencySymbol || '€';
     let html = '';
 
@@ -3646,6 +3646,7 @@ window.renderInventory = function() {
 
     listDiv.innerHTML = cellar.map(item => {
         const originalBrew = brews.find(b => b.id === item.brewId);
+        const escapedRecipeName = item.recipeName.replace(/'/g, "\\'");
         const originalBatchSize = originalBrew ? originalBrew.batchSize : 1; // Fallback
         const ingredientCostPerLiter = originalBatchSize > 0 ? (item.ingredientCost || 0) / originalBatchSize : 0;
 
@@ -3699,7 +3700,7 @@ window.renderInventory = function() {
             ${adviceHtml}
             <div class="text-right mt-3 border-t border-app pt-2 flex justify-end items-center gap-4">
                  <button onclick="window.setTastingReminder('${item.id}')" class="text-blue-600 hover:text-blue-800 text-xs font-semibold">Set Reminder</button>
-                 <button onclick="window.deleteCellarItem('${item.id}', '${item.recipeName}')" class="text-red-600 hover:text-red-800 text-xs font-semibold">Delete Batch</button>
+                 <button onclick="window.deleteCellarItem('${item.id}', '${escapedRecipeName}')" class="text-red-600 hover:text-red-800 text-xs font-semibold">Delete Batch</button>
             </div>
         </div>
         `;

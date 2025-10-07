@@ -2852,72 +2852,44 @@ Generate the complete, new, and improved recipe that incorporates the user's req
                 }
             }
 
-            window.recalculateBatchCost = async function(brewId) {
-                if (!userId) return;
-                const brew = brews.find(b => b.id === brewId);
-                if (!brew) {
-                    showToast("Could not find brew to recalculate.", "error");
-                    return;
-                }
-
-                // Stap 1: Herbereken de ingrediëntenkost
-                function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
-    let totalCost = 0;
-    // Stap 1: Gebruik de correcte, robuuste functie om ingrediënten te parsen.
-    const requiredIngredients = parseIngredientsFromMarkdown(markdown);
-
-    if (requiredIngredients.length === 0) {
-        console.warn("Cost calculation: No ingredients found by the parser.");
-        return 0;
+window.recalculateBatchCost = async function(brewId) {
+    if (!userId) return;
+    const brew = brews.find(b => b.id === brewId);
+    if (!brew) {
+        showToast("Could not find brew to recalculate.", "error");
+        return;
     }
 
-    // Stap 2: Bereken de kosten op basis van de gevonden ingrediënten.
-    requiredIngredients.forEach(req => {
-        const inventoryItem = inventory.find(item => item.name.toLowerCase() === req.name.toLowerCase());
-        
-        // Ga alleen verder als het item in de inventaris is gevonden en een geldige hoeveelheid heeft.
-        if (inventoryItem && inventoryItem.qty > 0) {
-            let costPerUnit = inventoryItem.price / inventoryItem.qty;
-            const reqUnit = (req.unit || '').toLowerCase();
-            const invUnit = (inventoryItem.unit || '').toLowerCase();
+    // Roep de globale, correcte parseerfunctie aan
+    const newTotalCost = parseIngredientsAndCalculateCost(brew.recipeMarkdown, inventory, brew.batchSize);
+    const oldTotalCost = brew.totalCost || 0;
 
-            // Verbeterde unit conversie
-            if (invUnit === 'kg' && reqUnit === 'g') {
-                costPerUnit /= 1000;
-            } else if (invUnit === 'g' && reqUnit === 'kg') {
-                costPerUnit *= 1000;
-            } else if (invUnit === 'l' && reqUnit === 'ml') {
-                costPerUnit /= 1000;
-            } else if (invUnit === 'ml' && reqUnit === 'l') {
-                costPerUnit *= 1000;
+    if (confirm(`The new calculated total ingredient cost is ${userSettings.currencySymbol || '€'}${newTotalCost.toFixed(2)} (was ${oldTotalCost.toFixed(2)}). Do you want to update?`)) {
+        try {
+            const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
+            await updateDoc(brewDocRef, { totalCost: newTotalCost });
+
+            // Update ook de cellar entry als die bestaat
+            const cellarEntry = cellar.find(c => c.brewId === brewId);
+            if (cellarEntry) {
+                const cellarDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar', cellarEntry.id);
+                // De 'totalBatchCost' in de kelder is de som van ingrediënten en verpakking. 
+                // We kunnen hier enkel de 'ingredientCost' veilig updaten.
+                await updateDoc(cellarDocRef, { ingredientCost: newTotalCost });
             }
-            
-            totalCost += req.quantity * costPerUnit;
-        }
-    });
 
-    return totalCost;
+            showToast("Batch cost updated successfully!", "success");
+            // De onSnapshot-listener zal de UI automatisch verversen, inclusief de detailweergave
+            goBackToHistoryList();
+        } catch (error) {
+            console.error("Error recalculating cost:", error);
+            showToast("Failed to update cost.", "error");
+        }
+    }
 }
 
-                if (confirm(`The new calculated total cost is ${userSettings.currencySymbol || '€'}${newTotalCost.toFixed(2)} (was ${oldTotalCost.toFixed(2)}). Do you want to update?`)) {
-                    try {
-                        const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
-                        await updateDoc(brewDocRef, { totalCost: newTotalCost });
-                        
-                        // Update ook de cellar entry als die bestaat
-                        if (cellarEntry) {
-                            const cellarDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar', cellarEntry.id);
-                            await updateDoc(cellarDocRef, { totalBatchCost: newTotalCost, ingredientCost: ingredientCost });
-                        }
-
-                        showToast("Batch cost updated successfully!", "success");
-                        // De onSnapshot-listener zal de UI automatisch verversen
-                    } catch (error) {
-                        console.error("Error recalculating cost:", error);
-                        showToast("Failed to update cost.", "error");
-                    }
-                }
-            }
+               
+    });
 
             window.editPackagingItem = function(itemId) {
                 const item = PACKAGING_ITEMS.find(i => i.id === itemId);
@@ -3956,8 +3928,6 @@ async function bottleBatch(e) {
                 outOfStockItems.push(`${needed} x ${closureType.replace(/_/g, ' ')} (only ${inStock} in stock)`);
             }
         }
-
-        
         
         const currentLabelStock = packagingCosts['label']?.qty || 0;
         if (totalBottles > currentLabelStock) outOfStockItems.push(`${totalBottles} label(s) (only ${currentLabelStock} in stock)`);
@@ -3984,8 +3954,12 @@ async function bottleBatch(e) {
             const labelCost = packagingCostsPerUnit.label || 0;
             totalPackagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
         });
-        
-        let finalTotalCost = (originalBrew.totalCost || 0) + totalPackagingCost;
+
+        const ingredientCost = originalBrew.totalCost || 0;
+        if (ingredientCost === 0) {
+           showToast("Warning: The ingredient cost for this batch is €0.00. The total cost may be inaccurate. You can try recalculating it from the History view.", "error", 8000);
+        }
+        let finalTotalCost = ingredientCost + totalPackagingCost;
 
         if (confirm(`The calculated packaging cost is ${userSettings.currencySymbol || '€'}${totalPackagingCost.toFixed(2)}. The new total batch cost will be ${userSettings.currencySymbol || '€'}${finalTotalCost.toFixed(2)}. Do you want to continue?`)) {
             const updatedPackagingStock = JSON.parse(JSON.stringify(packagingCosts)); // Veilige kopie
@@ -4804,10 +4778,12 @@ window.showBrewDay2Detail = function(brewId) {
             const originalIndex = secondaryStartIndex + index;
             const isCompleted = currentBrewDay.checklist[`step-${originalIndex}`] || false;
 
-            // We gebruiken hier enkel de "Mark as Complete" knop, geen timers
-            const buttonsHtml = `
-                <button data-action="completeStep" data-step="${originalIndex}" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 btn">Mark as Complete</button>
-            `;
+            const timerHtml = step.duration > 0 ? `<p class="timer-display my-2" id="timer-${originalIndex}">${formatTime(step.duration)}</p>` : '';
+const buttonsHtml = step.duration > 0 ? `
+    <button data-action="startTimer" data-step="${originalIndex}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Start Timer</button>
+` : `
+    <button data-action="completeStep" data-step="${originalIndex}" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 btn">Mark as Complete</button>
+`;
 
             return `
                 <div id="step-${originalIndex}" class="step-item p-4 rounded-r-lg mb-3 ${isCompleted ? 'completed' : ''}">
@@ -4817,6 +4793,7 @@ window.showBrewDay2Detail = function(brewId) {
                             <p class="text-sm text-app-secondary">${step.description}</p>
                         </div>
                         <div class="text-right flex-shrink-0 ml-4">
+                            ${timerHtml}
                             <div class="space-x-2" id="controls-${originalIndex}">
                                 ${isCompleted ? '<span class="text-sm font-bold text-green-600">✓ Completed</span>' : buttonsHtml}
                             </div>

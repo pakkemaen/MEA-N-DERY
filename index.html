@@ -2606,20 +2606,34 @@ async function clearInventory() {
                         }
                     }
 
-                    prompt += `\n\nFor the final output, generate a full recipe suitable for an experienced homebrewer. 
-    
-        SPECIAL INSTRUCTION: If the recipe includes ingredients with a high oil content (like nuts, cacao nibs, coffee beans), you MUST include a specific warning in the 'Brewer's Notes'. This warning should explain the risk of oils (rancidity, loss of head retention) and recommend the best practice for adding them (ONLY in secondary fermentation). You should also suggest methods to mitigate oils (toasting, tinctures) and suggest oil-free alternatives.
+                    prompt += `
 
-        CRUCIAL FORMATTING RULES:
-        - The main recipe title MUST be the very first line of your response and MUST start with a single hashtag (#).
-        - You are FORBIDDEN from using a single hashtag (#) for any other heading in the entire response. All other headings like 'Description', 'Ingredients', 'Instructions', 'Brewer's Notes', and 'Recommended Water' MUST use double hashtags (##).
-        - You MUST determine the most optimal nutrient protocol (e.g., TOSNA, staggered additions) for this specific recipe.
-        - You MUST calculate the required Yeast Assimilable Nitrogen (YAN) based on the recipe's OG and ingredients. Do not ask the user to calculate it.
+        For the final output, generate a full recipe suitable for an experienced homebrewer, following all rules below.
+
+        **CRUCIAL NUTRIENT LOGIC (TWO-STEP PROCESS):**
+
+        **Step 1: Ideal Calculation (Internal Thought Process)**
+        First, you MUST determine the ideal nutrient protocol (e.g., TOSNA, staggered additions) and calculate the required Yeast Assimilable Nitrogen (YAN) in ppm based on the recipe's OG and ingredients. You must choose the scientifically best nutrient for this (e.g., Fermaid O, Fermaid K). This is your internal benchmark.
+
+        **Step 2: Practical Substitution (Final Output)**
+        After determining the ideal plan, you MUST check the user's inventory for ingredients in the 'Nutrient' category: [${inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available'}].
+        - In the "## Brewer's Notes" section, you MUST explain your ideal nutrient plan. State the target YAN, the ideal nutrient you chose (e.g., Fermaid O), and why.
+        - Then, in the main "## Ingredients" table and "## Instructions", you MUST replace the ideal nutrient with the calculated equivalent amount of the nutrient(s) available in the user's inventory.
+        - You MUST explain this substitution in the Brewer's Notes, for example: "To achieve the target 220 ppm YAN using your available Vinoferm Nutrisal, you will need 11.5g in total instead of the ideal 9g of Fermaid O."
+        - Finally, confirm in the Brewer's Notes if the nutrient addition schedule (e.g., at 24/48/72 hours) remains the same with the substituted nutrient.
+
+        **CRUCIAL FORMATTING RULES:**
+        - The main recipe title MUST be the very first line and start with a single hashtag (#). Format: '# Name: Subtitle'.
+        - All other headings ('## Description', '## Ingredients', etc.) MUST use double hashtags (##).
         - The 'Ingredients' section MUST be a Markdown table with columns: | Ingredient | Quantity | Unit |.
-        - The recipe title MUST follow the format 'Name: Subtitle'.
         - You MUST explicitly state the Target OG, Target FG, and Target ABV in the description.
 
-        The final section of your response MUST be '## Recommended Water'. In this section, you must recommend a suitable, commercially available Belgian bottled water (e.g., Spa Reine, Chaudfontaine, Valvert, etc.) that best fits the generated recipe's style. You must also explain in 1-2 sentences WHY it is a good choice.`;
+        **WATER RECOMMENDATION:**
+        The final section MUST be '## Recommended Water'. Recommend a suitable, commercially available Belgian bottled water (e.g., Spa Reine, Chaudfontaine). 
+        - CRUCIAL: You MUST vary your choice based on the mead style. Do not always default to Spa Reine.
+        - For rich, dark styles (Bochets), consider water with more minerals (like Chaudfontaine) to enhance body.
+        - For delicate, dry meads, a low-mineral water (like Spa Reine) is appropriate.
+        - You must explain your choice in 1-2 sentences.`;
         
         return prompt;
     } catch (error) {
@@ -2800,6 +2814,7 @@ Generate the complete, new, and improved recipe that incorporates the user's req
         <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
             <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors btn flex items-center justify-center"> Clone Recipe </button>
             <button onclick="window.startBrewDay('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Start New Batch</button>
+            <button onclick="window.recalculateBatchCost('${brew.id}')" class="bg-purple-700 text-white py-2 px-4 rounded-lg hover:bg-purple-800 transition-colors btn">Recalculate Cost</button>
             <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded-lg hover:bg-red-800 transition-colors btn flex items-center justify-center"> Delete Recipe </button>
         </div>
         

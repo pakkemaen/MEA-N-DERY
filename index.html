@@ -2759,10 +2759,9 @@ Generate the complete, new, and improved recipe that incorporates the user's req
     const searchTerm = document.getElementById('history-search-input').value.toLowerCase();
     
     // NIEUW: Filter de lijst om enkel gebottelde recepten te tonen
-    const bottledBrews = brews.filter(brew => brew.isBottled);
-
-    const filteredBrews = bottledBrews.filter(brew => 
-        (brew.recipeName || 'Untitled Brew').toLowerCase().includes(searchTerm)
+    // Toon alle opgeslagen recepten, en filter enkel op basis van de zoekterm
+    const filteredBrews = brews.filter(brew => 
+         (brew.recipeName || 'Untitled Brew').toLowerCase().includes(searchTerm)
     );
 
     if (bottledBrews.length === 0) {

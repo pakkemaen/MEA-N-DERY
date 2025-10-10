@@ -1333,7 +1333,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.8.0 - 08/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.8.1 - 10/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2623,6 +2623,7 @@ async function clearInventory() {
         - Finally, confirm in the Brewer's Notes if the nutrient addition schedule (e.g., at 24/48/72 hours) remains the same with the substituted nutrient.
 
         **CRUCIAL FORMATTING RULES:**
+        - Your entire response MUST be a single, valid Markdown document from start to finish. 
         - The main recipe title MUST be the very first line and start with a single hashtag (#). Format: '# Name: Subtitle'.
         - All other headings ('## Description', '## Ingredients', etc.) MUST use double hashtags (##).
         - The 'Ingredients' section MUST be a Markdown table with columns: | Ingredient | Quantity | Unit |.
@@ -2755,22 +2756,21 @@ Generate the complete, new, and improved recipe that incorporates the user's req
                 });
             }
 
-            function renderHistoryList() {
+function renderHistoryList() {
     const searchTerm = document.getElementById('history-search-input').value.toLowerCase();
     
-    // NIEUW: Filter de lijst om enkel gebottelde recepten te tonen
     // Toon alle opgeslagen recepten, en filter enkel op basis van de zoekterm
     const filteredBrews = brews.filter(brew => 
          (brew.recipeName || 'Untitled Brew').toLowerCase().includes(searchTerm)
     );
 
-    if (bottledBrews.length === 0) {
-        historyList.innerHTML = `<p class="text-center text-app-secondary/80">You have no bottled brews in your history yet.</p>`;
+    if (brews.length === 0) { // Controleer de ongefilterde lijst voor de "leeg" melding
+        historyList.innerHTML = `<p class="text-center text-app-secondary/80">You have no brews in your history yet. Go to the Creator to make one!</p>`;
         return;
     }
     
     if (filteredBrews.length === 0) {
-        historyList.innerHTML = `<p class="text-center text-app-secondary/80">No bottled recipes found matching your search.</p>`;
+        historyList.innerHTML = `<p class="text-center text-app-secondary/80">No recipes found matching your search.</p>`;
         return;
     }
 
@@ -4734,7 +4734,7 @@ function renderBrewDay2() {
     if (!view) return;
 
     // Vind alle brouwsels die gestart zijn maar nog niet gebotteld
-    const secondaryBrews = brews.filter(b => b.logData && b.logData.brewDate && !b.isBottled);
+    const secondaryBrews = brews.filter(b => b.primaryComplete && !b.isBottled);
 
     if (secondaryBrews.length === 0) {
         view.innerHTML = `
@@ -5109,6 +5109,7 @@ const buttonsHtml = step.duration > 0 ? `
                 });
 
                 if (currentStepIndex >= brewDaySteps.length) {
+    markPrimaryAsComplete(currentBrewDay.brewId);
     const container = document.getElementById('brew-day-steps-container');
     container.innerHTML += `
         <div class="text-center p-6 card rounded-lg mt-6">
@@ -5120,6 +5121,22 @@ const buttonsHtml = step.duration > 0 ? `
             </button>
         </div>
     `;
+}
+
+async function markPrimaryAsComplete(brewId) {
+    if (!userId || !brewId) return;
+    try {
+        const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
+        await updateDoc(brewDocRef, { primaryComplete: true });
+        
+        // Update ook de lokale data onmiddellijk
+        const brewIndex = brews.findIndex(b => b.id === brewId);
+        if (brewIndex > -1) {
+            brews[brewIndex].primaryComplete = true;
+        }
+    } catch (error) {
+        console.error("Could not mark primary as complete:", error);
+    }
 }
 
 window.finalizeBrewDay1 = function() {

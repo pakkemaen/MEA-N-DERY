@@ -2511,6 +2511,7 @@ async function clearInventory() {
     }
 }          
 
+// VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE DEFINITIEVE, OPGESCHOONDE VERSIE
 function buildPrompt() {
     try {
         const customDescription = document.getElementById('customDescription').value;
@@ -2544,11 +2545,8 @@ In the 'Instructions', you MUST state the final calculated starting water volume
         if (customDescription.trim() !== '') {
             const inventoryString = inventory.map(item => `${item.name}: ${item.qty} ${item.unit}`).join('; ');
             prompt = `${personaAndConstraints} ${equipmentPrompt} A user wants to create a unique mead from a text description.
-
                 Their detailed description is: "${customDescription}"
-
                 Here is the user's current inventory: [${inventoryString}].
-
                 Your primary goal is to create a recipe for a ${batchSize}-liter batch that perfectly matches the user's text description. However, you MUST prioritize using the ingredients available in their inventory if they are suitable for the recipe. If a key ingredient from the description is not in stock, you are allowed to suggest they purchase it. All other form fields below the description should be ignored.`;
 
         } else if (useInventory) {
@@ -2563,9 +2561,7 @@ In the 'Instructions', you MUST state the final calculated starting water volume
                 else if (item.unit === 'L') { costPerUnit /= 1000; baseUnit = 'ml'; }
                 return `${item.name}: ${item.qty} ${item.unit} available (Cost: ${costPerUnit.toFixed(2)} ${currency}/${baseUnit})`;
             }).join('; ');
-
             prompt = `${personaAndConstraints} ${equipmentPrompt} A user wants you to create a recipe using ingredients they already have in stock. Their inventory is: [${richInventoryString}]. 
-            
             Use the following parameters as a creative brief:
             - Batch Size: ${batchSize} liters
             - Target ABV: Approximately ${document.getElementById('abv').value || '12'}%
@@ -2575,7 +2571,6 @@ In the 'Instructions', you MUST state the final calculated starting water volume
             if (useBudget && maxBudget) {
                 prompt += `\n\nCRUCIAL CONSTRAINT: The total cost of the ingredients for this recipe MUST NOT EXCEED ${maxBudget} ${currency}. You must use the provided ingredient costs to calculate this and stay within budget. In the Brewer's Notes, briefly state the calculated total cost of the recipe.`;
             }
-
             prompt += `\n\nYour primary goal is to create the best possible recipe that uses the available ingredients. If the inventory is insufficient to make a good recipe matching the style, state that clearly in the Brewer's Notes and list the essential ingredients the user needs to buy.`;
 
         } else {
@@ -2618,6 +2613,7 @@ In the 'Instructions', you MUST state the final calculated starting water volume
             }
         }
 
+        // --- DEFINITIEVE INSTRUCTIES ---
         prompt += `
 
         For the final output, generate a full recipe suitable for an experienced homebrewer, following all rules below.
@@ -2629,7 +2625,6 @@ In the 'Instructions', you MUST state the final calculated starting water volume
         4. In the main "## Ingredients" table and "## Instructions", you MUST substitute the ideal yeast with the BEST AVAILABLE option from the user's inventory.
         5. **FALLBACK:** If no suitable substitute is found, state this in "## Brewer's Notes", explain WHY the inventory yeasts are not a good match, and recommend a common dry yeast from a supplier like 'Brouwland'.
         6. If you make a substitution, explain in "## Brewer's Notes" why it's a good alternative and specify any required process changes.
-
 
         **CRUCIAL NUTRIENT LOGIC (TWO-STEP PROCESS):**
         1. First, determine the ideal nutrient protocol and calculate the required YAN in ppm. Choose the scientifically best nutrient (e.g., Fermaid O).

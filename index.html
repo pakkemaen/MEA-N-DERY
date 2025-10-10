@@ -1483,23 +1483,27 @@ window.removeCustomBottleFromList = function(index) {
                 logoUploadInput, labelPreview;
 
             function handleStyleChange() {
-               const style = styleSelect.value;
-               const isMelomel = style.includes('melomel');
-               const isMetheglin = style.includes('metheglin');
-               const isBraggot = style.includes('braggot');
+    const style = styleSelect.value.toLowerCase(); // Gebruik toLowerCase() voor zekerheid
+    const isMelomel = style.includes('melomel');
+    const isMetheglin = style.includes('metheglin');
+    const isBraggot = style.includes('braggot');
 
-               fruitSection.classList.toggle('hidden', !isMelomel);
-               spiceSection.classList.toggle('hidden', !isMetheglin);
-               braggotSection.classList.toggle('hidden', !isBraggot);
+    fruitSection.classList.toggle('hidden', !isMelomel);
+    spiceSection.classList.toggle('hidden', !isMetheglin);
+    braggotSection.classList.toggle('hidden', !isBraggot);
 
-               // Reset de vinkjes als de sectie verborgen wordt
-               if (!isMelomel) {
-                   document.querySelectorAll('#fruit-section input:checked').forEach(cb => cb.checked = false);
-               }
-               if (!isMetheglin) {
-                   document.querySelectorAll('#spice-section input:checked').forEach(cb => cb.checked = false);
-               }
-            }
+    // Reset de vinkjes en velden als de sectie verborgen wordt
+    if (!isMelomel) {
+        document.querySelectorAll('#fruit-section input:checked').forEach(cb => cb.checked = false);
+        const fruitOther = document.getElementById('fruitOther');
+        if(fruitOther) fruitOther.value = ''; // Maak ook het 'other' veld leeg
+    }
+    if (!isMetheglin) {
+        document.querySelectorAll('#spice-section input:checked').forEach(cb => cb.checked = false);
+        const spiceOther = document.getElementById('spiceOther');
+        if(spiceOther) spiceOther.value = ''; // Maak ook het 'other' veld leeg
+    }
+}
 
             function handleDescriptionInput() {
                 const descriptionInput = document.getElementById('customDescription');

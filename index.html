@@ -2632,48 +2632,41 @@ In the 'Instructions', you MUST state the final calculated starting water volume
 
         For the final output, generate a full recipe suitable for an experienced homebrewer, following all rules below.
 
+        prompt += `
+
+        For the final output, generate a full recipe suitable for an experienced homebrewer, following all rules below.
+
         **CRUCIAL YEAST LOGIC (TWO-STEP PROCESS):**
         1. First, determine the scientifically ideal yeast for the recipe.
         2. Then, check the user's inventory for available yeasts: [${inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available'}].
         3. In "## Brewer's Notes", explain your ideal yeast choice.
         4. In the main "## Ingredients" table and "## Instructions", you MUST substitute the ideal yeast with the BEST AVAILABLE option from the user's inventory.
-        5. **FALLBACK:** If no suitable substitute is found in the inventory, you MUST state this clearly in the "Brewer's Notes". Explain WHY the inventory yeasts are not a good match (e.g., "Your available Kveik yeast is not suitable for the desired clean profile...") and then recommend a common dry yeast available at European suppliers like 'Brouland'.
-        6. If you make a substitution, you MUST also explain in "## Brewer's Notes" why it's a good alternative and specify any required changes to the process (e.g., different fermentation temperature).
+        5. **FALLBACK:** If no suitable substitute is found in the inventory, you MUST state this clearly in the "Brewer's Notes". Explain WHY the inventory yeasts are not a good match and then recommend a common dry yeast available at European suppliers like 'Brouland'.
+        6. If you make a substitution, you MUST also explain in "## Brewer's Notes" why it's a good alternative and specify any required changes to the process.
 
         **CRUCIAL NUTRIENT LOGIC (TWO-STEP PROCESS):**
         1. First, determine the ideal nutrient protocol and calculate the required YAN in ppm. Choose the scientifically best nutrient (e.g., Fermaid O).
         2. Then, check the user's inventory for 'Nutrient' category ingredients: [${inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available'}].
         3. In "## Brewer's Notes", explain your ideal nutrient plan (target YAN, ideal nutrient, and why).
         4. In the main "## Ingredients" table and "## Instructions", you MUST replace the ideal nutrient with the calculated equivalent amount of the nutrient(s) available in the user's inventory.
-        5. In "## Brewer's Notes", you MUST explain the substitution (e.g., "To achieve the target 220 ppm YAN using your available Vinoferm Nutrisal, you will need 11.5g total.").
+        5. In "## Brewer's Notes", you MUST explain the substitution.
         6. Finally, confirm in the "## Brewer's Notes" if the nutrient addition schedule remains the same.
 
         **CRUCIAL INGREDIENT SUBSTITUTION LOGIC:**
         - You MUST recognize common European brand names and their chemical equivalents (e.g., 'Vinoferm Campden' is Potassium Metabisulfite; 'Vinoferm Zymex' is Pectic Enzyme).
         - When you make such a substitution, you MUST use the user's inventory item name in the final ingredient list and briefly mention the substitution in the Brewer's Notes.
         
-        **FERMENTATION PROFILE:**
-        - When providing fermentation instructions, you MUST provide a dynamic temperature profile based on the chosen (substituted) yeast and desired outcome. Do not just give a single temperature.
-        - For example: 'Start fermentation at 18°C for 3 days for a clean profile, then let it rise to 22°C for full attenuation.'
-
-        **SAFETY & CLARITY:**
-        - You MUST include relevant safety warnings where appropriate (e.g., honey boil-overs for Bochets, ensuring complete fermentation before bottling to prevent bottle bombs).
-        - In the "## Brewer's Notes", you should briefly explain the "why" behind any complex or non-obvious steps.
+        **FERMENTATION PROFILE & SAFETY:**
+        - You MUST provide a dynamic temperature profile based on the chosen yeast and desired outcome. Do not just give a single temperature.
+        - You MUST include relevant safety warnings where appropriate (e.g., honey boil-overs for Bochets, bottle bombs).
 
         **CRUCIAL FORMATTING RULES:**
-        - Your entire response MUST be a single, valid Markdown document from start to finish.
-        - The main recipe title MUST be the very first line and start with a single hashtag (#). Format: '# Name: Subtitle'.
-        - All other headings ('## Description', '## Ingredients', etc.) MUST use double hashtags (##).
-        - The 'Ingredients' section MUST be a Markdown table with columns: | Ingredient | Quantity | Unit |.
-        - You MUST explicitly state the Target OG, Target FG, and Target ABV in the description.
+        - Your entire response MUST be a single, valid Markdown document.
+        - The "## Instructions" section MUST be structured with two specific subheadings: "### Primary Fermentation" and "### Secondary & Aging". All steps must be listed under one of these.
+        - **TIMED STEPS:** If a step has a specific duration (boiling, waiting, etc.), you MUST add a tag in the format \`[d:HH:MM:SS]\` at the end of the step's list item. For example: \`1. Boil the honey for 30 minutes. [d:00:30:00]\`. For a 24-hour timer: \`[d:24:00:00]\`.
 
         **WATER RECOMMENDATION:**
-        The final section MUST be '## Recommended Water'. Recommend a suitable, commercially available Belgian bottled water.
-        - CRUCIAL: You MUST vary your choice based on the mead style. Do not always default to Spa Reine.
-        - For rich, dark styles (Bochets), consider water with more minerals (like Chaudfontaine) to enhance body.
-        - For delicate, dry meads, a low-mineral water (like Spa Reine) is appropriate.
-        - You must explain your choice in 1-2 sentences.`;
-        // --- EINDE VAN DE NIEUWE, DEFINITIEVE INSTRUCTIES ---
+        The final section MUST be '## Recommended Water'. You MUST vary your choice based on the mead style and explain your reasoning.`;
         
         return prompt;
     } catch (error) {
@@ -2683,7 +2676,8 @@ In the 'Instructions', you MUST state the final calculated starting water volume
 }
             
             // --- Firestore & History Functions ---
-            window.saveBrewToHistory = async function() {
+            // VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE
+window.saveBrewToHistory = async function() {
     if (!userId || !currentRecipeMarkdown) {
         showToast("Cannot save. No user identified or no recipe generated.", "error");
         return;
@@ -2693,12 +2687,11 @@ In the 'Instructions', you MUST state the final calculated starting water volume
     saveButton.disabled = true;
 
     const totalBatchCost = parseIngredientsAndCalculateCost(currentRecipeMarkdown, inventory, parseFloat(document.getElementById('batchSize').value) || 5);
-    const brewDaySteps = parseStepsForBrewDay(currentRecipeMarkdown);
+    const brewDayStepsObject = parseStepsForBrewDay(currentRecipeMarkdown);
     const predictedProfile = await getPredictedFlavorProfile(currentRecipeMarkdown);
     
-    // De initiële logboekgegevens worden nu direct uit het recept gehaald
     const initialLogData = parseRecipeData(currentRecipeMarkdown);
-    initialLogData.fermentationLog = Array.from({ length: 8 }, () => ({})); // Maak een leeg logboek
+    initialLogData.fermentationLog = Array.from({ length: 8 }, () => ({}));
     
     const batchSize = parseFloat(document.getElementById('batchSize').value) || 5;
     const brewData = {
@@ -2711,8 +2704,10 @@ In the 'Instructions', you MUST state the final calculated starting water volume
         batchSize: batchSize,
         totalCost: totalBatchCost,
         isBottled: false,
+        primaryComplete: false,
         predictedFlavorProfile: predictedProfile,
-        brewDaySteps: brewDaySteps
+        brewDaySteps: brewDayStepsObject.primary,
+        secondarySteps: brewDayStepsObject.secondary
     };
 
     try {
@@ -2722,11 +2717,11 @@ In the 'Instructions', you MUST state the final calculated starting water volume
         
         const buttonContainer = saveButton.parentElement;
         
-        const startBrewDayBtn = document.createElement('button');
-        startBrewDayBtn.textContent = 'Start Brew Day';
-        startBrewDayBtn.className = 'w-full mt-4 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors btn';
-        startBrewDayBtn.onclick = () => startBrewDay(docRef.id);
-        buttonContainer.appendChild(startBrewDayBtn);
+        buttonContainer.innerHTML += `
+            <button onclick="window.startBrewDay('${docRef.id}')" class="w-full mt-4 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors btn">
+                Start Brew Day
+            </button>
+        `;
 
         saveButton.textContent = 'Saved!';
         saveButton.classList.replace('bg-green-700', 'bg-gray-500');
@@ -4686,7 +4681,13 @@ function renderActiveBrewTimeline() {
     generateShoppingList(brewId, false);
 }
 
-            function renderBrewDay(brewId) {
+            // VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE
+function renderBrewDay(brewId) {
+    if (brewId === 'none') {
+        document.getElementById('brew-day-content').innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">Brew Day 1 - Primary Fermentation</h2><p class="text-center text-app-secondary/80">Select a new recipe from your History to start a new brew day.</p>`;
+        return;
+    }
+
     const brew = brews.find(b => b.id === brewId);
     const brewDayContent = document.getElementById('brew-day-content');
     if (!brew) {
@@ -4694,19 +4695,11 @@ function renderActiveBrewTimeline() {
         return;
     }
 
-    const allSteps = brew.brewDaySteps || [];
-    if (allSteps.length === 0) {
-         brewDayContent.innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2><p class="text-center text-app-secondary/80">Could not parse steps from this recipe. Ensure it has an 'Instructions' section with a list.</p>`;
+    const primarySteps = brew.brewDaySteps || [];
+    if (primarySteps.length === 0) {
+         brewDayContent.innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2><p class="text-center text-app-secondary/80">Could not find Primary Fermentation steps for this recipe.</p>`;
          return;
     }
-
-    // Vind het begin van de secundaire fase op basis van keywords
-    const secondaryStartIndex = allSteps.findIndex(step => 
-        /rack|secondary|bottle|cold crash|age/i.test(step.title)
-    );
-
-    // Toon alle stappen als er geen keyword wordt gevonden, anders enkel de primaire stappen
-    const primarySteps = secondaryStartIndex === -1 ? allSteps : allSteps.slice(0, secondaryStartIndex);
 
     let stepsHtml = primarySteps.map((step, index) => {
         const isCompleted = currentBrewDay.checklist[`step-${index}`] || false;
@@ -4720,20 +4713,19 @@ function renderActiveBrewTimeline() {
         return `
             <div id="step-${index}" class="step-item p-4 rounded-r-lg mb-3 ${isCompleted ? 'completed' : ''}">
                 <div>
-    <p class="step-title">${index + 1}. ${step.title}</p>
-    <p class="text-sm text-app-secondary">${step.description}</p>
-    <div class="mt-4">
-        ${timerHtml}
-        <div class="space-x-2" id="controls-${index}">
-            ${isCompleted ? '<span class="text-sm font-bold text-green-600">✓ Completed</span>' : buttonsHtml}
-        </div>
-    </div>
-</div>
+                    <p class="step-title">${index + 1}. ${step.title}</p>
+                    <p class="text-sm text-app-secondary">${step.description}</p>
+                    <div class="mt-4">
+                        ${timerHtml}
+                        <div class="space-x-2" id="controls-${index}">
+                            ${isCompleted ? '<span class="text-sm font-bold text-green-600">✓ Completed</span>' : buttonsHtml}
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     }).join('');
 
-    // Haal het invulbare logboek op
     const parsedTargets = parseRecipeData(brew.recipeMarkdown);
     const combinedLogData = { ...brew.logData, ...parsedTargets };
     const logHtml = getBrewLogHtml(combinedLogData, brew.id);
@@ -4751,9 +4743,7 @@ function renderActiveBrewTimeline() {
         <div class="text-center mt-6">
             <button data-action="resetBrewDay" class="text-sm bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 btn">Reset and Start Over</button>
         </div>
-
         <hr class="my-8 border-app">
-
         ${logHtml}
         <div class="mt-4 no-print">
             <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
@@ -4762,8 +4752,6 @@ function renderActiveBrewTimeline() {
 
     initializeBrewDayState(primarySteps);
 }
-
-// VOEG DEZE TWEE NIEUWE FUNCTIES TOE
 
 function renderBrewDay2() {
     const view = document.getElementById('brew-day-2-view');
@@ -4803,48 +4791,42 @@ function renderBrewDay2() {
     `;
 }
 
+// VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE
 window.showBrewDay2Detail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    // Stel de actieve brouwdag in, zodat de checklist weet welk brouwsel we aanpassen
     currentBrewDay = userSettings.currentBrewDay?.brewId === brewId ? userSettings.currentBrewDay : { brewId: brewId, checklist: {} };
 
     const view = document.getElementById('brew-day-2-view');
-    const allSteps = brew.brewDaySteps || [];
-    
-    const secondaryStartIndex = allSteps.findIndex(step => 
-        /rack|transfer|secondary|bottle|cold crash|age/i.test(step.title)
-    );
+    const secondarySteps = brew.secondarySteps || [];
+    const stepOffset = (brew.brewDaySteps || []).length; // Start telling vanaf het einde van de primaire stappen
 
-    let secondaryStepsHtml = '<p class="text-center text-app-secondary/80">No specific secondary steps found. Ready to bottle?</p>';
-    if (secondaryStartIndex !== -1) {
-        const secondarySteps = allSteps.slice(secondaryStartIndex);
-        
-        // --- NIEUWE LOGICA: Bouw interactieve stappen ---
+    let secondaryStepsHtml = '<p class="text-center text-app-secondary/80">No specific secondary steps found for this recipe. Ready to bottle?</p>';
+    if (secondarySteps.length > 0) {
         secondaryStepsHtml = secondarySteps.map((step, index) => {
-            const originalIndex = secondaryStartIndex + index;
+            const originalIndex = stepOffset + index;
             const isCompleted = currentBrewDay.checklist[`step-${originalIndex}`] || false;
 
             const timerHtml = step.duration > 0 ? `<p class="timer-display my-2" id="timer-${originalIndex}">${formatTime(step.duration)}</p>` : '';
-const buttonsHtml = step.duration > 0 ? `
-    <button data-action="startTimer" data-step="${originalIndex}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Start Timer</button>
-` : `
-    <button data-action="completeStep" data-step="${originalIndex}" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 btn">Mark as Complete</button>
-`;
+            const buttonsHtml = step.duration > 0 ? `
+                <button data-action="startTimer" data-step="${originalIndex}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Start Timer</button>
+            ` : `
+                <button data-action="completeStep" data-step="${originalIndex}" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 btn">Mark as Complete</button>
+            `;
 
             return `
                 <div id="step-${originalIndex}" class="step-item p-4 rounded-r-lg mb-3 ${isCompleted ? 'completed' : ''}">
                     <div>
-    <p class="step-title">${originalIndex + 1}. ${step.title}</p>
-    <p class="text-sm text-app-secondary">${step.description}</p>
-    <div class="mt-4">
-        ${timerHtml}
-        <div class="space-x-2" id="controls-${originalIndex}">
-            ${isCompleted ? '<span class="text-sm font-bold text-green-600">✓ Completed</span>' : buttonsHtml}
-        </div>
-    </div>
-</div>
+                        <p class="step-title">${originalIndex + 1}. ${step.title}</p>
+                        <p class="text-sm text-app-secondary">${step.description}</p>
+                        <div class="mt-4">
+                            ${timerHtml}
+                            <div class="space-x-2" id="controls-${originalIndex}">
+                                ${isCompleted ? '<span class="text-sm font-bold text-green-600">✓ Completed</span>' : buttonsHtml}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -4856,20 +4838,16 @@ const buttonsHtml = step.duration > 0 ? `
         <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
             <button onclick="renderBrewDay2()" class="mb-4 text-app-brand hover:underline no-print">&larr; Back to Secondary List</button>
             <h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName}</h2>
-            
             <div class="mb-6">
                 <h3 class="text-xl font-header mb-2">Remaining Steps</h3>
                 <div id="brew-day-steps-container">${secondaryStepsHtml}</div>
             </div>
-            
             <div class="text-center my-6">
                 <button onclick="window.showBottlingModal('${brew.id}')" class="bg-app-action text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 btn">
                     Bottle This Batch
                 </button>
             </div>
-
             <hr class="my-8 border-app">
-
             ${logHtml}
             <div class="mt-4 no-print">
                 <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
@@ -4935,42 +4913,78 @@ const buttonsHtml = step.duration > 0 ? `
     });
 }
 
-            function parseStepsForBrewDay(markdown) {
-                let steps = [];
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = marked.parse(markdown);
+// VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE
+function parseStepsForBrewDay(markdown) {
+    const steps = { primary: [], secondary: [] };
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = marked.parse(markdown);
 
-                const parseStepText = (text) => {
-                    let duration = 0;
-                    let description = 'Follow the instruction.';
-                    const minMatch = text.match(/(\d+)\s*min/i);
-                    const hourMatch = text.match(/(\d+)\s*hour/i);
-                    if (minMatch) {
-                        duration = parseInt(minMatch[1]) * 60;
-                        description = `Timer set for ${minMatch[1]} minutes.`;
-                    } else if (hourMatch) {
-                        duration = parseInt(hourMatch[1]) * 3600;
-                        description = `Timer set for ${hourMatch[1]} hour(s).`;
-                    }
-                    return { title: text.replace(/(\d+)\s*(min|hour)s?:?/i, '').trim(), description, duration };
-                };
+    const primaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('primary fermentation'));
+    const secondaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('secondary & aging'));
 
-                const instructionsHeader = Array.from(tempDiv.querySelectorAll('h2, h3')).find(h => h.textContent.toLowerCase().includes('instructions'));
-                if (instructionsHeader) {
-                    let element = instructionsHeader.nextElementSibling;
-                    while (element && !/H[2]/.test(element.tagName)) {
-                        if (element.tagName === 'OL' || element.tagName === 'UL') {
-                            Array.from(element.children).forEach(li => {
-                                if (li.tagName === 'LI') {
-                                    steps.push(parseStepText(li.textContent.trim()));
-                                }
-                            });
-                        }
-                        element = element.nextElementSibling;
-                    }
+    const parseStepText = (text) => {
+        let duration = 0;
+        let title = text;
+        const durationMatch = text.match(/\[d:(\d{2}):(\d{2}):(\d{2})\]/);
+
+        if (durationMatch) {
+            const hours = parseInt(durationMatch[1], 10);
+            const minutes = parseInt(durationMatch[2], 10);
+            const seconds = parseInt(durationMatch[3], 10);
+            duration = (hours * 3600) + (minutes * 60) + seconds;
+            title = text.replace(durationMatch[0], '').trim();
+        }
+        
+        return { title: title, description: 'Follow the instruction.', duration: duration };
+    };
+
+    const processSection = (header, stepArray) => {
+        if (header) {
+            let element = header.nextElementSibling;
+            while (element && element.tagName !== 'H2' && element.tagName !== 'H3') {
+                if (element.tagName === 'OL' || element.tagName === 'UL') {
+                    Array.from(element.children).forEach(li => {
+                        if (li.tagName === 'LI') stepArray.push(parseStepText(li.textContent.trim()));
+                    });
                 }
-                return steps;
+                element = element.nextElementSibling;
             }
+        }
+    };
+
+    processSection(primaryHeader, steps.primary);
+    processSection(secondaryHeader, steps.secondary);
+    
+    // Fallback voor oude/niet-gestructureerde recepten
+    if (steps.primary.length === 0 && steps.secondary.length === 0) {
+        console.warn("Could not find structured ### headings, using fallback keyword search.");
+         const allSteps = [];
+         const instructionsHeader = Array.from(tempDiv.querySelectorAll('h2, h3')).find(h => h.textContent.toLowerCase().includes('instructions'));
+         if (instructionsHeader) {
+            let element = instructionsHeader.nextElementSibling;
+             while (element && element.tagName !== 'H2') {
+                 if (element.tagName === 'OL' || element.tagName === 'UL') {
+                     Array.from(element.children).forEach(li => {
+                         if (li.tagName === 'LI') {
+                            // Oude parseStepText, vereenvoudigd
+                            const text = li.textContent.trim();
+                            let duration = 0;
+                            if (text.match(/(\d+)\s*min/i)) duration = parseInt(text.match(/(\d+)\s*min/i)[1]) * 60;
+                            if (text.match(/(\d+)\s*hour/i)) duration = parseInt(text.match(/(\d+)\s*hour/i)[1]) * 3600;
+                            allSteps.push({ title: text, description: 'Follow the instruction.', duration: duration });
+                         }
+                     });
+                 }
+                 element = element.nextElementSibling;
+             }
+         }
+         const secondaryStartIndex = allSteps.findIndex(step => /rack|secondary|bottle|cold crash|age/i.test(step.title));
+         steps.primary = secondaryStartIndex === -1 ? allSteps : allSteps.slice(0, secondaryStartIndex);
+         steps.secondary = secondaryStartIndex === -1 ? [] : allSteps.slice(secondaryStartIndex);
+    }
+
+    return steps;
+}
 
             function generateBrewDaySteps(brew) {
                 // AANGEPAST: De functie leest nu de betrouwbare, opgeslagen array
@@ -5195,97 +5209,97 @@ window.finalizeBrewDay1 = function() {
             }
    
             // --- Analysis Functions ---
-            window.generateShoppingList = function(brewId, navigate = false) {
-                const brew = brews.find(b => b.id === brewId);
-                if (!brew) return;
+            // VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE
+window.generateShoppingList = function(brewId, navigate = false) {
+    const brew = brews.find(b => b.id === brewId);
+    if (!brew) return;
 
-                const listState = brew.shoppingListState || {};
+    const listState = brew.shoppingListState || {};
 
-                const convertToBaseUnit = (quantity, unit) => {
-                    const u = unit.toLowerCase();
-                    if (u === 'kg') return { quantity: quantity * 1000, unit: 'g' };
-                    if (u === 'l') return { quantity: quantity * 1000, unit: 'ml' };
-                    return { quantity, unit: u };
-                };
+    const convertToBaseUnit = (quantity, unit) => {
+        const u = unit.toLowerCase();
+        if (u === 'kg') return { quantity: quantity * 1000, unit: 'g' };
+        if (u === 'l') return { quantity: quantity * 1000, unit: 'ml' };
+        return { quantity, unit: u };
+    };
 
-                const requiredIngredients = parseIngredientsFromMarkdown(brew.recipeMarkdown);
-                const shoppingList = [];
+    const requiredIngredients = parseIngredientsFromMarkdown(brew.recipeMarkdown);
+    const shoppingList = [];
 
-                requiredIngredients.forEach(req => {
-                    const invItem = inventory.find(inv => inv.name.toLowerCase() === req.name.toLowerCase());
-                    const requiredAmount = convertToBaseUnit(req.quantity, req.unit);
-                    let stockAmount = { quantity: 0, unit: requiredAmount.unit };
+    requiredIngredients.forEach(req => {
+        const invItem = inventory.find(inv => inv.name.toLowerCase() === req.name.toLowerCase());
+        const requiredAmount = convertToBaseUnit(req.quantity, req.unit);
+        let stockAmount = { quantity: 0, unit: requiredAmount.unit };
 
-                    if (invItem) {
-                        stockAmount = convertToBaseUnit(invItem.qty, invItem.unit);
-                        if (stockAmount.unit !== requiredAmount.unit) {
-                            console.warn(`Unit mismatch for ${req.name}`);
-                        }
-                    }
-
-                    if (!invItem || stockAmount.quantity < requiredAmount.quantity) {
-                        let toBuy = requiredAmount.quantity - stockAmount.quantity;
-                        let unitToDisplay = req.unit;
-                        if (req.unit.toLowerCase() === 'g' && toBuy >= 1000) { 
-                            toBuy /= 1000;
-                            unitToDisplay = 'kg';
-                        } else if (req.unit.toLowerCase() === 'ml' && toBuy >= 1000) { 
-                            toBuy /= 1000;
-                            unitToDisplay = 'L';
-                        }
-                        shoppingList.push({ name: req.name, quantity: toBuy, unit: unitToDisplay });
-                    }
-                });
-
-                const contentDiv = document.getElementById('shopping-list-content');
-                let html = `<h4 class="text-xl font-header mb-4">${brew.recipeName} - Shopping List</h4>`;
-                
-                if (shoppingList.length > 0) {
-                        html += `<div id="shopping-list-items" class="space-y-2">`;
-                        html += shoppingList.map((item, index) => {
-                            const displayQty = Number.isInteger(item.quantity) ? item.quantity : item.quantity.toFixed(2);
-                            const isChecked = listState[item.name] || false;
-                            const escapedItemName = item.name.replace(/'/g, "\\'");
-
-                            return `
-                                <div class="flex items-start">
-                                    <input type="checkbox" id="shop-item-${index}" 
-                                           onchange="window.updateShoppingListItemStatus('${brew.id}', '${escapedItemName}', this.checked)" 
-                                           class="h-5 w-5 rounded border-gray-300 text-app-brand focus:ring-app-brand"
-                                           ${isChecked ? 'checked' : ''}>
-                                    <label for="shop-item-${index}" class="ml-3 text-app-primary">${item.name}: ${displayQty} ${item.unit}</label>
-                                </div>
-                            `;
-                        }).join('');
-                        html += `</div>`;
-                        
-                        // --- Knop om items aan inventaris toe te voegen ---
-                        html += `
-                            <div class="mt-6 pt-4 border-t border-app">
-                                <button id="add-to-inventory-btn" onclick="window.addMissingItemsToInventory('${brew.id}')" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 btn text-sm">
-                                    Add Missing Items to Inventory (as 0 qty)
-                                </button>
-                            </div>
-                        `;
-
-                        html += `<div id="start-brew-day-container" class="mt-6 text-center hidden">
-                                <p class="text-green-600 dark:text-green-400 font-semibold mb-2">All items acquired!</p>
-                                <button onclick="window.startActualBrewDay('${brew.id}')" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 btn">Let's Start Brewing!</button>
-                             </div>`;
-                } else {
-                        html += `<p class="text-green-600 dark:text-green-400 font-semibold mb-4">You have all the ingredients you need!</p>`;
-                        html += `<button onclick="window.startActualBrewDay('${brew.id}')" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 btn">Let's Start Brewing!</button>`;
-                }
-
-                contentDiv.innerHTML = html;
-                
-                if (navigate) {
-                    switchMainView('brewing');
-                    switchSubView('shopping-list', 'brewing-main-view');
-                }
-                
-                checkShoppingList(brewId);
+        if (invItem) {
+            stockAmount = convertToBaseUnit(invItem.qty, invItem.unit);
+            if (stockAmount.unit !== requiredAmount.unit) {
+                console.warn(`Unit mismatch for ${req.name}`);
             }
+        }
+
+        if (!invItem || stockAmount.quantity < requiredAmount.quantity) {
+            let toBuy = requiredAmount.quantity - stockAmount.quantity;
+            let unitToDisplay = req.unit;
+            if (req.unit.toLowerCase() === 'g' && toBuy >= 1000) { 
+                toBuy /= 1000;
+                unitToDisplay = 'kg';
+            } else if (req.unit.toLowerCase() === 'ml' && toBuy >= 1000) { 
+                toBuy /= 1000;
+                unitToDisplay = 'L';
+            }
+            shoppingList.push({ name: req.name, quantity: toBuy, unit: unitToDisplay });
+        }
+    });
+
+    const contentDiv = document.getElementById('shopping-list-content');
+    let html = `<h4 class="text-xl font-header mb-4">${brew.recipeName} - Shopping List</h4>`;
+    
+    if (shoppingList.length > 0) {
+            html += `<div id="shopping-list-items" class="space-y-2">`;
+            html += shoppingList.map((item, index) => {
+                const displayQty = Number.isInteger(item.quantity) ? item.quantity : item.quantity.toFixed(2);
+                const isChecked = listState[item.name] || false;
+                const escapedItemName = item.name.replace(/'/g, "\\'");
+
+                return `
+                    <div class="flex items-start">
+                        <input type="checkbox" id="shop-item-${index}" 
+                               onchange="window.updateShoppingListItemStatus('${brew.id}', '${escapedItemName}', this.checked)" 
+                               class="h-5 w-5 rounded border-gray-300 text-app-brand focus:ring-app-brand mt-1"
+                               ${isChecked ? 'checked' : ''}>
+                        <label for="shop-item-${index}" class="ml-3 text-app-primary">${item.name}: ${displayQty} ${item.unit}</label>
+                    </div>
+                `;
+            }).join('');
+            html += `</div>`;
+            
+            html += `
+                <div class="mt-6 pt-4 border-t border-app">
+                    <button id="add-to-inventory-btn" onclick="window.addMissingItemsToInventory('${brew.id}')" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 btn text-sm">
+                        Add Missing Items to Inventory (as 0 qty)
+                    </button>
+                </div>
+            `;
+
+            html += `<div id="start-brew-day-container" class="mt-6 text-center hidden">
+                    <p class="text-green-600 dark:text-green-400 font-semibold mb-2">All items acquired!</p>
+                    <button onclick="window.startActualBrewDay('${brew.id}')" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 btn">Let's Start Brewing!</button>
+                 </div>`;
+    } else {
+            html += `<p class="text-green-600 dark:text-green-400 font-semibold mb-4">You have all the ingredients you need!</p>`;
+            html += `<button onclick="window.startActualBrewDay('${brew.id}')" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 btn">Let's Start Brewing!</button>`;
+    }
+
+    contentDiv.innerHTML = html;
+    
+    if (navigate) {
+        switchMainView('brewing');
+        switchSubView('shopping-list', 'brewing-main-view');
+    }
+    
+    checkShoppingList(brewId);
+}
 
             window.updateShoppingListItemStatus = async function(brewId, ingredientName, isChecked) {
                 if (!userId) return;

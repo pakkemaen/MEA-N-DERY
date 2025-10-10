@@ -1343,7 +1343,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.8.2 - 10/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.8.3 - 10/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2511,6 +2511,7 @@ async function clearInventory() {
     }
 }          
 
+// VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE DEFINITIEVE, COMPLETE VERSIE
 function buildPrompt() {
     try {
         const batchSize = document.getElementById('batchSize').value || '5';
@@ -2519,8 +2520,7 @@ function buildPrompt() {
         const nutrientsInInventory = inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available';
         
         // --- MASTER PROMPT TEMPLATE ---
-        // We definiëren eerst alle regels en de structuur.
-        let masterPrompt = `You are an expert mead maker named "MEA(N)DERY". Your entire response MUST be a single, valid Markdown document. All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers like 'Brouland'.
+        let masterPrompt = `You are an expert mead maker named "MEA(N)DERY". Your entire response MUST be a single, valid Markdown document. All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers like 'Brouwland'.
 
 Your response MUST be structured with the following headings in this exact order:
 # [Recipe Name]: [Subtitle]
@@ -2530,7 +2530,7 @@ Your response MUST be structured with the following headings in this exact order
 ## Brewer's Notes
 ## Recommended Water
 
-The "## Instructions" section MUST contain two subheadings: "### Primary Fermentation" and "### Secondary & Aging". All steps MUST be listed under one of these.
+The "## Instructions" section MUST contain two subheadings: "### Primary Fermentation" and "### Secondary & Aging". All steps must be listed under one of these.
 If any step in the instructions has a duration (boiling, waiting, etc.), you MUST add a tag at the end of its line in the format \`[d:HH:MM:SS]\`. For example: \`1. Boil the honey for 30 minutes. [d:00:30:00]\`.
 
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
@@ -2541,21 +2541,22 @@ If any step in the instructions has a duration (boiling, waiting, etc.), you MUS
 
 2.  **Nutrient Logic:** First, determine the ideal YAN and nutrient (e.g., Fermaid O). Then, check the user's inventory for substitutes: [${nutrientsInInventory}].
     - You MUST use the user's nutrient in the "## Ingredients" table after calculating the equivalent amount.
-    - You MUST explain the original goal (ideal nutrient, target YAN) and the substitution calculation in "## Brewer's Notes". You must also confirm if the addition schedule remains the same.
+    - You MUST explain the original goal (ideal nutrient, target YAN) and the substitution calculation in "## Brewer's Notes".
+    - **CRUCIAL for Staggered Nutrient Additions (SNA):** In the "### Primary Fermentation" instructions, you MUST create a **separate, numbered list item for EACH individual nutrient addition**. For additions that occur after a delay (e.g., at 24 hours), you MUST add the appropriate timer tag to that specific step, like \`[d:24:00:00]\`.
 
 3.  **Ingredient Substitution:** You MUST recognize common brand names for chemicals (e.g., 'Vinoferm Campden' is Potassium Metabisulfite; 'Vinoferm Zymex' is Pectic Enzyme) and use the user's inventory item name in the recipe.
 
-4.  **Fermentation & Safety:** You MUST provide a dynamic temperature profile in the instructions and include relevant safety warnings (e.g., for Bochets, bottling) in the "## Brewer's Notes" or instructions.
+4.  **Fermentation & Safety:** You MUST provide a dynamic temperature profile in the instructions and include relevant safety warnings in the "## Brewer's Notes" or instructions.
 
-5.  **Water Choice:** In the "## Recommended Water" section, you MUST recommend a specific, commercially available Belgian bottled water (e.g., Spa Reine, Chaudfontaine) and vary your choice based on the style, explaining your reasoning.
+5.  **Water Choice:** In the "## Recommended Water" section, you MUST recommend a specific, commercially available Belgian bottled water and vary your choice based on the style, explaining your reasoning.
 
 Now, generate a world-class mead recipe for a ${batchSize}-liter batch based on the following user request:
 ---
 `;
+        // --- EINDE MASTER TEMPLATE ---
 
-        let creativeBrief = ''; // Dit vullen we hieronder
+        let creativeBrief = ''; 
         
-        // Equipment Profiel
         const selectedProfileId = document.getElementById('equipmentProfileSelect').value;
         if (selectedProfileId) {
             const profile = equipmentProfiles.find(p => p.id === selectedProfileId);
@@ -2566,7 +2567,6 @@ The recipe must be adapted for the "${profile.name}" equipment profile with a to
             }
         }
         
-        // Bepaal de creatieve opdracht (custom, from inventory, of structured)
         const customDescription = document.getElementById('customDescription').value;
         const useInventory = document.getElementById('useInventory').checked;
 
@@ -2584,7 +2584,6 @@ Use these parameters as guidelines:
 - Style Inspiration: ${document.getElementById('style').selectedOptions[0].text}
 `;
         } else {
-            // ... (Hier komt de logica voor de gestructureerde opties) ...
              const style = document.getElementById('style').selectedOptions[0].text;
             let honeyValue = document.getElementById('honeyVariety').options[document.getElementById('honeyVariety').selectedIndex].text;
             const honeySelectValue = document.getElementById('honeyVariety').value;
@@ -2610,7 +2609,7 @@ Use these parameters as guidelines:
             }
         }
 
-        return masterPrompt + creativeBrief; // Voeg de opdracht toe aan de regels
+        return masterPrompt + creativeBrief;
 
     } catch (error) {
         console.error("Error building prompt:", error);

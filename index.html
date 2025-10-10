@@ -2622,10 +2622,6 @@ In the 'Instructions', you MUST state the final calculated starting water volume
 
         For the final output, generate a full recipe suitable for an experienced homebrewer, following all rules below.
 
-        prompt += `
-
-        For the final output, generate a full recipe suitable for an experienced homebrewer, following all rules below.
-
         **CRUCIAL YEAST LOGIC (TWO-STEP PROCESS):**
         1. First, determine the scientifically ideal yeast for the recipe.
         2. Then, check the user's inventory for available yeasts: [${inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available'}].

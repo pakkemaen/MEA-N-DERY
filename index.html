@@ -2547,7 +2547,7 @@ async function clearInventory() {
                         let waterPromptInstruction = '';
                         if (waterInInventory.length > 0) {
                             const waterNames = waterInInventory.map(item => `${item.name} (${item.qty} ${item.unit})`).join(', ');
-                            waterPromptInstruction = `\n\nWATER CONSTRAINT: The user has the following bottled water in stock: [${waterNames}]. You MUST use one of these as the base water for the recipe. Recommend which one is best suited for the style.`;
+                            waterPromptInstruction = `\n\nWATER CONSTRAINT: The user has the following bottled water in stock: [${waterNames}]. You MUST use one of these as the base water for the recipe. When you do, you MUST use that exact brand name (e.g., 'Spa Reine') in the '## Ingredients' table instead of the generic term 'Water'.`;
                         }
 
                         const inventoryString = inventory.map(item => {
@@ -2628,6 +2628,12 @@ async function clearInventory() {
         - All other headings ('## Description', '## Ingredients', etc.) MUST use double hashtags (##).
         - The 'Ingredients' section MUST be a Markdown table with columns: | Ingredient | Quantity | Unit |.
         - You MUST explicitly state the Target OG, Target FG, and Target ABV in the description.
+
+        **CRUCIAL INGREDIENT SUBSTITUTION LOGIC:**
+        - You MUST recognize common European brand names and their chemical equivalents.
+        - For example: If the user's inventory contains 'Vinoferm Campden', you must understand this IS Potassium Metabisulfite and use it if the recipe requires sulfites.
+        - Another example: If the user has 'Vinoferm Zymex', you must recognize this as Pectic Enzyme.
+        - When you make such a substitution, you MUST use the user's inventory item name (e.g., 'Vinoferm Campden') in the final ingredient list. Briefly mention the substitution in the Brewer's Notes (e.g., "Used Vinoferm Campden as a source of sulfites.").
 
         **WATER RECOMMENDATION:**
         The final section MUST be '## Recommended Water'. Recommend a suitable, commercially available Belgian bottled water (e.g., Spa Reine, Chaudfontaine). 
@@ -4365,43 +4371,42 @@ Peak Date: 2027-09-24`;
 
             // --- Utility Functions ---
             function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
-                let totalCost = 0;
-                const tableRegex = /\| Ingredient.*?\|\n\|[-|: ]+\|[-|: ]+\|[-|: ]+\|\n([\s\S]*?)\n\n/gm;
-                const tableMatch = tableRegex.exec(markdown);
+    let totalCost = 0;
+    const requiredIngredients = parseIngredientsFromMarkdown(markdown);
 
-                if (!tableMatch || !tableMatch[1]) {
-                    console.warn("Could not find or parse ingredients table in the recipe.");
-                    return 0;
-                }
+    if (requiredIngredients.length === 0) {
+        console.warn("Cost calculation: No ingredients found by the parser.");
+        return 0;
+    }
 
-                const rows = tableMatch[1].split('\n').filter(row => row.trim() !== '');
+    requiredIngredients.forEach(req => {
+        const inventoryItem = inventory.find(item => item.name.toLowerCase() === req.name.toLowerCase());
+        
+        // Ga alleen verder als het item bestaat, een geldige prijs heeft, en een hoeveelheid groter dan 0.
+        if (inventoryItem && typeof inventoryItem.price === 'number' && typeof inventoryItem.qty === 'number' && inventoryItem.qty > 0) {
+            let costPerUnit = inventoryItem.price / inventoryItem.qty;
+            const reqUnit = (req.unit || '').toLowerCase();
+            const invUnit = (inventoryItem.unit || '').toLowerCase();
 
-                rows.forEach(row => {
-                    const columns = row.split('|').map(c => c.trim()).filter(c => c);
-                    if (columns.length !== 3) return;
-
-                    const [name, quantityStr, unit] = columns;
-                    const quantity = parseFloat(quantityStr);
-                    if (isNaN(quantity)) return;
-                    
-                    // Find best match in inventory (case-insensitive)
-                    const inventoryItem = inventory.find(item => item.name.toLowerCase() === name.toLowerCase());
-                    
-                    if (inventoryItem) {
-                        let costPerUnit = inventoryItem.price / inventoryItem.qty;
-                        // Basic unit conversion
-                        if (inventoryItem.unit === 'kg' && unit.toLowerCase() === 'g') {
-                            costPerUnit /= 1000;
-                        } else if (inventoryItem.unit === 'g' && unit.toLowerCase() === 'kg') {
-                            costPerUnit *= 1000;
-                        } // Can add more conversions here
-                        
-                        totalCost += quantity * costPerUnit;
-                    }
-                });
-
-                return totalCost;
+            if (invUnit === 'kg' && reqUnit === 'g') {
+                costPerUnit /= 1000;
+            } else if (invUnit === 'g' && reqUnit === 'kg') {
+                costPerUnit *= 1000;
+            } else if (invUnit === 'l' && reqUnit === 'ml') {
+                costPerUnit /= 1000;
+            } else if (invUnit === 'ml' && reqUnit === 'l') {
+                costPerUnit *= 1000;
             }
+            
+            // Voeg enkel toe aan de totaalkost als de berekening een geldig getal oplevert
+            if (!isNaN(costPerUnit)) {
+                totalCost += req.quantity * costPerUnit;
+            }
+        }
+    });
+
+    return totalCost;
+}
 
             window.printEmptyLog = function() {
                 const logHtml = getBrewLogHtml(null, 'empty');

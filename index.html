@@ -2511,24 +2511,15 @@ async function clearInventory() {
     }
 }          
 
-            // VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE NIEUWE VERSIE
 function buildPrompt() {
     try {
-        // Functie om waarden uit de DOM te halen. Deze blijft ongewijzigd.
-        function getValue(id, defaultValue = '') {
-            const el = document.getElementById(id);
-            if (!el) return defaultValue;
-            if (el.type === 'checkbox') return el.checked;
-            if (el.tagName === 'SELECT') return el.selectedOptions[0].text;
-            return el.value || defaultValue;
-        }
-
         const customDescription = document.getElementById('customDescription').value;
         const batchSize = document.getElementById('batchSize').value || '5';
         const useInventory = document.getElementById('useInventory').checked;
         
         let prompt;
-        const personaAndConstraints = `You are an expert mead maker named "MEA(N)DERY". All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers like 'Brouwland'.`;
+        const personaAndConstraints = `You are an expert mead maker named "MEA(N)DERY". All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers like 'Brouland'.`;
+        
         let equipmentPrompt = '';
         const selectedProfileId = document.getElementById('equipmentProfileSelect').value;
         if (selectedProfileId) {
@@ -2627,7 +2618,6 @@ In the 'Instructions', you MUST state the final calculated starting water volume
             }
         }
 
-        // --- START VAN DE NIEUWE, DEFINITIEVE INSTRUCTIES ---
         prompt += `
 
         For the final output, generate a full recipe suitable for an experienced homebrewer, following all rules below.
@@ -2641,8 +2631,9 @@ In the 'Instructions', you MUST state the final calculated starting water volume
         2. Then, check the user's inventory for available yeasts: [${inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available'}].
         3. In "## Brewer's Notes", explain your ideal yeast choice.
         4. In the main "## Ingredients" table and "## Instructions", you MUST substitute the ideal yeast with the BEST AVAILABLE option from the user's inventory.
-        5. **FALLBACK:** If no suitable substitute is found in the inventory, you MUST state this clearly in the "Brewer's Notes". Explain WHY the inventory yeasts are not a good match and then recommend a common dry yeast available at European suppliers like 'Brouland'.
-        6. If you make a substitution, you MUST also explain in "## Brewer's Notes" why it's a good alternative and specify any required changes to the process.
+        5. **FALLBACK:** If no suitable substitute is found, state this in "## Brewer's Notes", explain WHY the inventory yeasts are not a good match, and recommend a common dry yeast from a supplier like 'Brouwland'.
+        6. If you make a substitution, explain in "## Brewer's Notes" why it's a good alternative and specify any required process changes.
+
 
         **CRUCIAL NUTRIENT LOGIC (TWO-STEP PROCESS):**
         1. First, determine the ideal nutrient protocol and calculate the required YAN in ppm. Choose the scientifically best nutrient (e.g., Fermaid O).
@@ -2676,7 +2667,6 @@ In the 'Instructions', you MUST state the final calculated starting water volume
 }
             
             // --- Firestore & History Functions ---
-            // VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE
 window.saveBrewToHistory = async function() {
     if (!userId || !currentRecipeMarkdown) {
         showToast("Cannot save. No user identified or no recipe generated.", "error");
@@ -4331,7 +4321,6 @@ Peak Date: 2027-09-24`;
                 villers: { ca: 106.1, mg: 11.1, na: 8, so4: 48.8, cl: 19.9, hco3: 340.4 }
             };
 
-            // VERVANG DE OUDE handleWaterSourceChange
             function handleWaterSourceChange() {
                 const select = document.getElementById('waterSource');
                 const selectedValue = select.value;
@@ -4681,7 +4670,6 @@ function renderActiveBrewTimeline() {
     generateShoppingList(brewId, false);
 }
 
-            // VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE
 function renderBrewDay(brewId) {
     if (brewId === 'none') {
         document.getElementById('brew-day-content').innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">Brew Day 1 - Primary Fermentation</h2><p class="text-center text-app-secondary/80">Select a new recipe from your History to start a new brew day.</p>`;
@@ -4791,7 +4779,6 @@ function renderBrewDay2() {
     `;
 }
 
-// VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE
 window.showBrewDay2Detail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
@@ -4913,7 +4900,6 @@ window.showBrewDay2Detail = function(brewId) {
     });
 }
 
-// VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE
 function parseStepsForBrewDay(markdown) {
     const steps = { primary: [], secondary: [] };
     const tempDiv = document.createElement('div');
@@ -5209,7 +5195,6 @@ window.finalizeBrewDay1 = function() {
             }
    
             // --- Analysis Functions ---
-            // VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE
 window.generateShoppingList = function(brewId, navigate = false) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;

@@ -596,7 +596,9 @@
                                     <option value="Linden/Linde">Linden Honey (Lindehoning)</option>
                                     <option value="Orange Blossom">Orange Blossom</option>
                                     <option value="Wildflower" selected>Wildflower (Default)</option>
-                                </select>
+                                    <option value="other">Other...</option>
+                                 </select>
+                                 <input type="text" id="honeyVarietyOther" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary mt-2 hidden" placeholder="Specify other honey">
                             </div>
                             <div id="fruit-section" class="hidden space-y-2">
                                 <label class="block text-sm font-bold">Choose Fruits (for Melomel)</label>
@@ -614,6 +616,10 @@
                                     <div class="p-2 rounded hover:bg-app-primary"><input type="checkbox" id="fruit_raspberries" class="mr-2"><label for="fruit_raspberries">Raspberries</label></div>
                                     <div class="p-2 rounded hover:bg-app-primary"><input type="checkbox" id="fruit_redcurrants" class="mr-2"><label for="fruit_redcurrants">Redcurrants</label></div>
                                 </div>
+                                <div class="pt-2">
+                                    <label for="fruitOther" class="block text-xs font-bold text-app-secondary">Other Fruits (comma-separated)</label>
+                                    <input type="text" id="fruitOther" placeholder="e.g., Mango, Passion Fruit" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                                </div> 
                             </div>
                              <div id="spice-section" class="hidden space-y-2">
                                 <label class="block text-sm font-bold">Choose Spices (for Metheglin)</label>
@@ -624,6 +630,10 @@
                                     <div class="p-2 rounded hover:bg-app-primary"><input type="checkbox" id="spice_nutmeg" class="mr-2"><label for="spice_nutmeg">Nutmeg</label></div>
                                     <div class="p-2 rounded hover:bg-app-primary"><input type="checkbox" id="spice_orange" class="mr-2"><label for="spice_orange">Orange Peel</label></div>
                                     <div class="p-2 rounded hover:bg-app-primary"><input type="checkbox" id="spice_vanilla" class="mr-2"><label for="spice_vanilla">Vanilla</label></div>
+                                </div>
+                                <div class="pt-2">
+                                    <label for="spiceOther" class="block text-xs font-bold text-app-secondary">Other Spices (comma-separated)</label>
+                                    <input type="text" id="spiceOther" placeholder="e.g., Star Anise, Grains of Paradise" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
                                 </div>
                             </div>
                             <div id="braggot-section" class="hidden">
@@ -1333,7 +1343,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.8.1 - 10/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.8.2 - 10/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2037,6 +2047,9 @@ function refreshCurrentChecklistView() {
             switchSubView(e.target.id.replace('-sub-tab', ''), parentId);
         });
     });
+    document.getElementById('honeyVariety').addEventListener('change', (e) => {
+    document.getElementById('honeyVarietyOther').classList.toggle('hidden', e.target.value !== 'other');
+    });
 
     setupBrewDayEventListeners();
     styleSelect.addEventListener('change', handleStyleChange);
@@ -2494,153 +2507,169 @@ async function clearInventory() {
     }
 }          
 
-            function buildPrompt() {
-                try {
-                    function getValue(id, defaultValue = '') { /* ... (deze innerlijke functie blijft hetzelfde) ... */ }
+            // VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE NIEUWE VERSIE
+function buildPrompt() {
+    try {
+        // Functie om waarden uit de DOM te halen. Deze blijft ongewijzigd.
+        function getValue(id, defaultValue = '') {
+            const el = document.getElementById(id);
+            if (!el) return defaultValue;
+            if (el.type === 'checkbox') return el.checked;
+            if (el.tagName === 'SELECT') return el.selectedOptions[0].text;
+            return el.value || defaultValue;
+        }
 
-                    const customDescription = document.getElementById('customDescription').value;
-                    const batchSize = document.getElementById('batchSize').value || '5';
-                    const useInventory = document.getElementById('useInventory').checked;
+        const customDescription = document.getElementById('customDescription').value;
+        const batchSize = document.getElementById('batchSize').value || '5';
+        const useInventory = document.getElementById('useInventory').checked;
         
-                    let prompt;
-                    const personaAndConstraints = `You are an expert mead maker named "MEA(N)DERY". All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers.`;
-                    let equipmentPrompt = '';
-                    const selectedProfileId = document.getElementById('equipmentProfileSelect').value;
-                    if (selectedProfileId) {
-                        const profile = equipmentProfiles.find(p => p.id === selectedProfileId);
-                        if (profile) {
-                            equipmentPrompt = `
-            CRUCIAL CONSTRAINT: The user is brewing with the "${profile.name}" equipment profile. You MUST adjust the recipe to account for the following losses to ensure the FINAL batch size in the fermenter is exactly ${batchSize} liters.
-            - Trub/Yeast Loss: ${profile.trubLossLiters} L (This is loss in the fermenter, so you must add this volume to the starting volume).
-            - Boil-Off Rate: ${profile.boilOffRateLitersPerHour} L/hour (This only applies if the recipe requires boiling, like for a braggot. You must calculate the total boil volume loss and add it to the starting water volume).
-            In the 'Instructions', explicitly state the calculated starting water volume. For example: "Start with 12.5 liters of water to account for boil-off and trub loss."
-                            `;
-                        }
-                    }
+        let prompt;
+        const personaAndConstraints = `You are an expert mead maker named "MEA(N)DERY". All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers like 'Brouwland'.`;
+        let equipmentPrompt = '';
+        const selectedProfileId = document.getElementById('equipmentProfileSelect').value;
+        if (selectedProfileId) {
+            const profile = equipmentProfiles.find(p => p.id === selectedProfileId);
+            if (profile) {
+                equipmentPrompt = `
+CRUCIAL EQUIPMENT CONSTRAINT: The user is brewing with the "${profile.name}" equipment profile.
+- Fermenter Total Capacity: ${profile.capacityLiters} L
+- Trub/Yeast Loss: ${profile.trubLossLiters} L
+- Boil-Off Rate: ${profile.boilOffRateLitersPerHour} L/hour (if applicable)
 
-                    if (customDescription.trim() !== '') {
-                        const currency = userSettings.currencySymbol || '€';
-                        const inventoryString = inventory.map(item => {
-                            let costPerUnit = 0;
-                            let baseUnit = item.unit;
-                            if (item.qty > 0 && item.price > 0) { costPerUnit = item.price / item.qty; }
-                            if (item.unit === 'kg') { costPerUnit /= 1000; baseUnit = 'g'; } 
-                            else if (item.unit === 'L') { costPerUnit /= 1000; baseUnit = 'ml'; }
-                            return `${item.name}: ${item.qty} ${item.unit} available`;
-                    }).join('; ');
+Your instructions MUST be adapted to this equipment.
+1. First, calculate the required starting volume (Target End Volume + Losses).
+2. CRUCIAL VOLUME CHECK: You MUST then verify if this starting volume fits into the fermenter's total capacity, leaving at least 15% headspace.
+3. If the starting volume is too large, you MUST automatically scale down the recipe's final batch size to fit.
+4. You MUST state any adjustments in the 'Brewer's Notes'. For example: "NOTE: To fit this recipe into your ${profile.capacityLiters}L fermenter while accounting for ${profile.trubLossLiters}L trub loss and headspace, the final batch size has been adjusted down to [new batch size]L."
+In the 'Instructions', you MUST state the final calculated starting water volume.
+                `;
+            }
+        }
 
-                    prompt = `${personaAndConstraints} ${equipmentPrompt} A user wants to create a unique mead from a text description.
+        if (customDescription.trim() !== '') {
+            const inventoryString = inventory.map(item => `${item.name}: ${item.qty} ${item.unit}`).join('; ');
+            prompt = `${personaAndConstraints} ${equipmentPrompt} A user wants to create a unique mead from a text description.
 
-                    Their detailed description is: "${customDescription}"
+                Their detailed description is: "${customDescription}"
 
-                    Here is the user's current inventory: [${inventoryString}].
+                Here is the user's current inventory: [${inventoryString}].
 
-                    Your primary goal is to create a recipe for a ${batchSize}-liter batch that perfectly matches the user's text description. However, you MUST prioritize using the ingredients available in their inventory if they are suitable for the recipe. If a key ingredient from the description is not in stock, you are allowed to suggest they purchase it. All other form fields below the description should be ignored.`;
+                Your primary goal is to create a recipe for a ${batchSize}-liter batch that perfectly matches the user's text description. However, you MUST prioritize using the ingredients available in their inventory if they are suitable for the recipe. If a key ingredient from the description is not in stock, you are allowed to suggest they purchase it. All other form fields below the description should be ignored.`;
 
-                    } else if (useInventory) {
-                        const currency = userSettings.currencySymbol || '€';
-                        const useBudget = getValue('useBudget', false);
-                        const maxBudget = getValue('maxBudget');
+        } else if (useInventory) {
+            const currency = userSettings.currencySymbol || '€';
+            const useBudget = document.getElementById('useBudget').checked;
+            const maxBudget = document.getElementById('maxBudget').value;
+            const richInventoryString = inventory.map(item => {
+                let costPerUnit = 0;
+                let baseUnit = item.unit;
+                if (item.qty > 0 && item.price > 0) { costPerUnit = item.price / item.qty; }
+                if (item.unit === 'kg') { costPerUnit /= 1000; baseUnit = 'g'; } 
+                else if (item.unit === 'L') { costPerUnit /= 1000; baseUnit = 'ml'; }
+                return `${item.name}: ${item.qty} ${item.unit} available (Cost: ${costPerUnit.toFixed(2)} ${currency}/${baseUnit})`;
+            }).join('; ');
 
-                        // Zoek naar water in de inventaris
-                        const waterInInventory = inventory.filter(item => item.category === 'Water');
-                        let waterPromptInstruction = '';
-                        if (waterInInventory.length > 0) {
-                            const waterNames = waterInInventory.map(item => `${item.name} (${item.qty} ${item.unit})`).join(', ');
-                            waterPromptInstruction = `\n\nWATER CONSTRAINT: The user has the following bottled water in stock: [${waterNames}]. You MUST use one of these as the base water for the recipe. When you do, you MUST use that exact brand name (e.g., 'Spa Reine') in the '## Ingredients' table instead of the generic term 'Water'.`;
-                        }
-
-                        const inventoryString = inventory.map(item => {
-                            let costPerUnit = 0;
-                            let baseUnit = item.unit;
-                            if (item.qty > 0 && item.price > 0) { costPerUnit = item.price / item.qty; }
-                            if (item.unit === 'kg') { costPerUnit /= 1000; baseUnit = 'g'; } 
-                            else if (item.unit === 'L') { costPerUnit /= 1000; baseUnit = 'ml'; }
-                            return `${item.name}: ${item.qty} ${item.unit} available (Cost: ${costPerUnit.toFixed(2)} ${currency}/${baseUnit})`;
-                        }).join('; ');
-
-                        prompt = `${personaAndConstraints} ${equipmentPrompt} A user wants you to create a recipe using ingredients they already have in stock. Their inventory is: [${inventoryString}]. 
-                        
-                        Use the following parameters as a creative brief:
-                        - Batch Size: ${batchSize} liters
-                        - Target ABV: Approximately ${getValue('abv', '12')}%
-                        - Desired Final Sweetness: ${getValue('sweetness', 'Semi-Sweet')}
-                        - Overall Style Inspiration: ${getValue('style', 'Traditional')}`;
-
-                        // Voeg de water-instructie toe indien van toepassing
-                        prompt += waterPromptInstruction;
-                        
-                        if (useBudget && maxBudget) {
-                            prompt += `\n\nCRUCIAL CONSTRAINT: The total cost of the ingredients for this recipe MUST NOT EXCEED ${maxBudget} ${currency}. You must use the provided ingredient costs to calculate this and stay within budget. In the Brewer's Notes, briefly state the calculated total cost of the recipe.`;
-                        }
-
-                        prompt += `\n\nYour primary goal is to create the best possible recipe that uses the available ingredients. If the inventory is insufficient to make a good recipe matching the style, state that clearly in the Brewer's Notes and list the essential ingredients the user needs to buy.`;
-                    } else {
-                        const style = document.getElementById('style').selectedOptions[0].text;
-                        prompt = `${personaAndConstraints} ${equipmentPrompt} Create a detailed, world-class mead recipe from scratch based on the following structured options:
-                        - Batch Size: ${batchSize} liters
-                        - Target ABV: Approximately ${document.getElementById('abv').value || '12'}%
-                        - Desired Final Sweetness: ${document.getElementById('sweetness').selectedOptions[0].text}
-                        - Overall Style Inspiration: ${style}
-                        - Primary Honey: ${document.getElementById('honeyVariety').selectedOptions[0].text} honey`;
+            prompt = `${personaAndConstraints} ${equipmentPrompt} A user wants you to create a recipe using ingredients they already have in stock. Their inventory is: [${richInventoryString}]. 
             
-                        // Specifieke instructie voor Bochet
-                        if (style.toLowerCase().includes('bochet')) {
-                            prompt += `\n- Bochet Method: You MUST recommend the best method for caramelizing the honey (e.g., direct heat, oven, slow cooker) and provide detailed, safe instructions for that method.`;
-                        }
-                        if (style.includes('Melomel')) {
-                            const fruits = Array.from(document.querySelectorAll('#fruit-section input:checked')).map(el => el.labels[0].innerText);
-                            prompt += `\n- Featured Fruits: ${fruits.length > 0 ? fruits.join(', ') : 'Please suggest a classic fruit combination.'}`;
-                        } else if (style.includes('Metheglin')) {
-                            const spices = Array.from(document.querySelectorAll('#spice-section input:checked')).map(el => el.labels[0].innerText);
-                            prompt += `\n- Featured Spices: ${spices.length > 0 ? spices.join(', ') : 'Please suggest a classic spice blend.'}`;
-                        } else if (style.includes('Braggot')) {
-                            prompt += `\n- Braggot Base: Based on a ${getValue('braggotStyle', 'Belgian Blond')} style. Provide an extract-based recipe.`;
-                        }
-                        if (getValue('addOak', false)) {
-                            prompt += '\n- Oak Aging: The recipe must include a step for aging with oak.';
-                        }
-                        const specialIngredients = document.getElementById('specialIngredients').value;
-                        if (specialIngredients && specialIngredients.trim() !== '') {
-                            prompt += `\n- Special Ingredients: The recipe must creatively incorporate: ${specialIngredients}.`;
-                        }
-                    }
+            Use the following parameters as a creative brief:
+            - Batch Size: ${batchSize} liters
+            - Target ABV: Approximately ${document.getElementById('abv').value || '12'}%
+            - Desired Final Sweetness: ${document.getElementById('sweetness').selectedOptions[0].text}
+            - Overall Style Inspiration: ${document.getElementById('style').selectedOptions[0].text}`;
+            
+            if (useBudget && maxBudget) {
+                prompt += `\n\nCRUCIAL CONSTRAINT: The total cost of the ingredients for this recipe MUST NOT EXCEED ${maxBudget} ${currency}. You must use the provided ingredient costs to calculate this and stay within budget. In the Brewer's Notes, briefly state the calculated total cost of the recipe.`;
+            }
 
-                    prompt += `
+            prompt += `\n\nYour primary goal is to create the best possible recipe that uses the available ingredients. If the inventory is insufficient to make a good recipe matching the style, state that clearly in the Brewer's Notes and list the essential ingredients the user needs to buy.`;
+
+        } else {
+            const style = document.getElementById('style').selectedOptions[0].text;
+            let honeyValue = document.getElementById('honeyVariety').options[document.getElementById('honeyVariety').selectedIndex].text;
+            const honeySelectValue = document.getElementById('honeyVariety').value;
+            if (honeySelectValue === 'other') {
+                const otherHoney = document.getElementById('honeyVarietyOther').value;
+                if(otherHoney) honeyValue = otherHoney;
+            }
+            prompt = `${personaAndConstraints} ${equipmentPrompt} Create a detailed, world-class mead recipe from scratch based on the following structured options:
+            - Batch Size: ${batchSize} liters
+            - Target ABV: Approximately ${document.getElementById('abv').value || '12'}%
+            - Desired Final Sweetness: ${document.getElementById('sweetness').selectedOptions[0].text}
+            - Overall Style Inspiration: ${style}
+            - Primary Honey: ${honeyValue}`;
+
+            if (style.toLowerCase().includes('bochet')) {
+                prompt += `\n- Bochet Method: You MUST recommend the best method for caramelizing the honey (e.g., direct heat, oven, slow cooker) and provide detailed, safe instructions for that method.`;
+            }
+            if (style.includes('Melomel')) {
+                const fruits = Array.from(document.querySelectorAll('#fruit-section input[type=checkbox]:checked')).map(el => el.labels[0].innerText);
+                const otherFruits = document.getElementById('fruitOther').value.split(',').map(f => f.trim()).filter(f => f);
+                const allFruits = [...fruits, ...otherFruits];
+                prompt += `\n- Featured Fruits: ${allFruits.length > 0 ? allFruits.join(', ') : 'Please suggest a classic fruit combination.'}`;
+            } else if (style.includes('Metheglin')) {
+                const spices = Array.from(document.querySelectorAll('#spice-section input[type=checkbox]:checked')).map(el => el.labels[0].innerText);
+                const otherSpices = document.getElementById('spiceOther').value.split(',').map(s => s.trim()).filter(s => s);
+                const allSpices = [...spices, ...otherSpices];
+                prompt += `\n- Featured Spices: ${allSpices.length > 0 ? allSpices.join(', ') : 'Please suggest a classic spice blend.'}`;
+            } else if (style.includes('Braggot')) {
+                prompt += `\n- Braggot Base: Based on a ${document.getElementById('braggotStyle').value} style. Provide an extract-based recipe.`;
+            }
+            if (document.getElementById('addOak').checked) {
+                prompt += '\n- Oak Aging: The recipe must include a step for aging with oak.';
+            }
+            const specialIngredients = document.getElementById('specialIngredients').value;
+            if (specialIngredients && specialIngredients.trim() !== '') {
+                prompt += `\n- Special Ingredients: The recipe must creatively incorporate: ${specialIngredients}.`;
+            }
+        }
+
+        // --- START VAN DE NIEUWE, DEFINITIEVE INSTRUCTIES ---
+        prompt += `
 
         For the final output, generate a full recipe suitable for an experienced homebrewer, following all rules below.
 
+        **CRUCIAL YEAST LOGIC (TWO-STEP PROCESS):**
+        1. First, determine the scientifically ideal yeast for the recipe.
+        2. Then, check the user's inventory for available yeasts: [${inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available'}].
+        3. In "## Brewer's Notes", explain your ideal yeast choice.
+        4. In the main "## Ingredients" table and "## Instructions", you MUST substitute the ideal yeast with the BEST AVAILABLE option from the user's inventory.
+        5. **FALLBACK:** If no suitable substitute is found in the inventory, you MUST state this clearly in the "Brewer's Notes". Explain WHY the inventory yeasts are not a good match (e.g., "Your available Kveik yeast is not suitable for the desired clean profile...") and then recommend a common dry yeast available at European suppliers like 'Brouland'.
+        6. If you make a substitution, you MUST also explain in "## Brewer's Notes" why it's a good alternative and specify any required changes to the process (e.g., different fermentation temperature).
+
         **CRUCIAL NUTRIENT LOGIC (TWO-STEP PROCESS):**
+        1. First, determine the ideal nutrient protocol and calculate the required YAN in ppm. Choose the scientifically best nutrient (e.g., Fermaid O).
+        2. Then, check the user's inventory for 'Nutrient' category ingredients: [${inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available'}].
+        3. In "## Brewer's Notes", explain your ideal nutrient plan (target YAN, ideal nutrient, and why).
+        4. In the main "## Ingredients" table and "## Instructions", you MUST replace the ideal nutrient with the calculated equivalent amount of the nutrient(s) available in the user's inventory.
+        5. In "## Brewer's Notes", you MUST explain the substitution (e.g., "To achieve the target 220 ppm YAN using your available Vinoferm Nutrisal, you will need 11.5g total.").
+        6. Finally, confirm in the "## Brewer's Notes" if the nutrient addition schedule remains the same.
 
-        **Step 1: Ideal Calculation (Internal Thought Process)**
-        First, you MUST determine the ideal nutrient protocol (e.g., TOSNA, staggered additions) and calculate the required Yeast Assimilable Nitrogen (YAN) in ppm based on the recipe's OG and ingredients. You must choose the scientifically best nutrient for this (e.g., Fermaid O, Fermaid K). This is your internal benchmark.
+        **CRUCIAL INGREDIENT SUBSTITUTION LOGIC:**
+        - You MUST recognize common European brand names and their chemical equivalents (e.g., 'Vinoferm Campden' is Potassium Metabisulfite; 'Vinoferm Zymex' is Pectic Enzyme).
+        - When you make such a substitution, you MUST use the user's inventory item name in the final ingredient list and briefly mention the substitution in the Brewer's Notes.
+        
+        **FERMENTATION PROFILE:**
+        - When providing fermentation instructions, you MUST provide a dynamic temperature profile based on the chosen (substituted) yeast and desired outcome. Do not just give a single temperature.
+        - For example: 'Start fermentation at 18°C for 3 days for a clean profile, then let it rise to 22°C for full attenuation.'
 
-        **Step 2: Practical Substitution (Final Output)**
-        After determining the ideal plan, you MUST check the user's inventory for ingredients in the 'Nutrient' category: [${inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available'}].
-        - In the "## Brewer's Notes" section, you MUST explain your ideal nutrient plan. State the target YAN, the ideal nutrient you chose (e.g., Fermaid O), and why.
-        - Then, in the main "## Ingredients" table and "## Instructions", you MUST replace the ideal nutrient with the calculated equivalent amount of the nutrient(s) available in the user's inventory.
-        - You MUST explain this substitution in the Brewer's Notes, for example: "To achieve the target 220 ppm YAN using your available Vinoferm Nutrisal, you will need 11.5g in total instead of the ideal 9g of Fermaid O."
-        - Finally, confirm in the Brewer's Notes if the nutrient addition schedule (e.g., at 24/48/72 hours) remains the same with the substituted nutrient.
+        **SAFETY & CLARITY:**
+        - You MUST include relevant safety warnings where appropriate (e.g., honey boil-overs for Bochets, ensuring complete fermentation before bottling to prevent bottle bombs).
+        - In the "## Brewer's Notes", you should briefly explain the "why" behind any complex or non-obvious steps.
 
         **CRUCIAL FORMATTING RULES:**
-        - Your entire response MUST be a single, valid Markdown document from start to finish. 
+        - Your entire response MUST be a single, valid Markdown document from start to finish.
         - The main recipe title MUST be the very first line and start with a single hashtag (#). Format: '# Name: Subtitle'.
         - All other headings ('## Description', '## Ingredients', etc.) MUST use double hashtags (##).
         - The 'Ingredients' section MUST be a Markdown table with columns: | Ingredient | Quantity | Unit |.
         - You MUST explicitly state the Target OG, Target FG, and Target ABV in the description.
 
-        **CRUCIAL INGREDIENT SUBSTITUTION LOGIC:**
-        - You MUST recognize common European brand names and their chemical equivalents.
-        - For example: If the user's inventory contains 'Vinoferm Campden', you must understand this IS Potassium Metabisulfite and use it if the recipe requires sulfites.
-        - Another example: If the user has 'Vinoferm Zymex', you must recognize this as Pectic Enzyme.
-        - When you make such a substitution, you MUST use the user's inventory item name (e.g., 'Vinoferm Campden') in the final ingredient list. Briefly mention the substitution in the Brewer's Notes (e.g., "Used Vinoferm Campden as a source of sulfites.").
-
         **WATER RECOMMENDATION:**
-        The final section MUST be '## Recommended Water'. Recommend a suitable, commercially available Belgian bottled water (e.g., Spa Reine, Chaudfontaine). 
+        The final section MUST be '## Recommended Water'. Recommend a suitable, commercially available Belgian bottled water.
         - CRUCIAL: You MUST vary your choice based on the mead style. Do not always default to Spa Reine.
         - For rich, dark styles (Bochets), consider water with more minerals (like Chaudfontaine) to enhance body.
         - For delicate, dry meads, a low-mineral water (like Spa Reine) is appropriate.
         - You must explain your choice in 1-2 sentences.`;
+        // --- EINDE VAN DE NIEUWE, DEFINITIEVE INSTRUCTIES ---
         
         return prompt;
     } catch (error) {

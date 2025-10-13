@@ -1986,19 +1986,21 @@ function refreshCurrentChecklistView() {
 
                 onAuthStateChanged(auth, async (user) => {
     const loginView = document.getElementById('login-view');
-    const mainAppView = document.getElementById('dashboard-main-view');
+    // AANGEPAST: We verwijzen naar de container van de hele app, niet alleen het dashboard.
+    // Dit zorgt ervoor dat de header en andere elementen ook correct getoond/verborgen worden.
+    const appContainer = document.querySelector('.container.mx-auto'); 
 
     if (user && !user.isAnonymous) {
         // Gebruiker is succesvol ingelogd met Google
         userId = user.uid;
 
-        // 1. VERBERG HET LOGIN-SCHERM ONMIDDELLIJK
+        // 1. VERBERG HET LOGIN-SCHERM ONMIDDELLIJK en toon de app
         loginView.classList.add('hidden');
-        mainAppView.classList.remove('hidden');
+        if (appContainer) appContainer.classList.remove('hidden'); // Toon de app
 
         // 2. LAAD VERVOLGENS VEILIG DE DATA
-        // Gebruik een try...catch blok om eventuele fouten tijdens het laden op te vangen
-        // zonder de hele app te laten crashen.
+        // Een try...catch blok vangt fouten op zonder de hele app te laten crashen.
+        // Promise.all() laadt alles tegelijk voor betere prestaties.
         try {
             await Promise.all([
                 loadHistory(),
@@ -2011,14 +2013,14 @@ function refreshCurrentChecklistView() {
             ]);
         } catch (error) {
             console.error("Fout bij het laden van de gebruikersdata:", error);
-            // Optioneel: toon een foutmelding aan de gebruiker
-            showToast("Kon niet alle gegevens laden. Probeer de pagina te vernieuwen.", "error");
+            // Toon een duidelijke foutmelding aan de gebruiker
+            showToast("Kon niet alle gegevens laden. Probeer de pagina te vernieuwen.", "error", 6000);
         }
 
     } else {
         // Geen gebruiker of anonieme gebruiker -> toon login-scherm
         loginView.classList.remove('hidden');
-        mainAppView.classList.add('hidden');
+        if (appContainer) appContainer.classList.add('hidden'); // Verberg de app
 
         // Log eventuele anonieme of onbekende gebruikers uit
         if (user && user.isAnonymous) {

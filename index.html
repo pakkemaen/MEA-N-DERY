@@ -1984,6 +1984,8 @@ function refreshCurrentChecklistView() {
                 db = getFirestore(app);
                 auth = getAuth(app);
 
+                document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
+
                 onAuthStateChanged(auth, async (user) => {
     const loginView = document.getElementById('login-view');
     // AANGEPAST: We verwijzen naar de container van de hele app, niet alleen het dashboard.
@@ -2036,7 +2038,6 @@ function refreshCurrentChecklistView() {
 
     // --- Event Listeners ---
     document.getElementById('history-search-input').addEventListener('input', renderHistoryList);
-    document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
     document.getElementById('packaging-add-form').addEventListener('submit', addPackagingStock);
     document.getElementById('danger-cancel-btn').addEventListener('click', hideDangerModal);
     document.getElementById('danger-confirm-btn').addEventListener('click', executeDangerAction);

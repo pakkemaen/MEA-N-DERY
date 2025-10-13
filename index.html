@@ -2537,7 +2537,6 @@ async function generateRecipe() {
     }
 }          
 
-// --- VERVANG JE VOLLEDIGE buildPrompt FUNCTIE MET DEZE ---
 function buildPrompt() {
     try {
         const batchSize = document.getElementById('batchSize').value || '5';
@@ -2732,7 +2731,6 @@ function renderHistoryList() {
     `).join('');
 }
 
-            // --- VERVANG JE VOLLEDIGE showBrewDetail FUNCTIE MET DEZE ---
 window.showBrewDetail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;

@@ -2468,77 +2468,68 @@ async function clearInventory() {
                 return data;
             }
 
-// VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE NIEUWE, ROBUUSTE VERSIE
+// --- VERVANG JE VOLLEDIGE generateRecipe FUNCTIE MET DEZE ---
 async function generateRecipe() {
     recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
     generateBtn.disabled = true;
     generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
     try {
-        let finalMarkdown;
-        const useInventory = document.getElementById('useInventory').checked;
-        const customDescription = document.getElementById('customDescription').value.trim() !== '';
-
-        // De twee-stappen methode wordt enkel gebruikt voor de complexe "from inventory" taak
-        if (useInventory && !customDescription) {
-            
-            // --- STAP 1: VRAAG ENKEL DE INGREDIËNTEN OP ---
-            recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Step 1/2: Analyzing inventory and selecting ingredients...</p>';
-            const step1Prompt = buildPrompt('select_ingredients');
-            lastGeneratedPrompt = `// --- STEP 1 PROMPT ---\n${step1Prompt}`; // Sla op voor debuggen
-            
-            const ingredientsJsonString = await performApiCall(step1Prompt);
-            
-            // --- STAP 2: BOUW HET RECEPT ROND DE VASTE INGRIËNTEN ---
-            recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Step 2/2: Writing the full recipe...</p>';
-            const step2Prompt = buildPrompt('write_recipe', ingredientsJsonString);
-            lastGeneratedPrompt += `\n\n// --- STEP 2 PROMPT ---\n${step2Prompt}`; // Voeg toe voor debuggen
-
-            finalMarkdown = await performApiCall(step2Prompt);
-
-        } else {
-            // Voor alle andere, simpelere taken, gebruiken we de normale één-stap methode
-            const singlePrompt = buildPrompt('single_step');
-            lastGeneratedPrompt = singlePrompt;
-            finalMarkdown = await performApiCall(singlePrompt);
-        }
+        const prompt = buildPrompt();
+        lastGeneratedPrompt = prompt;
+        currentRecipeMarkdown = await performApiCall(prompt);
         
-        // --- VERWERK HET FINALE RESULTAAT (INCLUSIEF JSON-NAAR-TABEL CONVERSIE) ---
-        currentRecipeMarkdown = finalMarkdown; // Sla de ruwe markdown op
-        let processedMarkdown = finalMarkdown;
+        // --- START NIEUWE LOGICA: JSON VERWERKEN ---
+        let finalMarkdown = currentRecipeMarkdown;
         const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
-        const jsonMatch = finalMarkdown.match(jsonRegex);
+        const jsonMatch = currentRecipeMarkdown.match(jsonRegex);
 
+        // Als we een JSON-blok vinden...
         if (jsonMatch && jsonMatch[1]) {
             try {
+                // 1. Haal de pure JSON-string eruit en parse het naar een JavaScript object.
                 const ingredientsArray = JSON.parse(jsonMatch[1]);
+                
+                // 2. Bouw een gegarandeerd correcte Markdown-tabel op.
                 let tableMarkdown = '| Ingredient | Quantity | Unit |\n';
                 tableMarkdown += '|---|---|---|\n';
                 ingredientsArray.forEach(item => {
                     tableMarkdown += `| ${item.ingredient} | ${item.quantity} | ${item.unit} |\n`;
                 });
-                processedMarkdown = finalMarkdown.replace(jsonRegex, tableMarkdown);
+                
+                // 3. Vervang het JSON-blok in de originele tekst door onze perfecte Markdown-tabel.
+                finalMarkdown = currentRecipeMarkdown.replace(jsonRegex, tableMarkdown);
             } catch (e) {
                 console.error("Failed to parse ingredients JSON from AI response:", e);
+                // Als de JSON corrupt is, tonen we de ruwe output zodat de gebruiker het kan zien.
+                finalMarkdown = currentRecipeMarkdown; 
             }
         }
+        // --- EINDE NIEUWE LOGICA ---
 
-        const recipeHtml = marked.parse(processedMarkdown);
+        const recipeHtml = marked.parse(finalMarkdown);
+        
         const fullHtml = `
             <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
-                <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">Show AI Prompt</button>
-                <button onclick="window.print()" class="bg-stone-600 text-white py-2 px-4 rounded-lg hover:bg-stone-700 transition-colors btn">Print Recipe</button>
+                <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
+                    Show AI Prompt
+                </button>
+                <button onclick="window.print()" class="bg-stone-600 text-white py-2 px-4 rounded-lg hover:bg-stone-700 transition-colors btn">
+                    Print Recipe
+                </button>
             </div>
             <div class="recipe-content">${recipeHtml}</div>
             <div class="mt-6 no-print">
-                <button id="saveBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-800 transition-colors btn">Save to Brew History</button>
+                <button id="saveBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-800 transition-colors btn">
+                    Save to Brew History
+                </button>
             </div>
         `;
         recipeOutput.innerHTML = fullHtml;
         document.getElementById('saveBtn').addEventListener('click', saveBrewToHistory);
 
     } catch (error) {
-        console.error("Error during recipe generation:", error);
+        console.error("Error calling Gemini API:", error);
         recipeOutput.innerHTML = `<p class="text-center text-red-600 font-bold">Sorry, the Alchemist is busy. Please try again.</p><p class="text-center text-sm text-app-secondary/80">${error.message}</p>`;
     } finally {
         generateBtn.disabled = false;
@@ -2546,63 +2537,13 @@ async function generateRecipe() {
     }
 }          
 
-// VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE DEFINITIEVE, CORRECTE VERSIE
-function buildPrompt(step = 'single_step', ingredientsJson = null) {
+function buildPrompt() {
     try {
         const batchSize = document.getElementById('batchSize').value || '5';
-        const inventoryString = inventory.map(item => `${item.name}: ${item.qty} ${item.unit}`).join('; ');
-        
-        // --- PROMPT VOOR STAP 1: KIES ENKEL DE INGREDIËNTEN ---
-        if (step === 'select_ingredients') {
-            const richInventoryString = inventory.map(item => `${item.name}: ${item.qty} ${item.unit}`).join('; ');
-            return `You are a creative mead recipe designer. Your task is to select the best ingredients from a user's inventory to create a recipe.
-User inventory: [${richInventoryString}].
-The user wants a recipe with these guidelines:
-- Target ABV: Approximately ${document.getElementById('abv').value || '12'}%
-- Final Sweetness: ${document.getElementById('sweetness').selectedOptions[0].text}
-- Style Inspiration: ${document.getElementById('style').selectedOptions[0].text}
-
-Your ONLY output must be a valid JSON code block containing an array of objects. Each object must have three keys: "ingredient" (string), "quantity" (number), and "unit" (string). Do not add any other text, explanation, or markdown.
-\`\`\`json
-[
-  {"ingredient": "...", "quantity": ..., "unit": "..."},
-  {"ingredient": "...", "quantity": ..., "unit": "..."}
-]
-\`\`\``;
-        }
-
-        // --- PROMPT VOOR STAP 2: SCHRIJF HET RECEPT ROND DE GEKOZEN INGRIËNTEN ---
-        if (step === 'write_recipe') {
-            const yeastInInventory = inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available';
-            const nutrientsInInventory = inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available';
-            
-            return `You are an expert mead maker named "MEA(N)DERY". A list of ingredients has been pre-selected for you. Your task is to write a complete, world-class mead recipe using ONLY these ingredients.
-
-The pre-selected ingredients are:
-${ingredientsJson}
-
-Your entire response MUST be a single, valid Markdown document and MUST be structured with the following headings in this exact order:
-# [Creative Recipe Name]: [Subtitle]
-## Description
-## Ingredients
-## Instructions
-## Brewer's Notes
-## Recommended Water
-
-**CRUCIAL FORMATTING & LOGIC RULES:**
-- **INGREDIENTS:** The "## Ingredients" section MUST contain ONLY the pre-selected ingredients in a valid JSON code block. Do NOT add, remove, or change any ingredients from the list provided above.
-- **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST be structured with two specific subheadings: "### Primary Fermentation" and "### Secondary & Aging".
-- **TIMED STEPS:** If a step has a duration, you MUST add a tag in the format \`[d:HH:MM:SS]\` at the end of the step's line.
-- **YEAST/NUTRIENT NOTES:** In the "## Brewer's Notes", explain your choices for yeast and nutrient additions based on the provided ingredients. For staggered nutrient additions (SNA), you MUST create a separate, numbered list item for EACH individual addition in the instructions, with the appropriate timer tag.
-- **WATER CHOICE:** In "## Recommended Water", recommend a specific, commercially available Belgian bottled water (e.g., Spa Reine, Chaudfontaine) and explain your choice.
-`;
-        }
-
-        // --- NORMALE PROMPT VOOR ALLE ANDERE GEVALLEN (FROM SCRATCH / CUSTOM DESCRIPTION) ---
         const yeastInInventory = inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available';
         const nutrientsInInventory = inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available';
         
-        let masterPrompt = `You are an expert mead maker named "MEA(N)DERY". Your entire response MUST be a single, valid Markdown document. All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers like 'Brouland'.
+        let masterPrompt = `You are an expert mead maker named "MEA(N)DERY". Your entire response MUST be a single, valid Markdown document. All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers like 'Brouwland'.
 
 Your response MUST be structured with the following headings in this exact order:
 # [Recipe Name]: [Subtitle]
@@ -2621,7 +2562,7 @@ Your response MUST be structured with the following headings in this exact order
     {"ingredient": "Lalvin D-47 Yeast", "quantity": 5, "unit": "g"}
   ]
   \`\`\`
-- **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST be structured with two specific subheadings: "### Primary Fermentation" and "### Secondary & Aging".
+- **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST be structured with two specific subheadings: "### Primary Fermentation" and "### Secondary & Aging". All steps must be listed under one of these.
 - **TIMED STEPS:** If a step has a duration, you MUST add a tag in the format \`[d:HH:MM:SS]\` at the end of the step's line. Example: \`1. Boil for 30 minutes. [d:00:30:00]\`.
 
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
@@ -2639,8 +2580,9 @@ Your response MUST be structured with the following headings in this exact order
 Now, generate a world-class mead recipe for a ${batchSize}-liter batch based on the following user request:
 ---
 `;
-        let creativeBrief = '';
-        
+        let creativeBrief = ''; 
+        const inventoryString = inventory.map(item => `${item.name}: ${item.qty} ${item.unit}`).join('; ');
+
         const selectedProfileId = document.getElementById('equipmentProfileSelect').value;
         if (selectedProfileId) {
             const profile = equipmentProfiles.find(p => p.id === selectedProfileId);
@@ -2652,10 +2594,24 @@ The recipe must be adapted for the "${profile.name}" equipment profile with a to
         }
         
         const customDescription = document.getElementById('customDescription').value;
-        
+        const useInventory = document.getElementById('useInventory').checked;
+
         if (customDescription.trim() !== '') {
             creativeBrief += `\nThe user's request is a free-text description: "${customDescription}". Prioritize using ingredients from their inventory if suitable: [${inventoryString}].`;
-        } else { // Dit is nu de logica voor de gestructureerde 'from scratch' opties
+        } else if (useInventory) {
+             const currency = userSettings.currencySymbol || '€';
+            const useBudget = document.getElementById('useBudget').checked;
+            const maxBudget = document.getElementById('maxBudget').value;
+            const richInventoryString = inventory.map(item => {
+                let costPerUnit = 0; let baseUnit = item.unit; if (item.qty > 0 && item.price > 0) { costPerUnit = item.price / item.qty; } if (item.unit === 'kg') { costPerUnit /= 1000; baseUnit = 'g'; } else if (item.unit === 'L') { costPerUnit /= 1000; baseUnit = 'ml'; }
+                return `${item.name}: ${item.qty} ${item.unit} available (Cost: ${costPerUnit.toFixed(2)} ${currency}/${baseUnit})`;
+            }).join('; ');
+            creativeBrief += `\nThe user wants a recipe created from their inventory: [${richInventoryString}]. Use these parameters as guidelines:\n- Target ABV: Approximately ${document.getElementById('abv').value || '12'}%\n- Final Sweetness: ${document.getElementById('sweetness').selectedOptions[0].text}\n- Style Inspiration: ${document.getElementById('style').selectedOptions[0].text}`;
+            if (useBudget && maxBudget) {
+                creativeBrief += `\n\nCRUCIAL CONSTRAINT: The total cost of the ingredients for this recipe MUST NOT EXCEED ${maxBudget} ${currency}. You must use the provided ingredient costs to calculate this and stay within budget. In the Brewer's Notes, briefly state the calculated total cost of the recipe.`;
+            }
+
+        } else {
             const style = document.getElementById('style').selectedOptions[0].text;
             let honeyValue = document.getElementById('honeyVariety').options[document.getElementById('honeyVariety').selectedIndex].text;
             const honeySelectValue = document.getElementById('honeyVariety').value;
@@ -2685,9 +2641,7 @@ The recipe must be adapted for the "${profile.name}" equipment profile with a to
                 creativeBrief += `\n- Special Ingredients: The recipe must creatively incorporate: ${specialIngredients}.`;
             }
         }
-        
         return masterPrompt + creativeBrief;
-
     } catch (error) {
         console.error("Error building prompt:", error);
         throw new Error(`Failed to build the prompt. (Details: ${error.message})`);

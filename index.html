@@ -2468,7 +2468,6 @@ async function clearInventory() {
                 return data;
             }
 
-// --- VERVANG JE VOLLEDIGE generateRecipe FUNCTIE MET DEZE ---
 async function generateRecipe() {
     recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
     generateBtn.disabled = true;
@@ -2484,24 +2483,20 @@ async function generateRecipe() {
         const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
         const jsonMatch = currentRecipeMarkdown.match(jsonRegex);
 
-        // Als we een JSON-blok vinden...
         if (jsonMatch && jsonMatch[1]) {
             try {
-                // 1. Haal de pure JSON-string eruit en parse het naar een JavaScript object.
                 const ingredientsArray = JSON.parse(jsonMatch[1]);
-                
-                // 2. Bouw een gegarandeerd correcte Markdown-tabel op.
                 let tableMarkdown = '| Ingredient | Quantity | Unit |\n';
                 tableMarkdown += '|---|---|---|\n';
                 ingredientsArray.forEach(item => {
                     tableMarkdown += `| ${item.ingredient} | ${item.quantity} | ${item.unit} |\n`;
                 });
                 
-                // 3. Vervang het JSON-blok in de originele tekst door onze perfecte Markdown-tabel.
+                // Vervang het JSON-blok door de zelfgebouwde Markdown-tabel
                 finalMarkdown = currentRecipeMarkdown.replace(jsonRegex, tableMarkdown);
             } catch (e) {
                 console.error("Failed to parse ingredients JSON from AI response:", e);
-                // Als de JSON corrupt is, tonen we de ruwe output zodat de gebruiker het kan zien.
+                // Als de JSON corrupt is, tonen we de ruwe output zodat de gebruiker het kan zien
                 finalMarkdown = currentRecipeMarkdown; 
             }
         }

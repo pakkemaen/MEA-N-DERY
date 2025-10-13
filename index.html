@@ -2644,7 +2644,7 @@ Your response must be a single, valid Markdown document.
     ]
     \`\`\`
 2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST be structured with two specific subheadings: "### Primary Fermentation" and "### Secondary & Aging". All steps must be listed under one of these.
-3.  **CRUCIAL TIMER RULE:** Only add a timer tag \`[d:HH:MM:SS]\` for steps that require a specific **waiting period**, such as yeast rehydration, staggered nutrient additions, or specific timed boils. **Do NOT add a timer tag for general tasks** like 'mixing for 15 minutes' or 'sanitizing'.`;
+3.  **CRUCIAL TIMER RULE:** You MUST add a timer tag `[d:HH:MM:SS]` for any step that requires a specific waiting period. This is mandatory for yeast rehydration, staggered nutrient additions, and timed boils. **For example, a step like "let the yeast rehydrate for 15 minutes" MUST end with the tag `[d:00:15:00]`. A nutrient addition at 24 hours MUST end with `[d:24:00:00]`.** Do NOT add a timer for general active tasks like 'mixing'.
 
         // Combineer alles in de juiste volgorde
         return basePrompt + creativeBrief + formattingRules;
@@ -5257,9 +5257,7 @@ window.showBrewDay2Detail = function(brewId) {
                 }
             }
 
-// --- VERVANG JE VOLLEDIGE completeStep FUNCTIE MET DEZE ---
-async function completeStep(stepIndex) { // <-- TOEGEVOEGD: async
-    // Stop een eventuele actieve timer en ruim de status op.
+async function completeStep(stepIndex) {
     if (stepTimerInterval) {
         clearInterval(stepTimerInterval);
         stepTimerInterval = null;
@@ -5268,7 +5266,7 @@ async function completeStep(stepIndex) { // <-- TOEGEVOEGD: async
     }
     
     currentBrewDay.checklist[`step-${stepIndex}`] = true;
-    await saveChecklistState(); // <-- AANGEPAST: wacht op het opslaan
+    await saveChecklistState();
 
     const stepDiv = document.getElementById(`step-${stepIndex}`);
     if (stepDiv) {
@@ -5295,8 +5293,10 @@ async function completeStep(stepIndex) { // <-- TOEGEVOEGD: async
         const brew = brews.find(b => b.id === currentBrewDay.brewId);
         const primaryStepCount = (brew.brewDaySteps || []).length;
         
-        if (stepIndex < primaryStepCount) {
-             await markPrimaryAsComplete(currentBrewDay.brewId); // <-- AANGEPAST: wacht op het opslaan
+        // We controleren of de NIEUWE currentStepIndex gelijk is aan (of groter dan)
+        // het totaal aantal primaire stappen. Dit betekent dat alle primaire stappen voltooid zijn.
+        if (currentStepIndex >= primaryStepCount) {
+             await markPrimaryAsComplete(currentBrewDay.brewId);
              const container = document.getElementById('brew-day-steps-container');
              if(container) {
                 container.innerHTML += `

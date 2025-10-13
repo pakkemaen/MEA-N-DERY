@@ -1985,25 +1985,35 @@ function refreshCurrentChecklistView() {
                 auth = getAuth(app);
 
                 onAuthStateChanged(auth, async (user) => {
-            const loginView = document.getElementById('login-view');
-            const mainAppView = document.getElementById('dashboard-main-view');
+    const loginView = document.getElementById('login-view');
+    const mainAppView = document.getElementById('dashboard-main-view');
 
     if (user && !user.isAnonymous) {
         // Gebruiker is succesvol ingelogd met Google
         userId = user.uid;
 
-        // Verberg login-scherm en toon de app
+        // 1. VERBERG HET LOGIN-SCHERM ONMIDDELLIJK
         loginView.classList.add('hidden');
         mainAppView.classList.remove('hidden');
 
-        // Laad de data van de gebruiker
-        loadHistory();
-        loadInventory();
-        loadEquipmentProfiles();
-        loadCellar();
-        loadUserSettings();
-        loadPackagingCosts();
-        loadUserWaterProfiles();
+        // 2. LAAD VERVOLGENS VEILIG DE DATA
+        // Gebruik een try...catch blok om eventuele fouten tijdens het laden op te vangen
+        // zonder de hele app te laten crashen.
+        try {
+            await Promise.all([
+                loadHistory(),
+                loadInventory(),
+                loadEquipmentProfiles(),
+                loadCellar(),
+                loadUserSettings(),
+                loadPackagingCosts(),
+                loadUserWaterProfiles()
+            ]);
+        } catch (error) {
+            console.error("Fout bij het laden van de gebruikersdata:", error);
+            // Optioneel: toon een foutmelding aan de gebruiker
+            showToast("Kon niet alle gegevens laden. Probeer de pagina te vernieuwen.", "error");
+        }
 
     } else {
         // Geen gebruiker of anonieme gebruiker -> toon login-scherm

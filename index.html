@@ -1343,7 +1343,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.8.4 - 13/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.8.5 - 13/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2468,6 +2468,7 @@ async function clearInventory() {
                 return data;
             }
 
+// --- VERVANG JE VOLLEDIGE generateRecipe FUNCTIE MET DEZE ---
 async function generateRecipe() {
     recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
     generateBtn.disabled = true;
@@ -2483,20 +2484,24 @@ async function generateRecipe() {
         const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
         const jsonMatch = currentRecipeMarkdown.match(jsonRegex);
 
+        // Als we een JSON-blok vinden...
         if (jsonMatch && jsonMatch[1]) {
             try {
+                // 1. Haal de pure JSON-string eruit en parse het naar een JavaScript object.
                 const ingredientsArray = JSON.parse(jsonMatch[1]);
+                
+                // 2. Bouw een gegarandeerd correcte Markdown-tabel op.
                 let tableMarkdown = '| Ingredient | Quantity | Unit |\n';
                 tableMarkdown += '|---|---|---|\n';
                 ingredientsArray.forEach(item => {
                     tableMarkdown += `| ${item.ingredient} | ${item.quantity} | ${item.unit} |\n`;
                 });
                 
-                // Vervang het JSON-blok door de zelfgebouwde Markdown-tabel
+                // 3. Vervang het JSON-blok in de originele tekst door onze perfecte Markdown-tabel.
                 finalMarkdown = currentRecipeMarkdown.replace(jsonRegex, tableMarkdown);
             } catch (e) {
                 console.error("Failed to parse ingredients JSON from AI response:", e);
-                // Als de JSON corrupt is, tonen we de ruwe output zodat de gebruiker het kan zien
+                // Als de JSON corrupt is, tonen we de ruwe output zodat de gebruiker het kan zien.
                 finalMarkdown = currentRecipeMarkdown; 
             }
         }
@@ -2558,7 +2563,7 @@ Your response MUST be structured with the following headings in this exact order
   ]
   \`\`\`
 - **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST be structured with two specific subheadings: "### Primary Fermentation" and "### Secondary & Aging". All steps must be listed under one of these.
-- **TIMED STEPS:** If a step has a duration, you MUST add a tag in the format \`[d:HH:MM:SS]\` at the end of the step's line. Example: \`1. Boil for 30 minutes. [d:00:30:00]\`.
+- **CRUCIAL TIMER RULE:** Only add a timer tag `[d:HH:MM:SS]` for steps that require a specific **waiting period**, such as yeast rehydration, staggered nutrient additions, or specific timed boils. **Do NOT add a timer tag for general tasks** like 'mixing for 15 minutes' or 'sanitizing', even if you mention a typical duration for them.
 
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
 1.  **Yeast Logic:** First, determine the ideal yeast for the recipe. Then, check the user's inventory for a substitute: [${yeastInInventory}].
@@ -2593,7 +2598,7 @@ The recipe must be adapted for the "${profile.name}" equipment profile with a to
 
         if (customDescription.trim() !== '') {
             creativeBrief += `\nThe user's request is a free-text description: "${customDescription}". Prioritize using ingredients from their inventory if suitable: [${inventoryString}].`;
-        } else if (useInventory) {
+         } else if (useInventory) {
              const currency = userSettings.currencySymbol || '€';
             const useBudget = document.getElementById('useBudget').checked;
             const maxBudget = document.getElementById('maxBudget').value;
@@ -2601,7 +2606,11 @@ The recipe must be adapted for the "${profile.name}" equipment profile with a to
                 let costPerUnit = 0; let baseUnit = item.unit; if (item.qty > 0 && item.price > 0) { costPerUnit = item.price / item.qty; } if (item.unit === 'kg') { costPerUnit /= 1000; baseUnit = 'g'; } else if (item.unit === 'L') { costPerUnit /= 1000; baseUnit = 'ml'; }
                 return `${item.name}: ${item.qty} ${item.unit} available (Cost: ${costPerUnit.toFixed(2)} ${currency}/${baseUnit})`;
             }).join('; ');
+            
             creativeBrief += `\nThe user wants a recipe created from their inventory: [${richInventoryString}]. Use these parameters as guidelines:\n- Target ABV: Approximately ${document.getElementById('abv').value || '12'}%\n- Final Sweetness: ${document.getElementById('sweetness').selectedOptions[0].text}\n- Style Inspiration: ${document.getElementById('style').selectedOptions[0].text}`;
+            
+            creativeBrief += `\n- CRUCIAL: You MUST select the necessary ingredients from this inventory and present the final chosen list in the required JSON format under the '## Ingredients' section.`;
+
             if (useBudget && maxBudget) {
                 creativeBrief += `\n\nCRUCIAL CONSTRAINT: The total cost of the ingredients for this recipe MUST NOT EXCEED ${maxBudget} ${currency}. You must use the provided ingredient costs to calculate this and stay within budget. In the Brewer's Notes, briefly state the calculated total cost of the recipe.`;
             }
@@ -2722,11 +2731,37 @@ function renderHistoryList() {
     `).join('');
 }
 
-            window.showBrewDetail = function(brewId) {
+            // --- VERVANG JE VOLLEDIGE showBrewDetail FUNCTIE MET DEZE ---
+window.showBrewDetail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    const recipeHtml = marked.parse(brew.recipeMarkdown);
+    // --- START TOEGEVOEGDE LOGICA ---
+    let finalMarkdown = brew.recipeMarkdown;
+    const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
+    const jsonMatch = brew.recipeMarkdown.match(jsonRegex);
+
+    if (jsonMatch && jsonMatch[1]) {
+        try {
+            const ingredientsArray = JSON.parse(jsonMatch[1]);
+            let tableMarkdown = '| Ingredient | Quantity | Unit |\n';
+            tableMarkdown += '|---|---|---|\n';
+            ingredientsArray.forEach(item => {
+                // Zorg ervoor dat alle velden bestaan om fouten te voorkomen
+                const ing = item.ingredient || 'N/A';
+                const qty = item.quantity || 0;
+                const unit = item.unit || 'N/A';
+                tableMarkdown += `| ${ing} | ${qty} | ${unit} |\n`;
+            });
+            finalMarkdown = brew.recipeMarkdown.replace(jsonRegex, tableMarkdown);
+        } catch (e) {
+            console.error("Failed to parse ingredients JSON from saved recipe:", e);
+            finalMarkdown = brew.recipeMarkdown; 
+        }
+    }
+    // --- EINDE TOEGEVOEGDE LOGICA ---
+
+    const recipeHtml = marked.parse(finalMarkdown); // Gebruik de bewerkte markdown
     const logHtml = getBrewLogHtml(brew.logData, brew.id);
     const currency = userSettings.currencySymbol || '€';
 
@@ -2788,23 +2823,23 @@ function renderHistoryList() {
     `;
     historyListContainer.classList.add('hidden');
     historyDetailContainer.classList.remove('hidden');
-    renderFermentationGraph(brewId);
+    renderFermentationGraph(brew.id);
 
-                if (brew.predictedFlavorProfile) {
-                    const container = document.getElementById(`flavor-wheel-container-${brewId}`);
-                    container.style.display = 'block';
-                    const labels = ['Sweetness', 'Acidity', 'Fruity/Floral', 'Spiciness', 'Earthy/Woody', 'Body'];
-                    const data = [
-                        brew.predictedFlavorProfile.sweetness,
-                        brew.predictedFlavorProfile.acidity,
-                        brew.predictedFlavorProfile.fruity_floral,
-                        brew.predictedFlavorProfile.spiciness,
-                        brew.predictedFlavorProfile.earthy_woody,
-                        brew.predictedFlavorProfile.body_mouthfeel
-                    ];
-                    renderFlavorWheel(brewId, labels, data);
-                }
-            }
+    if (brew.predictedFlavorProfile) {
+        const container = document.getElementById(`flavor-wheel-container-${brewId}`);
+        container.style.display = 'block';
+        const labels = ['Sweetness', 'Acidity', 'Fruity/Floral', 'Spiciness', 'Earthy/Woody', 'Body'];
+        const data = [
+            brew.predictedFlavorProfile.sweetness,
+            brew.predictedFlavorProfile.acidity,
+            brew.predictedFlavorProfile.fruity_floral,
+            brew.predictedFlavorProfile.spiciness,
+            brew.predictedFlavorProfile.earthy_woody,
+            brew.predictedFlavorProfile.body_mouthfeel
+        ];
+        renderFlavorWheel(brewId, labels, data);
+    }
+}
 
 window.recalculateBatchCost = async function(brewId) {
     if (!userId) return;
@@ -5219,7 +5254,7 @@ window.showBrewDay2Detail = function(brewId) {
                 }
             }
 
-            function completeStep(stepIndex) {
+function completeStep(stepIndex) {
     // Stop een eventuele actieve timer en ruim de status op.
     if (stepTimerInterval) {
         clearInterval(stepTimerInterval);
@@ -5227,12 +5262,56 @@ window.showBrewDay2Detail = function(brewId) {
         remainingTime = 0;
         localStorage.removeItem('activeBrewDayTimer');
     }
+    
     // Sla de voltooide status van de stap op
     currentBrewDay.checklist[`step-${stepIndex}`] = true;
     saveChecklistState();
 
-    // Roep een nieuwe functie aan die de huidige view ververst
-    refreshCurrentChecklistView();
+    const stepDiv = document.getElementById(`step-${stepIndex}`);
+    if (stepDiv) {
+        stepDiv.classList.remove('active');
+        stepDiv.classList.add('completed');
+        
+        const controlsDiv = document.getElementById(`controls-${stepIndex}`);
+        if (controlsDiv) {
+            controlsDiv.innerHTML = `<span class="text-sm font-bold text-green-600">✓ Completed</span>`;
+        }
+    }
+
+    // Ga naar de volgende stap (indien van toepassing)
+    const allStepsContainer = stepDiv.closest('#brew-day-steps-container');
+    const allStepItems = allStepsContainer.querySelectorAll('.step-item');
+    
+    currentStepIndex = stepIndex + 1;
+    
+    if (currentStepIndex < allStepItems.length) {
+        const nextStepDiv = document.getElementById(`step-${currentStepIndex}`);
+        if (nextStepDiv) {
+            nextStepDiv.classList.add('active');
+        }
+    } else {
+        // Alle stappen in deze view zijn voltooid
+        const brew = brews.find(b => b.id === currentBrewDay.brewId);
+        const primaryStepCount = (brew.brewDaySteps || []).length;
+        
+        // Controleer of we in de Brew Day 1 view zijn
+        if (stepIndex < primaryStepCount) {
+             markPrimaryAsComplete(currentBrewDay.brewId);
+             const container = document.getElementById('brew-day-steps-container');
+             if(container) {
+                container.innerHTML += `
+                    <div class="text-center p-6 card rounded-lg mt-6">
+                        <h3 class="text-2xl font-header font-bold text-green-600">Phase 1 Complete!</h3>
+                        <p class="my-2">Great! The primary fermentation steps are done.</p>
+                        <p class="text-app-secondary mb-4">The next steps for this batch can now be found on the 'Brew Day 2' tab.</p>
+                        <button onclick="window.finalizeBrewDay1()" class="bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">
+                            Go to Brew Day 2
+                        </button>
+                    </div>
+                `;
+             }
+        }
+    }
 }
 
             function updateUI() {

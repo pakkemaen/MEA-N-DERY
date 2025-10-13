@@ -1279,7 +1279,7 @@
         <label for="apiKeyInput" class="block text-lg font-bold mb-2">Google AI API Key (for Text)</label>
         <input type="password" id="apiKeyInput" placeholder="Enter your Google AI API key" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
         <p class="text-sm text-app-secondary mt-2">
-            Required for recipe creation, analysis, etc. Get one from <a href="httpsaistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:underline">Google AI Studio</a>.
+            Required for recipe creation, analysis, etc. Get one from <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:underline">Google AI Studio</a>.
         </p>
     </div>
     
@@ -2559,7 +2559,7 @@ Your response MUST be structured with the following headings in this exact order
 
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
 1.  **Yeast Logic:** First, determine the ideal yeast. Then, check the user's inventory: [${yeastInInventory}]. If a suitable substitute is found, use it and explain in "Brewer's Notes". Otherwise, recommend a common dry yeast and explain why the inventory yeasts aren't a good match.
-2.  **Nutrient Logic:** First, determine the ideal nutrient and check the user's inventory: [${nutrientsInInventory}]. You MUST use the user's nutrient and explain the substitution. For Staggered Nutrient Additions (SNA), you MUST create a separate, numbered list item for EACH addition (e.g., "7. SNA #1: Add nutrient at 24 hours.", "8. SNA #2: Add nutrient at 48 hours."). You MUST also add the correct timer tag like `[d:24:00:00]` to each of these steps. DO NOT group them under a single step.
+2.  **Nutrient Logic:** First, determine the ideal nutrient and check the user's inventory: [${nutrientsInInventory}]. You MUST use the user's nutrient and explain the substitution. For Staggered Nutrient Additions (SNA), you MUST create a separate, numbered list item for EACH addition (e.g., "7. SNA #1: Add nutrient at 24 hours.", "8. SNA #2: Add nutrient at 48 hours."). You MUST also add the correct timer tag like \`[d:24:00:00]\` to each of these steps. DO NOT group them under a single step.
 3.  **Water Choice:** In "Recommended Water", recommend a specific Belgian bottled water (e.g., Spa Reine, Chaudfontaine) and explain your choice based on the mead style.
 
 Now, generate the recipe based on the following user request:
@@ -2598,7 +2598,6 @@ Now, generate the recipe based on the following user request:
             }
 
         } else {
-            // ... (logica voor gestructureerde opties blijft hetzelfde)
             const style = document.getElementById('style').selectedOptions[0].text;
             let honeyValue = document.getElementById('honeyVariety').options[document.getElementById('honeyVariety').selectedIndex].text;
             const honeySelectValue = document.getElementById('honeyVariety').value;
@@ -2629,7 +2628,6 @@ Now, generate the recipe based on the following user request:
             }
         }
         
-        // --- STAP 3: VOEG DE DEFINITIEVE OPMAAKREGELS AAN HET EINDE TOE ---
         const formattingRules = `
 ---
 **FINAL AND MOST IMPORTANT INSTRUCTIONS - YOUR ENTIRE RESPONSE MUST CONFORM TO THESE RULES:**
@@ -2644,7 +2642,7 @@ Your response must be a single, valid Markdown document.
     ]
     \`\`\`
 2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST be structured with two specific subheadings: "### Primary Fermentation" and "### Secondary & Aging". All steps must be listed under one of these.
-3.  **CRUCIAL TIMER RULE:** You MUST add a timer tag `[d:HH:MM:SS]` for any step that requires a specific waiting period. This is mandatory for yeast rehydration, staggered nutrient additions, and timed boils. **For example, a step like "let the yeast rehydrate for 15 minutes" MUST end with the tag `[d:00:15:00]`. A nutrient addition at 24 hours MUST end with `[d:24:00:00]`.** Do NOT add a timer for general active tasks like 'mixing'.
+3.  **CRUCIAL TIMER RULE:** You MUST add a timer tag \`[d:HH:MM:SS]\` for any step that requires a specific waiting period. This is mandatory for yeast rehydration, staggered nutrient additions, and timed boils. **For example, a step like "let the yeast rehydrate for 15 minutes" MUST end with the tag \`[d:00:15:00]\`. A nutrient addition at 24 hours MUST end with \`[d:24:00:00]\`.** Do NOT add a timer for general active tasks like 'mixing'.`;
 
         // Combineer alles in de juiste volgorde
         return basePrompt + creativeBrief + formattingRules;

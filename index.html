@@ -1343,7 +1343,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.8.3 - 10/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.8.4 - 13/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2468,20 +2468,41 @@ async function clearInventory() {
                 return data;
             }
 
-                async function generateRecipe() {
+async function generateRecipe() {
     recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
     generateBtn.disabled = true;
     generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
     try {
         const prompt = buildPrompt();
-        if (!prompt) { 
-            throw new Error("Could not build the prompt. A required input field might be missing.");
-        }
         lastGeneratedPrompt = prompt;
         currentRecipeMarkdown = await performApiCall(prompt);
         
-        const recipeHtml = marked.parse(currentRecipeMarkdown);
+        // --- START NIEUWE LOGICA: JSON VERWERKEN ---
+        let finalMarkdown = currentRecipeMarkdown;
+        const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
+        const jsonMatch = currentRecipeMarkdown.match(jsonRegex);
+
+        if (jsonMatch && jsonMatch[1]) {
+            try {
+                const ingredientsArray = JSON.parse(jsonMatch[1]);
+                let tableMarkdown = '| Ingredient | Quantity | Unit |\n';
+                tableMarkdown += '|---|---|---|\n';
+                ingredientsArray.forEach(item => {
+                    tableMarkdown += `| ${item.ingredient} | ${item.quantity} | ${item.unit} |\n`;
+                });
+                
+                // Vervang het JSON-blok door de zelfgebouwde Markdown-tabel
+                finalMarkdown = currentRecipeMarkdown.replace(jsonRegex, tableMarkdown);
+            } catch (e) {
+                console.error("Failed to parse ingredients JSON from AI response:", e);
+                // Als de JSON corrupt is, tonen we de ruwe output zodat de gebruiker het kan zien
+                finalMarkdown = currentRecipeMarkdown; 
+            }
+        }
+        // --- EINDE NIEUWE LOGICA ---
+
+        const recipeHtml = marked.parse(finalMarkdown);
         
         const fullHtml = `
             <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
@@ -2511,12 +2532,9 @@ async function clearInventory() {
     }
 }          
 
-
-// VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE
 function buildPrompt() {
     try {
         const batchSize = document.getElementById('batchSize').value || '5';
-        const inventoryString = inventory.map(item => `${item.name}: ${item.qty} ${item.unit}`).join('; ');
         const yeastInInventory = inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available';
         const nutrientsInInventory = inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available';
         
@@ -2531,29 +2549,35 @@ Your response MUST be structured with the following headings in this exact order
 ## Recommended Water
 
 **CRUCIAL FORMATTING RULES:**
-- The "## Instructions" section MUST be structured with two specific subheadings: "### Primary Fermentation" and "### Secondary & Aging". All steps must be listed under one of these.
-- **INGREDIENTS TABLE:** The "## Ingredients" section MUST be a valid Markdown table with columns for Ingredient, Quantity, and Unit. You MUST NOT use a bulleted list (\`*\`) for ingredients.
-  Correct example: \`| Honey | 1.5 | kg |\`
-  Incorrect example: \`* 1.5 kg Honey\`
-- **TIMED STEPS:** If a step has a specific duration (boiling, waiting, etc.), you MUST add a tag in the format \`[d:HH:MM:SS]\` at the end of the step's list item. For example: \`1. Boil the honey for 30 minutes. [d:00:30:00]\`. For a 24-hour timer: \`[d:24:00:00]\`.
+- **INGREDIENTS JSON BLOCK:** The "## Ingredients" section MUST contain ONLY a valid JSON code block. This block MUST contain an array of objects, where each object has three keys: "ingredient" (string), "quantity" (number), and "unit" (string).
+  \`\`\`json
+  [
+    {"ingredient": "Wildflower Honey", "quantity": 1.5, "unit": "kg"},
+    {"ingredient": "Spa Reine", "quantity": 4, "unit": "L"},
+    {"ingredient": "Lalvin D-47 Yeast", "quantity": 5, "unit": "g"}
+  ]
+  \`\`\`
+- **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST be structured with two specific subheadings: "### Primary Fermentation" and "### Secondary & Aging". All steps must be listed under one of these.
+- **TIMED STEPS:** If a step has a duration, you MUST add a tag in the format \`[d:HH:MM:SS]\` at the end of the step's line. Example: \`1. Boil for 30 minutes. [d:00:30:00]\`.
 
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
+1.  **Yeast Logic:** First, determine the ideal yeast for the recipe. Then, check the user's inventory for a substitute: [${yeastInInventory}].
+    - If you find a suitable substitute, you MUST use the user's inventory item name in the JSON ingredient block and explain your choice and any process changes (e.g., temperature) in "## Brewer's Notes".
+    - **FALLBACK:** If no suitable substitute is found, you MUST state this clearly in "## Brewer's Notes", explain WHY the inventory yeasts are not a good match, and then recommend a common European dry yeast in the JSON ingredient block.
 
-1.  **Yeast Logic:** First, determine the ideal yeast. Then, check the user's inventory for a substitute: [${yeastInInventory}].
-    - If you find a suitable substitute, you MUST use the user's inventory item name in the "## Ingredients" table and explain your choice and any process changes in "## Brewer's Notes".
-    - **FALLBACK:** If no suitable substitute is found, you MUST state this clearly in "## Brewer's Notes", explain WHY the inventory yeasts are not a good match, and then recommend a common European dry yeast in the "## Ingredients" table.
-
-2.  **Nutrient Logic:** First, determine the ideal YAN and nutrient. Then, check the user's inventory for substitutes: [${nutrientsInInventory}].
-    - You MUST use the user's nutrient in the "## Ingredients" table after calculating the equivalent amount.
-    - You MUST explain the original goal and the substitution calculation in "## Brewer's Notes".
-    - **CRUCIAL for SNA:** In the "### Primary Fermentation" instructions, you MUST create a **separate, numbered list item for EACH individual nutrient addition**. For additions that occur after a delay (e.g., at 24 hours), you MUST add the appropriate timer tag to that specific step.
+2.  **Nutrient Logic:** First, determine the ideal YAN and nutrient (e.g., Fermaid O). Then, check the user's inventory for substitutes: [${nutrientsInInventory}].
+    - You MUST use the user's nutrient in the JSON ingredient block after calculating the equivalent amount.
+    - You MUST explain the original goal (ideal nutrient, target YAN) and the substitution calculation in "## Brewer's Notes".
+    - **CRUCIAL for Staggered Nutrient Additions (SNA):** In the "### Primary Fermentation" instructions, you MUST create a **separate, numbered list item for EACH individual nutrient addition**. For additions that occur after a delay (e.g., at 24 hours), you MUST add the appropriate timer tag to that specific step, like \`[d:24:00:00]\`.
+    
+3.  **Water Choice:** In the "## Recommended Water" section, you MUST recommend a specific, commercially available Belgian bottled water (e.g., Spa Reine, Chaudfontaine) and vary your choice based on the style, explaining your reasoning. For rich/dark styles, consider mineral-rich water; for delicate styles, use low-mineral water.
 
 Now, generate a world-class mead recipe for a ${batchSize}-liter batch based on the following user request:
 ---
 `;
-
         let creativeBrief = ''; 
-        
+        const inventoryString = inventory.map(item => `${item.name}: ${item.qty} ${item.unit}`).join('; ');
+
         const selectedProfileId = document.getElementById('equipmentProfileSelect').value;
         if (selectedProfileId) {
             const profile = equipmentProfiles.find(p => p.id === selectedProfileId);

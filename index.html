@@ -2555,11 +2555,29 @@ function buildPrompt() {
         const yeastInInventory = inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available';
         const nutrientsInInventory = inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available';
         
-        let basePrompt = `You are an expert mead maker named "MEA(N)DERY". All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers like 'Brouwland'.
+        //--- Maak een lijst van beschikbare fermenters ---
+        const availableFermenters = equipmentProfiles
+            .filter(p => p.type === 'Fermenter' && p.capacityLiters)
+            .map(p => `${p.name} (${p.capacityLiters}L total capacity, ${p.trubLossLiters || 0}L loss)`)
+            .join('; ');
+
+        let basePrompt = `You are an expert mead maker named "MEA(N)DERY" and a logistics expert. All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers like 'Brouwland'.
 
 All units MUST be in the metric system. Specifically, all temperatures MUST be in Celsius (°C) and you MUST NOT mention Fahrenheit (°F).
 
 You will generate a world-class mead recipe for a ${batchSize}-liter batch.
+
+**CRUCIAL EQUIPMENT & VOLUME LOGIC:**
+Your primary task is to design a recipe AND select the most appropriate fermenter from the user's inventory. Follow this exact thought process:
+
+1.  **Design Recipe:** First, design the best possible recipe based on the user's request for a target final batch size of **${batchSize} liters**.
+2.  **Calculate Total Volume:** THEN, calculate the **Total Required Fermenter Volume**. This is the sum of the liquid volume PLUS the volume displaced by solid ingredients. Use these estimations:
+    -   1 kg of fruit displaces approximately 0.7 liters.
+    -   Spices and other small additions have negligible volume.
+    -   Add the user's specified 'Trub/Yeast Loss' to this total.
+3.  **Select Fermenter:** Look at the user's list of available fermenters: [${availableFermenters}]. Select the **smallest** fermenter that can hold the 'Total Required Fermenter Volume' while leaving at least 20% headspace.
+4.  **Fallback - Scale Down:** If NO available fermenter is large enough, you MUST scale down the entire recipe (both liquid and ingredients) so that it fits into the largest available fermenter, again with at least 20% headspace.
+5.  **Communicate:** In the "Brewer's Notes" section, you MUST add a "Volume & Equipment" note explaining your choice. For example: "Equipment Choice: Selected the 10L Speidel Fermenter. The 5.5L of liquid combined with 2.1L from the 3kg of fruit requires a total volume of 7.6L, which fits perfectly in this vessel with adequate headspace." If you scaled down, explain why.
 
 **CRUCIAL TITLE RULE: You are not a recipe assistant, you are a branding expert and storyteller.**
 Your primary task is to invent a captivating and memorable name for this mead. Follow this exact thought process:
@@ -2592,7 +2610,7 @@ Your response MUST be structured with the following headings in this exact order
 
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
 1.  **Yeast Logic:** First, determine the ideal yeast. Then, check the user's inventory: [${yeastInInventory}]. If a suitable substitute is found, use it and explain in "Brewer's Notes". Otherwise, recommend a common dry yeast and explain why the inventory yeasts aren't a good match.
-2.  **Nutrient Logic:** First, determine the ideal nutrient and check the user's inventory: [${nutrientsInInventory}]. You MUST use the user's nutrient and explain the substitution. For Staggered Nutrient Additions (SNA), you MUST create a separate, numbered list item for EACH addition (e.g., "7. SNA #1: Add nutrient at 24 hours.", "8. SNA #2: Add nutrient at 48 hours."). You MUST also add the correct timer tag like \`[d:24:00:00]\` to each of these steps. DO NOT group them under a single step.
+2.  **Nutrient Logic:** First, determine the ideal nutrient and check the user's inventory: [${nutrientsInInventory}]. You MUST use the user's nutrient and explain the substitution. For Staggered Nutrient Additions (SNA), you MUST create a separate, numbered list item for EACH addition. The timer tag for the FIRST addition (SNA #1), even if it's "at pitch", must represent the waiting time until the second addition (e.g., \`[d:24:00:00]\`). For all subsequent additions (SNA #2, #3, etc.), the timer tag must represent the total time elapsed since the start (e.g., \`[d:48:00:00]\`, \`[d:72:00:00]\`). This is mandatory.
 3.  **Water Choice:** In "Recommended Water", recommend a specific Belgian bottled water (e.g., Spa Reine, Chaudfontaine) and explain your choice based on the mead style.
 4.  **Key Stats Section:** The "## Key Stats" section is MANDATORY. It MUST be placed directly after "## Description" and before "## Ingredients". It MUST contain a list with the following three values, formatted exactly like this:
     - Target OG: 1.XXX
@@ -2766,6 +2784,7 @@ function renderHistoryList() {
     `).join('');
 }
 
+// --- VERVANG JE VOLLEDIGE showBrewDetail FUNCTIE MET DEZE ---
 window.showBrewDetail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
@@ -2819,9 +2838,11 @@ window.showBrewDetail = function(brewId) {
         <button onclick="window.goBackToHistoryList()" class="mb-4 text-app-brand hover:underline no-print">&larr; Back to History</button>
 
         <div class="mb-4">
-            <div id="title-display-${brew.id}" class="flex justify-between items-center gap-4">
-                <h2 class="text-3xl font-header font-bold flex-grow">${brew.recipeName}</h2>
-                <button onclick="window.showTitleEditor('${brew.id}')" class="text-blue-600 hover:text-blue-800 text-sm font-semibold no-print flex-shrink-0">Edit Title</button>
+            <div id="title-display-${brew.id}">
+                <h2 class="text-3xl font-header font-bold w-full">${brew.recipeName}</h2>
+                <div class="text-right w-full mt-1">
+                     <button onclick="window.showTitleEditor('${brew.id}')" class="text-blue-600 hover:text-blue-800 text-sm font-semibold no-print">Edit Title</button>
+                </div>
             </div>
             <div id="title-editor-${brew.id}" class="hidden">
                 <input type="text" id="title-input-${brew.id}" value="${brew.recipeName}" class="w-full text-2xl font-bold p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
@@ -4384,7 +4405,7 @@ Peak Date: 2027-09-24`;
             }
 
             // --- Utility Functions ---
-            function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
+function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
     let totalCost = 0;
     const requiredIngredients = parseIngredientsFromMarkdown(markdown);
 
@@ -4393,28 +4414,34 @@ Peak Date: 2027-09-24`;
         return 0;
     }
 
+    // Helper functie om alles naar een basis-eenheid (g of ml) om te rekenen
+    const convertToBaseUnit = (quantity, unit) => {
+        const u = (unit || '').toLowerCase();
+        if (u === 'kg') return { quantity: quantity * 1000, unit: 'g' };
+        if (u === 'l') return { quantity: quantity * 1000, unit: 'ml' };
+        return { quantity, unit: u };
+    };
+
     requiredIngredients.forEach(req => {
         const inventoryItem = inventory.find(item => item.name.toLowerCase() === req.name.toLowerCase());
         
-        // Ga alleen verder als het item bestaat, een geldige prijs heeft, en een hoeveelheid groter dan 0.
-        if (inventoryItem && typeof inventoryItem.price === 'number' && typeof inventoryItem.qty === 'number' && inventoryItem.qty > 0) {
-            let costPerUnit = inventoryItem.price / inventoryItem.qty;
-            const reqUnit = (req.unit || '').toLowerCase();
-            const invUnit = (inventoryItem.unit || '').toLowerCase();
+        if (inventoryItem && typeof inventoryItem.price === 'number' && inventoryItem.qty > 0) {
+            // Stap 1: Converteer de benodigde hoeveelheid naar de basis-eenheid.
+            const requiredAmountInBase = convertToBaseUnit(req.quantity, req.unit);
 
-            if (invUnit === 'kg' && reqUnit === 'g') {
-                costPerUnit /= 1000;
-            } else if (invUnit === 'g' && reqUnit === 'kg') {
-                costPerUnit *= 1000;
-            } else if (invUnit === 'l' && reqUnit === 'ml') {
-                costPerUnit /= 1000;
-            } else if (invUnit === 'ml' && reqUnit === 'l') {
-                costPerUnit *= 1000;
-            }
+            // Stap 2: Bereken de prijs per basis-eenheid uit de inventaris.
+            const inventoryAmountInBase = convertToBaseUnit(inventoryItem.qty, inventoryItem.unit);
             
-            // Voeg enkel toe aan de totaalkost als de berekening een geldig getal oplevert
-            if (!isNaN(costPerUnit)) {
-                totalCost += req.quantity * costPerUnit;
+            // Controleer of de eenheden overeenkomen na conversie (bv. g met g, ml met ml)
+            if (requiredAmountInBase.unit === inventoryAmountInBase.unit) {
+                const costPerBaseUnit = inventoryItem.price / inventoryAmountInBase.quantity;
+
+                // Stap 3: Vermenigvuldig de benodigde hoeveelheid (in basis-eenheid) met de prijs per basis-eenheid.
+                if (!isNaN(costPerBaseUnit)) {
+                    totalCost += requiredAmountInBase.quantity * costPerBaseUnit;
+                }
+            } else {
+                 console.warn(`Cannot calculate cost for '${req.name}'. Incompatible units: recipe wants '${requiredAmountInBase.unit}', inventory has '${inventoryAmountInBase.unit}'.`);
             }
         }
     });
@@ -5322,37 +5349,42 @@ async function completeStep(stepIndex) {
         }
     }
 
-    const allStepsContainer = stepDiv.closest('#brew-day-steps-container');
+    // Vind de container en alle stappen die momenteel op het scherm zichtbaar zijn.
+    const allStepsContainer = stepDiv.closest('[id$="-steps-container"]');
+    if (!allStepsContainer) return; // Veiligheidsklep
+
     const allStepItems = allStepsContainer.querySelectorAll('.step-item');
     
-    currentStepIndex = stepIndex + 1;
-    
-    if (currentStepIndex < allStepItems.length) {
-        const nextStepDiv = document.getElementById(`step-${currentStepIndex}`);
+    // Bepaal de positie (index) van de HUIDIGE stap binnen de ZICHTBARE lijst.
+    const currentRelativeIndex = Array.from(allStepItems).findIndex(item => item.id === `step-${stepIndex}`);
+
+    // Controleer of dit de laatste stap in de ZICHTBARE lijst was.
+    if (currentRelativeIndex + 1 < allStepItems.length) {
+        // Nee, het was niet de laatste stap. Activeer de volgende.
+        const nextStepDiv = allStepItems[currentRelativeIndex + 1];
         if (nextStepDiv) {
             nextStepDiv.classList.add('active');
         }
     } else {
+        // Ja, dit was de laatste stap van de HUIDIGE fase (Brew Day 1 of 2).
+        // Controleer nu of dit OOK de laatste stap van de primaire fase was.
         const brew = brews.find(b => b.id === currentBrewDay.brewId);
         const primaryStepCount = (brew.brewDaySteps || []).length;
         
-        // We controleren of de NIEUWE currentStepIndex gelijk is aan (of groter dan)
-        // het totaal aantal primaire stappen. Dit betekent dat alle primaire stappen voltooid zijn.
-        if (currentStepIndex >= primaryStepCount) {
+        // Deze voorwaarde wordt nu alleen correct uitgevoerd aan het einde van Brew Day 1.
+        if (stepIndex === primaryStepCount - 1) {
              await markPrimaryAsComplete(currentBrewDay.brewId);
-             const container = document.getElementById('brew-day-steps-container');
-             if(container) {
-                container.innerHTML += `
-                    <div class="text-center p-6 card rounded-lg mt-6">
-                        <h3 class="text-2xl font-header font-bold text-green-600">Phase 1 Complete!</h3>
-                        <p class="my-2">Great! The primary fermentation steps are done.</p>
-                        <p class="text-app-secondary mb-4">The next steps for this batch can now be found on the 'Brew Day 2' tab.</p>
-                        <button onclick="window.finalizeBrewDay1()" class="bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">
-                            Go to Brew Day 2
-                        </button>
-                    </div>
-                `;
-             }
+             // Gebruik de correcte container die we eerder hebben gevonden.
+             allStepsContainer.innerHTML += `
+                <div class="text-center p-6 card rounded-lg mt-6">
+                    <h3 class="text-2xl font-header font-bold text-green-600">Phase 1 Complete!</h3>
+                    <p class="my-2">Great! The primary fermentation steps are done.</p>
+                    <p class="text-app-secondary mb-4">The next steps for this batch can now be found on the 'Brew Day 2' tab.</p>
+                    <button onclick="window.finalizeBrewDay1()" class="bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">
+                        Go to Brew Day 2
+                    </button>
+                </div>
+            `;
         }
     }
 }
@@ -5425,6 +5457,7 @@ window.finalizeBrewDay1 = async function() {
             }
    
             // --- Analysis Functions ---
+// --- VERVANG JE VOLLEDIGE generateShoppingList FUNCTIE MET DEZE ---
 window.generateShoppingList = function(brewId, navigate = false) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
@@ -5478,10 +5511,10 @@ window.generateShoppingList = function(brewId, navigate = false) {
                 const escapedItemName = item.name.replace(/'/g, "\\'");
 
                 return `
-                    <div class="flex items-start">
+                    <div class="flex items-center">
                         <input type="checkbox" id="shop-item-${index}" 
                                onchange="window.updateShoppingListItemStatus('${brew.id}', '${escapedItemName}', this.checked)" 
-                               class="h-5 w-5 rounded border-gray-300 text-app-brand focus:ring-app-brand mt-1"
+                               class="h-5 w-5 rounded border-gray-300 text-app-brand focus:ring-app-brand flex-shrink-0"
                                ${isChecked ? 'checked' : ''}>
                         <label for="shop-item-${index}" class="ml-3 text-app-primary">${item.name}: ${displayQty} ${item.unit}</label>
                     </div>

@@ -2622,13 +2622,6 @@ Now, generate the recipe based on the following user request:
         
         let creativeBrief = ''; 
         const inventoryString = inventory.map(item => `${item.name}: ${item.qty} ${item.unit}`).join('; ');
-        const selectedProfileId = document.getElementById('equipmentProfileSelect').value;
-        if (selectedProfileId) {
-            const profile = equipmentProfiles.find(p => p.id === selectedProfileId);
-            if (profile) {
-                creativeBrief += `The recipe must be adapted for the "${profile.name}" equipment profile with a capacity of ${profile.capacityLiters}L and trub loss of ${profile.trubLossLiters}L. You MUST perform a volume check and scale down if necessary, explaining this in the Brewer's Notes.\n`;
-            }
-        }
         
         const customDescription = document.getElementById('customDescription').value;
         const useInventory = document.getElementById('useInventory').checked;
@@ -2784,7 +2777,6 @@ function renderHistoryList() {
     `).join('');
 }
 
-// --- VERVANG JE VOLLEDIGE showBrewDetail FUNCTIE MET DEZE ---
 window.showBrewDetail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
@@ -5327,6 +5319,7 @@ function skipTimer(stepIndex) {
                 }
             }
 
+// --- VERVANG JE VOLLEDIGE completeStep FUNCTIE MET DEZE ---
 async function completeStep(stepIndex) {
     if (stepTimerInterval) {
         clearInterval(stepTimerInterval);
@@ -5359,7 +5352,7 @@ async function completeStep(stepIndex) {
     const currentRelativeIndex = Array.from(allStepItems).findIndex(item => item.id === `step-${stepIndex}`);
 
     // Controleer of dit de laatste stap in de ZICHTBARE lijst was.
-    if (currentRelativeIndex + 1 < allStepItems.length) {
+    if (currentRelativeIndex !== -1 && currentRelativeIndex + 1 < allStepItems.length) {
         // Nee, het was niet de laatste stap. Activeer de volgende.
         const nextStepDiv = allStepItems[currentRelativeIndex + 1];
         if (nextStepDiv) {
@@ -5367,13 +5360,14 @@ async function completeStep(stepIndex) {
         }
     } else {
         // Ja, dit was de laatste stap van de HUIDIGE fase (Brew Day 1 of 2).
-        // Controleer nu of dit OOK de laatste stap van de primaire fase was.
         const brew = brews.find(b => b.id === currentBrewDay.brewId);
         const primaryStepCount = (brew.brewDaySteps || []).length;
         
-        // Deze voorwaarde wordt nu alleen correct uitgevoerd aan het einde van Brew Day 1.
+        // Toon de "Phase 1 Complete" kaart ENKEL en ALLEEN als de zojuist voltooide stap
+        // de allerlaatste stap van de primaire fase was (bv. stap 11 van 12, want index is 0-based).
         if (stepIndex === primaryStepCount - 1) {
              await markPrimaryAsComplete(currentBrewDay.brewId);
+             
              // Gebruik de correcte container die we eerder hebben gevonden.
              allStepsContainer.innerHTML += `
                 <div class="text-center p-6 card rounded-lg mt-6">

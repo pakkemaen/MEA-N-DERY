@@ -2597,6 +2597,7 @@ Your entire response MUST be a single, valid Markdown document and MUST be struc
         }
 
         // --- NORMALE PROMPT VOOR ALLE ANDERE GEVALLEN (FROM SCRATCH / CUSTOM DESCRIPTION) ---
+        // Dit gedeelte was de bron van de fout en is nu hersteld.
         const yeastInInventory = inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available';
         const nutrientsInInventory = inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available';
         
@@ -2650,10 +2651,6 @@ The recipe must be adapted for the "${profile.name}" equipment profile with a to
         }
         
         const customDescription = document.getElementById('customDescription').value;
-        const useInventory = document.getElementById('useInventory').checked;
-        
-        // DE LOGICA IS HIER OPGESCHOOND: DE TWEE-STAPPEN METHODE VANGT 'useInventory' AF IN generateRecipe.
-        // DEZE FUNCTIE BOUWT NU ENKEL NOG DE PROMPT VOOR DE 'single_step' GEVALLEN.
         
         if (customDescription.trim() !== '') {
             creativeBrief += `\nThe user's request is a free-text description: "${customDescription}". Prioritize using ingredients from their inventory if suitable: [${inventoryString}].`;

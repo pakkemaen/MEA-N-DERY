@@ -4873,7 +4873,7 @@ function parseStepsForBrewDay(markdown) {
     const parseStepText = (text) => {
         let duration = 0;
         let title = text;
-        const durationMatch = text.match(/\[d:(\d{2}):(\d{2}):(\d{2})\]/);
+        const durationMatch = text.match(/\[d:(\d+):(\d{2}):(\d{2})\]/); // Aangepast voor >99 uur
 
         if (durationMatch) {
             const hours = parseInt(durationMatch[1], 10);
@@ -4886,11 +4886,7 @@ function parseStepsForBrewDay(markdown) {
     };
 
     const processSection = (header, stepArray) => {
-        // --- NIEUWE LOGICA START ---
-        // Deze variabele onthoudt de totale tijd van de vorige SNA stap
         let lastNutrientTimeInSeconds = 0;
-        // --- NIEUWE LOGICA EINDE ---
-
         if (header) {
             let element = header.nextElementSibling;
             while (element && element.tagName !== 'H2' && element.tagName !== 'H3') {
@@ -4898,19 +4894,13 @@ function parseStepsForBrewDay(markdown) {
                     Array.from(element.children).forEach(li => {
                         if (li.tagName === 'LI') {
                             const step = parseStepText(li.textContent.trim());
-
-                            // --- NIEUWE LOGICA START ---
-                            // Controleer of dit een nutriëntenstap is
                             const isSnaStep = /SNA|Nutrient Addition/i.test(step.title);
+
                             if (isSnaStep && step.duration > 0) {
-                                const absoluteDuration = step.duration; // bv. 172800s (48u)
-                                // Bereken de relatieve duur
+                                const absoluteDuration = step.duration;
                                 step.duration = absoluteDuration - lastNutrientTimeInSeconds;
-                                // Update de tracker voor de volgende stap
                                 lastNutrientTimeInSeconds = absoluteDuration;
                             }
-                            // --- NIEUWE LOGICA EINDE ---
-                            
                             stepArray.push(step);
                         }
                     });
@@ -4922,33 +4912,7 @@ function parseStepsForBrewDay(markdown) {
 
     processSection(primaryHeader, steps.primary);
     processSection(secondaryHeader, steps.secondary);
-    
-    // Fallback voor oude/niet-gestructureerde recepten
-    if (steps.primary.length === 0 && steps.secondary.length === 0) {
-        console.warn("Could not find structured ### headings, using fallback keyword search.");
-         const allSteps = [];
-         const instructionsHeader = Array.from(tempDiv.querySelectorAll('h2, h3')).find(h => h.textContent.toLowerCase().includes('instructions'));
-         if (instructionsHeader) {
-            let element = instructionsHeader.nextElementSibling;
-             while (element && element.tagName !== 'H2') {
-                 if (element.tagName === 'OL' || element.tagName === 'UL') {
-                     Array.from(element.children).forEach(li => {
-                         if (li.tagName === 'LI') {
-                            const text = li.textContent.trim();
-                            let duration = 0;
-                            if (text.match(/(\d+)\s*min/i)) duration = parseInt(text.match(/(\d+)\s*min/i)[1]) * 60;
-                            if (text.match(/(\d+)\s*hour/i)) duration = parseInt(text.match(/(\d+)\s*hour/i)[1]) * 3600;
-                            allSteps.push({ title: text, description: 'Follow the instruction.', duration: duration });
-                         }
-                     });
-                 }
-                 element = element.nextElementSibling;
-             }
-         }
-         const secondaryStartIndex = allSteps.findIndex(step => /rack|secondary|bottle|cold crash|age/i.test(step.title));
-         steps.primary = secondaryStartIndex === -1 ? allSteps : allSteps.slice(0, secondaryStartIndex);
-         steps.secondary = secondaryStartIndex === -1 ? [] : allSteps.slice(secondaryStartIndex);
-    }
+
     return steps;
 }
 
@@ -5259,17 +5223,16 @@ window.showBrewDay2Detail = function(brewId) {
                 controlsDiv.innerHTML = `<button data-action="startTimer" data-step="${currentStepIndex}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Resume</button>`;
             }
 
-            function skipTimer(stepIndex) {
-                if (stepIndex !== currentStepIndex) return;
-                clearInterval(stepTimerInterval);
-                stepTimerInterval = null;
-                remainingTime = 0;
-                
-                // --- Verwijder de opgeslagen timer ---
-                localStorage.removeItem('activeBrewDayTimer');
-                
-                completeStep(stepIndex);
-            }
+
+function skipTimer(stepIndex) {
+    clearInterval(stepTimerInterval);
+    stepTimerInterval = null;
+    remainingTime = 0;
+
+    localStorage.removeItem('activeBrewDayTimer');
+
+    completeStep(stepIndex);
+}
 
             function resetBrewDay() {
                 if (confirm("Are you sure you want to reset your progress for this brew day?")) {
@@ -5590,7 +5553,11 @@ window.generateShoppingList = function(brewId, navigate = false) {
 window.checkShoppingList = function(brewId) {
     const checkboxes = document.querySelectorAll('#shopping-list-items input[type="checkbox"]');
     const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-    document.getElementById('start-brew-day-container').classList.toggle('hidden', !allChecked);
+
+    const container = document.getElementById('start-brew-day-container');
+    if (container) { // Voer de code enkel uit als de container bestaat
+        container.classList.toggle('hidden', !allChecked);
+    }
 }
 
 window.startActualBrewDay = async function(brewId) {
@@ -5835,35 +5802,49 @@ function populateSocialRecipeDropdown() {
     }
 }
 
-            // DEFINITIEVE, ROBUUSTE FUNCTIE VOOR INGREDIENTEN PARSEN
-            function parseIngredientsFromMarkdown(markdown) {
-                const ingredients = [];
-                // Deze regex vindt de start van de tabel en pakt alle rijen tot een dubbele witregel of een nieuw subhoofdstuk.
-                const tableContentRegex = /\|-+\|.*\n([\s\S]*?)(?:\n\n|##|$)/;
-                const match = markdown.match(tableContentRegex);
+function parseIngredientsFromMarkdown(markdown) {
+    const ingredients = [];
 
-                if (!match || !match[1]) {
-                    console.warn("Definitive parser could not find ingredient table content.");
-                    return ingredients;
-                }
+    // Poging 1: Zoek naar een JSON-blok (de nieuwe, robuuste methode)
+    const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
+    const jsonMatch = markdown.match(jsonRegex);
 
-                const rows = match[1].trim().split('\n').filter(row => row.trim().startsWith('|'));
+    if (jsonMatch && jsonMatch[1]) {
+        try {
+            const ingredientsArray = JSON.parse(jsonMatch[1]);
+            return ingredientsArray.map(item => ({
+                name: (item.ingredient || '').trim(),
+                quantity: parseFloat(item.quantity) || 0,
+                unit: (item.unit || '').trim()
+            }));
+        } catch (e) {
+            console.error("Failed to parse JSON block, falling back to table parser.", e);
+        }
+    }
 
-                rows.forEach(row => {
-                    // Pak de waardes uit de cellen, negeer de buitenste pipes.
-                    const columns = row.split('|').map(c => c.trim()).slice(1, 4); 
-                    
-                    if (columns.length === 3) {
-                        const [name, quantityStr, unit] = columns;
-                        const quantity = parseFloat(quantityStr);
-                        // Voeg enkel toe als alle data logisch is.
-                        if (name && !isNaN(quantity)) {
-                            ingredients.push({ name: name.trim(), quantity: quantity, unit: (unit || '').trim() });
-                        }
-                    }
-                });
-                return ingredients;
+    // Poging 2: Fallback naar de oude tabel-parser
+    const tableContentRegex = /\|-+\|.*\n([\s\S]*?)(?:\n\n|##|$)/;
+    const match = markdown.match(tableContentRegex);
+
+    if (!match || !match[1]) {
+        console.warn("Definitive parser could not find ingredient table content.");
+        return ingredients; // Geef lege lijst terug als beide methodes falen
+    }
+
+    const rows = match[1].trim().split('\n').filter(row => row.trim().startsWith('|'));
+    rows.forEach(row => {
+        const columns = row.split('|').map(c => c.trim()).slice(1, 4); 
+        if (columns.length === 3) {
+            const [name, quantityStr, unit] = columns;
+            const quantity = parseFloat(quantityStr);
+            if (name && !isNaN(quantity)) {
+                ingredients.push({ name: name.trim(), quantity: quantity, unit: (unit || '').trim() });
             }
+        }
+    });
+
+    return ingredients;
+}
 
             // getPackagingCosts FUNCTIE
             function getPackagingCosts() {

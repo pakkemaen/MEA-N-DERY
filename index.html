@@ -1598,15 +1598,24 @@ function executeDangerAction() {
 }
 
             async function signInWithGoogle() {
-                const provider = new GoogleAuthProvider();
-                try {
-                    await signInWithPopup(auth, provider);
-                    // De onAuthStateChanged listener zal de rest afhandelen.
-                } catch (error) {
-                    console.error("Google Sign-In failed:", error);
-                    showToast(`Login failed: ${error.message}`, "error");
-                }
-            }
+    const provider = new GoogleAuthProvider();
+    try {
+        await signInWithPopup(auth, provider);
+        // De onAuthStateChanged listener zal de rest afhandelen.
+    } catch (error) {
+        // Log de volledige fout naar de console voor debugging.
+        console.error("Google Sign-In failed:", error);
+
+        // Gebruik een simpele alert() als fallback om zeker te weten dat de gebruiker de fout ziet.
+        // Dit is handig als de Toastify-bibliotheek niet laadt of een ander probleem heeft.
+        alert("Login Mislukt: " + error.message);
+
+        // Probeer de toast-notificatie nog steeds te gebruiken.
+        if (typeof showToast === 'function') {
+            showToast(`Login failed: ${error.message}`, "error");
+        }
+    }
+}
 
 
             function populatePackagingDropdown() {

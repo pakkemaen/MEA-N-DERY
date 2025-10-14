@@ -2564,6 +2564,8 @@ function buildPrompt() {
         
         let basePrompt = `You are an expert mead maker named "MEA(N)DERY". All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers like 'Brouwland'.
 
+All units MUST be in the metric system. Specifically, all temperatures MUST be in Celsius (°C) and you MUST NOT mention Fahrenheit (°F).
+
 You will generate a world-class mead recipe for a ${batchSize}-liter batch.
 
 You must create a unique, evocative, and creative title for the recipe. Puns, literary references, or descriptive names are highly encouraged. The title MUST be on the first line, formatted as '# Title: Subtitle'. You MUST NOT use square brackets [] in the title.
@@ -2660,7 +2662,7 @@ Your response must be a single, valid Markdown document.
     ]
     \`\`\`
 2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST be structured with two specific subheadings: "### Primary Fermentation" and "### Secondary & Aging". All steps must be listed under one of these.
-3.  **CRUCIAL TIMER RULE:** Only add a timer tag \`[d:HH:MM:SS]\` for steps that require a specific **waiting period**, such as yeast rehydration, staggered nutrient additions, or specific timed boils. **Do NOT add a timer tag for general tasks** like 'mixing for 15 minutes' or 'sanitizing'.`;
+3.  **CRUCIAL TIMER RULE:** You MUST add a timer tag \`[d:HH:MM:SS]\` for any step that requires a specific waiting period. This is mandatory for yeast rehydration, staggered nutrient additions, and timed boils. **For example, a step like "let the yeast rehydrate for 15 minutes" MUST end with the tag \`[d:00:15:00]\`. A nutrient addition at 24 hours MUST end with \`[d:24:00:00]\`.** Do NOT add a timer for general active tasks like 'mixing'.`;
 
         // Combineer alles in de juiste volgorde
         return basePrompt + creativeBrief + formattingRules;
@@ -2764,7 +2766,6 @@ window.showBrewDetail = function(brewId) {
             let tableMarkdown = '| Ingredient | Quantity | Unit |\n';
             tableMarkdown += '|---|---|---|\n';
             ingredientsArray.forEach(item => {
-                // Zorg ervoor dat alle velden bestaan om fouten te voorkomen
                 const ing = item.ingredient || 'N/A';
                 const qty = item.quantity || 0;
                 const unit = item.unit || 'N/A';
@@ -2777,7 +2778,8 @@ window.showBrewDetail = function(brewId) {
         }
     }
 
-    const recipeHtml = marked.parse(finalMarkdown); // Gebruik de bewerkte markdown
+    // Verwijder de h1-titel uit de markdown-tekst zelf
+    const recipeHtmlWithoutTitle = marked.parse(finalMarkdown.replace(/^#\s.*$/m, ''));
     const logHtml = getBrewLogHtml(brew.logData, brew.id);
     const currency = userSettings.currencySymbol || '€';
 
@@ -2814,7 +2816,6 @@ window.showBrewDetail = function(brewId) {
                 </div>
             </div>
         </div>
-
         <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
             <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors btn flex items-center justify-center"> Clone Recipe </button>
             <button onclick="window.startBrewDay('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Start New Batch</button>
@@ -2822,8 +2823,9 @@ window.showBrewDetail = function(brewId) {
             <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded-lg hover:bg-red-800 transition-colors btn flex items-center justify-center"> Delete Recipe </button>
         </div>
         
-        <div class="recipe-content">${recipeHtml}</div>
+        <div class="recipe-content">${recipeHtmlWithoutTitle}</div>
         ${costHtml}
+        `;
         <div class="mt-6 card p-4 rounded-lg"><h3 class="font-header text-lg text-center">Fermentation Progress</h3><canvas id="fermChart-${brew.id}"></canvas></div>
         ${logHtml}
         
@@ -6421,8 +6423,7 @@ window.saveNewTitle = async function(brewId) {
         console.error("Error updating title:", error);
         showToast("Could not update title.", "error");
     }
-}
-            
+}            
             // --- Start the App ---
             // Wacht tot de volledige HTML-pagina is geladen voordat het script wordt uitgevoerd.
             document.addEventListener('DOMContentLoaded', (event) => {

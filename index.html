@@ -1343,7 +1343,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.0 - 14/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.1 - 14/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2556,30 +2556,27 @@ async function generateRecipe() {
     }
 }          
 
-// --- VERVANG JE VOLLEDIGE buildPrompt FUNCTIE MET DEZE ---
 function buildPrompt() {
     try {
         const batchSize = document.getElementById('batchSize').value || '5';
         const yeastInInventory = inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available';
         const nutrientsInInventory = inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available';
         
-        // --- STAP 1: BASISPROMPT ZONDER OPMAAKREGELS ---
         let basePrompt = `You are an expert mead maker named "MEA(N)DERY". All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers like 'Brouwland'.
 
 You will generate a world-class mead recipe for a ${batchSize}-liter batch.
 
+You must create a unique, evocative, and creative title for the recipe. Puns, literary references, or descriptive names are highly encouraged. The title MUST be on the first line, formatted as '# Title: Subtitle'. You MUST NOT use square brackets [] in the title.
+
 Your response MUST be structured with the following headings in this exact order:
-# [Recipe Name]: [Subtitle]
 ## Description
 ## Ingredients
 ## Instructions
 ## Brewer's Notes
 ## Recommended Water
 
-**ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
-1.  **Yeast Logic:** First, determine the ideal yeast. Then, check the user's inventory: [${yeastInInventory}]. If a suitable substitute is found, use it and explain in "Brewer's Notes". Otherwise, recommend a common dry yeast and explain why the inventory yeasts aren't a good match.
-2.  **Nutrient Logic:** First, determine the ideal nutrient. Then, check the user's inventory: [${nutrientsInInventory}]. You MUST use the user's nutrient after calculating the equivalent amount and explain the substitution in "Brewer's Notes". For Staggered Nutrient Additions (SNA), create a separate list item for EACH addition.
-3.  **Water Choice:** In "Recommended Water", recommend a specific Belgian bottled water (e.g., Spa Reine, Chaudfontaine) and explain your choice based on the mead style.
+**ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**1.  **Yeast Logic:** First, determine the ideal yeast. Then, check the user's inventory: [${yeastInInventory}]. If a suitable substitute is found, use it and explain in "Brewer's Notes". Otherwise, recommend a common dry yeast and explain why the inventory yeasts aren't a good match.
+2.  **Nutrient Logic:** First, determine the ideal nutrient and check the user's inventory: [${nutrientsInInventory}]. You MUST use the user's nutrient and explain the substitution. For Staggered Nutrient Additions (SNA), you MUST create a separate, numbered list item for EACH addition (e.g., "7. SNA #1: Add nutrient at 24 hours.", "8. SNA #2: Add nutrient at 48 hours."). You MUST also add the correct timer tag like `[d:24:00:00]` to each of these steps. DO NOT group them under a single step.3.  **Water Choice:** In "Recommended Water", recommend a specific Belgian bottled water (e.g., Spa Reine, Chaudfontaine) and explain your choice based on the mead style.
 
 Now, generate the recipe based on the following user request:
 ---
@@ -2757,7 +2754,6 @@ window.showBrewDetail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    // --- START TOEGEVOEGDE LOGICA ---
     let finalMarkdown = brew.recipeMarkdown;
     const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
     const jsonMatch = brew.recipeMarkdown.match(jsonRegex);
@@ -2780,7 +2776,6 @@ window.showBrewDetail = function(brewId) {
             finalMarkdown = brew.recipeMarkdown; 
         }
     }
-    // --- EINDE TOEGEVOEGDE LOGICA ---
 
     const recipeHtml = marked.parse(finalMarkdown); // Gebruik de bewerkte markdown
     const logHtml = getBrewLogHtml(brew.logData, brew.id);
@@ -2806,6 +2801,20 @@ window.showBrewDetail = function(brewId) {
     historyDetailContainer.innerHTML = `
         <button onclick="window.goBackToHistoryList()" class="mb-4 text-app-brand hover:underline no-print">&larr; Back to History</button>
         
+        <div class="mb-4">
+            <div id="title-display-${brew.id}" class="flex items-center gap-4">
+                <h2 class="text-3xl font-header font-bold flex-grow">${brew.recipeName}</h2>
+                <button onclick="window.showTitleEditor('${brew.id}')" class="text-blue-600 hover:text-blue-800 text-sm font-semibold no-print">Edit Title</button>
+            </div>
+            <div id="title-editor-${brew.id}" class="hidden">
+                <input type="text" id="title-input-${brew.id}" value="${brew.recipeName}" class="w-full text-2xl font-bold p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                <div class="flex gap-2 mt-2">
+                    <button onclick="window.saveNewTitle('${brew.id}')" class="bg-green-600 text-white px-3 py-1 rounded text-sm btn">Save</button>
+                    <button onclick="window.hideTitleEditor('${brew.id}')" class="bg-gray-500 text-white px-3 py-1 rounded text-sm btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+
         <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
             <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-colors btn flex items-center justify-center"> Clone Recipe </button>
             <button onclick="window.startBrewDay('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn">Start New Batch</button>
@@ -6371,6 +6380,48 @@ document.getElementById('total-cellar-value').textContent = `${currency}${totalC
                     if(allergensContainer) allergensContainer.classList.add('hidden');
                 }
             }
+
+// Toont het invoerveld en verbergt de titel
+window.showTitleEditor = function(brewId) {
+    document.getElementById(`title-display-${brewId}`).classList.add('hidden');
+    document.getElementById(`title-editor-${brewId}`).classList.remove('hidden');
+    document.getElementById(`title-input-${brewId}`).focus();
+}
+
+// Verbergt het invoerveld en toont de titel weer
+window.hideTitleEditor = function(brewId) {
+    document.getElementById(`title-display-${brewId}`).classList.remove('hidden');
+    document.getElementById(`title-editor-${brewId}`).classList.add('hidden');
+}
+
+// Slaat de nieuwe titel op in Firestore
+window.saveNewTitle = async function(brewId) {
+    if (!userId) return;
+    const newTitle = document.getElementById(`title-input-${brewId}`).value.trim();
+    if (!newTitle) {
+        showToast("Title cannot be empty.", "error");
+        return;
+    }
+
+    try {
+        const appId = 'meandery-aa05e';
+        const brewDocRef = doc(db, 'artifacts', appId, 'users', userId, 'brews', brewId);
+        await updateDoc(brewDocRef, { recipeName: newTitle });
+
+        // Update de lokale data en UI onmiddellijk voor een snelle respons
+        const brew = brews.find(b => b.id === brewId);
+        if (brew) brew.recipeName = newTitle;
+        
+        document.querySelector(`#title-display-${brewId} h2`).textContent = newTitle;
+        hideTitleEditor(brewId);
+        renderHistoryList(); // Ververs de lijstweergave
+        showToast("Recipe title updated!", "success");
+
+    } catch (error) {
+        console.error("Error updating title:", error);
+        showToast("Could not update title.", "error");
+    }
+}
             
             // --- Start the App ---
             // Wacht tot de volledige HTML-pagina is geladen voordat het script wordt uitgevoerd.

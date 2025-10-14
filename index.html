@@ -2517,13 +2517,24 @@ async function generateRecipe() {
             }
         }
 
+        finalMarkdown = finalMarkdown.replace(/\[d:[\d:]+\]/g, '');
+
         const recipeHtml = marked.parse(finalMarkdown);
         
         const fullHtml = `
-            <div class="print-button-container ..."> ... </div>
+            <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
+                <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
+                    Show AI Prompt
+                </button>
+                <button onclick="window.print()" class="bg-stone-600 text-white py-2 px-4 rounded-lg hover:bg-stone-700 transition-colors btn">
+                    Print Recipe
+                </button>
+            </div>
             <div class="recipe-content">${recipeHtml}</div>
             <div class="mt-6 no-print">
-                <button id="saveBtn" class="w-full ...">Save to Brew History</button>
+                <button id="saveBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-800 transition-colors btn">
+                    Save to Brew History
+                </button>
             </div>
         `;
         recipeOutput.innerHTML = fullHtml;
@@ -2550,7 +2561,7 @@ All units MUST be in the metric system. Specifically, all temperatures MUST be i
 
 You will generate a world-class mead recipe for a ${batchSize}-liter batch.
 
-You must create a unique, evocative, and creative title for the recipe. Puns, literary references, or descriptive names are highly encouraged. The title MUST be on the first line, formatted as '# Title: Subtitle'. You MUST NOT use square brackets [] in the title.
+The first line MUST be the recipe title, formatted as a Markdown H1 heading (e.g., '# My Mead: A Honey Delight'). The title should be creative and evocative. Do NOT use square brackets [].
 
 Your response MUST be structured with the following headings in this exact order:
 ## Description
@@ -2732,7 +2743,6 @@ function renderHistoryList() {
     `).join('');
 }
 
-// --- VERVANG JE VOLLEDIGE showBrewDetail FUNCTIE MET DEZE ---
 window.showBrewDetail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
@@ -2758,6 +2768,8 @@ window.showBrewDetail = function(brewId) {
             finalMarkdown = brew.recipeMarkdown;
         }
     }
+
+    finalMarkdown = finalMarkdown.replace(/\[d:[\d:]+\]/g, '');
 
     const recipeHtmlWithoutTitle = marked.parse(finalMarkdown.replace(/^#\s.*$/m, ''));
     const logHtml = getBrewLogHtml(brew.logData, brew.id);
@@ -5175,6 +5187,22 @@ window.showBrewDay2Detail = function(brewId) {
             function startStepTimer(stepIndex, resumeTime = null) {
                 if (stepTimerInterval) return; // Start geen nieuwe timer als er al een loopt
 
+                // Zoek de actieve brew op
+    const activeBrew = brews.find(b => b.id === currentBrewDay.brewId);
+    if (!activeBrew) {
+        console.error("Could not find active brew to start timer.");
+        return;
+    }
+
+    // Combineer alle stappen om de juiste te vinden
+    const allSteps = [...(activeBrew.brewDaySteps || []), ...(activeBrew.secondarySteps || [])];
+    const step = allSteps[stepIndex];
+
+    if (!step) {
+        console.error(`Could not find step data for index ${stepIndex}.`);
+        return;
+    }
+
                 let timeLeft = resumeTime !== null ? resumeTime : brewDaySteps[stepIndex].duration;
                 
                 // --- Sla de eindtijd van de timer op ---
@@ -5804,7 +5832,7 @@ function populateSocialRecipeDropdown() {
 
 function parseIngredientsFromMarkdown(markdown) {
     const ingredients = [];
-
+    
     // Poging 1: Zoek naar een JSON-blok (de nieuwe, robuuste methode)
     const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
     const jsonMatch = markdown.match(jsonRegex);
@@ -5842,7 +5870,7 @@ function parseIngredientsFromMarkdown(markdown) {
             }
         }
     });
-
+    
     return ingredients;
 }
 

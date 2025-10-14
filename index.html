@@ -1343,7 +1343,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.8.6 - 14/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.0 - 14/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -5409,7 +5409,6 @@ window.finalizeBrewDay1 = function() {
     // Stap 2: Schakel nu pas over naar de weergave om deze zichtbaar te maken.
     window.switchSubView('brew-day-2', 'brewing-main-view');
 }
-            }
 
             function formatTime(seconds) {
                 if (isNaN(seconds) || seconds < 0) return "00:00";
@@ -5423,7 +5422,6 @@ window.finalizeBrewDay1 = function() {
             }
    
             // --- Analysis Functions ---
-// VERVANG DE VOLLEDIGE OUDE FUNCTIE MET DEZE
 window.generateShoppingList = function(brewId, navigate = false) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;

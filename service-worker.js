@@ -5,7 +5,7 @@ const urlsToCache = [
   '/',
   'index.html',
   // Add other assets like CSS or JS files if you have them
-];;
+];
 
 // Install the service worker and cache the app shell
 self.addEventListener('install', event => {

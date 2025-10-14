@@ -1,10 +1,11 @@
 // A simple service worker for PWA installation and basic caching.
 
-const CACHE_NAME = 'meandery-cache-v1';
+const CACHE_NAME = 'meandery-cache-v2'; // Verhoogde versie om de cache te vernieuwen
 const urlsToCache = [
   '/',
   'index.html',
-  // Add other assets like CSS or JS files if you have them
+  'icon-192x192.png', // Icoon uit manifest.json
+  'icon-512x512.png'  // Icoon uit manifest.json
 ];
 
 // Install the service worker and cache the app shell

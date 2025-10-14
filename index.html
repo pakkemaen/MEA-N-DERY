@@ -5375,13 +5375,19 @@ async function markPrimaryAsComplete(brewId) {
     }
 }
 
-window.finalizeBrewDay1 = function() {
+window.finalizeBrewDay1 = async function() {
     // Stap 1: Bouw de inhoud van de (nog verborgen) Brew Day 2 weergave opnieuw op.
-    // Dit gebeurt nu gegarandeerd met de meest recente lokale data.
     renderBrewDay2();
 
     // Stap 2: Schakel nu pas over naar de weergave om deze zichtbaar te maken.
     window.switchSubView('brew-day-2', 'brewing-main-view');
+
+    // Stap 3: Reset de Brew Day 1 status
+    currentBrewDay = { brewId: null, checklist: {} };
+    await saveUserSettings(); // Sla de lege status op in de database
+
+    // Stap 4: Maak de Brew Day 1 view visueel leeg voor de volgende batch
+    renderBrewDay('none');
 }
 
             function formatTime(seconds) {

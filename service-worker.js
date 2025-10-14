@@ -3,9 +3,9 @@
 const CACHE_NAME = 'meandery-cache-v1';
 const urlsToCache = [
   '/',
-  '/MEA(N)DERY.html',
+  'index.html',
   // Add other assets like CSS or JS files if you have them
-];
+];;
 
 // Install the service worker and cache the app shell
 self.addEventListener('install', event => {

@@ -2498,50 +2498,32 @@ async function generateRecipe() {
         lastGeneratedPrompt = prompt;
         currentRecipeMarkdown = await performApiCall(prompt);
         
-        // --- JSON VERWERKEN ---
         let finalMarkdown = currentRecipeMarkdown;
         const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
         const jsonMatch = currentRecipeMarkdown.match(jsonRegex);
 
-        // Als we een JSON-blok vinden...
         if (jsonMatch && jsonMatch[1]) {
             try {
-                // 1. Haal de pure JSON-string eruit en parse het naar een JavaScript object.
                 const ingredientsArray = JSON.parse(jsonMatch[1]);
-                
-                // 2. Bouw een gegarandeerd correcte Markdown-tabel op.
                 let tableMarkdown = '| Ingredient | Quantity | Unit |\n';
                 tableMarkdown += '|---|---|---|\n';
                 ingredientsArray.forEach(item => {
                     tableMarkdown += `| ${item.ingredient} | ${item.quantity} | ${item.unit} |\n`;
                 });
-                
-                // 3. Vervang het JSON-blok in de originele tekst door onze perfecte Markdown-tabel.
                 finalMarkdown = currentRecipeMarkdown.replace(jsonRegex, tableMarkdown);
             } catch (e) {
                 console.error("Failed to parse ingredients JSON from AI response:", e);
-                // Als de JSON corrupt is, tonen we de ruwe output zodat de gebruiker het kan zien.
                 finalMarkdown = currentRecipeMarkdown; 
             }
         }
-        // --- EINDE ---
 
         const recipeHtml = marked.parse(finalMarkdown);
         
         const fullHtml = `
-            <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
-                <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
-                    Show AI Prompt
-                </button>
-                <button onclick="window.print()" class="bg-stone-600 text-white py-2 px-4 rounded-lg hover:bg-stone-700 transition-colors btn">
-                    Print Recipe
-                </button>
-            </div>
+            <div class="print-button-container ..."> ... </div>
             <div class="recipe-content">${recipeHtml}</div>
             <div class="mt-6 no-print">
-                <button id="saveBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-800 transition-colors btn">
-                    Save to Brew History
-                </button>
+                <button id="saveBtn" class="w-full ...">Save to Brew History</button>
             </div>
         `;
         recipeOutput.innerHTML = fullHtml;
@@ -2586,7 +2568,6 @@ Now, generate the recipe based on the following user request:
 ---
 `;
         
-        // --- STAP 2: BOUW HET CREATIEVE GEDEELTE (DE TAAK) ---
         let creativeBrief = ''; 
         const inventoryString = inventory.map(item => `${item.name}: ${item.qty} ${item.unit}`).join('; ');
         const selectedProfileId = document.getElementById('equipmentProfileSelect').value;
@@ -2664,7 +2645,6 @@ Your response must be a single, valid Markdown document.
 2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST be structured with two specific subheadings: "### Primary Fermentation" and "### Secondary & Aging". All steps must be listed under one of these.
 3.  **CRUCIAL TIMER RULE:** You MUST add a timer tag \`[d:HH:MM:SS]\` for any step that requires a specific waiting period. This is mandatory for yeast rehydration, staggered nutrient additions, and timed boils. **For example, a step like "let the yeast rehydrate for 15 minutes" MUST end with the tag \`[d:00:15:00]\`. A nutrient addition at 24 hours MUST end with \`[d:24:00:00]\`.** Do NOT add a timer for general active tasks like 'mixing'.`;
 
-        // Combineer alles in de juiste volgorde
         return basePrompt + creativeBrief + formattingRules;
 
     } catch (error) {
@@ -2752,6 +2732,7 @@ function renderHistoryList() {
     `).join('');
 }
 
+// --- VERVANG JE VOLLEDIGE showBrewDetail FUNCTIE MET DEZE ---
 window.showBrewDetail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
@@ -2774,11 +2755,10 @@ window.showBrewDetail = function(brewId) {
             finalMarkdown = brew.recipeMarkdown.replace(jsonRegex, tableMarkdown);
         } catch (e) {
             console.error("Failed to parse ingredients JSON from saved recipe:", e);
-            finalMarkdown = brew.recipeMarkdown; 
+            finalMarkdown = brew.recipeMarkdown;
         }
     }
 
-    // Verwijder de h1-titel uit de markdown-tekst zelf
     const recipeHtmlWithoutTitle = marked.parse(finalMarkdown.replace(/^#\s.*$/m, ''));
     const logHtml = getBrewLogHtml(brew.logData, brew.id);
     const currency = userSettings.currencySymbol || '€';
@@ -2796,17 +2776,17 @@ window.showBrewDetail = function(brewId) {
     }
 
     const flavorWheelTitle = brew.predictedFlavorProfile ? 'Predicted Flavor Profile' : 'Flavor Profile Analysis';
-    const flavorWheelDescription = brew.predictedFlavorProfile 
+    const flavorWheelDescription = brew.predictedFlavorProfile
         ? 'This is the AI-predicted flavor profile based on the recipe.'
         : 'Enter your tasting notes in the log above, save them, and then click the button below to generate a flavor profile.';
 
     historyDetailContainer.innerHTML = `
         <button onclick="window.goBackToHistoryList()" class="mb-4 text-app-brand hover:underline no-print">&larr; Back to History</button>
-        
+
         <div class="mb-4">
-            <div id="title-display-${brew.id}" class="flex items-center gap-4">
+            <div id="title-display-${brew.id}" class="flex justify-between items-center gap-4">
                 <h2 class="text-3xl font-header font-bold flex-grow">${brew.recipeName}</h2>
-                <button onclick="window.showTitleEditor('${brew.id}')" class="text-blue-600 hover:text-blue-800 text-sm font-semibold no-print">Edit Title</button>
+                <button onclick="window.showTitleEditor('${brew.id}')" class="text-blue-600 hover:text-blue-800 text-sm font-semibold no-print flex-shrink-0">Edit Title</button>
             </div>
             <div id="title-editor-${brew.id}" class="hidden">
                 <input type="text" id="title-input-${brew.id}" value="${brew.recipeName}" class="w-full text-2xl font-bold p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
@@ -2822,16 +2802,16 @@ window.showBrewDetail = function(brewId) {
             <button onclick="window.recalculateBatchCost('${brew.id}')" class="bg-purple-700 text-white py-2 px-4 rounded-lg hover:bg-purple-800 transition-colors btn">Recalculate Cost</button>
             <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded-lg hover:bg-red-800 transition-colors btn flex items-center justify-center"> Delete Recipe </button>
         </div>
-        
+
         <div class="recipe-content">${recipeHtmlWithoutTitle}</div>
         ${costHtml}
         <div class="mt-6 card p-4 rounded-lg"><h3 class="font-header text-lg text-center">Fermentation Progress</h3><canvas id="fermChart-${brew.id}"></canvas></div>
         ${logHtml}
-        
+
         <div class="mt-4 no-print">
-            <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
+            <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>
         </div>
-        
+
         <div class="mt-6 pt-4 border-t-2 border-app-brand no-print">
             <h3 class="text-2xl font-header font-bold text-center mb-4">${flavorWheelTitle}</h3>
             <div class="card p-4 rounded-lg text-center">
@@ -2840,7 +2820,7 @@ window.showBrewDetail = function(brewId) {
                 <div id="flavor-wheel-container-${brew.id}" class="mt-4" style="max-width: 400px; margin: auto;"></div>
             </div>
         </div>
-        
+
         <div class="mt-6 pt-4 border-t-2 border-app no-print">
              <h3 class="text-2xl font-header font-bold text-center mb-4">Tweak Recipe with AI</h3>
              <div class="card p-4 rounded-lg">
@@ -2849,7 +2829,7 @@ window.showBrewDetail = function(brewId) {
                 <button onclick="window.freeformTweakRecipe('${brew.id}')" class="w-full mt-3 bg-purple-700 text-white py-3 px-4 rounded-lg hover:bg-purple-800 btn">Generate Tweaked Recipe</button>
              </div>
         </div>
-        
+
         <div id="tweak-output-${brew.id}" class="mt-6"></div>
     `;
     historyListContainer.classList.add('hidden');
@@ -4906,12 +4886,33 @@ function parseStepsForBrewDay(markdown) {
     };
 
     const processSection = (header, stepArray) => {
+        // --- NIEUWE LOGICA START ---
+        // Deze variabele onthoudt de totale tijd van de vorige SNA stap
+        let lastNutrientTimeInSeconds = 0;
+        // --- NIEUWE LOGICA EINDE ---
+
         if (header) {
             let element = header.nextElementSibling;
             while (element && element.tagName !== 'H2' && element.tagName !== 'H3') {
                 if (element.tagName === 'OL' || element.tagName === 'UL') {
                     Array.from(element.children).forEach(li => {
-                        if (li.tagName === 'LI') stepArray.push(parseStepText(li.textContent.trim()));
+                        if (li.tagName === 'LI') {
+                            const step = parseStepText(li.textContent.trim());
+
+                            // --- NIEUWE LOGICA START ---
+                            // Controleer of dit een nutriëntenstap is
+                            const isSnaStep = /SNA|Nutrient Addition/i.test(step.title);
+                            if (isSnaStep && step.duration > 0) {
+                                const absoluteDuration = step.duration; // bv. 172800s (48u)
+                                // Bereken de relatieve duur
+                                step.duration = absoluteDuration - lastNutrientTimeInSeconds;
+                                // Update de tracker voor de volgende stap
+                                lastNutrientTimeInSeconds = absoluteDuration;
+                            }
+                            // --- NIEUWE LOGICA EINDE ---
+                            
+                            stepArray.push(step);
+                        }
                     });
                 }
                 element = element.nextElementSibling;

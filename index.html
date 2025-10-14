@@ -2561,7 +2561,11 @@ All units MUST be in the metric system. Specifically, all temperatures MUST be i
 
 You will generate a world-class mead recipe for a ${batchSize}-liter batch.
 
-The first line MUST be the recipe title, formatted as a Markdown H1 heading (e.g., '# My Mead: A Honey Delight'). The title should be creative and evocative. Do NOT use square brackets [].
+**CRUCIAL TITLE RULE:** You MUST invent a highly creative, memorable, and unique name for the mead. 
+- **THINK LIKE A STORYTELLER:** Draw inspiration from mythology, history, literature, puns, or evocative phrases. 
+- **AVOID BORING DESCRIPTIONS:** Do NOT create simple, descriptive names like "Plum and Almond Mead" or "Honey Delight".
+- **GOOD EXAMPLE:** For a mead with opal plums and red currants, a fantastic name would be '# The Burning of Troy: An Opal and Red Currant Melomel'.
+- **FORMAT:** The title MUST be the very first line, formatted as a Markdown H1 heading (e.g., '# Invented Name: A Brief Description'). Do NOT use square brackets [].
 
 Your response MUST be structured with the following headings in this exact order:
 ## Description
@@ -2574,10 +2578,13 @@ Your response MUST be structured with the following headings in this exact order
 1.  **Yeast Logic:** First, determine the ideal yeast. Then, check the user's inventory: [${yeastInInventory}]. If a suitable substitute is found, use it and explain in "Brewer's Notes". Otherwise, recommend a common dry yeast and explain why the inventory yeasts aren't a good match.
 2.  **Nutrient Logic:** First, determine the ideal nutrient and check the user's inventory: [${nutrientsInInventory}]. You MUST use the user's nutrient and explain the substitution. For Staggered Nutrient Additions (SNA), you MUST create a separate, numbered list item for EACH addition (e.g., "7. SNA #1: Add nutrient at 24 hours.", "8. SNA #2: Add nutrient at 48 hours."). You MUST also add the correct timer tag like \`[d:24:00:00]\` to each of these steps. DO NOT group them under a single step.
 3.  **Water Choice:** In "Recommended Water", recommend a specific Belgian bottled water (e.g., Spa Reine, Chaudfontaine) and explain your choice based on the mead style.
+4.  **Key Stats Section:** The "## Key Stats" section is MANDATORY. It MUST be placed directly after "## Description" and before "## Ingredients". It MUST contain a list with the following three values, formatted exactly like this:
+    - Target OG: 1.XXX
+    - Target FG: 1.XXX
+    - Target ABV: XX.X%
 
 Now, generate the recipe based on the following user request:
----
-`;
+---`;
         
         let creativeBrief = ''; 
         const inventoryString = inventory.map(item => `${item.name}: ${item.qty} ${item.unit}`).join('; ');

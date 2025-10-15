@@ -3176,13 +3176,12 @@ function renderFlavorWheel(brewId, labels, data) {
         window.flavorChartInstances = {};
     }
     
-    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary');
     const brandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand-color');
     
-    // Gebruik een specifieke, goed leesbare kleur voor elk thema.
+    // Bepaal de kleuren expliciet op basis van het thema voor perfect contrast.
     const isDarkMode = document.documentElement.classList.contains('dark');
     const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
-
+    const textColor = isDarkMode ? '#e0e0e0' : '#4a3c2c'; // Gebruik de expliciete kleurcodes
 
     window.flavorChartInstances[brewId] = new Chart(ctx, {
         type: 'radar',
@@ -3201,8 +3200,9 @@ function renderFlavorWheel(brewId, labels, data) {
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
-                legend: {
-                    labels: { color: textColor } // Zorg ervoor dat de legende ook de juiste tekstkleur heeft
+                legend: { 
+                    display: true, // Maak de legende zichtbaar
+                    labels: { color: textColor } // Gebruik de correcte tekstkleur
                 }
             },
             scales: {
@@ -3210,11 +3210,11 @@ function renderFlavorWheel(brewId, labels, data) {
                     angleLines: { color: gridColor },
                     grid: { color: gridColor },
                     pointLabels: {
-                        color: textColor,
+                        color: textColor, // Gebruik de correcte tekstkleur
                         font: { size: 12, family: "'Barlow Semi Condensed', sans-serif" }
                     },
                     ticks: {
-                        color: textColor,
+                        color: textColor, // Gebruik de correcte tekstkleur
                         backdropColor: 'transparent',
                         stepSize: 1
                     },
@@ -3252,7 +3252,6 @@ async function getPredictedFlavorProfile(markdown) {
     }
 }
 
-// --- VERVANG JE VOLLEDIGE renderGeneratedFlavorWheel FUNCTIE MET DEZE ---
 function renderGeneratedFlavorWheel(flavorData) {
     const ctx = document.getElementById('generated-flavor-wheel');
     if (!ctx) return;
@@ -3267,12 +3266,12 @@ function renderGeneratedFlavorWheel(flavorData) {
         flavorData.body_mouthfeel
     ];
 
-    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary');
     const brandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand-color');
 
-    // Controleer of de donkere modus actief is voor een betere contrastkleur.
+    // Bepaal de kleuren expliciet op basis van het thema voor perfect contrast.
     const isDarkMode = document.documentElement.classList.contains('dark');
     const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDarkMode ? '#e0e0e0' : '#4a3c2c'; // Gebruik de expliciete kleurcodes
 
     new Chart(ctx.getContext('2d'), {
         type: 'radar',
@@ -3291,18 +3290,21 @@ function renderGeneratedFlavorWheel(flavorData) {
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
-                legend: { display: false }
+                legend: { 
+                    display: true, // Maak de legende zichtbaar
+                    labels: { color: textColor } // Gebruik de correcte tekstkleur
+                }
             },
             scales: {
                 r: {
-                    angleLines: { color: gridColor }, // Gebruik de nieuwe gridColor
-                    grid: { color: gridColor },       // Gebruik de nieuwe gridColor
+                    angleLines: { color: gridColor },
+                    grid: { color: gridColor },
                     pointLabels: {
-                        color: textColor,
+                        color: textColor, // Gebruik de correcte tekstkleur
                         font: { size: 12, family: "'Barlow Semi Condensed', sans-serif" }
                     },
                     ticks: {
-                        color: textColor,
+                        color: textColor, // Gebruik de correcte tekstkleur
                         backdropColor: 'transparent',
                         stepSize: 1
                     },

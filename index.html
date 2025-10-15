@@ -29,7 +29,7 @@
             --accent-color: #a89a87;
             --header-color: #4a3c2c;
             --brand-color: #8F8C79;
-            --action-color: #b45309;      /* Stronger action color */
+            --action-color: #b45309;
             --danger-color: #ef4444;
             --success-color: #22c55e;
             --info-color: #3b82f6;
@@ -1343,7 +1343,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.2 - 15/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.3 - 15/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2607,7 +2607,10 @@ Your response MUST be structured with the following headings in this exact order
 
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
 1.  **Yeast Logic:** First, determine the ideal yeast. Then, check the user's inventory: [${yeastInInventory}]. If a suitable substitute is found, use it and explain in "Brewer's Notes". Otherwise, recommend a common dry yeast and explain why the inventory yeasts aren't a good match.
-2.  **Nutrient Logic:** First, determine the ideal nutrient and check the user's inventory: [${nutrientsInInventory}]. You MUST use the user's nutrient and explain the substitution. For Staggered Nutrient Additions (SNA), you MUST create a separate, numbered list item for EACH addition. The timer tag for the FIRST addition (SNA #1), even if it's "at pitch", must represent the waiting time until the second addition (e.g., \`[d:24:00:00]\`). For all subsequent additions (SNA #2, #3, etc.), the timer tag must represent the total time elapsed since the start (e.g., \`[d:48:00:00]\`, \`[d:72:00:00]\`). This is mandatory.
+2.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule** for this specific recipe. This could be a single dose upfront or a full Staggered Nutrient Addition (SNA) schedule, depending on the Original Gravity and yeast needs. You MUST use the user's nutrient from their inventory: [${nutrientsInInventory}]. **If, and only if, you decide an SNA is the best approach,** you MUST then follow these strict formatting rules:
+    - Create a separate, numbered list item for EACH addition.
+    - The timer tag \`[d:HH:MM:SS]\` for each step **MUST** represent the waiting time **since the previous addition**.
+    - **Example:** For additions at 24h, 48h, and 72h, all three steps must have a \`[d:24:00:00]\` tag.
 3.  **Water Choice:** In "Recommended Water", recommend a specific Belgian bottled water (e.g., Spa Reine, Chaudfontaine) and explain your choice based on the mead style.
 4.  **Key Stats Section:** The "## Key Stats" section is MANDATORY. It MUST be placed directly after "## Description" and before "## Ingredients". It MUST contain a list with the following three values, formatted exactly like this:
     - Target OG: 1.XXX
@@ -4935,10 +4938,11 @@ function parseStepsForBrewDay(markdown) {
     const primaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('primary fermentation'));
     const secondaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('secondary & aging'));
 
+    // Deze functie leest nu gewoon de (correcte, relatieve) tijd uit de tag.
     const parseStepText = (text) => {
         let duration = 0;
         let title = text;
-        const durationMatch = text.match(/\[d:(\d+):(\d{2}):(\d{2})\]/); // Aangepast voor >99 uur
+        const durationMatch = text.match(/\[d:(\d+):(\d{2}):(\d{2})\]/);
 
         if (durationMatch) {
             const hours = parseInt(durationMatch[1], 10);
@@ -4951,22 +4955,13 @@ function parseStepsForBrewDay(markdown) {
     };
 
     const processSection = (header, stepArray) => {
-        let lastNutrientTimeInSeconds = 0;
         if (header) {
             let element = header.nextElementSibling;
             while (element && element.tagName !== 'H2' && element.tagName !== 'H3') {
                 if (element.tagName === 'OL' || element.tagName === 'UL') {
                     Array.from(element.children).forEach(li => {
                         if (li.tagName === 'LI') {
-                            const step = parseStepText(li.textContent.trim());
-                            const isSnaStep = /SNA|Nutrient Addition/i.test(step.title);
-
-                            if (isSnaStep && step.duration > 0) {
-                                const absoluteDuration = step.duration;
-                                step.duration = absoluteDuration - lastNutrientTimeInSeconds;
-                                lastNutrientTimeInSeconds = absoluteDuration;
-                            }
-                            stepArray.push(step);
+                            stepArray.push(parseStepText(li.textContent.trim()));
                         }
                     });
                 }
@@ -4977,7 +4972,7 @@ function parseStepsForBrewDay(markdown) {
 
     processSection(primaryHeader, steps.primary);
     processSection(secondaryHeader, steps.secondary);
-
+    
     return steps;
 }
 
@@ -5637,6 +5632,7 @@ window.generateShoppingList = function(brewId, navigate = false) {
                     await batch.commit();
                     showToast(`${missingItems.length} missing item(s) added to inventory. You can now update their quantity and price.`, 'success');
                     addButton.textContent = 'Added to Inventory!';
+                    generateShoppingList(brewId, false); 
                 } catch (error) {
                     console.error("Error adding missing items to inventory:", error);
                     showToast("Could not add items to inventory.", "error");

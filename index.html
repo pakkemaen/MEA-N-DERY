@@ -1343,7 +1343,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.5 - 15/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.6 - 15/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -3177,8 +3177,12 @@ function renderFlavorWheel(brewId, labels, data) {
     }
     
     const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary');
-    const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
     const brandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand-color');
+    
+    // Gebruik een specifieke, goed leesbare kleur voor elk thema.
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+
 
     window.flavorChartInstances[brewId] = new Chart(ctx, {
         type: 'radar',
@@ -3187,7 +3191,7 @@ function renderFlavorWheel(brewId, labels, data) {
             datasets: [{
                 label: 'Flavor Profile',
                 data: data,
-                backgroundColor: brandColor + '4D', // Semi-transparante vulling
+                backgroundColor: brandColor + '4D',
                 borderColor: brandColor,
                 borderWidth: 2,
                 pointBackgroundColor: brandColor
@@ -3197,7 +3201,9 @@ function renderFlavorWheel(brewId, labels, data) {
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
-                legend: { display: false }
+                legend: {
+                    labels: { color: textColor } // Zorg ervoor dat de legende ook de juiste tekstkleur heeft
+                }
             },
             scales: {
                 r: {
@@ -3246,6 +3252,7 @@ async function getPredictedFlavorProfile(markdown) {
     }
 }
 
+// --- VERVANG JE VOLLEDIGE renderGeneratedFlavorWheel FUNCTIE MET DEZE ---
 function renderGeneratedFlavorWheel(flavorData) {
     const ctx = document.getElementById('generated-flavor-wheel');
     if (!ctx) return;
@@ -3261,8 +3268,11 @@ function renderGeneratedFlavorWheel(flavorData) {
     ];
 
     const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary');
-    const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
     const brandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand-color');
+
+    // Controleer of de donkere modus actief is voor een betere contrastkleur.
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
 
     new Chart(ctx.getContext('2d'), {
         type: 'radar',
@@ -3278,7 +3288,28 @@ function renderGeneratedFlavorWheel(flavorData) {
             }]
         },
         options: {
-            // ... (de options zijn hetzelfde als in de renderFlavorWheel functie) ...
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                r: {
+                    angleLines: { color: gridColor }, // Gebruik de nieuwe gridColor
+                    grid: { color: gridColor },       // Gebruik de nieuwe gridColor
+                    pointLabels: {
+                        color: textColor,
+                        font: { size: 12, family: "'Barlow Semi Condensed', sans-serif" }
+                    },
+                    ticks: {
+                        color: textColor,
+                        backdropColor: 'transparent',
+                        stepSize: 1
+                    },
+                    suggestedMin: 0,
+                    suggestedMax: 5
+                }
+            }
         }
     });
 }
@@ -6393,64 +6424,72 @@ document.getElementById('total-cellar-value').textContent = `${currency}${totalC
                 setTimeout(() => { newWindow.print(); }, 500);
             }
 
-            function populateLabelRecipeDropdown() {
-                const select = document.getElementById('labelRecipeSelect');
-                if (!select) return;
-                const currentValue = select.value;
-                select.innerHTML = '<option value="">-- Choose a Saved Recipe --</option>';
-                brews.forEach(brew => {
-                    const option = document.createElement('option');
-                    option.value = brew.id;
-                    option.textContent = brew.recipeName;
-                    select.appendChild(option);
-                });
-                select.value = currentValue;
-            }
 
-            function handleLabelRecipeSelect(event) {
-                const brewId = event.target.value;
-                const styleInput = document.getElementById('labelStyle');
-                const abvInput = document.getElementById('labelAbv');
-                const volInput = document.getElementById('labelVol');
-                const dateInput = document.getElementById('labelDate');
-                
-                if (!brewId) {
-                    // Maak velden leeg als de gebruiker "-- Choose --" selecteert
-                    if(styleInput) styleInput.value = '';
-                    if(abvInput) abvInput.value = '';
-                    if(volInput) volInput.value = '';
-                    if(dateInput) dateInput.value = '';
-                    updateLabelPreview();
-                    return;
-                }
+function populateLabelRecipeDropdown() {
+    const select = document.getElementById('labelRecipeSelect');
+    if (!select) return;
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">-- Choose a Saved Recipe --</option>';
+    brews.forEach(brew => {
+        const option = document.createElement('option');
+        option.value = brew.id;
 
-                const selectedBrew = brews.find(b => b.id === brewId);
-                if (!selectedBrew) return;
+        // Splits de titel en gebruik alleen het deel vóór de dubbele punt of het streepje.
+        let displayName = brew.recipeName || 'Untitled Brew';
+        if (displayName.includes(':')) {
+            displayName = displayName.split(':')[0].trim();
+        } else if (displayName.includes(' - ')) {
+            displayName = displayName.split(' - ')[0].trim();
+        }
+        option.textContent = displayName;
+        
+        select.appendChild(option);
+    });
+    select.value = currentValue;
+}
 
-                // --- Splits de receptnaam in naam en ondertitel ---
-                const fullTitle = selectedBrew.recipeName;
-                let namePart = fullTitle;
-                let subtitlePart = '';
+            // --- VERVANG JE VOLLEDIGE handleLabelRecipeSelect FUNCTIE MET DEZE ---
+function handleLabelRecipeSelect(event) {
+    const brewId = event.target.value;
+    const styleInput = document.getElementById('labelStyle');
+    const abvInput = document.getElementById('labelAbv');
+    const volInput = document.getElementById('labelVol');
+    const dateInput = document.getElementById('labelDate');
+    
+    if (!brewId) {
+        // Maak velden leeg als de gebruiker "-- Choose --" selecteert
+        if(styleInput) styleInput.value = '';
+        if(abvInput) abvInput.value = '';
+        if(volInput) volInput.value = '';
+        if(dateInput) dateInput.value = '';
+        updateLabelPreview();
+        return;
+    }
 
-                if (fullTitle.includes(':')) {
-                    const parts = fullTitle.split(/:\s*(.*)/s);
-                    namePart = parts[0];
-                    subtitlePart = parts[1] || '';
-                } else if (fullTitle.includes(' - ')) {
-                    const parts = fullTitle.split(/\s*-\s*(.*)/s);
-                    namePart = parts[0];
-                    subtitlePart = parts[1] || '';
-                }
+    const selectedBrew = brews.find(b => b.id === brewId);
+    if (!selectedBrew) return;
 
-                // Vul de input-velden in
-                if(styleInput) styleInput.value = subtitlePart;
-                if(abvInput) abvInput.value = selectedBrew.logData?.finalABV?.replace('%','') || selectedBrew.logData?.targetABV?.replace('%','') || '';
-                if(volInput) volInput.value = selectedBrew.batchSize ? selectedBrew.batchSize * 1000 : '750';
-                if(dateInput) dateInput.value = selectedBrew.createdAt ? selectedBrew.createdAt.toDate().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '';
-                
-                // Update de visuele preview
-                updateLabelPreview();
-            }
+    // Haal de volledige titel uit de originele data, niet uit de dropdown.
+    const fullTitle = selectedBrew.recipeName;
+    let subtitlePart = '';
+
+    if (fullTitle.includes(':')) {
+        const parts = fullTitle.split(/:\s*(.*)/s);
+        subtitlePart = parts[1] || '';
+    } else if (fullTitle.includes(' - ')) {
+        const parts = fullTitle.split(/\s*-\s*(.*)/s);
+        subtitlePart = parts[1] || '';
+    }
+
+    // Vul de input-velden in
+    if(styleInput) styleInput.value = subtitlePart;
+    if(abvInput) abvInput.value = selectedBrew.logData?.finalABV?.replace('%','') || selectedBrew.logData?.targetABV?.replace('%','') || '';
+    if(volInput) volInput.value = selectedBrew.batchSize ? selectedBrew.batchSize * 1000 : '750';
+    if(dateInput) dateInput.value = selectedBrew.createdAt ? selectedBrew.createdAt.toDate().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '';
+    
+    // Update de visuele preview
+    updateLabelPreview();
+}
 
             function updateLabelPreview() {
                 // Haal alle elementen op

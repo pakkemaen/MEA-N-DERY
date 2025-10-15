@@ -2974,37 +2974,51 @@ window.recalculateBatchCost = async function(brewId) {
                 }
             }
 
-            window.cloneBrew = async function(brewId) {
-                const originalBrew = brews.find(b => b.id === brewId);
-                if (!originalBrew) {
-                    showToast("Could not find the original recipe to clone.", "error");
-                    return;
-                }
-                const newLogData = JSON.parse(JSON.stringify(originalBrew.logData));
-                newLogData.brewDate = ''; newLogData.actualOG = ''; newLogData.actualFG = ''; newLogData.finalABV = '';
-                newLogData.fermentationLog = Array.from({ length: 8 }, () => ({ date: '', temp: '', sg: '', notes: '' }));
-                newLogData.agingNotes = ''; newLogData.bottlingNotes = ''; newLogData.tastingNotes = '';
-                const newBrewData = {
-                    userId: userId,
-                    recipeName: `Clone of ${originalBrew.recipeName}`,
-                    recipeMarkdown: originalBrew.recipeMarkdown,
-                    logData: newLogData,
-                    createdAt: new Date(),
-                    batchSize: originalBrew.batchSize,
-                    totalCost: originalBrew.totalCost,
-                    isBottled: false
-                };
-                try {
-                    const appId = 'meandery-aa05e';
-                    const brewsCol = collection(db, 'artifacts', appId, 'users', userId, 'brews');
-                    await addDoc(brewsCol, newBrewData);
-                    showToast(`'${newBrewData.recipeName}' has been created!`, 'success');
-                    goBackToHistoryList();
-                } catch (error) {
-                    console.error("Error cloning brew:", error);
-                    showToast("An error occurred while cloning the recipe.", "error");
-                }
-            }
+            // --- VERVANG JE VOLLEDIGE cloneBrew FUNCTIE MET DEZE ---
+window.cloneBrew = async function(brewId) {
+    const originalBrew = brews.find(b => b.id === brewId);
+    if (!originalBrew) {
+        showToast("Could not find the original recipe to clone.", "error");
+        return;
+    }
+    // Maak een diepe kopie van de log data en reset de waarden
+    const newLogData = JSON.parse(JSON.stringify(originalBrew.logData || {}));
+    newLogData.brewDate = ''; 
+    newLogData.actualOG = ''; 
+    newLogData.actualFG = ''; 
+    newLogData.finalABV = '';
+    newLogData.fermentationLog = Array.from({ length: 8 }, () => ({ date: '', temp: '', sg: '', notes: '' }));
+    newLogData.agingNotes = ''; 
+    newLogData.bottlingNotes = ''; 
+    newLogData.tastingNotes = '';
+
+    const newBrewData = {
+        userId: userId,
+        recipeName: `Clone of ${originalBrew.recipeName}`,
+        recipeMarkdown: originalBrew.recipeMarkdown,
+        logData: newLogData,
+        createdAt: new Date(),
+        batchSize: originalBrew.batchSize,
+        totalCost: originalBrew.totalCost,
+        isBottled: false,
+        primaryComplete: false, // Belangrijk: reset deze status
+        predictedFlavorProfile: originalBrew.predictedFlavorProfile || null,
+        
+        brewDaySteps: originalBrew.brewDaySteps || [],     // Kopieer de primaire stappen
+        secondarySteps: originalBrew.secondarySteps || []  // Kopieer de secundaire stappen
+    };
+
+    try {
+        const appId = 'meandery-aa05e';
+        const brewsCol = collection(db, 'artifacts', appId, 'users', userId, 'brews');
+        await addDoc(brewsCol, newBrewData);
+        showToast(`'${newBrewData.recipeName}' has been created! You can now start a new batch from it.`, 'success');
+        goBackToHistoryList(); // Ga terug naar de lijst zodat de gebruiker de nieuwe kloon kan zien
+    } catch (error) {
+        console.error("Error cloning brew:", error);
+        showToast("An error occurred while cloning the recipe.", "error");
+    }
+}
 
             window.goBackToHistoryList = function() {
                 historyDetailContainer.classList.add('hidden');

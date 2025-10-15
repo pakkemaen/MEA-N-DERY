@@ -1343,7 +1343,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.1 - 14/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.2 - 15/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2555,29 +2555,26 @@ function buildPrompt() {
         const yeastInInventory = inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available';
         const nutrientsInInventory = inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available';
         
-        //--- Maak een lijst van beschikbare fermenters ---
         const availableFermenters = equipmentProfiles
             .filter(p => p.type === 'Fermenter' && p.capacityLiters)
             .map(p => `${p.name} (${p.capacityLiters}L total capacity, ${p.trubLossLiters || 0}L loss)`)
             .join('; ');
 
-        let basePrompt = `You are an expert mead maker named "MEA(N)DERY" and a logistics expert. All ingredients you recommend must be readily available in Belgium or through common European homebrew suppliers like 'Brouwland'.
+        let basePrompt = `You are an expert mead maker named "MEA(N)DERY" and a logistics expert. Your primary goal is to create a practical, feasible recipe that fits the user's equipment.
 
-All units MUST be in the metric system. Specifically, all temperatures MUST be in Celsius (°C) and you MUST NOT mention Fahrenheit (°F).
-
-You will generate a world-class mead recipe for a ${batchSize}-liter batch.
-
-**CRUCIAL EQUIPMENT & VOLUME LOGIC:**
-Your primary task is to design a recipe AND select the most appropriate fermenter from the user's inventory. Follow this exact thought process:
-
-1.  **Design Recipe:** First, design the best possible recipe based on the user's request for a target final batch size of **${batchSize} liters**.
-2.  **Calculate Total Volume:** THEN, calculate the **Total Required Fermenter Volume**. This is the sum of the liquid volume PLUS the volume displaced by solid ingredients. Use these estimations:
-    -   1 kg of fruit displaces approximately 0.7 liters.
-    -   Spices and other small additions have negligible volume.
-    -   Add the user's specified 'Trub/Yeast Loss' to this total.
-3.  **Select Fermenter:** Look at the user's list of available fermenters: [${availableFermenters}]. Select the **smallest** fermenter that can hold the 'Total Required Fermenter Volume' while leaving at least 20% headspace.
-4.  **Fallback - Scale Down:** If NO available fermenter is large enough, you MUST scale down the entire recipe (both liquid and ingredients) so that it fits into the largest available fermenter, again with at least 20% headspace.
-5.  **Communicate:** In the "Brewer's Notes" section, you MUST add a "Volume & Equipment" note explaining your choice. For example: "Equipment Choice: Selected the 10L Speidel Fermenter. The 5.5L of liquid combined with 2.1L from the 3kg of fruit requires a total volume of 7.6L, which fits perfectly in this vessel with adequate headspace." If you scaled down, explain why.
+**CRUCIAL EQUIPMENT & VOLUME LOGIC (MUST FOLLOW IN ORDER):**
+1.  **Design Initial Recipe:** Mentally design the best recipe for the user's requested final batch size of **${batchSize} liters**.
+2.  **Calculate Total Volume:** Calculate the **Total Required Fermenter Volume**. This is the sum of all liquids PLUS the volume displaced by solids. Use these strict estimations:
+    -   1 kg of fruit/solids displaces **0.7 liters**.
+    -   1.3 kg of honey displaces approximately **1 liter**.
+    -   Account for any specified 'Trub/Yeast Loss'.
+3.  **Select Best Fermenter:** Look at the user's available fermenters: [${availableFermenters}].
+    -   **A) Fruit Priority:** If the recipe contains a significant amount of fruit (>1kg), you **MUST** prioritize selecting a fermenter with 'wide mouth', 'bucket', or 'Speidel' in its name over one named 'carboy' or 'demijohn', if a suitable size is available. This is for practical reasons.
+    -   **B) Size Priority:** Select the **smallest** suitable fermenter that can hold the 'Total Required Fermenter Volume' while leaving at least 20% headspace for safety.
+4.  **HARD CHECK & FINAL ACTION:**
+    -   **If a suitable fermenter is found:** Finalize the recipe with the initial ingredient quantities.
+    -   **If NO fermenter is large enough:** Your final, most important task is to **SCALE DOWN THE ENTIRE RECIPE**. You must proportionally reduce all ingredients (liquids and solids) until the new 'Total Required Fermenter Volume' fits into the largest available fermenter with 20% headspace.
+5.  **Communicate & Generate:** In the "Brewer's Notes", add a "Volume & Equipment" note explaining your choice of fermenter and if/why you scaled the recipe down. **The final ## Ingredients list you generate MUST reflect the scaled-down quantities if a scale-down was necessary.**
 
 **CRUCIAL TITLE RULE: You are not a recipe assistant, you are a branding expert and storyteller.**
 Your primary task is to invent a captivating and memorable name for this mead. Follow this exact thought process:

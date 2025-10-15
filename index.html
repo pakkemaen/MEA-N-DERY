@@ -1343,7 +1343,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.3 - 15/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.5 - 15/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -1372,6 +1372,7 @@
             let fermChartInstance = null;
             let html5QrcodeScanner = null;
             let customBottles = []; // Houdt de lijst met custom flessen bij
+            let currentPredictedProfile = null;
 
 // Functie om de lijst met custom flessen op het scherm te tekenen
 window.renderCustomBottlesList = function() {
@@ -2492,13 +2493,30 @@ async function generateRecipe() {
     recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
     generateBtn.disabled = true;
     generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    currentPredictedProfile = null; // Reset bij elke nieuwe generatie
 
     try {
         const prompt = buildPrompt();
         lastGeneratedPrompt = prompt;
         currentRecipeMarkdown = await performApiCall(prompt);
         
+        // Genereer het smaakprofiel onmiddellijk
+        currentPredictedProfile = await getPredictedFlavorProfile(currentRecipeMarkdown);
+        let flavorProfileHtml = '';
+        if (currentPredictedProfile) {
+            flavorProfileHtml = `
+                <div class="mt-8 pt-6 border-t border-app">
+                    <h3 class="text-2xl font-header font-bold text-center mb-4">Predicted Flavor Profile</h3>
+                    <div class="card p-4 rounded-lg max-w-sm mx-auto">
+                        <canvas id="generated-flavor-wheel"></canvas>
+                    </div>
+                </div>
+            `;
+        }
+        
         let finalMarkdown = currentRecipeMarkdown;
+        
+        // CORRECTIE: De jsonRegex en jsonMatch declaraties waren hier vergeten
         const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
         const jsonMatch = currentRecipeMarkdown.match(jsonRegex);
 
@@ -2513,14 +2531,14 @@ async function generateRecipe() {
                 finalMarkdown = currentRecipeMarkdown.replace(jsonRegex, tableMarkdown);
             } catch (e) {
                 console.error("Failed to parse ingredients JSON from AI response:", e);
-                finalMarkdown = currentRecipeMarkdown; 
+                // finalMarkdown blijft de originele markdown bij een fout
             }
         }
 
         finalMarkdown = finalMarkdown.replace(/\[d:[\d:]+\]/g, '');
-
         const recipeHtml = marked.parse(finalMarkdown);
         
+        // CORRECTIE: De flavorProfileHtml wordt nu hier toegevoegd
         const fullHtml = `
             <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
                 <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
@@ -2531,6 +2549,7 @@ async function generateRecipe() {
                 </button>
             </div>
             <div class="recipe-content">${recipeHtml}</div>
+            ${flavorProfileHtml}
             <div class="mt-6 no-print">
                 <button id="saveBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-800 transition-colors btn">
                     Save to Brew History
@@ -2538,6 +2557,11 @@ async function generateRecipe() {
             </div>
         `;
         recipeOutput.innerHTML = fullHtml;
+
+        if (currentPredictedProfile) {
+            renderGeneratedFlavorWheel(currentPredictedProfile);
+        }
+
         document.getElementById('saveBtn').addEventListener('click', saveBrewToHistory);
 
     } catch (error) {
@@ -2616,6 +2640,10 @@ Your response MUST be structured with the following headings in this exact order
     - Target OG: 1.XXX
     - Target FG: 1.XXX
     - Target ABV: XX.X%
+5.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST be well-structured. Each distinct topic (Yeast, Nutrients, Volume & Equipment, etc.) MUST be introduced on a new line with a bolded title followed by a colon. For example:
+    - **Yeast:** I selected Oenoferm BOUQUET because...
+    - **Nutrients:** The schedule uses VitaFerm to...
+    - **Volume & Equipment:** I chose the 20L Speidel because...
 
 Now, generate the recipe based on the following user request:
 ---`;
@@ -2813,10 +2841,10 @@ window.showBrewDetail = function(brewId) {
     if (brew.totalCost !== undefined && brew.totalCost > 0) {
         const costPerLiter = brew.batchSize > 0 ? brew.totalCost / brew.batchSize : 0;
         costHtml = `
-            <div class="mt-6 p-4 bg-amber-50 rounded-lg dark:bg-opacity-10">
-                <h3 class="font-header text-lg text-stone-800 dark:text-amber-200">Batch Cost Analysis</h3>
-                <p class="text-stone-800 dark:text-amber-200"><strong>Total Ingredient Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</p>
-                <p class="text-stone-800 dark:text-amber-200"><strong>Cost Per Liter:</strong> ${currency}${costPerLiter.toFixed(2)}</p>
+            <div class="mt-6 p-4 bg-amber-100 rounded-lg dark:bg-amber-900/20">
+                <h3 class="font-header text-lg text-amber-900 dark:text-amber-200">Batch Cost Analysis</h3>
+                <p class="text-amber-800 dark:text-amber-200"><strong>Total Ingredient Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</p>
+                <p class="text-amber-800 dark:text-amber-200"><strong>Cost Per Liter:</strong> ${currency}${costPerLiter.toFixed(2)}</p>
             </div>
         `;
     }
@@ -3216,6 +3244,43 @@ async function getPredictedFlavorProfile(markdown) {
         console.error("Could not generate predicted flavor profile:", error);
         return null; // Geef null terug bij een fout
     }
+}
+
+function renderGeneratedFlavorWheel(flavorData) {
+    const ctx = document.getElementById('generated-flavor-wheel');
+    if (!ctx) return;
+
+    const labels = ['Sweetness', 'Acidity', 'Fruity/Floral', 'Spiciness', 'Earthy/Woody', 'Body'];
+    const data = [
+        flavorData.sweetness,
+        flavorData.acidity,
+        flavorData.fruity_floral,
+        flavorData.spiciness,
+        flavorData.earthy_woody,
+        flavorData.body_mouthfeel
+    ];
+
+    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary');
+    const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+    const brandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand-color');
+
+    new Chart(ctx.getContext('2d'), {
+        type: 'radar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Predicted Profile',
+                data: data,
+                backgroundColor: brandColor + '4D',
+                borderColor: brandColor,
+                borderWidth: 2,
+                pointBackgroundColor: brandColor
+            }]
+        },
+        options: {
+            // ... (de options zijn hetzelfde als in de renderFlavorWheel functie) ...
+        }
+    });
 }
 
             window.quickTweakRecipe = async function(brewId, tweakType) {
@@ -4982,12 +5047,12 @@ window.saveBrewToHistory = async function() {
         return;
     }
     const saveButton = document.getElementById('saveBtn');
-    saveButton.textContent = 'Analyzing & Saving...';
+    saveButton.textContent = 'Saving...';
     saveButton.disabled = true;
 
+    // CORRECTIE: De onnodige API-aanroep is hier verwijderd.
     const totalBatchCost = parseIngredientsAndCalculateCost(currentRecipeMarkdown, inventory, parseFloat(document.getElementById('batchSize').value) || 5);
     const brewDayStepsObject = parseStepsForBrewDay(currentRecipeMarkdown);
-    const predictedProfile = await getPredictedFlavorProfile(currentRecipeMarkdown);
     
     const initialLogData = parseRecipeData(currentRecipeMarkdown);
     initialLogData.fermentationLog = Array.from({ length: 8 }, () => ({}));
@@ -5004,7 +5069,7 @@ window.saveBrewToHistory = async function() {
         totalCost: totalBatchCost,
         isBottled: false,
         primaryComplete: false,
-        predictedFlavorProfile: predictedProfile,
+        predictedFlavorProfile: currentPredictedProfile, // Gebruik de waarde die al bestaat
         brewDaySteps: brewDayStepsObject.primary,
         secondarySteps: brewDayStepsObject.secondary
     };
@@ -5036,7 +5101,6 @@ window.saveBrewToHistory = async function() {
     }
 }
 
-// VERVANG DE VOLLEDIGE OUDE renderBrewDay FUNCTIE
 function renderBrewDay(brewId) {
     if (brewId === 'none') {
         document.getElementById('brew-day-content').innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">Brew Day 1 - Primary Fermentation</h2><p class="text-center text-app-secondary/80">Select a new recipe from your History to start a new brew day.</p>`;

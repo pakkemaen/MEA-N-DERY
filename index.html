@@ -542,7 +542,7 @@
                         <div id="structured-options-container" class="space-y-6 pt-6 border-t border-app">
                             <div>
                                 <label for="batchSize" class="block text-sm font-bold mb-2">Batch Size (Liters)</label>
-                                <input type="number" id="batchSize" value="5" min="1" max="100" step="0.5" class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                                <input type="number" id="batchSize" placeholder="5" min="1" max="100" step="0.5" class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
                             </div>
                             <div>
                                 <label for="equipmentProfileSelect" class="block text-sm font-bold mb-2">Equipment Profile</label>
@@ -552,57 +552,40 @@
                             </div>
                             <div>
                                 <label for="abv" class="block text-sm font-bold mb-2">Target ABV (%)</label>
-                                <input type="number" id="abv" value="12" min="5" max="18" class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                                <input type="number" id="abv" placeholder="12" min="5" max="18" class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
                             </div>
                             <div>
                                 <label for="sweetness" class="block text-sm font-bold mb-2">Final Sweetness</label>
                                 <select id="sweetness" class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                                    <option value="" disabled selected>-- Select a Sweetness --</option>
                                     <option value="dry">Dry (FG ~1.000)</option>
-                                    <option value="semi-sweet" selected>Semi-Sweet (FG ~1.015)</option>
+                                    <option value="semi-sweet">Semi-Sweet (FG ~1.015)</option>
                                     <option value="sweet">Sweet (FG ~1.030)</option>
                                 </select>
-                            </div>
+                            </div> 
+
                             <div>
                                 <label for="style" class="block text-sm font-bold mb-2">Base Style</label>
                                 <select id="style" class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                                    <option value="" disabled selected>-- Select a Style --</option>
                                     <optgroup label="Standard Styles">
-                                        <option value="bochet">Bochet (Caramelized Honey)</option>
-                                        <option value="braggot">Braggot (Beer/Mead Hybrid)</option>
-                                        <option value="capsicumel">Capsicumel (Chili Mead)</option>
-                                        <option value="cyser">Cyser (Apple Mead)</option>
-                                        <option value="melomel">Melomel (Fruit Mead)</option>
-                                        <option value="metheglin">Metheglin (Spiced Mead)</option>
-                                        <option value="pyment">Pyment (Grape Mead)</option>
-                                        <option value="rhodomel">Rhodomel (Rose Mead)</option>
-                                        <option value="traditional">Traditional</option>
-                                    </optgroup>
+                                        </optgroup>
                                     <optgroup label="Belgian Specials">
-                                        <option value="belgian_dubbel">Dubbel Style</option>
-                                        <option value="belgian_gruit">Gruit (Hopless Herb Mead)</option>
-                                        <option value="belgian_kriek">Kriek Style</option>
-                                        <option value="lambic">Lambic Style</option>
-                                        <option value="oud_bruin">Oud Bruin Style</option>
-                                        <option value="belgian_quad">Quadrupel (Westvleteren 12 Inspired)</option>
-                                        <option value="belgian_saison">Saison de Pipaix Style</option>
-                                        <option value="belgian_tripel">Tripel Style</option>
-                                        <option value="belgian_wit">Wit Style</option>
-                                    </optgroup>
+                                        </optgroup>
                                 </select>
                             </div>
+
                             <div>
                                 <label for="honeyVariety" class="block text-sm font-bold mb-2">Honey Variety</label>
                                 <select id="honeyVariety" class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
+                                    <option value="" disabled selected>-- Select a Honey --</option>
                                     <option value="Acacia">Acacia</option>
-                                    <option value="Buckwheat">Buckwheat</option>
-                                    <option value="Clover">Clover</option>
-                                    <option value="Forest/Boshoning">Forest Honey (Boshoning)</option>
-                                    <option value="Linden/Linde">Linden Honey (Lindehoning)</option>
-                                    <option value="Orange Blossom">Orange Blossom</option>
-                                    <option value="Wildflower" selected>Wildflower (Default)</option>
+                                    <option value="Wildflower">Wildflower</option>
                                     <option value="other">Other...</option>
-                                 </select>
-                                 <input type="text" id="honeyVarietyOther" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary mt-2 hidden" placeholder="Specify other honey">
+                                </select>
+                                <input type="text" id="honeyVarietyOther" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary mt-2 hidden" placeholder="Specify other honey">
                             </div>
+
                             <div id="fruit-section" class="hidden space-y-2">
                                 <label class="block text-sm font-bold">Choose Fruits (for Melomel)</label>
                                 <div class="grid grid-cols-2 gap-2 text-sm">
@@ -619,11 +602,13 @@
                                     <div class="p-2 rounded hover:bg-app-primary"><input type="checkbox" id="fruit_raspberries" class="mr-2"><label for="fruit_raspberries">Raspberries</label></div>
                                     <div class="p-2 rounded hover:bg-app-primary"><input type="checkbox" id="fruit_redcurrants" class="mr-2"><label for="fruit_redcurrants">Redcurrants</label></div>
                                 </div>
+
                                 <div class="pt-2">
                                     <label for="fruitOther" class="block text-xs font-bold text-app-secondary">Other Fruits (comma-separated)</label>
                                     <input type="text" id="fruitOther" placeholder="e.g., Mango, Passion Fruit" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
                                 </div> 
                             </div>
+
                              <div id="spice-section" class="hidden space-y-2">
                                 <label class="block text-sm font-bold">Choose Spices (for Metheglin)</label>
                                 <div class="grid grid-cols-2 gap-2">
@@ -1346,7 +1331,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.8 - 17/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.9 - © 2023-2025</p>
                 </div>
             </div>
         </div>
@@ -2589,13 +2574,12 @@ function buildPrompt() {
         let basePrompt = `You are an award-winning mead maker and logistics expert named "MEA(N)DERY". Your primary goal is to create a practical, world-class, feasible recipe that fits the user's equipment.
 
 **WORLD-CLASS RECIPE PHILOSOPHY:**
-Your recipe must adhere to these core principles:
 1.  **Time-Based Design:** If the user's request includes a timeline (e.g., "ready by Spring 2026"), this becomes a **primary design goal**. You MUST actively choose ingredients and techniques (yeast strain, fining agents, tannin levels) that allow the mead to mature and be ready by that date. You MUST explain these choices in the "Cellaring Note".
 2.  **Balance & Synergy:** In the "## Description", you MUST explain the intended balance and the synergy between at least two key ingredients.
 3.  **Process & Clarity:** The "## Instructions" MUST include best practices for achieving a clear final product and specify ideal fermentation temperature ranges.
-4.  **Ingredient Rationale:** In the "## Brewer's Notes", under a bolded **"Ingredient Rationale:"** title, you MUST justify your choice of the specific honey variety, the yeast strain, AND the chosen nutrient schedule for this recipe.
-5.  **Aging Potential & Guidelines:** In the "## Brewer's Notes", under a bolded **"Cellaring Note:"** title, you MUST provide a cellaring guideline that is consistent with the Time-Based Design goal if one was provided.
-6.  **Food Pairing:** In the "## Brewer's Notes", under a bolded **"Food Pairing:"** title, you MUST suggest at least two specific food pairings.
+4.  **Ingredient Rationale:** In "## Brewer's Notes", under **"Ingredient Rationale:"**, you MUST justify your choice of the specific honey variety, the yeast strain, AND the chosen nutrient schedule for this recipe.
+5.  **Aging Potential & Guidelines:** In "## Brewer's Notes", under **"Cellaring Note:"**, provide a cellaring guideline that is consistent with the Time-Based Design goal if one was provided.
+6.  **Food Pairing:** In "## Brewer's Notes", under **"Food Pairing:"**, suggest at least two specific food pairings.
 
 **CRUCIAL EQUIPMENT & VOLUME LOGIC (MUST FOLLOW IN ORDER):**
 1.  **Determine Target Size (Hierarchy of Goals):**
@@ -2605,52 +2589,49 @@ Your recipe must adhere to these core principles:
 2.  **Design Initial Recipe & Calculate Volume:** Based on the determined target size, design the recipe and calculate the **Total Required Fermenter Volume** (liquids + solids displacement).
 3.  **Feasibility Check & Selection:** Check if the recipe fits in the available fermenters: [${availableFermenters}]. If it fits, select the best one (prioritizing wide-mouth for fruit).
 4.  **Fallback (Scale Down):** If the initial design does not fit in any available fermenter, you MUST **SCALE DOWN THE ENTIRE RECIPE** until it fits in the largest available fermenter with adequate headspace.
-5.  **Communicate:** In the "Brewer's Notes" and "Key Stats", you MUST clearly state the final batch size and the chosen fermenter, and explain if/why you scaled the recipe down.
+5.  **Communicate:** In the "Brewer's Notes", "Key Stats", and "Selected Fermenter" sections, you MUST clearly state the final batch size and the chosen fermenter, and explain if/why you scaled the recipe down.
 
-**CRUCIAL TITLE RULE: You are not a recipe assistant, you are a branding expert and storyteller.**
-Your primary task is to invent a captivating and memorable name for this mead. Follow this exact thought process:
-1.  **Find a Concept:** First, look at the core ingredients and style (e.g., dark fruit, spices, bochet). Find a creative theme or concept inspired by mythology, history, literature, a specific feeling, or a clever pun.
-2.  **Invent a Name:** THEN, and only then, create a unique name based on that concept.
+**CRUCIAL TITLE RULE: You are a branding expert, not just a writer.**
+Your primary task is to invent a captivating name that stands out. Follow this exact thought process:
+1.  **Analyze the Recipe:** Look at the core ingredients, style, and potential flavor profile.
+2.  **Choose a Creative Style:** Select ONE of the following three styles for the name:
+    -   **Style A (Clever & Witty):** A smart pun or wordplay related to the ingredients or mead making.
+    -   **Style B (Modern & Evocative):** A short, powerful, and elegant name, often combining two concepts (e.g., ingredients, textures, colors). This style is simple and confident.
+    -   **Style C (The Craft & Technique):** The name is a direct reference to a crucial technique or process detail in the recipe. It's a confident name that highlights the craftsmanship (e.g., caramelization level, a specific yeast action, aging method).
+3.  **Invent a Name:** Create a unique name that perfectly fits the chosen style.
 
 **HARD CONSTRAINTS:**
--   The title **MUST NOT** start with a list of its main ingredients (e.g., "Plum & Almond...").
--   The title **MUST NOT** use generic, cheesy words like 'Delight', 'Embrace', 'Kiss', 'Symphony', or 'Elixir'.
+-   The title **MUST NOT** be a simple list of ingredients (e.g., "Plum & Almond Mead").
+-   The title **MUST NOT** use generic, "hippie" or cheesy words like 'Delight', 'Kiss', 'Symphony', 'Embrace', 'Nectar', or 'Elixir'.
 
-**Examples of EXCELLENT Titles:**
--   For a red fruit melomel: '# The Burning of Troy: An Opal and Red Currant Melomel'
--   For a spiced mead: '# The Alchemist's Folly: A Spiced Winter Metheglin'
--   For a traditional mead: '# Valkyrie's Veil: A Classic Wildflower Mead'
-
-**Examples of BAD, BORING Titles (AVOID THESE):**
--   'Plum & Redcurrant Delight'
--   'Sweet Honey Kiss'
--   'My First Melomel'
+**Examples of EXCELLENT Titles (by Style):**
+-   **Style A (Witty):** '# Berry Manilow: A Mixed Berry Melomel'
+-   **Style B (Modern):** '# Oak & Ember: A Dark Caramel Bochet'
+-   **Style C (The Craft):** '# The Third Scorch: A Dark Caramel Bochet'
 
 **FORMAT:** The title MUST be the very first line, formatted as a Markdown H1 heading (e.g., '# Invented Name: A Brief Description'). Do NOT use square brackets [].
 
 Your response MUST be structured with the following headings in this exact order:
 ## Description
 ## Key Stats
+## Selected Fermenter
 ## Ingredients
 ## Instructions
 ## Brewer's Notes
 ## Recommended Water
 
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
-1.  **Recipe Inspiration:** In the "## Description" section, you MUST begin with a single sentence, enclosed in italics, explaining the creative inspiration for the recipe itself. This could be a famous mead (e.g., Schramm's), a celebrated mead maker, a specific style, or a historical concept. For example: "*This recipe is a homebrew-scale interpretation of the award-winning 'The Heart of Darkness' by Schramm's Mead, focusing on a rich fruit character.*"
-2.  **Yeast Logic:** First, determine the ideal yeast. Then, check the user's inventory: [${yeastInInventory}]. If a suitable substitute is found, use it and explain in "Brewer's Notes". Otherwise, recommend a common dry yeast and explain why the inventory yeasts aren't a good match.
-3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule** for this specific recipe. This could be a single dose upfront or a full Staggered Nutrient Addition (SNA) schedule, depending on the Original Gravity and yeast needs. You MUST use the user's nutrient from their inventory: [${nutrientsInInventory}]. **If, and only if, you decide an SNA is the best approach,** you MUST then follow these strict formatting rules:
+1.  **Recipe Inspiration:** In "## Description", you MUST begin with an italicized sentence explaining the recipe's inspiration.
+2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. Then, check the user's inventory: [${yeastInInventory}]. You MUST use a suitable yeast from the inventory. In "## Brewer's Notes", under **"Ingredient Rationale:"**, you MUST state if the chosen inventory yeast was the ideal choice. If not, you MUST specify which yeast you would have preferred and why.
+3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from the user's inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal. **If, and only if, you decide an SNA is the best approach,** you MUST then follow these strict formatting rules:
     - Create a separate, numbered list item for EACH addition.
     - The timer tag \`[d:HH:MM:SS]\` for each step **MUST** represent the waiting time **since the previous addition**.
     - **Example:** For additions at 24h, 48h, and 72h, all three steps must have a \`[d:24:00:00]\` tag.
-4.  **Water Choice:** In "Recommended Water", recommend a specific Belgian bottled water (e.g., Spa Reine, Chaudfontaine) and explain your choice based on the mead style.
-5.  **Key Stats Section:** This section is MANDATORY. It MUST contain a list with these values, formatted exactly like this:
-    - Target OG: 1.XXX
-    - Target FG: 1.XXX
-    - Target ABV: XX.X%
-    - Final Batch Size: X.X L
-    - Selected Fermenter: [Name of the chosen fermenter]
-6.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST be well-structured with bolded titles as specified in the philosophy.
+4.  **Water Choice:** In "## Recommended Water", recommend a specific Belgian bottled water and explain your choice.
+5.  **Key Stats & Fermenter Section:** These sections are MANDATORY. 
+    - "## Key Stats" must contain the OG, FG, ABV, and Final Batch Size.
+    - "## Selected Fermenter" must contain ONLY the name of the chosen fermenter.
+6.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST use bolded titles as specified in the philosophy.
 
 Now, generate the recipe based on the following user request:
 ---`;
@@ -2677,7 +2658,6 @@ Now, generate the recipe based on the following user request:
             if (useBudget && maxBudget) {
                 creativeBrief += `\n\nCRUCIAL CONSTRAINT: The total cost of the ingredients for this recipe MUST NOT EXCEED ${maxBudget} ${currency}. You must use the provided ingredient costs to calculate this and stay within budget. In the Brewer's Notes, state the calculated total cost.`;
             }
-
         } else {
             const style = document.getElementById('style').selectedOptions[0].text;
             let honeyValue = document.getElementById('honeyVariety').options[document.getElementById('honeyVariety').selectedIndex].text;
@@ -2694,7 +2674,7 @@ Now, generate the recipe based on the following user request:
                 const otherSpices = document.getElementById('spiceOther').value.split(',').map(s => s.trim()).filter(s => s);
                 creativeBrief += `\n- Featured Spices: ${[...spices, ...otherSpices].join(', ') || 'Suggest a classic blend.'}`;
             }
-             if (style.toLowerCase().includes('bochet')) {
+            if (style.toLowerCase().includes('bochet')) {
                 creativeBrief += `\n- Bochet Method: You MUST recommend the best method for caramelizing the honey and provide detailed, safe instructions.`;
             }
             if (style.includes('Braggot')) {
@@ -2714,17 +2694,11 @@ Now, generate the recipe based on the following user request:
 **FINAL AND MOST IMPORTANT INSTRUCTIONS - YOUR ENTIRE RESPONSE MUST CONFORM TO THESE RULES:**
 Your response must be a single, valid Markdown document.
 
-1.  **INGREDIENTS MUST BE A JSON CODE BLOCK:** ...
-    - **UNIQUENESS RULE:** Each ingredient in the JSON array must be unique. If an ingredient is added at multiple stages (like in an SNA), you MUST sum the total quantity and list the ingredient only ONCE in this JSON block. The ## Instructions section should detail the separate additions.
-    Example of the required format:
-    \`\`\`json
-    [
-      {"ingredient": "Wildflower Honey", "quantity": 1.5, "unit": "kg"},
-      {"ingredient": "Spa Reine", "quantity": 4, "unit": "L"}
-    ]
-    \`\`\`
-2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST be structured with two specific subheadings: "### Primary Fermentation" and "### Secondary & Aging". All steps must be listed under one of these.
-3.  **CRUCIAL TIMER RULE:** You MUST add a timer tag \`[d:HH:MM:SS]\` for any step that requires a specific waiting period. This is mandatory for yeast rehydration, staggered nutrient additions, and timed boils. **For example, a step like "let the yeast rehydrate for 15 minutes" MUST end with the tag \`[d:00:15:00]\`. A nutrient addition at 24 hours MUST end with \`[d:24:00:00]\`.** Do NOT add a timer for general active tasks like 'mixing'.`;
+1.  **INGREDIENTS MUST BE A JSON CODE BLOCK:**
+    - **UNIQUENESS RULE:** Each ingredient must be unique. If added at multiple stages, you MUST sum the total quantity and list the ingredient only ONCE.
+    - **Example Format:** \`\`\`json[{"ingredient": "Honey", "quantity": 1.5, "unit": "kg"}]\`\`\`
+2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST have "### Primary Fermentation" and "### Secondary & Aging" subheadings.
+3.  **CRUCIAL TIMER RULE (GENERAL):** You MUST add a timer tag \`[d:HH:MM:SS]\` for any general step that requires a specific waiting period (e.g., yeast rehydration). **Example:** "...wait 15 minutes" MUST end with \`[d:00:15:00]\`. The specific rules for nutrient timers are handled earlier in the prompt.`;
 
         return basePrompt + creativeBrief + formattingRules;
 

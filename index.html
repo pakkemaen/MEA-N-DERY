@@ -2269,7 +2269,8 @@ function refreshCurrentChecklistView() {
     const batchSizeInput = document.getElementById('batchSize');
     if (batchSizeInput) {
         batchSizeInput.placeholder = userSettings.defaultBatchSize || 5;
-    
+    }
+
     defaultBatchSizeInput.value = userSettings.defaultBatchSize || 5;
     defaultCurrencyInput.value = userSettings.currencySymbol || '€';
     themeToggle.checked = (userSettings.theme === 'dark');

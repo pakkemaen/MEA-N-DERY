@@ -2265,10 +2265,10 @@ function refreshCurrentChecklistView() {
     apiKeyInput.value = userSettings.apiKey || '';
     document.getElementById('imageApiKeyInput').value = userSettings.imageApiKey || '';
     
+    // Set the placeholder for the main batch size input, don't pre-fill it.
     const batchSizeInput = document.getElementById('batchSize');
     if (batchSizeInput) {
-        batchSizeInput.value = userSettings.defaultBatchSize || 5;
-    }
+        batchSizeInput.placeholder = userSettings.defaultBatchSize || 5;
     
     defaultBatchSizeInput.value = userSettings.defaultBatchSize || 5;
     defaultCurrencyInput.value = userSettings.currencySymbol || '€';

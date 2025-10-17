@@ -1343,7 +1343,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.6 - 15/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.7 - 17/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2587,18 +2587,16 @@ function buildPrompt() {
         let basePrompt = `You are an expert mead maker named "MEA(N)DERY" and a logistics expert. Your primary goal is to create a practical, feasible recipe that fits the user's equipment.
 
 **CRUCIAL EQUIPMENT & VOLUME LOGIC (MUST FOLLOW IN ORDER):**
-1.  **Design Initial Recipe:** Mentally design the best recipe for the user's requested final batch size of **${batchSize} liters**.
+1.  **Design Initial Recipe:** Design the best recipe for the user's requested final batch size of **${batchSize} liters**.
 2.  **Calculate Total Volume:** Calculate the **Total Required Fermenter Volume**. This is the sum of all liquids PLUS the volume displaced by solids. Use these strict estimations:
     -   1 kg of fruit/solids displaces **0.7 liters**.
     -   1.3 kg of honey displaces approximately **1 liter**.
-    -   Account for any specified 'Trub/Yeast Loss'.
-3.  **Select Best Fermenter:** Look at the user's available fermenters: [${availableFermenters}].
-    -   **A) Fruit Priority:** If the recipe contains a significant amount of fruit (>1kg), you **MUST** prioritize selecting a fermenter with 'wide mouth', 'bucket', or 'Speidel' in its name over one named 'carboy' or 'demijohn', if a suitable size is available. This is for practical reasons.
-    -   **B) Size Priority:** Select the **smallest** suitable fermenter that can hold the 'Total Required Fermenter Volume' while leaving at least 20% headspace for safety.
-4.  **HARD CHECK & FINAL ACTION:**
-    -   **If a suitable fermenter is found:** Finalize the recipe with the initial ingredient quantities.
-    -   **If NO fermenter is large enough:** Your final, most important task is to **SCALE DOWN THE ENTIRE RECIPE**. You must proportionally reduce all ingredients (liquids and solids) until the new 'Total Required Fermenter Volume' fits into the largest available fermenter with 20% headspace.
-5.  **Communicate & Generate:** In the "Brewer's Notes", add a "Volume & Equipment" note explaining your choice of fermenter and if/why you scaled the recipe down. **The final ## Ingredients list you generate MUST reflect the scaled-down quantities if a scale-down was necessary.**
+    -   Account for any specified 'Trub/Yeast Loss' from the chosen fermenter.
+3.  **Feasibility Check:** Look at the user's LARGEST available fermenter from this list: [${availableFermenters}]. Is it large enough to hold the 'Total Required Fermenter Volume' with adequate headspace (approx. 20%, but more is acceptable for primary fermentation)?
+4.  **Action & Selection:**
+    -   **If YES (it fits):** Finalize the recipe with the initial ingredient quantities. Then, from all suitable fermenters in the list, select the best one. **PRIORITY 1:** For recipes with >1kg of fruit, you MUST choose a 'wide mouth', 'bucket', or 'Speidel' over a 'carboy'. **PRIORITY 2:** Choose the smallest fermenter that still meets the volume requirements.
+    -   **If NO (it does not fit):** You MUST **SCALE DOWN THE ENTIRE RECIPE**. Proportionally reduce all ingredients until the new 'Total Required Fermenter Volume' fits into the largest available fermenter with adequate headspace.
+5.  **Communicate:** In the "Brewer's Notes", you MUST add a "Volume & Equipment" note explaining your choice of fermenter and if/why you scaled the recipe down. The final ## Ingredients list you generate MUST reflect any scaling that was performed.
 
 **CRUCIAL TITLE RULE: You are not a recipe assistant, you are a branding expert and storyteller.**
 Your primary task is to invent a captivating and memorable name for this mead. Follow this exact thought process:

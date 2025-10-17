@@ -145,6 +145,9 @@
         .recipe-content th:nth-child(2) {
             padding-right: 2rem; /* Voegt extra ruimte toe na de "Quantity" kolomkop */
         }
+        .recipe-content th, .recipe-content td {
+            padding: 0.5rem 0.75rem; /* Voegt consistente opvulling toe aan alle cellen */
+        }
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid var(--accent-color);
@@ -2677,7 +2680,7 @@ Your response MUST be structured with the following headings in this exact order
 ## Recommended Water
 
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
-1.  **Recipe Inspiration:** The "## Description" section MUST begin with a single sentence explaining the creative inspiration for the recipe itself (e.g., a famous mead, a specific style). This sentence MUST be followed by a blank line before the rest of the description begins. Do NOT use italics for this sentence.
+1.  **Recipe Inspiration:** The "## Description" section MUST begin with a single sentence explaining the recipe's inspiration. This sentence MUST be a standalone paragraph. You MUST insert a full blank line after it before the main description begins. Do NOT use italics.
 2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. Then, check the user's inventory: [${yeastInInventory}]. You MUST use a suitable yeast from the inventory. In "## Brewer's Notes", under **"Ingredient Rationale:"**, you MUST state if the chosen inventory yeast was the ideal choice. If not, you MUST specify which yeast you would have preferred and why.
 3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from the user's inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal. **If, and only if, you decide an SNA is the best approach,** you MUST then follow these strict formatting rules:
     - Create a separate, numbered list item for EACH addition.
@@ -5109,6 +5112,7 @@ function parseStepsForBrewDay(markdown) {
                 if (element.tagName === 'OL' || element.tagName === 'UL') {
                     Array.from(element.children).forEach(li => {
                         if (li.tagName === 'LI') {
+                            // De complexe berekeningslogica is hier verwijderd. We voegen de stap direct toe.
                             stepArray.push(parseStepText(li.textContent.trim()));
                         }
                     });
@@ -5133,7 +5137,6 @@ window.saveBrewToHistory = async function() {
     saveButton.textContent = 'Saving...';
     saveButton.disabled = true;
 
-    // CORRECTIE: De onnodige API-aanroep is hier verwijderd.
     const totalBatchCost = parseIngredientsAndCalculateCost(currentRecipeMarkdown, inventory, parseFloat(document.getElementById('batchSize').value) || 5);
     const brewDayStepsObject = parseStepsForBrewDay(currentRecipeMarkdown);
     
@@ -5152,7 +5155,7 @@ window.saveBrewToHistory = async function() {
         totalCost: totalBatchCost,
         isBottled: false,
         primaryComplete: false,
-        predictedFlavorProfile: currentPredictedProfile, // Gebruik de waarde die al bestaat
+        predictedFlavorProfile: currentPredictedProfile,
         brewDaySteps: brewDayStepsObject.primary,
         secondarySteps: brewDayStepsObject.secondary
     };
@@ -5164,16 +5167,17 @@ window.saveBrewToHistory = async function() {
         
         const buttonContainer = saveButton.parentElement;
         
+        // Verberg de "Save" knop na succes
+        saveButton.style.display = 'none';
+
+        // Voeg de "Start Brew Day" knop toe
         buttonContainer.innerHTML += `
-            <button onclick="window.startBrewDay('${docRef.id}')" class="w-full mt-4 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors btn">
+            <button onclick="window.startBrewDay('${docRef.id}')" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors btn">
                 Start Brew Day
             </button>
         `;
 
-        saveButton.textContent = 'Saved!';
-        saveButton.classList.replace('bg-green-700', 'bg-gray-500');
         showToast("Recipe saved to History!", "success");
-
         promptToUpdateInventory(currentRecipeMarkdown);
 
     } catch (error) {

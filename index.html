@@ -1346,7 +1346,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.7 - 17/10/2025 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY v1.9.8 - 17/10/2025 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2590,11 +2590,12 @@ function buildPrompt() {
 
 **WORLD-CLASS RECIPE PHILOSOPHY:**
 Your recipe must adhere to these core principles:
-1.  **Balance & Synergy:** In the "## Description", you MUST explain the intended balance (sweetness, acidity, tannins, alcohol) and the synergy between at least two key ingredients.
-2.  **Process & Clarity:** The "## Instructions" MUST include best practices for achieving a clear final product (e.g., fining agents, cold crashing) and specify ideal fermentation temperature ranges.
-3.  **Ingredient Rationale:** In the "## Brewer's Notes", under a bolded **"Ingredient Rationale:"** title, you MUST justify your choice of the specific honey variety and yeast strain for this recipe.
-4.  **Aging Potential & Guidelines:** In the "## Brewer's Notes", under a bolded **"Cellaring Note:"** title, you MUST provide a general guideline on the aging potential. Explain what factors (like final gravity, fruit content, or tannins) will influence this, and give an estimated peak drinking window assuming a successful fermentation. For example: "If this mead ferments dry (around 1.000), it will likely peak in 1 year. A sweeter finish could extend this to 2-3 years."
-5.  **Food Pairing:** In the "## Brewer's Notes", under a bolded **"Food Pairing:"** title, you MUST suggest at least two specific food pairings that would complement the mead. For example: "This mead pairs wonderfully with a sharp blue cheese or a rich, dark chocolate dessert."
+1.  **Time-Based Design:** If the user's request includes a timeline (e.g., "ready by Spring 2026"), this becomes a **primary design goal**. You MUST actively choose ingredients and techniques (yeast strain, fining agents, tannin levels) that allow the mead to mature and be ready by that date. You MUST explain these choices in the "Cellaring Note".
+2.  **Balance & Synergy:** In the "## Description", you MUST explain the intended balance and the synergy between at least two key ingredients.
+3.  **Process & Clarity:** The "## Instructions" MUST include best practices for achieving a clear final product and specify ideal fermentation temperature ranges.
+4.  **Ingredient Rationale:** In the "## Brewer's Notes", under a bolded **"Ingredient Rationale:"** title, you MUST justify your choice of the specific honey variety, the yeast strain, AND the chosen nutrient schedule for this recipe.
+5.  **Aging Potential & Guidelines:** In the "## Brewer's Notes", under a bolded **"Cellaring Note:"** title, you MUST provide a cellaring guideline that is consistent with the Time-Based Design goal if one was provided.
+6.  **Food Pairing:** In the "## Brewer's Notes", under a bolded **"Food Pairing:"** title, you MUST suggest at least two specific food pairings.
 
 **CRUCIAL EQUIPMENT & VOLUME LOGIC (MUST FOLLOW IN ORDER):**
 1.  **Determine Target Size (Hierarchy of Goals):**

@@ -567,11 +567,31 @@
                             <div>
                                 <label for="style" class="block text-sm font-bold mb-2">Base Style</label>
                                 <select id="style" class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
-                                    <option value="" disabled selected>-- Select a Style --</option>
-                                    <optgroup label="Standard Styles">
-                                        </optgroup>
-                                    <optgroup label="Belgian Specials">
-                                        </optgroup>
+                                   <option value="" disabled selected>-- Select a Style --</option>
+                                   <optgroup label="Mead Styles">
+                                       <option value="Traditional">Traditional Mead (Honey Only)</option>
+                                       <option value="Melomel">Melomel (Fruit Mead)</option>
+                                       <option value="Metheglin">Metheglin (Spice Mead)</option>
+                                       <option value="Bochet">Bochet (Caramelized Honey)</option>
+                                       <option value="Cyser">Cyser (Apple Mead)</option>
+                                       <option value="Pyment">Pyment (Grape Mead)</option>
+                                       <option value="Braggot">Braggot (Mead/Beer Hybrid)</option>
+                                       <option value="Hydromel">Hydromel (Session Mead, <10% ABV)</option>
+                                       <option value="Sack Mead">Sack Mead (Dessert Mead, >14% ABV)</option>
+                                       <option value="Capsicumel">Capsicumel (Chili Pepper Mead)</option>
+                                       <option value="Rhodomel">Rhodomel (Rose Mead)</option>
+                                       <option value="Acerglyn">Acerglyn (Maple Mead)</option>
+                                    </optgroup>
+                                    <optgroup label="Alternative & Hybrid Styles">
+                                       <option value="Bochetomel">Bochetomel (Caramelized Fruit Mead)</option>
+                                       <option value="Viking's Blood">Viking's Blood (Cherry Melomel)</option>
+                                       <option value="Black Mead">Black Mead (Blackcurrant Melomel)</option>
+                                       <option value="Morat">Morat (Mulberry Mead)</option>
+                                       <option value="Tej">Tej (Ethiopian Honey Wine)</option>
+                                       <option value="Great Mead">Great Mead (Long-Aging Potential)</option>
+                                       <option value="Short Mead">Short Mead (Quick Fermentation)</option>
+                                       <option value="Sparkling Mead">Sparkling Mead</option>
+                                    </optgroup>
                                 </select>
                             </div>
 
@@ -1331,7 +1351,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.9 - © 2023-2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.9 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2614,7 +2634,7 @@ Your primary task is to invent a captivating name that stands out. Follow this e
 Your response MUST be structured with the following headings in this exact order:
 ## Description
 ## Key Stats
-## Selected Fermenter
+## Fermenter
 ## Ingredients
 ## Instructions
 ## Brewer's Notes
@@ -2630,7 +2650,7 @@ Your response MUST be structured with the following headings in this exact order
 4.  **Water Choice:** In "## Recommended Water", recommend a specific Belgian bottled water and explain your choice.
 5.  **Key Stats & Fermenter Section:** These sections are MANDATORY. 
     - "## Key Stats" must contain the OG, FG, ABV, and Final Batch Size.
-    - "## Selected Fermenter" must contain ONLY the name of the chosen fermenter.
+    - "## Fermenter" must contain ONLY the name of the chosen fermenter.
 6.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST use bolded titles as specified in the philosophy.
 
 Now, generate the recipe based on the following user request:

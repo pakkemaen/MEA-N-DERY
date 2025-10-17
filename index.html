@@ -142,6 +142,9 @@
         .recipe-content p { line-height: 1.7; margin-bottom: 1.25rem; }
         .recipe-content li { margin-bottom: 0.75rem; line-height: 1.6; }
         .recipe-content strong { font-weight: 600; color: var(--text-primary); }
+        .recipe-content th:nth-child(2) {
+            padding-right: 2rem; /* Voegt extra ruimte toe na de "Quantity" kolomkop */
+        }
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid var(--accent-color);
@@ -2515,8 +2518,7 @@ async function generateRecipe() {
         }
         
         let finalMarkdown = currentRecipeMarkdown;
-        
-        // CORRECTIE: De jsonRegex en jsonMatch declaraties waren hier vergeten
+     
         const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
         const jsonMatch = currentRecipeMarkdown.match(jsonRegex);
 
@@ -2584,19 +2586,25 @@ function buildPrompt() {
             .map(p => `${p.name} (${p.capacityLiters}L total capacity, ${p.trubLossLiters || 0}L loss)`)
             .join('; ');
 
-        let basePrompt = `You are an expert mead maker named "MEA(N)DERY" and a logistics expert. Your primary goal is to create a practical, feasible recipe that fits the user's equipment.
+        let basePrompt = `You are an award-winning mead maker and logistics expert named "MEA(N)DERY". Your primary goal is to create a practical, world-class, feasible recipe that fits the user's equipment.
+
+**WORLD-CLASS RECIPE PHILOSOPHY:**
+Your recipe must adhere to these core principles:
+1.  **Balance & Synergy:** In the "## Description", you MUST explain the intended balance (sweetness, acidity, tannins, alcohol) and the synergy between at least two key ingredients.
+2.  **Process & Clarity:** The "## Instructions" MUST include best practices for achieving a clear final product (e.g., fining agents, cold crashing) and specify ideal fermentation temperature ranges.
+3.  **Ingredient Rationale:** In the "## Brewer's Notes", under a bolded **"Ingredient Rationale:"** title, you MUST justify your choice of the specific honey variety and yeast strain for this recipe.
+4.  **Aging Potential & Guidelines:** In the "## Brewer's Notes", under a bolded **"Cellaring Note:"** title, you MUST provide a general guideline on the aging potential. Explain what factors (like final gravity, fruit content, or tannins) will influence this, and give an estimated peak drinking window assuming a successful fermentation. For example: "If this mead ferments dry (around 1.000), it will likely peak in 1 year. A sweeter finish could extend this to 2-3 years."
+5.  **Food Pairing:** In the "## Brewer's Notes", under a bolded **"Food Pairing:"** title, you MUST suggest at least two specific food pairings that would complement the mead. For example: "This mead pairs wonderfully with a sharp blue cheese or a rich, dark chocolate dessert."
 
 **CRUCIAL EQUIPMENT & VOLUME LOGIC (MUST FOLLOW IN ORDER):**
-1.  **Design Initial Recipe:** Design the best recipe for the user's requested final batch size of **${batchSize} liters**.
-2.  **Calculate Total Volume:** Calculate the **Total Required Fermenter Volume**. This is the sum of all liquids PLUS the volume displaced by solids. Use these strict estimations:
-    -   1 kg of fruit/solids displaces **0.7 liters**.
-    -   1.3 kg of honey displaces approximately **1 liter**.
-    -   Account for any specified 'Trub/Yeast Loss' from the chosen fermenter.
-3.  **Feasibility Check:** Look at the user's LARGEST available fermenter from this list: [${availableFermenters}]. Is it large enough to hold the 'Total Required Fermenter Volume' with adequate headspace (approx. 20%, but more is acceptable for primary fermentation)?
-4.  **Action & Selection:**
-    -   **If YES (it fits):** Finalize the recipe with the initial ingredient quantities. Then, from all suitable fermenters in the list, select the best one. **PRIORITY 1:** For recipes with >1kg of fruit, you MUST choose a 'wide mouth', 'bucket', or 'Speidel' over a 'carboy'. **PRIORITY 2:** Choose the smallest fermenter that still meets the volume requirements.
-    -   **If NO (it does not fit):** You MUST **SCALE DOWN THE ENTIRE RECIPE**. Proportionally reduce all ingredients until the new 'Total Required Fermenter Volume' fits into the largest available fermenter with adequate headspace.
-5.  **Communicate:** In the "Brewer's Notes", you MUST add a "Volume & Equipment" note explaining your choice of fermenter and if/why you scaled the recipe down. The final ## Ingredients list you generate MUST reflect any scaling that was performed.
+1.  **Determine Target Size (Hierarchy of Goals):**
+    -   **Priority 1 (User Specified Volume):** If the user's free-text description explicitly mentions a target volume (e.g., "make a 10 liter mead"), you MUST use that as your goal.
+    -   **Priority 2 (User Specified Ingredients):** If the description provides constraints on key ingredients (e.g., "use max 2kg honey", "use 3kg plums") but NOT a volume, your goal is to determine the **OPTIMAL BATCH SIZE** to create a world-class recipe with those ingredients.
+    -   **Priority 3 (Default):** If neither of the above applies, use the default target of **${batchSize} liters**.
+2.  **Design Initial Recipe & Calculate Volume:** Based on the determined target size, design the recipe and calculate the **Total Required Fermenter Volume** (liquids + solids displacement).
+3.  **Feasibility Check & Selection:** Check if the recipe fits in the available fermenters: [${availableFermenters}]. If it fits, select the best one (prioritizing wide-mouth for fruit).
+4.  **Fallback (Scale Down):** If the initial design does not fit in any available fermenter, you MUST **SCALE DOWN THE ENTIRE RECIPE** until it fits in the largest available fermenter with adequate headspace.
+5.  **Communicate:** In the "Brewer's Notes" and "Key Stats", you MUST clearly state the final batch size and the chosen fermenter, and explain if/why you scaled the recipe down.
 
 **CRUCIAL TITLE RULE: You are not a recipe assistant, you are a branding expert and storyteller.**
 Your primary task is to invent a captivating and memorable name for this mead. Follow this exact thought process:
@@ -2628,20 +2636,20 @@ Your response MUST be structured with the following headings in this exact order
 ## Recommended Water
 
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
-1.  **Yeast Logic:** First, determine the ideal yeast. Then, check the user's inventory: [${yeastInInventory}]. If a suitable substitute is found, use it and explain in "Brewer's Notes". Otherwise, recommend a common dry yeast and explain why the inventory yeasts aren't a good match.
-2.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule** for this specific recipe. This could be a single dose upfront or a full Staggered Nutrient Addition (SNA) schedule, depending on the Original Gravity and yeast needs. You MUST use the user's nutrient from their inventory: [${nutrientsInInventory}]. **If, and only if, you decide an SNA is the best approach,** you MUST then follow these strict formatting rules:
+1.  **Recipe Inspiration:** In the "## Description" section, you MUST begin with a single sentence, enclosed in italics, explaining the creative inspiration for the recipe itself. This could be a famous mead (e.g., Schramm's), a celebrated mead maker, a specific style, or a historical concept. For example: "*This recipe is a homebrew-scale interpretation of the award-winning 'The Heart of Darkness' by Schramm's Mead, focusing on a rich fruit character.*"
+2.  **Yeast Logic:** First, determine the ideal yeast. Then, check the user's inventory: [${yeastInInventory}]. If a suitable substitute is found, use it and explain in "Brewer's Notes". Otherwise, recommend a common dry yeast and explain why the inventory yeasts aren't a good match.
+3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule** for this specific recipe. This could be a single dose upfront or a full Staggered Nutrient Addition (SNA) schedule, depending on the Original Gravity and yeast needs. You MUST use the user's nutrient from their inventory: [${nutrientsInInventory}]. **If, and only if, you decide an SNA is the best approach,** you MUST then follow these strict formatting rules:
     - Create a separate, numbered list item for EACH addition.
     - The timer tag \`[d:HH:MM:SS]\` for each step **MUST** represent the waiting time **since the previous addition**.
     - **Example:** For additions at 24h, 48h, and 72h, all three steps must have a \`[d:24:00:00]\` tag.
-3.  **Water Choice:** In "Recommended Water", recommend a specific Belgian bottled water (e.g., Spa Reine, Chaudfontaine) and explain your choice based on the mead style.
-4.  **Key Stats Section:** The "## Key Stats" section is MANDATORY. It MUST be placed directly after "## Description" and before "## Ingredients". It MUST contain a list with the following three values, formatted exactly like this:
+4.  **Water Choice:** In "Recommended Water", recommend a specific Belgian bottled water (e.g., Spa Reine, Chaudfontaine) and explain your choice based on the mead style.
+5.  **Key Stats Section:** This section is MANDATORY. It MUST contain a list with these values, formatted exactly like this:
     - Target OG: 1.XXX
     - Target FG: 1.XXX
     - Target ABV: XX.X%
-5.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST be well-structured. Each distinct topic (Yeast, Nutrients, Volume & Equipment, etc.) MUST be introduced on a new line with a bolded title followed by a colon. For example:
-    - **Yeast:** I selected Oenoferm BOUQUET because...
-    - **Nutrients:** The schedule uses VitaFerm to...
-    - **Volume & Equipment:** I chose the 20L Speidel because...
+    - Final Batch Size: X.X L
+    - Selected Fermenter: [Name of the chosen fermenter]
+6.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST be well-structured with bolded titles as specified in the philosophy.
 
 Now, generate the recipe based on the following user request:
 ---`;
@@ -2705,7 +2713,8 @@ Now, generate the recipe based on the following user request:
 **FINAL AND MOST IMPORTANT INSTRUCTIONS - YOUR ENTIRE RESPONSE MUST CONFORM TO THESE RULES:**
 Your response must be a single, valid Markdown document.
 
-1.  **INGREDIENTS MUST BE A JSON CODE BLOCK:** The "## Ingredients" section MUST contain ONLY a valid JSON code block. This is not optional. The block must be an array of objects, with each object having "ingredient" (string), "quantity" (number), and "unit" (string) keys.
+1.  **INGREDIENTS MUST BE A JSON CODE BLOCK:** ...
+    - **UNIQUENESS RULE:** Each ingredient in the JSON array must be unique. If an ingredient is added at multiple stages (like in an SNA), you MUST sum the total quantity and list the ingredient only ONCE in this JSON block. The ## Instructions section should detail the separate additions.
     Example of the required format:
     \`\`\`json
     [
@@ -4037,7 +4046,7 @@ async function bottleBatch(e) {
     const originalButtonText = submitButton.innerHTML;
     submitButton.disabled = true;
     submitButton.innerHTML = '<div class="loader" style="height:20px; width:20px; border-width: 2px; margin: 0 auto;"></div>';
-    
+
     try {
         const originalBrew = brews.find(b => b.id === currentBrewToBottleId);
         if (!originalBrew) throw new Error("Could not find the original recipe to bottle.");
@@ -4055,7 +4064,7 @@ async function bottleBatch(e) {
         const closureType = document.getElementById('closureTypeSelect').value;
         const outOfStockItems = [];
         let totalBottles = 0;
-        
+
         bottlesData.forEach(bottle => {
             totalBottles += bottle.quantity;
             if (bottle.price === null) {
@@ -4084,14 +4093,14 @@ async function bottleBatch(e) {
                 outOfStockItems.push(`${needed} x ${closureType.replace(/_/g, ' ')} (only ${inStock} in stock)`);
             }
         }
-        
+
         const currentLabelStock = packagingCosts['label']?.qty || 0;
         if (totalBottles > currentLabelStock) outOfStockItems.push(`${totalBottles} label(s) (only ${currentLabelStock} in stock)`);
-        
+
         if (outOfStockItems.length > 0) {
             throw new Error(`Not enough stock. Missing:\n- ${outOfStockItems.join('\n- ')}`);
         }
-        
+
         const packagingCostsPerUnit = getPackagingCosts();
         let totalPackagingCost = 0;
 
@@ -4100,8 +4109,8 @@ async function bottleBatch(e) {
             let closureCost = 0;
 
             if (closureType === 'auto') {
-                if (bottle.size >= 750) { closureCost = packagingCostsPerUnit.cork || 0; } 
-                else if (bottle.size >= 500) { closureCost = packagingCostsPerUnit.crown_cap_29 || 0; } 
+                if (bottle.size >= 750) { closureCost = packagingCostsPerUnit.cork || 0; }
+                else if (bottle.size >= 500) { closureCost = packagingCostsPerUnit.crown_cap_29 || 0; }
                 else { closureCost = packagingCostsPerUnit.crown_cap_26 || 0; }
             } else {
                 closureCost = packagingCostsPerUnit[closureType] || 0;
@@ -4118,7 +4127,7 @@ async function bottleBatch(e) {
         let finalTotalCost = ingredientCost + totalPackagingCost;
 
         if (confirm(`The calculated packaging cost is ${userSettings.currencySymbol || '€'}${totalPackagingCost.toFixed(2)}. The new total batch cost will be ${userSettings.currencySymbol || '€'}${finalTotalCost.toFixed(2)}. Do you want to continue?`)) {
-            const updatedPackagingStock = JSON.parse(JSON.stringify(packagingCosts)); // Veilige kopie
+            const updatedPackagingStock = JSON.parse(JSON.stringify(packagingCosts));
 
             const deductFromStock = (stock, itemId, quantity) => {
                 if (stock[itemId] && stock[itemId].qty > 0) {
@@ -4128,7 +4137,6 @@ async function bottleBatch(e) {
                     stock[itemId].qty -= quantity;
                     stock[itemId].price -= costToDeduct;
 
-                    // Voorkom negatieve waarden door afrondingsfouten
                     if (stock[itemId].qty <= 0) {
                         stock[itemId].qty = 0;
                         stock[itemId].price = 0;
@@ -4136,19 +4144,17 @@ async function bottleBatch(e) {
                 }
             };
 
-            // Schrijf standaard flessen af
             bottlesData.forEach(bottle => {
-                if(bottle.price === null) { 
+                if(bottle.price === null) {
                     deductFromStock(updatedPackagingStock, `bottle_${bottle.size}`, bottle.quantity);
                 }
             });
 
-            // Schrijf sluitingen en etiketten af
             if (closureType === 'auto') {
                  bottlesData.forEach(bottle => {
                     let closureId;
-                    if (bottle.size >= 750) { closureId = 'cork'; } 
-                    else if (bottle.size >= 500) { closureId = 'crown_cap_29'; } 
+                    if (bottle.size >= 750) { closureId = 'cork'; }
+                    else if (bottle.size >= 500) { closureId = 'crown_cap_29'; }
                     else { closureId = 'crown_cap_26'; }
                     deductFromStock(updatedPackagingStock, closureId, bottle.quantity);
                  });
@@ -4156,18 +4162,18 @@ async function bottleBatch(e) {
                 deductFromStock(updatedPackagingStock, closureType, totalBottles);
             }
             deductFromStock(updatedPackagingStock, 'label', totalBottles);
-            
+
             const appId = 'meandery-aa05e';
             const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'packaging');
             await setDoc(settingsDocRef, updatedPackagingStock);
             packagingCosts = updatedPackagingStock;
-            
+
             const bottlingDate = new Date(document.getElementById('bottlingDate').value);
             const cellarData = {
-                userId: userId, 
-                brewId: currentBrewToBottleId, 
+                userId: userId,
+                brewId: currentBrewToBottleId,
                 recipeName: originalBrew.recipeName,
-                bottlingDate: bottlingDate, 
+                bottlingDate: bottlingDate,
                 bottles: bottlesData.map(({price, ...rest}) => rest),
                 totalBatchCost: finalTotalCost,
                 ingredientCost: originalBrew.totalCost || 0,
@@ -4176,54 +4182,56 @@ async function bottleBatch(e) {
             };
 
             try {
-                const agingPrompt = `Analyze the following mead recipe. Based on the ingredients and style, determine a recommended 'peak flavor' date, assuming it was bottled on ${bottlingDate.toISOString().split('T')[0]}.
+                const logSummary = `
+                    - Target OG: ${originalBrew.logData.targetOG}, Actual OG: ${originalBrew.logData.actualOG}
+                    - Target FG: ${originalBrew.logData.targetFG}, Actual FG: ${originalBrew.logData.actualFG}
+                    - Final ABV: ${originalBrew.logData.finalABV}
+                    - Fermentation notes: ${JSON.stringify(originalBrew.logData.fermentationLog)}
+                `;
 
-Recipe Markdown:
----
-${originalBrew.recipeMarkdown}
----
+                const agingPrompt = `You are an expert mead maker and keldermeester. Analyze the journey of the following mead from recipe to bottling and provide a definitive cellaring note. Pay close attention to any deviations between the target and actual values.
 
-CRUCIAL: Your response MUST contain two parts:
-1. A "Justification:" line with a single sentence explaining your reasoning.
-2. A "Peak Date:" line with only the date in YYYY-MM-DD format.
-Example:
-Justification: Bochets with dark fruit benefit from at least two years of aging to mellow.
-Peak Date: 2027-09-24`;
+                Original Recipe:
+                ---
+                ${originalBrew.recipeMarkdown}
+                ---
 
-                const agingAdvice = await performApiCall(agingPrompt);
-                const dateMatch = agingAdvice.match(/Peak Date:\s*(\d{4}-\d{2}-\d{2})/);
-                const justificationMatch = agingAdvice.match(/Justification:\s*(.*)/);
-                
-                if (dateMatch) cellarData.peakFlavorDate = dateMatch[1];
-                if (justificationMatch) cellarData.peakFlavorJustification = justificationMatch[1];
+                Brewmaster's Log Summary:
+                ---
+                ${logSummary}
+                ---
+
+                The mead was bottled on: ${bottlingDate.toISOString().split('T')[0]}.
+
+                Based on all this data, provide a single, expert "Cellaring Note:" explaining the aging potential and a recommended peak drinking window. Your entire response should be just the note itself, starting with "This mead...".`;
+
+                const definitiveAdvice = await performApiCall(agingPrompt);
+                cellarData.peakFlavorJustification = definitiveAdvice.trim();
 
             } catch (aiError) {
-                console.error("Aging advice failed, but bottling will continue:", aiError);
+                console.error("Definitive aging advice failed, but bottling will continue:", aiError);
             }
 
             const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar');
             await addDoc(cellarCol, cellarData);
-            // Markeer het originele brouwsel als gebotteld
+
             const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId);
             await updateDoc(brewDocRef, { isBottled: true });
 
-            // Stap 1: Forceer een directe update van de lokale data.
             const brewIndex = brews.findIndex(b => b.id === currentBrewToBottleId);
             if (brewIndex > -1) {
                 brews[brewIndex].isBottled = true;
             }
 
-            // Stap 2: Ruim de actieve 'Brew Day 1' op als dit de actieve batch was.
             if (currentBrewDay.brewId === currentBrewToBottleId) {
                 currentBrewDay = { brewId: null, checklist: {} };
-                await saveUserSettings(); // Sla de lege status op in de instellingen.
+                await saveUserSettings();
             }
 
-            // Stap 3: Ververs de (momenteel verborgen) UI-lijsten onmiddellijk.
             renderBrewDay2();
             renderHistoryList();
-            renderBrewDay('none'); // Leeg de Brew Day 1 weergave
-            
+            renderBrewDay('none');
+
             hideBottlingModal();
             showToast("Batch bottled and added to cellar!", "success");
             switchMainView('management');

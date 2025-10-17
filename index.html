@@ -2520,18 +2520,18 @@ async function clearInventory() {
                 return data;
             }
 
+// --- VERVANG JE VOLLEDIGE generateRecipe FUNCTIE MET DEZE ---
 async function generateRecipe() {
     recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
     generateBtn.disabled = true;
     generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    currentPredictedProfile = null; // Reset bij elke nieuwe generatie
+    currentPredictedProfile = null;
 
     try {
         const prompt = buildPrompt();
         lastGeneratedPrompt = prompt;
         currentRecipeMarkdown = await performApiCall(prompt);
         
-        // Genereer het smaakprofiel onmiddellijk
         currentPredictedProfile = await getPredictedFlavorProfile(currentRecipeMarkdown);
         let flavorProfileHtml = '';
         if (currentPredictedProfile) {
@@ -2546,7 +2546,6 @@ async function generateRecipe() {
         }
         
         let finalMarkdown = currentRecipeMarkdown;
-     
         const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
         const jsonMatch = currentRecipeMarkdown.match(jsonRegex);
 
@@ -2556,19 +2555,33 @@ async function generateRecipe() {
                 let tableMarkdown = '| Ingredient | Quantity | Unit |\n';
                 tableMarkdown += '|---|---|---|\n';
                 ingredientsArray.forEach(item => {
-                    tableMarkdown += `| ${item.ingredient} | ${item.quantity} | ${item.unit} |\n`;
+                    // --- START CORRECTIE ---
+                    let displayQty = item.quantity;
+                    let displayUnit = item.unit;
+
+                    if ((displayUnit || '').toLowerCase() === 'g' && displayQty >= 1000) {
+                        displayQty /= 1000;
+                        displayUnit = 'kg';
+                    } else if ((displayUnit || '').toLowerCase() === 'ml' && displayQty >= 1000) {
+                        displayQty /= 1000;
+                        displayUnit = 'L';
+                    }
+                    
+                    if (displayQty % 1 !== 0) {
+                       displayQty = parseFloat(displayQty.toFixed(2));
+                    }
+                    // --- EINDE CORRECTIE ---
+                    tableMarkdown += `| ${item.ingredient} | ${displayQty} | ${displayUnit} |\n`;
                 });
                 finalMarkdown = currentRecipeMarkdown.replace(jsonRegex, tableMarkdown);
             } catch (e) {
                 console.error("Failed to parse ingredients JSON from AI response:", e);
-                // finalMarkdown blijft de originele markdown bij een fout
             }
         }
 
         finalMarkdown = finalMarkdown.replace(/\[d:[\d:]+\]/g, '');
         const recipeHtml = marked.parse(finalMarkdown);
         
-        // CORRECTIE: De flavorProfileHtml wordt nu hier toegevoegd
         const fullHtml = `
             <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
                 <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
@@ -2664,7 +2677,7 @@ Your response MUST be structured with the following headings in this exact order
 ## Recommended Water
 
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
-1.  **Recipe Inspiration:** In "## Description", you MUST begin with an italicized sentence explaining the recipe's inspiration.
+1.  **Recipe Inspiration:** The "## Description" section MUST begin with a single sentence explaining the creative inspiration for the recipe itself (e.g., a famous mead, a specific style). This sentence MUST be followed by a blank line before the rest of the description begins. Do NOT use italics for this sentence.
 2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. Then, check the user's inventory: [${yeastInInventory}]. You MUST use a suitable yeast from the inventory. In "## Brewer's Notes", under **"Ingredient Rationale:"**, you MUST state if the chosen inventory yeast was the ideal choice. If not, you MUST specify which yeast you would have preferred and why.
 3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from the user's inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal. **If, and only if, you decide an SNA is the best approach,** you MUST then follow these strict formatting rules:
     - Create a separate, numbered list item for EACH addition.
@@ -2674,7 +2687,7 @@ Your response MUST be structured with the following headings in this exact order
 5.  **Key Stats & Fermenter Section:** These sections are MANDATORY. 
     - "## Key Stats" must contain the OG, FG, ABV, and Final Batch Size.
     - "## Fermenter" must contain ONLY the name of the chosen fermenter.
-6.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST use bolded titles as specified in the philosophy.
+6.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST use bolded titles on the same line as the text, followed by a colon (e.g., "**Ingredient Rationale:** ..."). This is mandatory for correct formatting.
 
 Now, generate the recipe based on the following user request:
 ---`;
@@ -2844,15 +2857,28 @@ window.showBrewDetail = function(brewId) {
             let tableMarkdown = '| Ingredient | Quantity | Unit |\n';
             tableMarkdown += '|---|---|---|\n';
             ingredientsArray.forEach(item => {
+  
+                let displayQty = item.quantity;
+                let displayUnit = item.unit;
                 const ing = item.ingredient || 'N/A';
-                const qty = item.quantity || 0;
-                const unit = item.unit || 'N/A';
-                tableMarkdown += `| ${ing} | ${qty} | ${unit} |\n`;
+
+                if ((displayUnit || '').toLowerCase() === 'g' && displayQty >= 1000) {
+                    displayQty /= 1000;
+                    displayUnit = 'kg';
+                } else if ((displayUnit || '').toLowerCase() === 'ml' && displayQty >= 1000) {
+                    displayQty /= 1000;
+                    displayUnit = 'L';
+                }
+
+                if (displayQty % 1 !== 0) {
+                   displayQty = parseFloat(displayQty.toFixed(2));
+                }
+
+                tableMarkdown += `| ${ing} | ${displayQty || 0} | ${displayUnit || 'N/A'} |\n`;
             });
             finalMarkdown = brew.recipeMarkdown.replace(jsonRegex, tableMarkdown);
         } catch (e) {
             console.error("Failed to parse ingredients JSON from saved recipe:", e);
-            finalMarkdown = brew.recipeMarkdown;
         }
     }
 

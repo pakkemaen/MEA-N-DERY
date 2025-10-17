@@ -599,8 +599,30 @@
                                 <label for="honeyVariety" class="block text-sm font-bold mb-2">Honey Variety</label>
                                 <select id="honeyVariety" class="w-full p-2 border rounded-md bg-app-tertiary border-app focus:ring-2 focus:ring-app-brand focus:border-app-brand text-app-primary">
                                     <option value="" disabled selected>-- Select a Honey --</option>
-                                    <option value="Acacia">Acacia</option>
-                                    <option value="Wildflower">Wildflower</option>
+                                    <optgroup label="Floral & Light">
+                                        <option value="Acacia">Acacia Honey</option>
+                                        <option value="Linden">Linden Honey</option>
+                                        <option value="Clover">Clover Honey</option>
+                                        <option value="Rapeseed">Rapeseed Honey</option>
+                                        <option value="Orange Blossom">Orange Blossom Honey</option>
+                                        <option value="Wildflower">Wildflower Honey (Default)</option>
+                                    </optgroup>
+                                    <optgroup label="Fruity & Complex">
+                                        <option value="Heather">Heather Honey</option>
+                                        <option value="Himalayan Balsam">Himalayan Balsam Honey</option>
+                                        <option value="Sunflower">Sunflower Honey</option>
+                                    </optgroup>
+                                    <optgroup label="Rich, Spicy & Dark">
+                                        <option value="Chestnut">Chestnut Honey</option>
+                                        <option value="Buckwheat">Buckwheat Honey</option>
+                                        <option value="Forest/Honeydew">Forest/Honeydew Honey</option>
+                                        <option value="Pine/Fir">Pine/Fir Honey</option>
+                                    </optgroup>
+                                    <optgroup label="Exotic & Special">
+                                        <option value="Thyme">Thyme Honey</option>
+                                        <option value="Lavender">Lavender Honey</option>
+                                        <option value="Eucalyptus">Eucalyptus Honey</option>
+                                    </optgroup>
                                     <option value="other">Other...</option>
                                 </select>
                                 <input type="text" id="honeyVarietyOther" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary mt-2 hidden" placeholder="Specify other honey">

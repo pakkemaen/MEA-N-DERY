@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.2 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.3 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -5142,6 +5142,43 @@ window.showBrewDay2Detail = function(brewId) {
 
                 return steps;
             }
+
+            const parseStepText = (text) => {
+                let duration = 0;
+                // Verwijder eerst alle [d:...] tags, want die zijn onbetrouwbaar
+                let title = text.replace(/\[d:[\d:]+\]/g, '').trim();
+                let description = 'Follow the instruction.';
+
+                // Prioriteit 1: Zoek naar "XX-hour mark" of "XX hours" in de TEKST
+                const hourMatch = title.match(/(?:at the|after)\s*(\d+)\s*(?:-| )hour/i);
+                if (hourMatch && hourMatch[1]) {
+                    const hours = parseInt(hourMatch[1], 10);
+                    duration = hours * 3600; // Bv. 24 uur -> 86400 seconden
+                } 
+                
+                // Prioriteit 2: Zoek naar "wait XX minutes" (enkel als er geen uren-match was)
+                else {
+                    const minuteMatch = title.match(/(?:wait|hydrate for)\s*(\d+)\s*minute/i);
+                    if (minuteMatch && minuteMatch[1]) {
+                        const minutes = parseInt(minuteMatch[1], 10);
+                        duration = minutes * 60; // Bv. 15 minuten -> 900 seconden
+                    }
+                }
+                
+                // Fallback: Mocht de tekst-parser falen, probeer de (mogelijk foute) tag alsnog
+                if (duration === 0) {
+                    const durationMatch = text.match(/\[d:(\d+):(\d{2}):(\d{2})\]/);
+                    if (durationMatch) {
+                        const hours = parseInt(durationMatch[1], 10);
+                        const minutes = parseInt(durationMatch[2], 10);
+                        const seconds = parseInt(durationMatch[3], 10);
+                        duration = (hours * 3600) + (minutes * 60) + seconds;
+                    }
+                }
+
+                return { title: title, description: description, duration: duration };
+            };
+
 
 window.saveBrewToHistory = async function() {
     if (!userId || !currentRecipeMarkdown) {

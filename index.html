@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.3 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.2 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2681,7 +2681,10 @@ Your response MUST be structured with the following headings in this exact order
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
 1.  **Recipe Inspiration:** The "## Description" section MUST begin with a single sentence explaining the recipe's inspiration. This sentence MUST be a standalone paragraph. You MUST insert a full blank line after it before the main description begins. Do NOT use italics.
 2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. Then, check the user's inventory: [${yeastInInventory}]. You MUST use a suitable yeast from the inventory. In "## Brewer's Notes", under **"Ingredient Rationale:"**, you MUST state if the chosen inventory yeast was the ideal choice. If not, you MUST specify which yeast you would have preferred and why.
-3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal. **Crucially, all nutrient additions MUST be placed in their correct logical order within the "## Instructions" list.** You MUST NOT create a separate "Nutrient Schedule" section.
+3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal. **If, and only if, you decide an SNA is the best approach,** you MUST then follow these strict formatting rules:
+    - Create a separate, numbered list item for EACH addition.
+    - The timer tag \`[d:HH:MM:SS]\` for each step **MUST** represent the waiting time **since the previous addition**.
+    - **Example:** For additions at 24h, 48h, and 72h, all three steps must have a \`[d:24:00:00]\` tag.
 4.  **Water Choice:** In "## Recommended Water", recommend a specific Belgian bottled water and explain your choice.
 5.  **Key Stats & Fermenter Section:** These sections are MANDATORY. 
     - "## Key Stats" must contain the OG, FG, ABV, and Final Batch Size.
@@ -2753,13 +2756,9 @@ Your response must be a single, valid Markdown document.
     - **UNIQUENESS RULE:** Each ingredient must be unique. If added at multiple stages, you MUST sum the total quantity and list the ingredient only ONCE.
     - **Example Format:** \`\`\`json[{"ingredient": "Honey", "quantity": 1.5, "unit": "kg"}]\`\`\`
 2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST have "### Primary Fermentation" and "### Secondary & Aging" subheadings.
-4.  **NUTRIENT TAGGING (MANDATORY):** All nutrient additions in the "## Instructions" list MUST end with one of these exact tags:
-    - \`[SNA:START]\` (For 'at pitch' / immediate additions)
-    - \`[SNA:24H]\` (For the 24-hour addition)
-    - \`[SNA:48H]\` (For the 48-hour addition)
-    - \`[SNA:72H]\` (For the 72-hour addition)
-    - **Example:** "11. Add 2g of VitaFerm Ultra F3 to the must. [SNA:START]"
-5.  **GENERAL TIMER RULE:** For non-nutrient steps that require waiting (like yeast hydration or Campden), you MUST write the time in plain text (e.g., "...and wait 24 hours" or "...wait 15 minutes"). The app will read this text.        return basePrompt + creativeBrief + formattingRules;
+3.  **CRUCIAL TIMER RULE (GENERAL):** You MUST add a timer tag \`[d:HH:MM:SS]\` for any general step that requires a specific waiting period (e.g., yeast rehydration). **Example:** "...wait 15 minutes" MUST end with \`[d:00:15:00]\`. The specific rules for nutrient timers are handled earlier in the prompt.`;
+
+        return basePrompt + creativeBrief + formattingRules;
 
     } catch (error) {
         console.error("Error building prompt:", error);
@@ -5086,82 +5085,96 @@ window.showBrewDay2Detail = function(brewId) {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = marked.parse(markdown);
 
-                // Vind de drie relevante headers
-                const nutrientHeader = Array.from(tempDiv.querySelectorAll('h2')).find(h => h.textContent.toLowerCase().includes('nutrient schedule'));
                 const primaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('primary fermentation'));
                 const secondaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('secondary & aging'));
 
-                // Helper om LI-elementen onder een header te verwerken
-                const processListItems = (header, stepArray) => {
-                    if (!header) return;
-                    
-                    let element = header.nextElementSibling;
-                    while (element && element.tagName !== 'H2' && element.tagName !== 'H3') {
-                        if (element.tagName === 'OL' || element.tagName === 'UL') {
-                            Array.from(element.children).forEach(li => {
-                                if (li.tagName === 'LI') {
-                                    const text = li.textContent.trim();
-                                    // Verwerk de stap (parseStepText is globaal beschikbaar)
-                                    // Geen complexe logica meer, gewoon parsen.
-                                    stepArray.push(parseStepText(text));
-                                }
-                            });
+                // 'parseStepText' is al gedefinieerd in de scope (regel 2174), dus we kunnen die gewoon aanroepen.
+
+                const processSection = (header, stepArray) => {
+                    if (header) {
+                        let element = header.nextElementSibling;
+                        while (element && element.tagName !== 'H2' && element.tagName !== 'H3') {
+                            if (element.tagName === 'OL' || element.tagName === 'UL') {
+                                Array.from(element.children).forEach(li => {
+                                    if (li.tagName === 'LI') {
+                                        const text = li.textContent.trim();
+                                        
+                                        // *** HIER IS DE FIX ***
+                                        // Controleer op de specifieke SNA-tekst. Wees specifiek om te voorkomen dat we normale stappen splitsen.
+                                        if (text.toLowerCase().includes('sna (staggered nutrient addition) schedule:')) {
+                                            
+                                            // Split de string op in de "Add..." commando's
+                                            // We splitten op "punt, spatie, Add" (case-insensitive)
+                                            const additions = text.split(/\.\s*Add /i);
+                                            
+                                            // Deel 1: De intro + eerste toevoeging
+                                            // "13. Follow this SNA...: Add 3 g of Vinoferm Cellvit 24 hours..."
+                                            const firstPart = additions[0];
+                                            stepArray.push(parseStepText(firstPart)); // Deze pakt de "24 hours" en stelt de timer correct in op 24u
+
+                                            // Deel 2 en 3: De volgende toevoegingen
+                                            for (let i = 1; i < additions.length; i++) {
+                                                // De tekst is "3 g of VitaFerm Ultra F3 48 hours..."
+                                                const stepText = "Add " + additions[i];
+                                                
+                                                // We parsen dit, MAAR we negeren de duur die het berekent
+                                                const parsedStep = parseStepText(stepText);
+                                                
+                                                // FORCEER de duur naar 24 uur (86400s), zoals de AI had moeten doen
+                                                parsedStep.duration = 86400; 
+                                                
+                                                stepArray.push(parsedStep);
+                                            }
+                                        } else {
+                                            // Dit is een normale stap, verwerk zoals voorheen
+                                            stepArray.push(parseStepText(text));
+                                        }
+                                    }
+                                });
+                            }
+                            element = element.nextElementSibling;
                         }
-                        element = element.nextElementSibling;
                     }
                 };
 
-                // Volgorde is belangrijk!
-                // 1. Voeg alle stappen van het nutrientenschema toe aan "primary"
-                processListItems(nutrientHeader, steps.primary);
-                
-                // 2. Voeg alle reguliere primaire stappen toe aan "primary"
-                processListItems(primaryHeader, steps.primary);
-                
-                // 3. Voeg alle secundaire stappen toe
-                processListItems(secondaryHeader, steps.secondary);
+                processSection(primaryHeader, steps.primary);
+                processSection(secondaryHeader, steps.secondary);
 
                 return steps;
             }
 
             const parseStepText = (text) => {
                 let duration = 0;
-                let title = text;
+                // Verwijder eerst alle [d:...] tags, want die zijn onbetrouwbaar
+                let title = text.replace(/\[d:[\d:]+\]/g, '').trim();
                 let description = 'Follow the instruction.';
 
-                // --- Prioriteit 1: Zoek naar de nieuwe, betrouwbare SNA-tags ---
-                const snaMatch = title.match(/\[SNA:(START|24H|48H|72H)\]/);
-                
-                if (snaMatch) {
-                    const tag = snaMatch[1];
-                    if (tag === 'START') {
-                        duration = 0; // 'At pitch' is een onmiddellijke actie
-                    } else if (tag === '24H' || tag === '48H' || tag === '72H') {
-                        // Alle getimede SNA-stappen starten een 24-uurs timer
-                        duration = 86400; // 24 uur in seconden
-                    }
-                    // Verwijder de tag uit de zichtbare tekst
-                    title = title.replace(snaMatch[0], '').trim();
+                // Prioriteit 1: Zoek naar "XX-hour mark" of "XX hours" in de TEKST
+                const hourMatch = title.match(/(?:at the|after)\s*(\d+)\s*(?:-| )hour/i);
+                if (hourMatch && hourMatch[1]) {
+                    const hours = parseInt(hourMatch[1], 10);
+                    duration = hours * 3600; // Bv. 24 uur -> 86400 seconden
                 } 
                 
-                // --- Prioriteit 2: Zoek naar 'gewone' timers (voor Campden, gist, etc.) ---
+                // Prioriteit 2: Zoek naar "wait XX minutes" (enkel als er geen uren-match was)
                 else {
-                    // Zoek naar "XX-hour"
-                    const hourMatch = title.match(/(?:at the|after|wait)\s*(\d+)\s*(?:-| )hour/i);
-                    if (hourMatch && hourMatch[1]) {
-                        duration = parseInt(hourMatch[1], 10) * 3600;
-                    } 
-                    // Zoek naar "XX-minute"
-                    else {
-                        const minuteMatch = title.match(/(?:wait|hydrate for)\s*(\d+)\s*minute/i);
-                        if (minuteMatch && minuteMatch[1]) {
-                            duration = parseInt(minuteMatch[1], 10) * 60;
-                        }
+                    const minuteMatch = title.match(/(?:wait|hydrate for)\s*(\d+)\s*minute/i);
+                    if (minuteMatch && minuteMatch[1]) {
+                        const minutes = parseInt(minuteMatch[1], 10);
+                        duration = minutes * 60; // Bv. 15 minuten -> 900 seconden
                     }
                 }
                 
-                // Verwijder voor de zekerheid alle oude, onbetrouwbare [d:...] tags
-                title = title.replace(/\[d:[\d:]+\]/g, '').trim();
+                // Fallback: Mocht de tekst-parser falen, probeer de (mogelijk foute) tag alsnog
+                if (duration === 0) {
+                    const durationMatch = text.match(/\[d:(\d+):(\d{2}):(\d{2})\]/);
+                    if (durationMatch) {
+                        const hours = parseInt(durationMatch[1], 10);
+                        const minutes = parseInt(durationMatch[2], 10);
+                        const seconds = parseInt(durationMatch[3], 10);
+                        duration = (hours * 3600) + (minutes * 60) + seconds;
+                    }
+                }
 
                 return { title: title, description: description, duration: duration };
             };

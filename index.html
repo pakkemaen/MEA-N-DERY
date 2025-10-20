@@ -5117,33 +5117,6 @@ window.showBrewDay2Detail = function(brewId) {
                 return steps;
             }
 
-            const parseStepText = (text) => {
-                let duration = 0;
-                let title = text;
-                let description = 'Follow the instruction.';
-
-                // Zoek naar de ENIGE betrouwbare tag: [TIMER:HH:MM:SS]
-                const timerMatch = text.match(/\[TIMER:(\d{2}):(\d{2}):(\d{2})\]/);
-
-                if (timerMatch) {
-                    // Converteer de tag naar seconden
-                    const hours = parseInt(timerMatch[1], 10);
-                    const minutes = parseInt(timerMatch[2], 10);
-                    const seconds = parseInt(timerMatch[3], 10);
-                    duration = (hours * 3600) + (minutes * 60) + seconds;
-                    
-                    // Verwijder de tag uit de zichtbare tekst
-                    title = text.replace(timerMatch[0], '').trim();
-                }
-                
-                // Verwijder alle oude, mogelijk storende tags voor de zekerheid
-                title = title.replace(/\[d:[\d:]+\]/g, '').trim();
-                title = title.replace(/\[SNA:[\w\d]+\]/g, '').trim();
-
-
-                return { title: title, description: description, duration: duration };
-            };
-
 window.saveBrewToHistory = async function() {
     if (!userId || !currentRecipeMarkdown) {
         showToast("Cannot save. No user identified or no recipe generated.", "error");

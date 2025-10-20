@@ -5151,36 +5151,25 @@ window.showBrewDay2Detail = function(brewId) {
 
             const parseStepText = (text) => {
                 let duration = 0;
-                // Verwijder eerst alle [d:...] tags, want die zijn onbetrouwbaar
-                let title = text.replace(/\[d:[\d:]+\]/g, '').trim();
+                let title = text;
                 let description = 'Follow the instruction.';
 
-                // Prioriteit 1: Zoek naar "XX-hour mark" of "XX hours" in de TEKST
-                const hourMatch = title.match(/(?:at the|after)\s*(\d+)\s*(?:-| )hour/i);
-                if (hourMatch && hourMatch[1]) {
-                    const hours = parseInt(hourMatch[1], 10);
-                    duration = hours * 3600; // Bv. 24 uur -> 86400 seconden
-                } 
-                
-                // Prioriteit 2: Zoek naar "wait XX minutes" (enkel als er geen uren-match was)
-                else {
-                    const minuteMatch = title.match(/(?:wait|hydrate for)\s*(\d+)\s*minute/i);
-                    if (minuteMatch && minuteMatch[1]) {
-                        const minutes = parseInt(minuteMatch[1], 10);
-                        duration = minutes * 60; // Bv. 15 minuten -> 900 seconden
-                    }
+                // Zoek naar de ENIGE betrouwbare tag: [TIMER:HH:MM:SS]
+                const timerMatch = text.match(/\[TIMER:(\d{2}):(\d{2}):(\d{2})\]/);
+
+                if (timerMatch) {
+                    // Converteer de tag naar seconden
+                    const hours = parseInt(timerMatch[1], 10);
+                    const minutes = parseInt(timerMatch[2], 10);
+                    const seconds = parseInt(timerMatch[3], 10);
+                    duration = (hours * 3600) + (minutes * 60) + seconds;
+                    
+                    // Verwijder de tag uit de zichtbare tekst
+                    title = text.replace(timerMatch[0], '').trim();
                 }
                 
-                // Fallback: Mocht de tekst-parser falen, probeer de (mogelijk foute) tag alsnog
-                if (duration === 0) {
-                    const durationMatch = text.match(/\[d:(\d+):(\d{2}):(\d{2})\]/);
-                    if (durationMatch) {
-                        const hours = parseInt(durationMatch[1], 10);
-                        const minutes = parseInt(durationMatch[2], 10);
-                        const seconds = parseInt(durationMatch[3], 10);
-                        duration = (hours * 3600) + (minutes * 60) + seconds;
-                    }
-                }
+                // Verwijder alle oude, mogelijk storende tags voor de zekerheid
+                title = title.replace(/\[d:[\d:]+\]/g, '').trim();
 
                 return { title: title, description: description, duration: duration };
             };

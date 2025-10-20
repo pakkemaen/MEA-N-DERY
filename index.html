@@ -146,7 +146,7 @@
             padding-right: 2rem; /* Voegt extra ruimte toe na de "Quantity" kolomkop */
         }
         .recipe-content th, .recipe-content td {
-            padding: 0.5rem 0.75rem; /* Voegt consistente opvulling toe aan alle cellen */
+            padding: 0.25rem 0.75rem; /* Voegt consistente opvulling toe aan alle cellen */
         }
         .loader {
             border: 4px solid #f3f3f3;
@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.1 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.2 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -5080,72 +5080,68 @@ window.showBrewDay2Detail = function(brewId) {
     });
 }
 
-function parseStepsForBrewDay(markdown) {
-    const steps = { primary: [], secondary: [] };
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = marked.parse(markdown);
+            function parseStepsForBrewDay(markdown) {
+                const steps = { primary: [], secondary: [] };
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = marked.parse(markdown);
 
-    const primaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('primary fermentation'));
-    const secondaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('secondary & aging'));
+                const primaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('primary fermentation'));
+                const secondaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('secondary & aging'));
 
-    const parseStepText = (text) => {
-                let duration = 0;
-                // Verwijder eerst alle [d:...] tags, want die zijn onbetrouwbaar
-                let title = text.replace(/\[d:[\d:]+\]/g, '').trim();
-                let description = 'Follow the instruction.';
+                // 'parseStepText' is al gedefinieerd in de scope (regel 2174), dus we kunnen die gewoon aanroepen.
 
-                // Prioriteit 1: Zoek naar "XX-hour mark" of "XX hours" in de TEKST
-                const hourMatch = title.match(/(?:at the|after)\s*(\d+)\s*(?:-| )hour/i);
-                if (hourMatch && hourMatch[1]) {
-                    const hours = parseInt(hourMatch[1], 10);
-                    duration = hours * 3600; // Bv. 24 uur -> 86400 seconden
-                } 
-                
-                // Prioriteit 2: Zoek naar "wait XX minutes" (enkel als er geen uren-match was)
-                else {
-                    const minuteMatch = title.match(/(?:wait|hydrate for)\s*(\d+)\s*minute/i);
-                    if (minuteMatch && minuteMatch[1]) {
-                        const minutes = parseInt(minuteMatch[1], 10);
-                        duration = minutes * 60; // Bv. 15 minuten -> 900 seconden
-                    }
-                }
-                
-                // Fallback: Mocht de tekst-parser falen, probeer de (mogelijk foute) tag alsnog
-                if (duration === 0) {
-                    const durationMatch = text.match(/\[d:(\d+):(\d{2}):(\d{2})\]/);
-                    if (durationMatch) {
-                        const hours = parseInt(durationMatch[1], 10);
-                        const minutes = parseInt(durationMatch[2], 10);
-                        const seconds = parseInt(durationMatch[3], 10);
-                        duration = (hours * 3600) + (minutes * 60) + seconds;
-                    }
-                }
+                const processSection = (header, stepArray) => {
+                    if (header) {
+                        let element = header.nextElementSibling;
+                        while (element && element.tagName !== 'H2' && element.tagName !== 'H3') {
+                            if (element.tagName === 'OL' || element.tagName === 'UL') {
+                                Array.from(element.children).forEach(li => {
+                                    if (li.tagName === 'LI') {
+                                        const text = li.textContent.trim();
+                                        
+                                        // *** HIER IS DE FIX ***
+                                        // Controleer op de specifieke SNA-tekst. Wees specifiek om te voorkomen dat we normale stappen splitsen.
+                                        if (text.toLowerCase().includes('sna (staggered nutrient addition) schedule:')) {
+                                            
+                                            // Split de string op in de "Add..." commando's
+                                            // We splitten op "punt, spatie, Add" (case-insensitive)
+                                            const additions = text.split(/\.\s*Add /i);
+                                            
+                                            // Deel 1: De intro + eerste toevoeging
+                                            // "13. Follow this SNA...: Add 3 g of Vinoferm Cellvit 24 hours..."
+                                            const firstPart = additions[0];
+                                            stepArray.push(parseStepText(firstPart)); // Deze pakt de "24 hours" en stelt de timer correct in op 24u
 
-                return { title: title, description: description, duration: duration };
-            };
-
-    const processSection = (header, stepArray) => {
-        if (header) {
-            let element = header.nextElementSibling;
-            while (element && element.tagName !== 'H2' && element.tagName !== 'H3') {
-                if (element.tagName === 'OL' || element.tagName === 'UL') {
-                    Array.from(element.children).forEach(li => {
-                        if (li.tagName === 'LI') {
-                            // De complexe berekeningslogica is hier verwijderd. We voegen de stap direct toe.
-                            stepArray.push(parseStepText(li.textContent.trim()));
+                                            // Deel 2 en 3: De volgende toevoegingen
+                                            for (let i = 1; i < additions.length; i++) {
+                                                // De tekst is "3 g of VitaFerm Ultra F3 48 hours..."
+                                                const stepText = "Add " + additions[i];
+                                                
+                                                // We parsen dit, MAAR we negeren de duur die het berekent
+                                                const parsedStep = parseStepText(stepText);
+                                                
+                                                // FORCEER de duur naar 24 uur (86400s), zoals de AI had moeten doen
+                                                parsedStep.duration = 86400; 
+                                                
+                                                stepArray.push(parsedStep);
+                                            }
+                                        } else {
+                                            // Dit is een normale stap, verwerk zoals voorheen
+                                            stepArray.push(parseStepText(text));
+                                        }
+                                    }
+                                });
+                            }
+                            element = element.nextElementSibling;
                         }
-                    });
-                }
-                element = element.nextElementSibling;
+                    }
+                };
+
+                processSection(primaryHeader, steps.primary);
+                processSection(secondaryHeader, steps.secondary);
+
+                return steps;
             }
-        }
-    };
-
-    processSection(primaryHeader, steps.primary);
-    processSection(secondaryHeader, steps.secondary);
-
-    return steps;
-}
 
 window.saveBrewToHistory = async function() {
     if (!userId || !currentRecipeMarkdown) {

@@ -2659,15 +2659,13 @@ Your primary task is to invent a captivating name that stands out. Follow this e
     -   **Style B (Modern & Evocative):** A short, powerful, and elegant name, often combining two concepts (e.g., ingredients, textures, colors). This style is simple and confident.
     -   **Style C (The Craft & Technique):** The name is a direct reference to a crucial technique or process detail in the recipe. It's a confident name that highlights the craftsmanship (e.g., caramelization level, a specific yeast action, aging method).
 3.  **Invent a Name:** Create a unique name that perfectly fits the chosen style.
-
-**HARD CONSTRAINTS:**
--   The title **MUST NOT** be a simple list of ingredients (e.g., "Plum & Almond Mead").
--   The title **MUST NOT** use generic, "hippie" or cheesy words like 'Delight', 'Kiss', 'Symphony', 'Embrace', 'Nectar', or 'Elixir'.
-
-**Examples of EXCELLENT Titles (by Style):**
--   **Style A (Witty):** '# Berry Manilow: A Mixed Berry Melomel'
--   **Style B (Modern):** '# Oak & Ember: A Dark Caramel Bochet'
--   **Style C (The Craft):** '# The Third Scorch: A Dark Caramel Bochet'
+4.  **HARD CONSTRAINTS:**
+    -   The title **MUST NOT** be a simple list of ingredients (e.g., "Plum & Almond Mead").
+    -   The title **MUST NOT** use generic, "hippie" or cheesy words like 'Delight', 'Kiss', 'Symphony', 'Embrace', 'Nectar', or 'Elixir'.
+5.  **Examples of EXCELLENT Titles (by Style):**
+    -   **Style A (Witty):** '# Berry Manilow: A Mixed Berry Melomel'
+    -   **Style B (Modern):** '# Oak & Ember: A Dark Caramel Bochet'
+    -   **Style C (The Craft):** '# The Third Scorch: A Dark Caramel Bochet'
 
 **FORMAT:** The title MUST be the very first line, formatted as a Markdown H1 heading (e.g., '# Invented Name: A Brief Description'). Do NOT use square brackets [].
 
@@ -5113,6 +5111,7 @@ function parseStepsForBrewDay(markdown) {
                 if (element.tagName === 'OL' || element.tagName === 'UL') {
                     Array.from(element.children).forEach(li => {
                         if (li.tagName === 'LI') {
+                            // De complexe berekeningslogica is hier verwijderd. We voegen de stap direct toe.
                             stepArray.push(parseStepText(li.textContent.trim()));
                         }
                     });
@@ -5124,7 +5123,7 @@ function parseStepsForBrewDay(markdown) {
 
     processSection(primaryHeader, steps.primary);
     processSection(secondaryHeader, steps.secondary);
-    
+
     return steps;
 }
 
@@ -6044,9 +6043,10 @@ function populateSocialRecipeDropdown() {
     }
 }
 
+// --- VERVANG JE VOLLEDIGE parseIngredientsFromMarkdown FUNCTIE MET DEZE ---
 function parseIngredientsFromMarkdown(markdown) {
     const ingredients = [];
-    
+
     // Poging 1: Zoek naar een JSON-blok (de nieuwe, robuuste methode)
     const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
     const jsonMatch = markdown.match(jsonRegex);
@@ -6075,7 +6075,7 @@ function parseIngredientsFromMarkdown(markdown) {
 
     const rows = match[1].trim().split('\n').filter(row => row.trim().startsWith('|'));
     rows.forEach(row => {
-        const columns = row.split('|').map(c => c.trim()).slice(1, 4); 
+        const columns = row.split('|').map(c => c.trim()).slice(1, 4);
         if (columns.length === 3) {
             const [name, quantityStr, unit] = columns;
             const quantity = parseFloat(quantityStr);
@@ -6084,7 +6084,7 @@ function parseIngredientsFromMarkdown(markdown) {
             }
         }
     });
-    
+
     return ingredients;
 }
 

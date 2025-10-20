@@ -2558,7 +2558,6 @@ async function generateRecipe() {
                 let tableMarkdown = '| Ingredient | Quantity | Unit |\n';
                 tableMarkdown += '|---|---|---|\n';
                 ingredientsArray.forEach(item => {
-                    // --- START CORRECTIE ---
                     let displayQty = item.quantity;
                     let displayUnit = item.unit;
 
@@ -2573,8 +2572,7 @@ async function generateRecipe() {
                     if (displayQty % 1 !== 0) {
                        displayQty = parseFloat(displayQty.toFixed(2));
                     }
-                    // --- EINDE CORRECTIE ---
-                    tableMarkdown += `| ${item.ingredient} | ${displayQty} | ${displayUnit} |\n`;
+                    tableMarkdown += `| ${item.ingredient} | ${displayQty} | ${displayUnit} |`;
                 });
                 finalMarkdown = currentRecipeMarkdown.replace(jsonRegex, tableMarkdown);
             } catch (e) {
@@ -2636,7 +2634,10 @@ function buildPrompt() {
 1.  **Time-Based Design:** If the user's request includes a timeline (e.g., "ready by Spring 2026"), this becomes a **primary design goal**. You MUST actively choose ingredients and techniques (yeast strain, fining agents, tannin levels) that allow the mead to mature and be ready by that date. You MUST explain these choices in the "Cellaring Note".
 2.  **Balance & Synergy:** In the "## Description", you MUST explain the intended balance and the synergy between at least two key ingredients.
 3.  **Process & Clarity:** The "## Instructions" MUST include best practices for achieving a clear final product and specify ideal fermentation temperature ranges.
-4.  **Ingredient Rationale:** In "## Brewer's Notes", under **"Ingredient Rationale:"**, you MUST justify your choice of the specific honey variety, the yeast strain, AND the chosen nutrient schedule for this recipe.
+4.  **Brewer's Notes - Rationale:** The "## Brewer's Notes" section MUST contain the following three bolded sub-topics, each explaining the rationale behind the choice:
+    - **Honey Choice:** Justify the specific honey variety selected.
+    - **Yeast Choice:** Justify the specific yeast strain selected, comparing it to the ideal if different.
+    - **Nutrient Schedule:** Justify the chosen nutrient schedule, comparing it to the ideal if different.
 5.  **Aging Potential & Guidelines:** In "## Brewer's Notes", under **"Cellaring Note:"**, provide a cellaring guideline that is consistent with the Time-Based Design goal if one was provided.
 6.  **Food Pairing:** In "## Brewer's Notes", under **"Food Pairing:"**, suggest at least two specific food pairings.
 
@@ -5081,7 +5082,6 @@ window.showBrewDay2Detail = function(brewId) {
     });
 }
 
-// --- VERVANG JE VOLLEDIGE parseStepsForBrewDay FUNCTIE MET DEZE ---
 function parseStepsForBrewDay(markdown) {
     const steps = { primary: [], secondary: [] };
     const tempDiv = document.createElement('div');
@@ -5113,7 +5113,6 @@ function parseStepsForBrewDay(markdown) {
                 if (element.tagName === 'OL' || element.tagName === 'UL') {
                     Array.from(element.children).forEach(li => {
                         if (li.tagName === 'LI') {
-                            // De complexe berekeningslogica is hier verwijderd. We voegen de stap direct toe.
                             stepArray.push(parseStepText(li.textContent.trim()));
                         }
                     });

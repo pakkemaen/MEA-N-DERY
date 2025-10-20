@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.9 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2682,7 +2682,7 @@ Your response MUST be structured with the following headings in this exact order
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
 1.  **Recipe Inspiration:** The "## Description" section MUST begin with a single sentence explaining the recipe's inspiration. This sentence MUST be a standalone paragraph. You MUST insert a full blank line after it before the main description begins. Do NOT use italics.
 2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. Then, check the user's inventory: [${yeastInInventory}]. You MUST use a suitable yeast from the inventory. In "## Brewer's Notes", under **"Ingredient Rationale:"**, you MUST state if the chosen inventory yeast was the ideal choice. If not, you MUST specify which yeast you would have preferred and why.
-3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from the user's inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal. **If, and only if, you decide an SNA is the best approach,** you MUST then follow these strict formatting rules:
+3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal. **If, and only if, you decide an SNA is the best approach,** you MUST then follow these strict formatting rules:
     - Create a separate, numbered list item for EACH addition.
     - The timer tag \`[d:HH:MM:SS]\` for each step **MUST** represent the waiting time **since the previous addition**.
     - **Example:** For additions at 24h, 48h, and 72h, all three steps must have a \`[d:24:00:00]\` tag.
@@ -5081,6 +5081,7 @@ window.showBrewDay2Detail = function(brewId) {
     });
 }
 
+// --- VERVANG JE VOLLEDIGE parseStepsForBrewDay FUNCTIE MET DEZE ---
 function parseStepsForBrewDay(markdown) {
     const steps = { primary: [], secondary: [] };
     const tempDiv = document.createElement('div');

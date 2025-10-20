@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.2 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.3 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2756,7 +2756,13 @@ Your response must be a single, valid Markdown document.
     - **UNIQUENESS RULE:** Each ingredient must be unique. If added at multiple stages, you MUST sum the total quantity and list the ingredient only ONCE.
     - **Example Format:** \`\`\`json[{"ingredient": "Honey", "quantity": 1.5, "unit": "kg"}]\`\`\`
 2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST have "### Primary Fermentation" and "### Secondary & Aging" subheadings.
-3.  **CRUCIAL TIMER RULE (GENERAL):** You MUST add a timer tag \`[d:HH:MM:SS]\` for any general step that requires a specific waiting period (e.g., yeast rehydration). **Example:** "...wait 15 minutes" MUST end with \`[d:00:15:00]\`. The specific rules for nutrient timers are handled earlier in the prompt.`;
+3.  **UNIVERSIAL TIMER RULE (MANDATORY):**
+    You MUST end *any* instruction list item that requires a specific wait time with a generic timer tag in the format \`[TIMER:HH:MM:SS]\`.
+    - For 'at pitch' or immediate steps, do NOT add a tag.
+    - **Example 1:** "...and wait 15 minutes. [TIMER:00:15:00]"
+    - **Example 2:** "At 24 hours, add 1g Nutrisal. [TIMER:24:00:00]"
+    - **Example 3:** "Add 2g Nutrisal at pitch." (No tag, this is correct)
+    This tag is the ONLY way the app will create a timer. The plain text ("24 hours", "15 minutes") will be ignored by the app's timer logic.`;
 
         return basePrompt + creativeBrief + formattingRules;
 

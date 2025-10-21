@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.8 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.7 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2648,14 +2648,10 @@ function buildPrompt() {
 1.  **Time-Based Design:** If the user's request includes a timeline (e.g., "ready by Spring 2026"), this becomes a **primary design goal**. You MUST actively choose ingredients and techniques (yeast strain, fining agents, tannin levels) that allow the mead to mature and be ready by that date. You MUST explain these choices in the "Cellaring Note".
 2.  **Balance & Synergy:** In the "## Description", you MUST explain the intended balance and the synergy between at least two key ingredients.
 3.  **Process & Clarity:** The "## Instructions" MUST include best practices for achieving a clear final product and specify ideal fermentation temperature ranges.
-4.  **Brewer's Notes - Rationale (MANDATORY FORMATTING):** The "## Brewer's Notes" section MUST contain the following **three bolded sub-topics**. Each topic MUST start a **new paragraph**. The bolded title and the explanation MUST be on the **same line**, separated by a colon and a space.
+4.  **Brewer's Notes - Rationale:** The "## Brewer's Notes" section MUST contain the following three bolded sub-topics, each explaining the rationale behind the choice:
     - **Honey Choice:** Justify the specific honey variety selected.
     - **Yeast Choice:** Justify the specific yeast strain selected, comparing it to the ideal if different.
     - **Nutrient Schedule:** Justify the chosen nutrient schedule, comparing it to the ideal if different.
-    **Example:**
-    **Honey Choice:** Wildflower was chosen for...
-    *(blank line)*
-    **Yeast Choice:** Lalvin 71B was selected because...
 5.  **Aging Potential & Guidelines:** In "## Brewer's Notes", under **"Cellaring Note:"**, provide a cellaring guideline that is consistent with the Time-Based Design goal if one was provided.
 6.  **Food Pairing:** In "## Brewer's Notes", under **"Food Pairing:"**, suggest at least two specific food pairings.
 
@@ -2699,12 +2695,8 @@ Your response MUST be structured with the following headings in this exact order
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
 1.  **Recipe Inspiration:** The "## Description" section MUST begin with a single sentence explaining the recipe's inspiration. This sentence MUST be a standalone paragraph. You MUST insert a full blank line after it before the main description begins. Do NOT use italics.
 2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. Then, check the user's inventory: [${yeastInInventory}]. You MUST use a suitable yeast from the inventory. In "## Brewer's Notes", under **"Ingredient Rationale:"**, you MUST state if the chosen inventory yeast was the ideal choice. If not, you MUST specify which yeast you would have preferred and why.
-3.  **Nutrient Logic & Timing (CRUCIAL):**
-    - First, as an expert, determine the **best nutrient schedule** (e.g., SNA, TOSNA, front-load). You MUST use nutrients from inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal.
-    - **Pitching Alignment:** Any nutrient addition specified as "at pitch" MUST occur in the step **immediately following** the yeast pitching step in the "## Instructions" list.
-    - **Post-Pitching:** ALL timed nutrient additions (e.g., "At 24 hours") MUST occur **after** the yeast has been pitched.
-    - **Correct Placement:** All nutrient additions MUST be placed in their correct logical order within the "## Instructions" list. You MUST NOT create a separate "Nutrient Schedule" section.
-4.  **Water Choice:** In "## Recommended Water", recommend a specific bottled water that is available in Belgium and explain your choice.
+3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal. 
+4.  **Water Choice:** In "## Recommended Water", recommend a specific Belgian bottled water and explain your choice.
 5.  **Key Stats & Fermenter Section:** These sections are MANDATORY. 
     - "## Key Stats" must contain the OG, FG, ABV, and Final Batch Size.
     - "## Fermenter" must contain ONLY the name of the chosen fermenter.
@@ -2775,15 +2767,13 @@ Your response must be a single, valid Markdown document.
     - **UNIQUENESS RULE:** Each ingredient must be unique. If added at multiple stages, you MUST sum the total quantity and list the ingredient only ONCE.
     - **Example Format:** \`\`\`json[{"ingredient": "Honey", "quantity": 1.5, "unit": "kg"}]\`\`\`
 2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST have "### Primary Fermentation" and "### Secondary & Aging" subheadings.
-3.  **UNIVERSAL TIMER RULE (MANDATORY):**
+3.  **UNIVERSIAL TIMER RULE (MANDATORY):**
     You MUST end *any* instruction list item that requires a specific wait time with a generic timer tag in the format \`[TIMER:HH:MM:SS]\`.
-    - **CRUCIAL:** The time specified in the tag (HH:MM:SS) MUST represent the **duration of the wait itself**, NOT the absolute time marker (e.g., "At 48 hours..." still requires a \`[TIMER:HH:MM:SS]\` tag if the previous step was at 24 hours).
     - For 'at pitch' or immediate steps, do NOT add a tag.
-    - **Example 1:** "...wait 15 minutes. \`[TIMER:HH:MM:SS]\`"
-    - **Example 2:** "At 24 hours after pitching, add 1g Nutrisal. \`[TIMER:HH:MM:SS]\`"
-    - **Example 3:** "At 48 hours after pitching, add 1g VitaFerm. \`[TIMER:HH:MM:SS]\`" // Correct: 24h wait
-    - **Example 4:** "Add 2g Nutrisal at pitch." (No tag, this is correct)
-    This tag is the ONLY reliable way the app creates a timer.
+    - **Example 1:** "...wait 15 minutes. \`[TIMER:00:15:00]\`"
+    - **Example 2:** "At 24 hours after pitching, add 1g Nutrisal. \`[TIMER:24:00:00]\`"
+    - **Example 3:** "At 48 hours after pitching, add 1g VitaFerm. \`[TIMER:24:00:00]\`" // Correct: 24h wait
+    This tag is the ONLY way the app will create a timer. The plain text ("24 hours", "15 minutes") will be ignored by the app's timer logic.`;
 
         return basePrompt + creativeBrief + formattingRules;
 
@@ -2914,7 +2904,7 @@ window.showBrewDetail = function(brewId) {
     finalMarkdown = finalMarkdown.replace(/\[d:[\d:]+\]/g, '');
 
     const recipeHtmlWithoutTitle = marked.parse(finalMarkdown.replace(/^#\s.*$/m, ''));
-    const parsedTargets = parseRecipeData(brew.recipeMarkdown); const logHtml = getBrewLogHtml(brew.logData, brew.id, parsedTargets); // Pass parsedTargets
+    const logHtml = getBrewLogHtml(brew.logData, brew.id);
     const currency = userSettings.currencySymbol || '€';
 
     let costHtml = '';
@@ -4697,13 +4687,8 @@ function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
                 };
             }
 
-function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) { // Added parsedTargets parameter
+function getBrewLogHtml(logData, idSuffix = 'new') {
     const data = logData || {};
-    // Prioritize newly parsed targets, fall back to saved log data
-    const targetOG = parsedTargets.targetOG || data.targetOG || '';
-    const targetFG = parsedTargets.targetFG || data.targetFG || '';
-    const targetABV = parsedTargets.targetABV || data.targetABV || '';
-
     const fermLog = data.fermentationLog || Array.from({ length: 8 }, () => ({}));
     const escapedRecipeName = (data.recipeName || '').replace(/"/g, '&quot;');
     const copyOgToLogScript = `const ogInput = document.getElementById('actualOG-${idSuffix}'); const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input'); if (ogInput && firstSgInput) { firstSgInput.value = ogInput.value; }`;
@@ -4716,20 +4701,16 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) { // Adde
                 <div class="log-item"><label for="brewDate-${idSuffix}">Brew Date:</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}"></div>
             </div>
             <div class="log-grid">
-                 {/* Use the prioritized target values */}
-                 <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${targetOG}" readonly class="bg-app-primary"></div>
+                 <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${data.targetOG || ''}"></div>
                  <div class="log-item">
                     <label for="actualOG-${idSuffix}">Actual OG:</label>
                     <input type="text" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" oninput="${copyOgToLogScript}">
                  </div>
-                 {/* Use the prioritized target values */}
-                 <div class="log-item"><label for="targetFG-${idSuffix}">Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${targetFG}" readonly class="bg-app-primary"></div>
+                 <div class="log-item"><label for="targetFG-${idSuffix}">Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${data.targetFG || ''}"></div>
                 <div class="log-item"><label for="actualFG-${idSuffix}">Actual FG:</label><input type="text" id="actualFG-${idSuffix}" value="${data.actualFG || ''}"></div>
-                 {/* Use the prioritized target values */}
-                 <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${targetABV}" readonly class="bg-app-primary"></div>
+                 <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${data.targetABV || ''}"></div>
                 <div class="log-item"><label for="finalABV-${idSuffix}">Final ABV:</label><input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}"></div>
             </div>
-            {/* Rest of the function remains the same */}
             <div class="log-item">
                 <label>Fermentation Log</label>
                 <div class="overflow-x-auto">
@@ -4960,7 +4941,7 @@ function renderBrewDay(brewId) {
         `;
     }).join('');
 
-    const parsedTargets = parseRecipeData(brew.recipeMarkdown); const logHtml = getBrewLogHtml(brew.logData, brew.id, parsedTargets); // Pass parsedTargets
+    const parsedTargets = parseRecipeData(brew.recipeMarkdown);
     const combinedLogData = { ...brew.logData, ...parsedTargets };
     const logHtml = getBrewLogHtml(combinedLogData, brew.id);
 

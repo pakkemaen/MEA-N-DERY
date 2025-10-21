@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.3 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.4 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -5094,8 +5094,8 @@ window.showBrewDay2Detail = function(brewId) {
                 const primaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('primary fermentation'));
                 const secondaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('secondary & aging'));
 
-                // 'parseStepText' is al gedefinieerd in de scope (regel 2174), dus we kunnen die gewoon aanroepen.
-
+                // 'parseStepText' is de nieuwe, slimme functie die we in Stap 2 hebben gemaakt.
+                
                 const processSection = (header, stepArray) => {
                     if (header) {
                         let element = header.nextElementSibling;
@@ -5104,37 +5104,9 @@ window.showBrewDay2Detail = function(brewId) {
                                 Array.from(element.children).forEach(li => {
                                     if (li.tagName === 'LI') {
                                         const text = li.textContent.trim();
-                                        
-                                        // *** HIER IS DE FIX ***
-                                        // Controleer op de specifieke SNA-tekst. Wees specifiek om te voorkomen dat we normale stappen splitsen.
-                                        if (text.toLowerCase().includes('sna (staggered nutrient addition) schedule:')) {
-                                            
-                                            // Split de string op in de "Add..." commando's
-                                            // We splitten op "punt, spatie, Add" (case-insensitive)
-                                            const additions = text.split(/\.\s*Add /i);
-                                            
-                                            // Deel 1: De intro + eerste toevoeging
-                                            // "13. Follow this SNA...: Add 3 g of Vinoferm Cellvit 24 hours..."
-                                            const firstPart = additions[0];
-                                            stepArray.push(parseStepText(firstPart)); // Deze pakt de "24 hours" en stelt de timer correct in op 24u
-
-                                            // Deel 2 en 3: De volgende toevoegingen
-                                            for (let i = 1; i < additions.length; i++) {
-                                                // De tekst is "3 g of VitaFerm Ultra F3 48 hours..."
-                                                const stepText = "Add " + additions[i];
-                                                
-                                                // We parsen dit, MAAR we negeren de duur die het berekent
-                                                const parsedStep = parseStepText(stepText);
-                                                
-                                                // FORCEER de duur naar 24 uur (86400s), zoals de AI had moeten doen
-                                                parsedStep.duration = 86400; 
-                                                
-                                                stepArray.push(parsedStep);
-                                            }
-                                        } else {
-                                            // Dit is een normale stap, verwerk zoals voorheen
-                                            stepArray.push(parseStepText(text));
-                                        }
+                                        // Geen complexe logica meer.
+                                        // De nieuwe parseStepText doet al het werk.
+                                        stepArray.push(parseStepText(text));
                                     }
                                 });
                             }

@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.5 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.6 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2523,7 +2523,6 @@ async function clearInventory() {
                 return data;
             }
 
-// --- VERVANG JE VOLLEDIGE generateRecipe FUNCTIE MET DEZE ---
 async function generateRecipe() {
     recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
     generateBtn.disabled = true;
@@ -2535,18 +2534,33 @@ async function generateRecipe() {
         lastGeneratedPrompt = prompt;
         currentRecipeMarkdown = await performApiCall(prompt);
         
-        currentPredictedProfile = await getPredictedFlavorProfile(currentRecipeMarkdown);
-        let flavorProfileHtml = '';
+        currentPredictedProfile = await getPredictedFlavorProfile(currentRecipeMarkdown); 
+        
+        let flavorProfileHtml = `
+            <div id="flavor-profile-section" class="mt-8 pt-6 border-t border-app">
+                <h3 class="text-2xl font-header font-bold text-center mb-4">Predicted Flavor Profile</h3>
+        `;
+
         if (currentPredictedProfile) {
-            flavorProfileHtml = `
-                <div class="mt-8 pt-6 border-t border-app">
-                    <h3 class="text-2xl font-header font-bold text-center mb-4">Predicted Flavor Profile</h3>
-                    <div class="card p-4 rounded-lg max-w-sm mx-auto">
-                        <canvas id="generated-flavor-wheel"></canvas>
-                    </div>
+            // Gelukt: toon de canvas
+            flavorProfileHtml += `
+                <div class="card p-4 rounded-lg max-w-sm mx-auto">
+                    <canvas id="generated-flavor-wheel"></canvas>
+                </div>
+            `;
+        } else {
+            // Mislukt: toon de knop
+             flavorProfileHtml += `
+                <div class="card p-4 rounded-lg max-w-sm mx-auto text-center">
+                    <p class="text-app-secondary/80 text-sm mb-4">Could not generate profile initially. Try again?</p>
+                    <button id="retry-flavor-btn" onclick="window.regenerateFlavorProfile()" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 btn">
+                        Generate Profile
+                    </button>
+                    <div id="flavor-generation-status" class="mt-2 text-sm"></div> 
                 </div>
             `;
         }
+        flavorProfileHtml += `</div>`; // Sluit de section div
         
         let finalMarkdown = currentRecipeMarkdown;
         const jsonRegex = /(?:```json\s*([\s\S]*?)\s*```|(\[\s*\{[\s\S]*?\}\s*\]))/;
@@ -3061,7 +3075,6 @@ window.recalculateBatchCost = async function(brewId) {
                 }
             }
 
-            // --- VERVANG JE VOLLEDIGE cloneBrew FUNCTIE MET DEZE ---
 window.cloneBrew = async function(brewId) {
     const originalBrew = brews.find(b => b.id === brewId);
     if (!originalBrew) {
@@ -3374,6 +3387,37 @@ function renderGeneratedFlavorWheel(flavorData) {
         }
     });
 }
+
+window.regenerateFlavorProfile = async function() {
+            const button = document.getElementById('retry-flavor-btn');
+            const statusDiv = document.getElementById('flavor-generation-status');
+            const sectionDiv = document.getElementById('flavor-profile-section'); // De div rond de knop/canvas
+            const containerDiv = button.parentElement; // De div waar de knop in zit
+
+            if (!currentRecipeMarkdown) {
+                statusDiv.innerHTML = `<p class="text-red-500">No recipe data available.</p>`;
+                return;
+            }
+
+            button.disabled = true;
+            statusDiv.innerHTML = '<div class="loader mx-auto" style="width:20px; height:20px; border-width:2px;"></div><p>Generating...</p>';
+
+            try {
+                const profile = await getPredictedFlavorProfile(currentRecipeMarkdown);
+                if (profile) {
+                    currentPredictedProfile = profile; // Sla het succesvolle profiel op
+                    // Vervang de knop-container door de canvas container
+                    containerDiv.innerHTML = `<canvas id="generated-flavor-wheel"></canvas>`;
+                    renderGeneratedFlavorWheel(profile); // Teken de grafiek
+                } else {
+                     throw new Error("AI did not return a valid profile.");
+                }
+            } catch (error) {
+                 console.error("Error regenerating flavor profile:", error);
+                 statusDiv.innerHTML = `<p class="text-red-500">Failed: ${error.message}</p>`;
+                 button.disabled = false; // Laat de gebruiker opnieuw proberen
+            }
+        }
 
             window.quickTweakRecipe = async function(brewId, tweakType) {
                 const brew = brews.find(b => b.id === brewId);

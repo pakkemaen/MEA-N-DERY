@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.6 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.7 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2648,10 +2648,14 @@ function buildPrompt() {
 1.  **Time-Based Design:** If the user's request includes a timeline (e.g., "ready by Spring 2026"), this becomes a **primary design goal**. You MUST actively choose ingredients and techniques (yeast strain, fining agents, tannin levels) that allow the mead to mature and be ready by that date. You MUST explain these choices in the "Cellaring Note".
 2.  **Balance & Synergy:** In the "## Description", you MUST explain the intended balance and the synergy between at least two key ingredients.
 3.  **Process & Clarity:** The "## Instructions" MUST include best practices for achieving a clear final product and specify ideal fermentation temperature ranges.
-4.  **Brewer's Notes - Rationale:** The "## Brewer's Notes" section MUST contain the following three bolded sub-topics, each explaining the rationale behind the choice:
+4.  **Brewer's Notes - Rationale (MANDATORY FORMATTING):** The "## Brewer's Notes" section MUST contain the following **three bolded sub-topics**. Each topic MUST start a **new paragraph**. The bolded title and the explanation MUST be on the **same line**, separated by a colon and a space.
     - **Honey Choice:** Justify the specific honey variety selected.
     - **Yeast Choice:** Justify the specific yeast strain selected, comparing it to the ideal if different.
     - **Nutrient Schedule:** Justify the chosen nutrient schedule, comparing it to the ideal if different.
+    **Example:**
+    **Honey Choice:** Wildflower was chosen for...
+    *(blank line)*
+    **Yeast Choice:** Lalvin 71B was selected because...
 5.  **Aging Potential & Guidelines:** In "## Brewer's Notes", under **"Cellaring Note:"**, provide a cellaring guideline that is consistent with the Time-Based Design goal if one was provided.
 6.  **Food Pairing:** In "## Brewer's Notes", under **"Food Pairing:"**, suggest at least two specific food pairings.
 
@@ -2695,11 +2699,12 @@ Your response MUST be structured with the following headings in this exact order
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
 1.  **Recipe Inspiration:** The "## Description" section MUST begin with a single sentence explaining the recipe's inspiration. This sentence MUST be a standalone paragraph. You MUST insert a full blank line after it before the main description begins. Do NOT use italics.
 2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. Then, check the user's inventory: [${yeastInInventory}]. You MUST use a suitable yeast from the inventory. In "## Brewer's Notes", under **"Ingredient Rationale:"**, you MUST state if the chosen inventory yeast was the ideal choice. If not, you MUST specify which yeast you would have preferred and why.
-3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal. **If, and only if, you decide an SNA is the best approach,** you MUST then follow these strict formatting rules:
-    - Create a separate, numbered list item for EACH addition.
-    - The timer tag \`[d:HH:MM:SS]\` for each step **MUST** represent the waiting time **since the previous addition**.
-    - **Example:** For additions at 24h, 48h, and 72h, all three steps must have a \`[d:24:00:00]\` tag.
-4.  **Water Choice:** In "## Recommended Water", recommend a specific Belgian bottled water and explain your choice.
+3.  **Nutrient Logic & Timing (CRUCIAL):**
+    - First, as an expert, determine the **best nutrient schedule** (e.g., SNA, TOSNA, front-load). You MUST use nutrients from inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal.
+    - **Pitching Alignment:** Any nutrient addition specified as "at pitch" MUST occur in the step **immediately following** the yeast pitching step in the "## Instructions" list.
+    - **Post-Pitching:** ALL timed nutrient additions (e.g., "At 24 hours") MUST occur **after** the yeast has been pitched.
+    - **Correct Placement:** All nutrient additions MUST be placed in their correct logical order within the "## Instructions" list. You MUST NOT create a separate "Nutrient Schedule" section.
+4.  **Water Choice:** In "## Recommended Water", recommend a specific bottled water that is available in Belgium and explain your choice.
 5.  **Key Stats & Fermenter Section:** These sections are MANDATORY. 
     - "## Key Stats" must contain the OG, FG, ABV, and Final Batch Size.
     - "## Fermenter" must contain ONLY the name of the chosen fermenter.
@@ -2907,7 +2912,7 @@ window.showBrewDetail = function(brewId) {
     finalMarkdown = finalMarkdown.replace(/\[d:[\d:]+\]/g, '');
 
     const recipeHtmlWithoutTitle = marked.parse(finalMarkdown.replace(/^#\s.*$/m, ''));
-    const logHtml = getBrewLogHtml(brew.logData, brew.id);
+    const parsedTargets = parseRecipeData(brew.recipeMarkdown); const combinedLogData = { ...brew.logData, ...parsedTargets }; const logHtml = getBrewLogHtml(combinedLogData, brew.id);
     const currency = userSettings.currencySymbol || '€';
 
     let costHtml = '';

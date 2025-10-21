@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.8.2 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.8.3 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2648,12 +2648,28 @@ function buildPrompt() {
 1.  **Time-Based Design:** If the user's request includes a timeline (e.g., "ready by Spring 2026"), this becomes a **primary design goal**. You MUST actively choose ingredients and techniques (yeast strain, fining agents, tannin levels) that allow the mead to mature and be ready by that date. You MUST explain these choices in the "Cellaring Note".
 2.  **Balance & Synergy:** In the "## Description", you MUST explain the intended balance and the synergy between at least two key ingredients.
 3.  **Process & Clarity:** The "## Instructions" MUST include best practices for achieving a clear final product and specify ideal fermentation temperature ranges.
-4.  **Brewer's Notes - Rationale (MANDATORY FORMATTING):** The "## Brewer's Notes" section MUST contain the following **bolded sub-topics**. Each topic MUST start a **new paragraph**. The bolded title AND the explanation text MUST appear on the **exact same line**, separated by a colon and a space. **Crucially, do NOT insert a newline or any list formatting (like dashes or bullets) immediately after the colon.**
-    - **Honey Choice:** Justify the specific honey variety selected.
-    - **Yeast Choice:** Justify the specific yeast strain selected, comparing it to the ideal if different.
-    - **Nutrient Schedule:** Justify the chosen nutrient schedule, comparing it to the ideal if different.
-    - **Cellaring Note:** Provide a cellaring guideline that is consistent with the Time-Based Design goal if one was provided.
-    - **Food Pairing:** Suggest at least two specific food pairings.
+4.  **Brewer's Notes - Rationale (MANDATORY FORMATTING):** The "## Brewer's Notes" section MUST contain the specified bolded sub-topics below.
+    - **Crucial Formatting:**
+        - Each topic MUST start on a **completely new paragraph**. You MUST insert a **full blank line** before starting the next topic's paragraph.
+        - The bolded title AND its explanation text MUST appear on the **exact same line**, separated by a colon and a space.
+        - Do NOT use any list formatting (like dashes or bullets).
+    - **Required Topics:**
+        - **Honey Choice:** Justify the specific honey variety selected.
+        - **Yeast Choice:** Justify the specific yeast strain selected, comparing it to the ideal if different.
+        - **Nutrient Schedule:** Justify the chosen nutrient schedule, comparing it to the ideal if different.
+        - **Cellaring Note:** Provide a cellaring guideline that is consistent with the Time-Based Design goal if one was provided.
+        - **Food Pairing:** Suggest at least two food pairings.
+    **Example of CORRECT format:**
+
+    **Honey Choice:** Wildflower was chosen for its balanced profile...
+
+    **Yeast Choice:** Lalvin 71B was selected because it enhances fruity esters...
+
+    **Nutrient Schedule:** A staggered nutrient addition using Fermaid K...
+
+    **Cellaring Note:** This mead should peak within 1-2 years...
+
+    **Food Pairing:** Pairs well with aged cheddar or spicy dishes...
 
 **CRUCIAL EQUIPMENT & VOLUME LOGIC (MUST FOLLOW IN ORDER):**
 1.  **Determine Target Size (Hierarchy of Goals):**
@@ -4688,11 +4704,16 @@ function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
             }
 
 function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) { // Added parsedTargets parameter
+    console.log(`getBrewLogHtml called for ${idSuffix}. Parsed Targets:`, parsedTargets, 'Existing LogData:', logData); // DEBUG LINE
     const data = logData || {};
+
     // Prioritize newly parsed targets, fall back to saved log data
-    const targetOG = parsedTargets.targetOG || data.targetOG || '';
-    const targetFG = parsedTargets.targetFG || data.targetFG || '';
-    const targetABV = parsedTargets.targetABV || data.targetABV || '';
+    const targetOGValue = parsedTargets.targetOG || data.targetOG || '';
+    const targetFGValue = parsedTargets.targetFG || data.targetFG || '';
+    const targetABVValue = parsedTargets.targetABV || data.targetABV || '';
+
+    // --- DEBUG --- Check if the values are what we expect
+    console.log(`Final values being used -> OG: ${targetOGValue}, FG: ${targetFGValue}, ABV: ${targetABVValue}`);
 
     const fermLog = data.fermentationLog || Array.from({ length: 8 }, () => ({}));
     const escapedRecipeName = (data.recipeName || '').replace(/"/g, '&quot;');
@@ -4705,17 +4726,19 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) { // Adde
                 <div class="log-item"><label for="recipeName-${idSuffix}">Recipe Name:</label><input type="text" id="recipeName-${idSuffix}" value="${escapedRecipeName}"></div>
                 <div class="log-item"><label for="brewDate-${idSuffix}">Brew Date:</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}"></div>
             </div>
+            {/* Make sure the correct variables are used in 'value' */}
             <div class="log-grid">
-                 <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${targetOG}" readonly class="bg-app-primary"></div>
+                 <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${targetOGValue}" readonly class="bg-app-primary"></div>
                  <div class="log-item">
                     <label for="actualOG-${idSuffix}">Actual OG:</label>
                     <input type="text" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" oninput="${copyOgToLogScript}">
                  </div>
-                 <div class="log-item"><label for="targetFG-${idSuffix}">Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${targetFG}" readonly class="bg-app-primary"></div>
+                 <div class="log-item"><label for="targetFG-${idSuffix}">Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${targetFGValue}" readonly class="bg-app-primary"></div>
                 <div class="log-item"><label for="actualFG-${idSuffix}">Actual FG:</label><input type="text" id="actualFG-${idSuffix}" value="${data.actualFG || ''}"></div>
-                 <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${targetABV}" readonly class="bg-app-primary"></div>
+                 <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${targetABVValue}" readonly class="bg-app-primary"></div>
                 <div class="log-item"><label for="finalABV-${idSuffix}">Final ABV:</label><input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}"></div>
             </div>
+            {/* Rest of the function remains the same */}
             <div class="log-item">
                 <label>Fermentation Log</label>
                 <div class="overflow-x-auto">

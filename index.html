@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.7 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.8 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2775,13 +2775,15 @@ Your response must be a single, valid Markdown document.
     - **UNIQUENESS RULE:** Each ingredient must be unique. If added at multiple stages, you MUST sum the total quantity and list the ingredient only ONCE.
     - **Example Format:** \`\`\`json[{"ingredient": "Honey", "quantity": 1.5, "unit": "kg"}]\`\`\`
 2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST have "### Primary Fermentation" and "### Secondary & Aging" subheadings.
-3.  **UNIVERSIAL TIMER RULE (MANDATORY):**
+3.  **UNIVERSAL TIMER RULE (MANDATORY):**
     You MUST end *any* instruction list item that requires a specific wait time with a generic timer tag in the format \`[TIMER:HH:MM:SS]\`.
+    - **CRUCIAL:** The time specified in the tag (HH:MM:SS) MUST represent the **duration of the wait itself**, NOT the absolute time marker (e.g., "At 48 hours..." still requires a `[TIMER:24:00:00]` tag if the previous step was at 24 hours).
     - For 'at pitch' or immediate steps, do NOT add a tag.
-    - **Example 1:** "...and wait 15 minutes. [TIMER:00:15:00]"
-    - **Example 2:** "At 24 hours, add 1g Nutrisal. [TIMER:24:00:00]"
-    - **Example 3:** "Add 2g Nutrisal at pitch." (No tag, this is correct)
-    This tag is the ONLY way the app will create a timer. The plain text ("24 hours", "15 minutes") will be ignored by the app's timer logic.`;
+    - **Example 1:** "...wait 15 minutes. [TIMER:00:15:00]"
+    - **Example 2:** "At 24 hours after pitching, add 1g Nutrisal. [TIMER:24:00:00]"
+    - **Example 3:** "At 48 hours after pitching, add 1g VitaFerm. [TIMER:24:00:00]" // Correct: 24h wait
+    - **Example 4:** "Add 2g Nutrisal at pitch." (No tag, this is correct)
+    This tag is the ONLY reliable way the app creates a timer.
 
         return basePrompt + creativeBrief + formattingRules;
 
@@ -2912,7 +2914,7 @@ window.showBrewDetail = function(brewId) {
     finalMarkdown = finalMarkdown.replace(/\[d:[\d:]+\]/g, '');
 
     const recipeHtmlWithoutTitle = marked.parse(finalMarkdown.replace(/^#\s.*$/m, ''));
-    const parsedTargets = parseRecipeData(brew.recipeMarkdown); const combinedLogData = { ...brew.logData, ...parsedTargets }; const logHtml = getBrewLogHtml(combinedLogData, brew.id);
+    const parsedTargets = parseRecipeData(brew.recipeMarkdown); const logHtml = getBrewLogHtml(brew.logData, brew.id, parsedTargets); // Pass parsedTargets
     const currency = userSettings.currencySymbol || '€';
 
     let costHtml = '';
@@ -4695,8 +4697,13 @@ function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
                 };
             }
 
-function getBrewLogHtml(logData, idSuffix = 'new') {
+function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) { // Added parsedTargets parameter
     const data = logData || {};
+    // Prioritize newly parsed targets, fall back to saved log data
+    const targetOG = parsedTargets.targetOG || data.targetOG || '';
+    const targetFG = parsedTargets.targetFG || data.targetFG || '';
+    const targetABV = parsedTargets.targetABV || data.targetABV || '';
+
     const fermLog = data.fermentationLog || Array.from({ length: 8 }, () => ({}));
     const escapedRecipeName = (data.recipeName || '').replace(/"/g, '&quot;');
     const copyOgToLogScript = `const ogInput = document.getElementById('actualOG-${idSuffix}'); const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input'); if (ogInput && firstSgInput) { firstSgInput.value = ogInput.value; }`;
@@ -4709,16 +4716,20 @@ function getBrewLogHtml(logData, idSuffix = 'new') {
                 <div class="log-item"><label for="brewDate-${idSuffix}">Brew Date:</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}"></div>
             </div>
             <div class="log-grid">
-                 <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${data.targetOG || ''}"></div>
+                 {/* Use the prioritized target values */}
+                 <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${targetOG}" readonly class="bg-app-primary"></div>
                  <div class="log-item">
                     <label for="actualOG-${idSuffix}">Actual OG:</label>
                     <input type="text" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" oninput="${copyOgToLogScript}">
                  </div>
-                 <div class="log-item"><label for="targetFG-${idSuffix}">Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${data.targetFG || ''}"></div>
+                 {/* Use the prioritized target values */}
+                 <div class="log-item"><label for="targetFG-${idSuffix}">Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${targetFG}" readonly class="bg-app-primary"></div>
                 <div class="log-item"><label for="actualFG-${idSuffix}">Actual FG:</label><input type="text" id="actualFG-${idSuffix}" value="${data.actualFG || ''}"></div>
-                 <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${data.targetABV || ''}"></div>
+                 {/* Use the prioritized target values */}
+                 <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${targetABV}" readonly class="bg-app-primary"></div>
                 <div class="log-item"><label for="finalABV-${idSuffix}">Final ABV:</label><input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}"></div>
             </div>
+            {/* Rest of the function remains the same */}
             <div class="log-item">
                 <label>Fermentation Log</label>
                 <div class="overflow-x-auto">
@@ -4949,7 +4960,7 @@ function renderBrewDay(brewId) {
         `;
     }).join('');
 
-    const parsedTargets = parseRecipeData(brew.recipeMarkdown);
+    const parsedTargets = parseRecipeData(brew.recipeMarkdown); const logHtml = getBrewLogHtml(brew.logData, brew.id, parsedTargets); // Pass parsedTargets
     const combinedLogData = { ...brew.logData, ...parsedTargets };
     const logHtml = getBrewLogHtml(combinedLogData, brew.id);
 

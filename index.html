@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.4 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.0.5 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2549,12 +2549,12 @@ async function generateRecipe() {
         }
         
         let finalMarkdown = currentRecipeMarkdown;
-        const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
+        const jsonRegex = /(?:```json\s*([\s\S]*?)\s*```|(\[\s*\{[\s\S]*?\}\s*\]))/;
         const jsonMatch = currentRecipeMarkdown.match(jsonRegex);
 
-        if (jsonMatch && jsonMatch[1]) {
+        if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
             try {
-                const ingredientsArray = JSON.parse(jsonMatch[1]);
+                const jsonString = jsonMatch[1] || jsonMatch[2]; const ingredientsArray = JSON.parse(jsonString);
                 let tableMarkdown = '| Ingredient | Quantity | Unit |\n';
                 tableMarkdown += '|---|---|---|\n';
                 ingredientsArray.forEach(item => {
@@ -5495,69 +5495,88 @@ function skipTimer(stepIndex) {
                 }
             }
 
-// --- VERVANG JE VOLLEDIGE completeStep FUNCTIE MET DEZE ---
 async function completeStep(stepIndex) {
-    if (stepTimerInterval) {
-        clearInterval(stepTimerInterval);
-        stepTimerInterval = null;
-        remainingTime = 0;
-        localStorage.removeItem('activeBrewDayTimer');
-    }
-    
-    currentBrewDay.checklist[`step-${stepIndex}`] = true;
-    await saveChecklistState();
+                if (stepTimerInterval) {
+                    clearInterval(stepTimerInterval);
+                    stepTimerInterval = null;
+                    remainingTime = 0;
+                    localStorage.removeItem('activeBrewDayTimer');
+                }
+                
+                // Markeer de huidige stap als voltooid en sla op
+                currentBrewDay.checklist[`step-${stepIndex}`] = true;
+                await saveChecklistState();
 
-    const stepDiv = document.getElementById(`step-${stepIndex}`);
-    if (stepDiv) {
-        stepDiv.classList.remove('active');
-        stepDiv.classList.add('completed');
-        
-        const controlsDiv = document.getElementById(`controls-${stepIndex}`);
-        if (controlsDiv) {
-            controlsDiv.innerHTML = `<span class="text-sm font-bold text-green-600">✓ Completed</span>`;
-        }
-    }
+                // Update de UI voor de HUIDIGE stap
+                const stepDiv = document.getElementById(`step-${stepIndex}`);
+                if (stepDiv) {
+                    stepDiv.classList.remove('active');
+                    stepDiv.classList.add('completed');
+                    
+                    const controlsDiv = document.getElementById(`controls-${stepIndex}`);
+                    if (controlsDiv) {
+                        controlsDiv.innerHTML = `<span class="text-sm font-bold text-green-600">✓ Completed</span>`;
+                    }
+                }
 
-    // Vind de container en alle stappen die momenteel op het scherm zichtbaar zijn.
-    const allStepsContainer = stepDiv.closest('[id$="-steps-container"]');
-    if (!allStepsContainer) return; // Veiligheidsklep
+                // --- NIEUWE LOGICA (MET NUTRIENT-CHECK) ---
+                
+                // 1. Vind de actieve brouw-data
+                const activeBrew = brews.find(b => b.id === currentBrewDay.brewId);
+                if (!activeBrew) return; // Veiligheidsklep
 
-    const allStepItems = allStepsContainer.querySelectorAll('.step-item');
-    
-    // Bepaal de positie (index) van de HUIDIGE stap binnen de ZICHTBARE lijst.
-    const currentRelativeIndex = Array.from(allStepItems).findIndex(item => item.id === `step-${stepIndex}`);
+                // 2. Maak een volledige lijst van ALLE stappen (primair + secundair)
+                const allSteps = [...(activeBrew.brewDaySteps || []), ...(activeBrew.secondarySteps || [])];
+                
+                // 3. Haal de data op van de stap die zojuist is voltooid
+                const currentStepData = allSteps[stepIndex];
+                
+                // 4. Bepaal of de voltooide stap een nutrient-stap was
+                const nutrientRegex = /vitaferm|nutrisal|fermaid|go-ferm/i; // Trefwoorden voor voedingsstoffen
+                const isCurrentStepNutrient = currentStepData && nutrientRegex.test(currentStepData.title);
 
-    // Controleer of dit de laatste stap in de ZICHTBARE lijst was.
-    if (currentRelativeIndex !== -1 && currentRelativeIndex + 1 < allStepItems.length) {
-        // Nee, het was niet de laatste stap. Activeer de volgende.
-        const nextStepDiv = allStepItems[currentRelativeIndex + 1];
-        if (nextStepDiv) {
-            nextStepDiv.classList.add('active');
-        }
-    } else {
-        // Ja, dit was de laatste stap van de HUIDIGE fase (Brew Day 1 of 2).
-        const brew = brews.find(b => b.id === currentBrewDay.brewId);
-        const primaryStepCount = (brew.brewDaySteps || []).length;
-        
-        // Toon de "Phase 1 Complete" kaart ENKEL en ALLEEN als de zojuist voltooide stap
-        // de allerlaatste stap van de primaire fase was (bv. stap 11 van 12, want index is 0-based).
-        if (stepIndex === primaryStepCount - 1) {
-             await markPrimaryAsComplete(currentBrewDay.brewId);
-             
-             // Gebruik de correcte container die we eerder hebben gevonden.
-             allStepsContainer.innerHTML += `
-                <div class="text-center p-6 card rounded-lg mt-6">
-                    <h3 class="text-2xl font-header font-bold text-green-600">Phase 1 Complete!</h3>
-                    <p class="my-2">Great! The primary fermentation steps are done.</p>
-                    <p class="text-app-secondary mb-4">The next steps for this batch can now be found on the 'Brew Day 2' tab.</p>
-                    <button onclick="window.finalizeBrewDay1()" class="bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">
-                        Go to Brew Day 2
-                    </button>
-                </div>
-            `;
-        }
-    }
-}
+                // 5. Bepaal de data en het UI-element van de VOLGENDE stap
+                const nextStepIndex = stepIndex + 1;
+                const nextStepData = allSteps[nextStepIndex];
+                const nextStepDiv = document.getElementById(`step-${nextStepIndex}`);
+
+                // 6. Controleer of de volgende stap bestaat
+                if (nextStepData && nextStepDiv) {
+                    // Ja, er is een volgende stap.
+                    
+                    // 7. Controleer de AUTO-START voorwaarde:
+                    // (ALLEEN als de HUIDIGE stap een nutrient was EN de VOLGENDE een timer heeft)
+                    if (isCurrentStepNutrient && nextStepData.duration > 0) {
+                        // JA. Start de timer automatisch.
+                        startStepTimer(nextStepIndex);
+                    } else {
+                        // NEE. Activeer de volgende stap handmatig.
+                        nextStepDiv.classList.add('active');
+                    }
+                } else {
+                    // Nee, er is geen volgende stap. Dit was de laatste stap van de fase.
+                    const brew = brews.find(b => b.id === currentBrewDay.brewId);
+                    const primaryStepCount = (brew.brewDaySteps || []).length;
+                    
+                    if (stepIndex === primaryStepCount - 1) {
+                         await markPrimaryAsComplete(currentBrewDay.brewId);
+                         
+                         const allStepsContainer = stepDiv.closest('[id$="-steps-container"]');
+                         if (allStepsContainer) {
+                             allStepsContainer.innerHTML += `
+                                <div class="text-center p-6 card rounded-lg mt-6">
+                                    <h3 class="text-2xl font-header font-bold text-green-600">Phase 1 Complete!</h3>
+                                    <p class="my-2">Great! The primary fermentation steps are done.</p>
+                                    <p class="text-app-secondary mb-4">The next steps for this batch can now be found on the 'Brew Day 2' tab.</p>
+                                    <button onclick="window.finalizeBrewDay1()" class="bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">
+                                        Go to Brew Day 2
+                                    </button>
+                                </div>
+                            `;
+                         }
+                    }
+                }
+            }
 
 function updateUI() {
     const progress = (currentStepIndex / brewDaySteps.length) * 100;

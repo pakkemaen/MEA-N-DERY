@@ -2777,11 +2777,11 @@ Your response must be a single, valid Markdown document.
 2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST have "### Primary Fermentation" and "### Secondary & Aging" subheadings.
 3.  **UNIVERSAL TIMER RULE (MANDATORY):**
     You MUST end *any* instruction list item that requires a specific wait time with a generic timer tag in the format \`[TIMER:HH:MM:SS]\`.
-    - **CRUCIAL:** The time specified in the tag (HH:MM:SS) MUST represent the **duration of the wait itself**, NOT the absolute time marker (e.g., "At 48 hours..." still requires a `[TIMER:24:00:00]` tag if the previous step was at 24 hours).
+    - **CRUCIAL:** The time specified in the tag (HH:MM:SS) MUST represent the **duration of the wait itself**, NOT the absolute time marker (e.g., "At 48 hours..." still requires a \`[TIMER:HH:MM:SS]\` tag if the previous step was at 24 hours).
     - For 'at pitch' or immediate steps, do NOT add a tag.
-    - **Example 1:** "...wait 15 minutes. [TIMER:00:15:00]"
-    - **Example 2:** "At 24 hours after pitching, add 1g Nutrisal. [TIMER:24:00:00]"
-    - **Example 3:** "At 48 hours after pitching, add 1g VitaFerm. [TIMER:24:00:00]" // Correct: 24h wait
+    - **Example 1:** "...wait 15 minutes. \`[TIMER:HH:MM:SS]\`"
+    - **Example 2:** "At 24 hours after pitching, add 1g Nutrisal. \`[TIMER:HH:MM:SS]\`"
+    - **Example 3:** "At 48 hours after pitching, add 1g VitaFerm. \`[TIMER:HH:MM:SS]\`" // Correct: 24h wait
     - **Example 4:** "Add 2g Nutrisal at pitch." (No tag, this is correct)
     This tag is the ONLY reliable way the app creates a timer.
 

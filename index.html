@@ -2492,36 +2492,24 @@ async function clearInventory() {
 
                 const data = {};
 
-                // Zoek de titel
-                const titleMatch = markdown.match(/^#\s*(.*)/m);
-                if (titleMatch && titleMatch[1]) {
-                    data.recipeName = titleMatch[1].trim();
-                }
+    const titleMatch = markdown.match(/^#\s*(.*)/m);
+    if (titleMatch && titleMatch[1]) { data.recipeName = titleMatch[1].trim(); }
+    console.log("parseRecipeData - Found Title:", data.recipeName); // DEBUG
 
-                // Zoek Target OG
-                const ogMatch = markdown.match(/(?:Target OG|Original Gravity|Start SG|O\.G\.)[\s\w:]*(\d\.\d{3})/i);
-                if (ogMatch && ogMatch[1]) {
-                    data.targetOG = ogMatch[1];
-                }
+    const ogMatch = markdown.match(/(?:Target OG|Original Gravity|Start SG|O\.G\.)[\s\w:]*(\d\.\d{3})/i);
+    if (ogMatch && ogMatch[1]) { data.targetOG = ogMatch[1]; }
+    console.log("parseRecipeData - Found OG:", data.targetOG, "Match:", ogMatch); // DEBUG
 
-                // Zoek Target FG
-                const fgMatch = markdown.match(/(?:Target FG|Final Gravity|Eind SG|F\.G\.)[\s\w:]*(\d\.\d{3})/i);
-                if (fgMatch && fgMatch[1]) {
-                    data.targetFG = fgMatch[1];
-                }
+    const fgMatch = markdown.match(/(?:Target FG|Final Gravity|Eind SG|F\.G\.)[\s\w:]*(\d\.\d{3})/i);
+    if (fgMatch && fgMatch[1]) { data.targetFG = fgMatch[1]; }
+    console.log("parseRecipeData - Found FG:", data.targetFG, "Match:", fgMatch); // DEBUG
 
-                // DEFINITIEVE, VEREENVOUDIGDE ZOEKTOCHT NAAR TARGET ABV
-                // Dit patroon zoekt nu heel direct naar "keyword: getal".
-                const abvMatch = markdown.match(/(?:Target ABV|ABV|Alcoholpercentage):\s*([\d.,]+)/i);
-                if (abvMatch && abvMatch[1]) {
-                    // Stap 1: Pak het getal (bv. "12.5")
-                    const abvValue = abvMatch[1];
-                    // Stap 2: Voeg het '%' symbool toe en vul het in
-                    data.targetABV = `${abvValue}%`;
-                }
+    const abvMatch = markdown.match(/(?:Target ABV|ABV|Alcoholpercentage):\s*([\d.,]+)/i);
+    if (abvMatch && abvMatch[1]) { data.targetABV = `${abvMatch[1]}%`; }
+    console.log("parseRecipeData - Found ABV:", data.targetABV, "Match:", abvMatch); // DEBUG
 
-                return data;
-            }
+    return data;
+}
 
 async function generateRecipe() {
     recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
@@ -4973,8 +4961,9 @@ function renderBrewDay(brewId) {
     }).join('');
 
     const parsedTargets = parseRecipeData(brew.recipeMarkdown);
-    const combinedLogData = { ...brew.logData, ...parsedTargets };
-    const logHtml = getBrewLogHtml(combinedLogData, brew.id);
+    console.log("renderBrewDay - Parsed Targets before passing:", parsedTargets); // DEBUG is fine
+    // We pass logData and parsedTargets separately now:
+    const logHtml = getBrewLogHtml(brew.logData, brew.id, parsedTargets);
 
     brewDayContent.innerHTML = `
         <h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2>
@@ -5568,87 +5557,83 @@ function skipTimer(stepIndex) {
             }
 
 async function completeStep(stepIndex) {
-                if (stepTimerInterval) {
-                    clearInterval(stepTimerInterval);
-                    stepTimerInterval = null;
-                    remainingTime = 0;
-                    localStorage.removeItem('activeBrewDayTimer');
-                }
-                
-                // Markeer de huidige stap als voltooid en sla op
-                currentBrewDay.checklist[`step-${stepIndex}`] = true;
-                await saveChecklistState();
+    // --- Timer Cleanup (No Change) ---
+    if (stepTimerInterval) {
+        clearInterval(stepTimerInterval);
+        stepTimerInterval = null;
+        remainingTime = 0;
+        localStorage.removeItem('activeBrewDayTimer');
+    }
 
-                // Update de UI voor de HUIDIGE stap
-                const stepDiv = document.getElementById(`step-${stepIndex}`);
-                if (stepDiv) {
-                    stepDiv.classList.remove('active');
-                    stepDiv.classList.add('completed');
-                    
-                    const controlsDiv = document.getElementById(`controls-${stepIndex}`);
-                    if (controlsDiv) {
-                        controlsDiv.innerHTML = `<span class="text-sm font-bold text-green-600">✓ Completed</span>`;
-                    }
-                }
+    // --- Mark Step Complete & Save (No Change) ---
+    currentBrewDay.checklist[`step-${stepIndex}`] = true;
+    await saveChecklistState();
 
-                // --- NIEUWE LOGICA (MET NUTRIENT-CHECK) ---
-                
-                // 1. Vind de actieve brouw-data
-                const activeBrew = brews.find(b => b.id === currentBrewDay.brewId);
-                if (!activeBrew) return; // Veiligheidsklep
+    // --- Update UI for CURRENT Step (No Change) ---
+    const stepDiv = document.getElementById(`step-${stepIndex}`);
+    if (stepDiv) {
+        stepDiv.classList.remove('active');
+        stepDiv.classList.add('completed');
+        const controlsDiv = document.getElementById(`controls-${stepIndex}`);
+        if (controlsDiv) {
+            controlsDiv.innerHTML = `<span class="text-sm font-bold text-green-600">✓ Completed</span>`;
+        }
+    }
 
-                // 2. Maak een volledige lijst van ALLE stappen (primair + secundair)
-                const allSteps = [...(activeBrew.brewDaySteps || []), ...(activeBrew.secondarySteps || [])];
-                
-                // 3. Haal de data op van de stap die zojuist is voltooid
-                const currentStepData = allSteps[stepIndex];
-                
-                // 4. Bepaal of de voltooide stap een nutrient-stap was
-                const nutrientRegex = /vitaferm|nutrisal|fermaid|go-ferm/i; // Trefwoorden voor voedingsstoffen
-                const isCurrentStepNutrient = currentStepData && nutrientRegex.test(currentStepData.title);
+    // --- START OF NEW LOGIC ---
 
-                // 5. Bepaal de data en het UI-element van de VOLGENDE stap
-                const nextStepIndex = stepIndex + 1;
-                const nextStepData = allSteps[nextStepIndex];
-                const nextStepDiv = document.getElementById(`step-${nextStepIndex}`);
+    // 1. Find the active brew data
+    const activeBrew = brews.find(b => b.id === currentBrewDay.brewId);
+    if (!activeBrew) return;
 
-                // 6. Controleer of de volgende stap bestaat
-                if (nextStepData && nextStepDiv) {
-                    // Ja, er is een volgende stap.
-                    
-                    // 7. Controleer de AUTO-START voorwaarde:
-                    // (ALLEEN als de HUIDIGE stap een nutrient was EN de VOLGENDE een timer heeft)
-                    if (isCurrentStepNutrient && nextStepData.duration > 0) {
-                        // JA. Start de timer automatisch.
-                        startStepTimer(nextStepIndex);
-                    } else {
-                        // NEE. Activeer de volgende stap handmatig.
-                        nextStepDiv.classList.add('active');
-                    }
-                } else {
-                    // Nee, er is geen volgende stap. Dit was de laatste stap van de fase.
-                    const brew = brews.find(b => b.id === currentBrewDay.brewId);
-                    const primaryStepCount = (brew.brewDaySteps || []).length;
-                    
-                    if (stepIndex === primaryStepCount - 1) {
-                         await markPrimaryAsComplete(currentBrewDay.brewId);
-                         
-                         const allStepsContainer = stepDiv.closest('[id$="-steps-container"]');
-                         if (allStepsContainer) {
-                             allStepsContainer.innerHTML += `
-                                <div class="text-center p-6 card rounded-lg mt-6">
-                                    <h3 class="text-2xl font-header font-bold text-green-600">Phase 1 Complete!</h3>
-                                    <p class="my-2">Great! The primary fermentation steps are done.</p>
-                                    <p class="text-app-secondary mb-4">The next steps for this batch can now be found on the 'Brew Day 2' tab.</p>
-                                    <button onclick="window.finalizeBrewDay1()" class="bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">
-                                        Go to Brew Day 2
-                                    </button>
-                                </div>
-                            `;
-                         }
-                    }
-                }
-            }
+    // 2. Get data for the step JUST completed
+    const allSteps = [...(activeBrew.brewDaySteps || []), ...(activeBrew.secondarySteps || [])];
+    const completedStepData = allSteps[stepIndex];
+
+    // 3. Check if the COMPLETED step itself has a timer duration
+    if (completedStepData && completedStepData.duration > 0) {
+        // YES, this step initiates a wait. Start its timer immediately.
+        // We pass the index of the completed step itself to startStepTimer now.
+        startStepTimer(stepIndex);
+        // We don't activate the next step yet; it becomes active when the timer finishes.
+        return; // Stop further processing for this step completion
+    }
+
+    // 4. If the completed step DID NOT have a timer, activate the NEXT step (if it exists)
+    const nextStepIndex = stepIndex + 1;
+    const nextStepData = allSteps[nextStepIndex];
+    const nextStepDiv = document.getElementById(`step-${nextStepIndex}`);
+
+    if (nextStepData && nextStepDiv) {
+        // Activate the next step normally
+        nextStepDiv.classList.add('active');
+    } else {
+        // No next step exists, this was the last step of the phase.
+        // Handle end-of-phase logic (e.g., mark primary complete)
+        const brew = brews.find(b => b.id === currentBrewDay.brewId);
+        const primaryStepCount = (brew.brewDaySteps || []).length;
+
+        if (stepIndex === primaryStepCount - 1) { // Check if it was the last *primary* step
+             await markPrimaryAsComplete(currentBrewDay.brewId);
+
+             const allStepsContainer = stepDiv?.closest('[id$="-steps-container"]'); // Use optional chaining
+             if (allStepsContainer) {
+                 allStepsContainer.innerHTML += `
+                    <div class="text-center p-6 card rounded-lg mt-6">
+                        <h3 class="text-2xl font-header font-bold text-green-600">Phase 1 Complete!</h3>
+                        <p class="my-2">Great! The primary fermentation steps are done.</p>
+                        <p class="text-app-secondary mb-4">The next steps for this batch can now be found on the 'Brew Day 2' tab.</p>
+                        <button onclick="window.finalizeBrewDay1()" class="bg-app-action text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 btn">
+                            Go to Brew Day 2
+                        </button>
+                    </div>
+                `;
+             }
+        }
+        // Add similar logic here if needed for the end of secondary steps
+    }
+    // --- END OF NEW LOGIC ---
+}
 
 function updateUI() {
     const progress = (currentStepIndex / brewDaySteps.length) * 100;

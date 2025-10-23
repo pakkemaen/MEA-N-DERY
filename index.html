@@ -4720,7 +4720,7 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
     const escapedRecipeName = (data.recipeName || '').replace(/"/g, '&quot;');
     const copyOgToLogScript = `const ogInput = document.getElementById('actualOG-${idSuffix}'); const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input'); if (ogInput && firstSgInput) { firstSgInput.value = ogInput.value; }`;
 
-    // Ensure the correct variables (useTargetOG, etc.) AND NO COMMENTS are used below
+    // Ensure the correct variables ARE used in the 'value' attributes below
     return `
         <div class="brew-log-section" data-id="${idSuffix}">
             <h3>Brewmaster's Log</h3>
@@ -4742,7 +4742,7 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
             <div class="log-item">
                 <label>Fermentation Log</label>
                 <div class="overflow-x-auto">
-                    <table class="fermentation-table table-fixed w-full" id="fermentationTable-${idSuffix}" style="min-width: 500px;">
+                     <table class="fermentation-table table-fixed w-full" id="fermentationTable-${idSuffix}" style="min-width: 500px;">
                         <thead><tr><th style="width: 120px;">Date</th><th style="width: 80px;">Temp (°C)</th><th style="width: 90px;">S.G.</th><th>Notes</th></tr></thead>
                         <tbody>${fermLog.map(row => `<tr>
                                 <td><input type="date" value="${row.date || ''}" class="w-full"></td>
@@ -4759,7 +4759,6 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
         </div>
     `;
 }
-
             // --- Functie voor de Actieve Batch Tijdlijn ---
 function renderActiveBrewTimeline() {
     const card = document.getElementById('current-brew-card');
@@ -4926,11 +4925,13 @@ function renderActiveBrewTimeline() {
 }
 
 function renderBrewDay(brewId) {
+    // Behandel het geval waar er geen actieve brouwdag is
     if (brewId === 'none') {
         document.getElementById('brew-day-content').innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">Brew Day 1 - Primary Fermentation</h2><p class="text-center text-app-secondary/80">Select a new recipe from your History to start a new brew day.</p>`;
         return;
     }
 
+    // Zoek het brouwsel op basis van ID
     const brew = brews.find(b => b.id === brewId);
     const brewDayContent = document.getElementById('brew-day-content');
     if (!brew) {
@@ -4938,12 +4939,14 @@ function renderBrewDay(brewId) {
         return;
     }
 
+    // Haal de primaire stappen op (of een lege array)
     const primarySteps = brew.brewDaySteps || [];
     if (primarySteps.length === 0) {
          brewDayContent.innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2><p class="text-center text-app-secondary/80">Could not find Primary Fermentation steps for this recipe.</p>`;
          return;
     }
 
+    // Genereer de HTML voor elke stap in de checklist
     let stepsHtml = primarySteps.map((step, index) => {
         const isCompleted = currentBrewDay.checklist[`step-${index}`] || false;
         const timerHtml = step.duration > 0 ? `<p class="timer-display my-2" id="timer-${index}">${formatTime(step.duration)}</p>` : '';
@@ -4969,11 +4972,13 @@ function renderBrewDay(brewId) {
         `;
     }).join('');
 
-    const parsedRecipeTargets = parseRecipeData(brew.recipeMarkdown); // Use a distinct variable name
+    // --- Genereer Log HTML ZONDER target values ---
+    const parsedRecipeTargets = parseRecipeData(brew.recipeMarkdown); // Gebruik een aparte naam
     console.log("renderBrewDay - Parsed Targets before passing to getBrewLogHtml:", parsedRecipeTargets); // DEBUG
-    // Pass the result directly
+    // Geef de geparste targets door aan getBrewLogHtml
     const logHtml = getBrewLogHtml(brew.logData, brew.id, parsedRecipeTargets);
 
+    // --- Zet de volledige HTML in de pagina ---
     brewDayContent.innerHTML = `
         <h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2>
         <div class="mb-4">
@@ -4988,12 +4993,13 @@ function renderBrewDay(brewId) {
             <button data-action="resetBrewDay" class="text-sm bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 btn">Reset and Start Over</button>
         </div>
         <hr class="my-8 border-app">
-        ${logHtml}
+        ${logHtml} {/* Log HTML wordt hier ingevoegd */}
         <div class="mt-4 no-print">
-            <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
+            <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>
         </div>
     `;
 
+    // Initialiseer de status van de checklist (welke stap actief is, etc.)
     initializeBrewDayState(primarySteps);
 }
 

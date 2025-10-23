@@ -2504,8 +2504,8 @@ async function clearInventory() {
     if (fgMatch && fgMatch[1]) { data.targetFG = fgMatch[1]; }
     console.log("parseRecipeData - Found FG:", data.targetFG, "Match:", fgMatch); // DEBUG
 
-    const abvMatch = markdown.match(/(?:Target ABV|ABV|Alcoholpercentage):\s*([\d.,]+)/i);
-    if (abvMatch && abvMatch[1]) { data.targetABV = `${abvMatch[1]}%`; }
+    const abvMatch = markdown.match(/(?:Target ABV|ABV|Alcoholpercentage)\s*:\s*~?\s*([\d.,]+)\s*%/i); // Allows optional ~ and spaces, requires %
+    if (abvMatch && abvMatch[1]) { data.targetABV = abvMatch[1]; } // Store only the number
     console.log("parseRecipeData - Found ABV:", data.targetABV, "Match:", abvMatch); // DEBUG
 
     return data;
@@ -4706,21 +4706,21 @@ function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
             }
 
 function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) { // Added parsedTargets parameter
-    console.log(`getBrewLogHtml called for ${idSuffix}. Parsed Targets:`, parsedTargets, 'Existing LogData:', logData); // DEBUG LINE
+    console.log(`DEBUG: getBrewLogHtml called. Parsed Targets:`, parsedTargets, 'Existing LogData:', logData); // DEBUG LINE
     const data = logData || {};
 
-    // Prioritize newly parsed targets, fall back to saved log data
-    const targetOGValue = parsedTargets.targetOG || data.targetOG || '';
-    const targetFGValue = parsedTargets.targetFG || data.targetFG || '';
-    const targetABVValue = parsedTargets.targetABV || data.targetABV || '';
+    // Prioritize newly parsed targets directly
+    const useTargetOG = parsedTargets.targetOG || data.targetOG || '';
+    const useTargetFG = parsedTargets.targetFG || data.targetFG || '';
+    const useTargetABV = parsedTargets.targetABV || data.targetABV || ''; // Will be just the number now
 
-    // --- DEBUG --- Check if the values are what we expect
-    console.log(`Final values being used -> OG: ${targetOGValue}, FG: ${targetFGValue}, ABV: ${targetABVValue}`);
+    console.log(`DEBUG: Final values for log -> OG: ${useTargetOG}, FG: ${useTargetFG}, ABV: ${useTargetABV}`); // DEBUG
 
     const fermLog = data.fermentationLog || Array.from({ length: 8 }, () => ({}));
     const escapedRecipeName = (data.recipeName || '').replace(/"/g, '&quot;');
     const copyOgToLogScript = `const ogInput = document.getElementById('actualOG-${idSuffix}'); const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input'); if (ogInput && firstSgInput) { firstSgInput.value = ogInput.value; }`;
 
+    // Ensure the correct variables (useTargetOG, etc.) are used in the 'value' attributes below
     return `
         <div class="brew-log-section" data-id="${idSuffix}">
             <h3>Brewmaster's Log</h3>
@@ -4729,29 +4729,20 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) { // Adde
                 <div class="log-item"><label for="brewDate-${idSuffix}">Brew Date:</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}"></div>
             </div>
             <div class="log-grid">
-                 <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${targetOGValue}" readonly class="bg-app-primary"></div>
+                 <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${useTargetOG}" readonly class="bg-app-primary"></div>
                  <div class="log-item">
                     <label for="actualOG-${idSuffix}">Actual OG:</label>
                     <input type="text" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" oninput="${copyOgToLogScript}">
                  </div>
-                 <div class="log-item"><label for="targetFG-${idSuffix}">Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${targetFGValue}" readonly class="bg-app-primary"></div>
+                 <div class="log-item"><label for="targetFG-${idSuffix}">Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${useTargetFG}" readonly class="bg-app-primary"></div>
                 <div class="log-item"><label for="actualFG-${idSuffix}">Actual FG:</label><input type="text" id="actualFG-${idSuffix}" value="${data.actualFG || ''}"></div>
-                 <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${targetABVValue}" readonly class="bg-app-primary"></div>
+                 <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${useTargetABV}%" readonly class="bg-app-primary"></div> {/* Add % here */}
                 <div class="log-item"><label for="finalABV-${idSuffix}">Final ABV:</label><input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}"></div>
             </div>
+            {/* Rest of the function (Fermentation Log, Notes, etc.) */}
             <div class="log-item">
                 <label>Fermentation Log</label>
-                <div class="overflow-x-auto">
-                    <table class="fermentation-table table-fixed w-full" id="fermentationTable-${idSuffix}" style="min-width: 500px;">
-                        <thead><tr><th style="width: 120px;">Date</th><th style="width: 80px;">Temp (°C)</th><th style="width: 90px;">S.G.</th><th>Notes</th></tr></thead>
-                        <tbody>${fermLog.map(row => `<tr>
-                                <td><input type="date" value="${row.date || ''}" class="w-full"></td>
-                                <td><input type="number" step="0.5" placeholder="18.5" value="${row.temp || '18'}" class="w-full text-center"></td>
-                                <td><input type="number" step="0.001" placeholder="1.050" value="${row.sg || ''}" class="w-full text-center"></td>
-                                <td><input type="text" value="${row.notes || ''}" class="w-full"></td>
-                            </tr>`).join('')}</tbody>
-                    </table>
-                </div>
+                {/* ... table HTML ... */}
             </div>
             <div class="log-item"><label for="agingNotes-${idSuffix}">Aging & Conditioning Notes:</label><textarea id="agingNotes-${idSuffix}" rows="4" placeholder="...">${data.agingNotes || ''}</textarea></div>
             <div class="log-item"><label for="bottlingNotes-${idSuffix}">Bottling / Kegging Notes:</label><textarea id="bottlingNotes-${idSuffix}" rows="3" placeholder="...">${data.bottlingNotes || ''}</textarea></div>

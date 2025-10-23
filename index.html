@@ -2774,7 +2774,7 @@ Your response must be a single, valid Markdown document.
 3.  **UNIVERSAL TIMER RULE (MANDATORY):**
     You MUST end *any* instruction list item that requires a specific wait time *after* it is completed with a generic timer tag in the format \`[TIMER:HH:MM:SS]\`.
     - **CRUCIAL Meaning:** The time specified (HH:MM:SS) represents the required waiting duration **AFTER** completing the current step **BEFORE** the next *timed* action (like the next nutrient addition) should occur. Place the tag on the step that *initiates* the waiting period.
-    - **Nutrient Schedule Exception:** Do **NOT** add a `[TIMER:...]` tag to the **final** timed nutrient addition in a schedule.
+    - **Nutrient Schedule Exception:** Do **NOT** add a \`[TIMER:...]\` tag to the **final** timed nutrient addition in a schedule.
     - For immediate steps ('at pitch' nutrients *without* a subsequent timed addition, general mixing, etc.), do NOT add a tag.
     - **Example 1 (Yeast):** "...Rehydrate yeast and wait 15 minutes. \`[TIMER:00:15:00]\`"
     - **Example 2 (Nutrient Schedule Start):** "Add 2g Nutrisal at pitch. \`[TIMER:24:00:00]\`" // Starts 24h wait for next nutrient step

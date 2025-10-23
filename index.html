@@ -2553,33 +2553,43 @@ async function generateRecipe() {
         let finalMarkdown = currentRecipeMarkdown;
         const jsonRegex = /(?:```json\s*([\s\S]*?)\s*```|(\[\s*\{[\s\S]*?\}\s*\]))/;
         const jsonMatch = currentRecipeMarkdown.match(jsonRegex);
+        let tableMarkdown = ''; // Initialize tableMarkdown
 
         if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
+            const jsonString = jsonMatch[1] || jsonMatch[2];
             try {
-                const jsonString = jsonMatch[1] || jsonMatch[2]; const ingredientsArray = JSON.parse(jsonString);
-                let tableMarkdown = '| Ingredient | Quantity | Unit |\n';
+                // *** TRY TO PARSE ***
+                const ingredientsArray = JSON.parse(jsonString);
+                tableMarkdown = '| Ingredient | Quantity | Unit |\n';
                 tableMarkdown += '|---|---|---|\n';
                 ingredientsArray.forEach(item => {
                     let displayQty = item.quantity;
                     let displayUnit = item.unit;
 
+                    // Unit conversion logic...
                     if ((displayUnit || '').toLowerCase() === 'g' && displayQty >= 1000) {
-                        displayQty /= 1000;
-                        displayUnit = 'kg';
+                        displayQty /= 1000; displayUnit = 'kg';
                     } else if ((displayUnit || '').toLowerCase() === 'ml' && displayQty >= 1000) {
-                        displayQty /= 1000;
-                        displayUnit = 'L';
+                        displayQty /= 1000; displayUnit = 'L';
                     }
-                    
-                    if (displayQty % 1 !== 0) {
-                       displayQty = parseFloat(displayQty.toFixed(2));
-                    }
+                    if (displayQty % 1 !== 0) { displayQty = parseFloat(displayQty.toFixed(2)); }
+
                     tableMarkdown += `| ${item.ingredient} | ${displayQty} | ${displayUnit} |\n`;
                 });
+                // Replace the JSON block with the generated table
                 finalMarkdown = currentRecipeMarkdown.replace(jsonRegex, tableMarkdown);
+
             } catch (e) {
+                // *** CATCH PARSING ERRORS ***
                 console.error("Failed to parse ingredients JSON from AI response:", e);
+                // Create an error message instead of a table
+                tableMarkdown = `\n**Error:** Could not display ingredients. The AI provided invalid data.\n`;
+                // Replace the JSON block with the error message
+                finalMarkdown = currentRecipeMarkdown.replace(jsonRegex, tableMarkdown);
             }
+        } else {
+            console.warn("Could not find ingredients JSON block in AI response.");
+            // Optional: You could add a message here too if the JSON block is completely missing
         }
 
         finalMarkdown = finalMarkdown.replace(/\[d:[\d:]+\]/g, '');
@@ -2768,6 +2778,7 @@ Now, generate the recipe based on the following user request:
 Your response must be a single, valid Markdown document.
 
 1.  **INGREDIENTS MUST BE A JSON CODE BLOCK:**
+    - **VALIDATION:** Before outputting, you MUST internally validate that the JSON is syntactically correct (correct commas, quotes, brackets). Invalid JSON will break the app.
     - **UNIQUENESS RULE:** Each ingredient must be unique. If added at multiple stages, you MUST sum the total quantity and list the ingredient only ONCE.
     - **Example Format:** \`\`\`json[{"ingredient": "Honey", "quantity": 1.5, "unit": "kg"}]\`\`\`
 2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST have "### Primary Fermentation" and "### Secondary & Aging" subheadings.
@@ -4958,10 +4969,10 @@ function renderBrewDay(brewId) {
         `;
     }).join('');
 
-    const parsedTargets = parseRecipeData(brew.recipeMarkdown);
-    console.log("renderBrewDay - Parsed Targets before passing:", parsedTargets); // DEBUG is fine
-    // We pass logData and parsedTargets separately now:
-    const logHtml = getBrewLogHtml(brew.logData, brew.id, parsedTargets);
+    const parsedRecipeTargets = parseRecipeData(brew.recipeMarkdown); // Use a distinct variable name
+    console.log("renderBrewDay - Parsed Targets before passing to getBrewLogHtml:", parsedRecipeTargets); // DEBUG
+    // Pass the result directly
+    const logHtml = getBrewLogHtml(brew.logData, brew.id, parsedRecipeTargets);
 
     brewDayContent.innerHTML = `
         <h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName || 'Brew Day'}</h2>

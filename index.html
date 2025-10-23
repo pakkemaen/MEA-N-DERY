@@ -4717,7 +4717,6 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) { // Adde
                 <div class="log-item"><label for="recipeName-${idSuffix}">Recipe Name:</label><input type="text" id="recipeName-${idSuffix}" value="${escapedRecipeName}"></div>
                 <div class="log-item"><label for="brewDate-${idSuffix}">Brew Date:</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}"></div>
             </div>
-            {/* Make sure the correct variables are used in 'value' */}
             <div class="log-grid">
                  <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${targetOGValue}" readonly class="bg-app-primary"></div>
                  <div class="log-item">
@@ -4729,7 +4728,6 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) { // Adde
                  <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${targetABVValue}" readonly class="bg-app-primary"></div>
                 <div class="log-item"><label for="finalABV-${idSuffix}">Final ABV:</label><input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}"></div>
             </div>
-            {/* Rest of the function remains the same */}
             <div class="log-item">
                 <label>Fermentation Log</label>
                 <div class="overflow-x-auto">

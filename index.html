@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.8.4 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.8.3 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2492,36 +2492,24 @@ async function clearInventory() {
 
                 const data = {};
 
-                // Zoek de titel
-                const titleMatch = markdown.match(/^#\s*(.*)/m);
-                if (titleMatch && titleMatch[1]) {
-                    data.recipeName = titleMatch[1].trim();
-                }
+    const titleMatch = markdown.match(/^#\s*(.*)/m);
+    if (titleMatch && titleMatch[1]) { data.recipeName = titleMatch[1].trim(); }
+    console.log("parseRecipeData - Found Title:", data.recipeName); // DEBUG
 
-                // Zoek Target OG
-                const ogMatch = markdown.match(/(?:Target OG|Original Gravity|Start SG|O\.G\.)[\s\w:]*(\d\.\d{3})/i);
-                if (ogMatch && ogMatch[1]) {
-                    data.targetOG = ogMatch[1];
-                }
+    const ogMatch = markdown.match(/(?:Target OG|Original Gravity|Start SG|O\.G\.)[\s\w:]*(\d\.\d{3})/i);
+    if (ogMatch && ogMatch[1]) { data.targetOG = ogMatch[1]; }
+    console.log("parseRecipeData - Found OG:", data.targetOG, "Match:", ogMatch); // DEBUG
 
-                // Zoek Target FG
-                const fgMatch = markdown.match(/(?:Target FG|Final Gravity|Eind SG|F\.G\.)[\s\w:]*(\d\.\d{3})/i);
-                if (fgMatch && fgMatch[1]) {
-                    data.targetFG = fgMatch[1];
-                }
+    const fgMatch = markdown.match(/(?:Target FG|Final Gravity|Eind SG|F\.G\.)[\s\w:]*(\d\.\d{3})/i);
+    if (fgMatch && fgMatch[1]) { data.targetFG = fgMatch[1]; }
+    console.log("parseRecipeData - Found FG:", data.targetFG, "Match:", fgMatch); // DEBUG
 
-                // DEFINITIEVE, VEREENVOUDIGDE ZOEKTOCHT NAAR TARGET ABV
-                // Dit patroon zoekt nu heel direct naar "keyword: getal".
-                const abvMatch = markdown.match(/(?:Target ABV|ABV|Alcoholpercentage):\s*([\d.,]+)/i);
-                if (abvMatch && abvMatch[1]) {
-                    // Stap 1: Pak het getal (bv. "12.5")
-                    const abvValue = abvMatch[1];
-                    // Stap 2: Voeg het '%' symbool toe en vul het in
-                    data.targetABV = `${abvValue}%`;
-                }
+    const abvMatch = markdown.match(/(?:Target ABV|ABV|Alcoholpercentage):\s*([\d.,]+)/i);
+    if (abvMatch && abvMatch[1]) { data.targetABV = `${abvMatch[1]}%`; }
+    console.log("parseRecipeData - Found ABV:", data.targetABV, "Match:", abvMatch); // DEBUG
 
-                return data;
-            }
+    return data;
+}
 
 async function generateRecipe() {
     recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
@@ -4729,6 +4717,7 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) { // Adde
                 <div class="log-item"><label for="recipeName-${idSuffix}">Recipe Name:</label><input type="text" id="recipeName-${idSuffix}" value="${escapedRecipeName}"></div>
                 <div class="log-item"><label for="brewDate-${idSuffix}">Brew Date:</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}"></div>
             </div>
+            {/* Make sure the correct variables are used in 'value' */}
             <div class="log-grid">
                  <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${targetOGValue}" readonly class="bg-app-primary"></div>
                  <div class="log-item">
@@ -4740,6 +4729,7 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) { // Adde
                  <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${targetABVValue}" readonly class="bg-app-primary"></div>
                 <div class="log-item"><label for="finalABV-${idSuffix}">Final ABV:</label><input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}"></div>
             </div>
+            {/* Rest of the function remains the same */}
             <div class="log-item">
                 <label>Fermentation Log</label>
                 <div class="overflow-x-auto">

@@ -678,12 +678,6 @@ function refreshCurrentChecklistView() {
 });
     
     // --- Event Listeners ---
-    const historySearchInput = document.getElementById('history-search-input');
-    if (historySearchInput) {
-        historySearchInput.addEventListener('input', renderHistoryList);
-    } else {
-        console.warn("Element with ID 'history-search-input' not found during init."); // Optional: Add a warning for debugging
-    }
     document.getElementById('packaging-add-form').addEventListener('submit', addPackagingStock);
     document.getElementById('danger-cancel-btn').addEventListener('click', hideDangerModal);
     document.getElementById('danger-confirm-btn').addEventListener('click', executeDangerAction);
@@ -827,6 +821,16 @@ function refreshCurrentChecklistView() {
     const tabToActivate = document.getElementById(tabId);
 
     if (viewToShow) viewToShow.classList.remove('hidden');
+    // --- ADDED CODE ---
+    // If we are showing the history view, attach the search listener
+    if (viewName === 'history') {
+        const historySearchInput = document.getElementById('history-search-input');
+        if (historySearchInput && !historySearchInput.hasAttribute('data-listener-added')) { // Check if listener already added
+            historySearchInput.addEventListener('input', renderHistoryList);
+            historySearchInput.setAttribute('data-listener-added', 'true'); // Mark as added
+        }
+    }
+    // --- END ADDED CODE ---
     if (tabToActivate) tabToActivate.classList.add('active');
 
     if (viewName === 'brew-day-2') {

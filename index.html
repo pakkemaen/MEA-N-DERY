@@ -2485,29 +2485,30 @@ async function clearInventory() {
     }
 }
 
-            // DEFINITIEVE FUNCTIE OM RECEPTGEGEVENS TE PARSEN
             function parseRecipeData(markdown) {
-                // Deze regel is voor debuggen. Het toont de volledige tekst van de AI in de browser console.
-                console.log("AI Recipe Output:", markdown);
+    console.log("--- Entering parseRecipeData ---"); // ENTRY LOG
+    const data = {};
+    try {
+        const titleMatch = markdown.match(/^#\s*(.*)/m);
+        if (titleMatch && titleMatch[1]) { data.recipeName = titleMatch[1].trim(); }
+        console.log("parseRecipeData - Found Title:", data.recipeName);
 
-                const data = {};
+        const ogMatch = markdown.match(/(?:Target OG|Original Gravity|Start SG|O\.G\.)\s*:\s*(\d\.\d{3})/i);
+        if (ogMatch && ogMatch[1]) { data.targetOG = ogMatch[1]; }
+        console.log("parseRecipeData - Found OG:", data.targetOG, "Match:", ogMatch);
 
-    const titleMatch = markdown.match(/^#\s*(.*)/m);
-    if (titleMatch && titleMatch[1]) { data.recipeName = titleMatch[1].trim(); }
-    console.log("parseRecipeData - Found Title:", data.recipeName); // DEBUG
+        const fgMatch = markdown.match(/(?:Target FG|Final Gravity|Eind SG|F\.G\.)\s*:\s*(\d\.\d{3})/i);
+        if (fgMatch && fgMatch[1]) { data.targetFG = fgMatch[1]; }
+        console.log("parseRecipeData - Found FG:", data.targetFG, "Match:", fgMatch);
 
-    const ogMatch = markdown.match(/(?:Target OG|Original Gravity|Start SG|O\.G\.)\s*:\s*(\d\.\d{3})/i); // More specific about colon and spaces
-    if (ogMatch && ogMatch[1]) { data.targetOG = ogMatch[1]; }
-    console.log("parseRecipeData - Found OG:", data.targetOG, "Match:", ogMatch); // DEBUG
+        const abvMatch = markdown.match(/(?:Target ABV|ABV|Alcoholpercentage)\s*:\s*~?\s*([\d.,]+)\s*%/i);
+        if (abvMatch && abvMatch[1]) { data.targetABV = abvMatch[1]; }
+        console.log("parseRecipeData - Found ABV:", data.targetABV, "Match:", abvMatch);
 
-    const fgMatch = markdown.match(/(?:Target FG|Final Gravity|Eind SG|F\.G\.)\s*:\s*(\d\.\d{3})/i); // More specific about colon and spaces
-    if (fgMatch && fgMatch[1]) { data.targetFG = fgMatch[1]; }
-    console.log("parseRecipeData - Found FG:", data.targetFG, "Match:", fgMatch); // DEBUG
-
-    const abvMatch = markdown.match(/(?:Target ABV|ABV|Alcoholpercentage)\s*:\s*~?\s*([\d.,]+)\s*%/i); // Allows optional ~ and spaces, requires %
-    if (abvMatch && abvMatch[1]) { data.targetABV = abvMatch[1]; } // Store only the number
-    console.log("parseRecipeData - Found ABV:", data.targetABV, "Match:", abvMatch); // DEBUG
-
+    } catch (e) {
+        console.error("!!! Error during parseRecipeData regex matching:", e); // CATCH BLOCK
+    }
+    console.log("--- Exiting parseRecipeData ---"); // EXIT LOG
     return data;
 }
 
@@ -2789,6 +2790,7 @@ Your response must be a single, valid Markdown document.
 1.  **INGREDIENTS MUST BE A JSON CODE BLOCK:**
     - **VALIDATION:** Before outputting, you MUST internally validate that the JSON is syntactically correct (correct commas, quotes, brackets). Invalid JSON will break the app.
     - **UNIQUENESS RULE:** Each ingredient must be unique. If added at multiple stages, you MUST sum the total quantity and list the ingredient only ONCE.
+    - **YEAST UNIT:** Yeast quantity MUST always be specified in **grams (g)**, even if it corresponds to a standard sachet size. Do NOT use "sachet" or "packet" as a unit for yeast.
     - **Example Format:** \`\`\`json[{"ingredient": "Honey", "quantity": 1.5, "unit": "kg"}]\`\`\`
 2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST have "### Primary Fermentation" and "### Secondary & Aging" subheadings.
 3.  **UNIVERSAL TIMER RULE (MANDATORY):**
@@ -4715,7 +4717,7 @@ function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
             }
 
 function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
-    console.log(`DEBUG: getBrewLogHtml called. Parsed Targets:`, parsedTargets, 'Existing LogData:', logData); // DEBUG LINE
+    console.log("--- Entering getBrewLogHtml ---"); // ENTRY LOG
     const data = logData || {};
 
     // Prioritize newly parsed targets directly
@@ -5556,12 +5558,31 @@ window.showBrewDay2Detail = function(brewId) {
 
 
 function skipTimer(stepIndex) {
+    // Clear the timer interval and reset state (no change)
     clearInterval(stepTimerInterval);
     stepTimerInterval = null;
     remainingTime = 0;
-
     localStorage.removeItem('activeBrewDayTimer');
 
+    // --- Update UI for the SKIPPED step ---
+    const stepDiv = document.getElementById(`step-${stepIndex}`);
+    if (stepDiv) {
+        stepDiv.classList.remove('active'); // Remove active state
+        stepDiv.classList.add('completed');   // Add completed state
+
+        const controlsDiv = document.getElementById(`controls-${stepIndex}`);
+        if (controlsDiv) {
+            // Replace buttons with "Completed" text
+            controlsDiv.innerHTML = `<span class="text-sm font-bold text-green-600">✓ Completed</span>`;
+        }
+        // Update timer display if it exists, though it might already be cleared
+        const timerDisplay = document.getElementById(`timer-${stepIndex}`);
+        if (timerDisplay) {
+             timerDisplay.textContent = "Skipped"; // Or "Completed"
+        }
+    }
+
+    // Now call completeStep to handle saving state and activating the next step (no change)
     completeStep(stepIndex);
 }
 

@@ -678,7 +678,12 @@ function refreshCurrentChecklistView() {
 });
     
     // --- Event Listeners ---
-    document.getElementById('packaging-add-form').addEventListener('submit', addPackagingStock);
+    const packagingForm = document.getElementById('packaging-add-form');
+if (packagingForm) {
+    packagingForm.addEventListener('submit', addPackagingStock);
+} else {
+    console.warn("Element with ID 'packaging-add-form' not found during init."); 
+}
     document.getElementById('danger-cancel-btn').addEventListener('click', hideDangerModal);
     document.getElementById('danger-confirm-btn').addEventListener('click', executeDangerAction);
     document.getElementById('danger-confirm-input').addEventListener('input', checkDangerConfirmation);

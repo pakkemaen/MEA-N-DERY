@@ -678,7 +678,12 @@ function refreshCurrentChecklistView() {
 });
     
     // --- Event Listeners ---
-    document.getElementById('history-search-input').addEventListener('input', renderHistoryList);
+    const historySearchInput = document.getElementById('history-search-input');
+    if (historySearchInput) {
+        historySearchInput.addEventListener('input', renderHistoryList);
+    } else {
+        console.warn("Element with ID 'history-search-input' not found during init."); // Optional: Add a warning for debugging
+    }
     document.getElementById('packaging-add-form').addEventListener('submit', addPackagingStock);
     document.getElementById('danger-cancel-btn').addEventListener('click', hideDangerModal);
     document.getElementById('danger-confirm-btn').addEventListener('click', executeDangerAction);

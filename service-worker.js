@@ -4,8 +4,13 @@ const CACHE_NAME = 'meandery-cache-v2'; // Verhoog de versie voor een schone upd
 const urlsToCache = [
   '/',
   'index.html',
-  'icon-192x192.png', // Voeg het icoon uit manifest.json toe
-  'icon-512x512.png'  // Voeg het icoon uit manifest.json toe
+  'style.css',
+  'app.js',
+  'js/firebase.js',
+  'js/calculators.js',
+  'icon-192x192.png',
+  'icon-512x512.png',
+  'manifest.json'
 ];
 
 // Install the service worker and cache the app shell

@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.8.3 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.8.4 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2711,10 +2711,19 @@ Your response MUST be structured with the following headings in this exact order
 2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. Then, check the user's inventory: [${yeastInInventory}]. You MUST use a suitable yeast from the inventory. In "## Brewer's Notes", under **"Ingredient Rationale:"**, you MUST state if the chosen inventory yeast was the ideal choice. If not, you MUST specify which yeast you would have preferred and why.
 3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal. 
 4.  **Water Choice:** In "## Recommended Water", recommend a specific Belgian bottled water and explain your choice.
-5.  **Key Stats & Fermenter Section:** These sections are MANDATORY. 
+5.  **Key Stats Section:** This sections is MANDATORY. 
     - "## Key Stats" must contain the OG, FG, ABV, and Final Batch Size.
-    - "## Fermenter" must contain ONLY the name of the chosen fermenter.
-6.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST use bolded titles on the same line as the text, followed by a colon (e.g., "**Ingredient Rationale:** ..."). This is mandatory for correct formatting.
+    **Example of CORRECT format:**
+
+    **OG: 1.110:**
+
+    **FG: 1.030**
+
+    **ABV: 10.5%**
+
+    **Final Batch Size: 5 Liters**
+6.  **Fermenter:** Must contain ONLY the name of the chosen fermenter. This sections is MANDATORY.
+7.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST use bolded titles on the same line as the text, followed by a colon (e.g., "**Ingredient Rationale:** ..."). This is mandatory for correct formatting.
 
 Now, generate the recipe based on the following user request:
 ---`;

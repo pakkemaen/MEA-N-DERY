@@ -684,14 +684,30 @@ if (packagingForm) {
 } else {
     console.warn("Element with ID 'packaging-add-form' not found during init."); 
 }
-    document.getElementById('danger-cancel-btn').addEventListener('click', hideDangerModal);
-    document.getElementById('danger-confirm-btn').addEventListener('click', executeDangerAction);
-    document.getElementById('danger-confirm-input').addEventListener('input', checkDangerConfirmation);
-    document.getElementById('customDescription').addEventListener('input', handleDescriptionInput);
-    document.getElementById('close-prompt-modal-btn').addEventListener('click', hidePromptModal);
-    document.getElementById('water-profile-form').addEventListener('submit', saveWaterProfile);
-    document.getElementById('waterSource').addEventListener('change', handleWaterSourceChange);
-    document.getElementById('ai-water-search-btn').addEventListener('click', findWaterProfileWithAI);
+    const dangerCancelBtn = document.getElementById('danger-cancel-btn');
+if (dangerCancelBtn) dangerCancelBtn.addEventListener('click', hideDangerModal);
+
+const dangerConfirmBtn = document.getElementById('danger-confirm-btn');
+if (dangerConfirmBtn) dangerConfirmBtn.addEventListener('click', executeDangerAction);
+
+const dangerConfirmInput = document.getElementById('danger-confirm-input');
+if (dangerConfirmInput) dangerConfirmInput.addEventListener('input', checkDangerConfirmation);
+
+const customDescriptionInput = document.getElementById('customDescription');
+if (customDescriptionInput) customDescriptionInput.addEventListener('input', handleDescriptionInput);
+
+const closeModalBtn = document.getElementById('close-prompt-modal-btn');
+if (closeModalBtn) closeModalBtn.addEventListener('click', hidePromptModal);
+
+const waterProfileForm = document.getElementById('water-profile-form');
+if (waterProfileForm) waterProfileForm.addEventListener('submit', saveWaterProfile);
+
+const waterSourceSelectCheck = document.getElementById('waterSource'); // Renamed variable
+if (waterSourceSelectCheck) waterSourceSelectCheck.addEventListener('change', handleWaterSourceChange);
+
+const aiWaterSearchBtn = document.getElementById('ai-water-search-btn');
+if (aiWaterSearchBtn) aiWaterSearchBtn.addEventListener('click', findWaterProfileWithAI);
+
     document.getElementById('prompt-modal').addEventListener('click', function(e) {
         if (e.target.id === 'prompt-modal') {
             hidePromptModal();

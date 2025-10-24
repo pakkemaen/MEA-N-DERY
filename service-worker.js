@@ -1,11 +1,11 @@
 // A simple service worker for PWA installation and basic caching.
 
-const CACHE_NAME = 'meandery-cache-v2'; // Verhoogde versie om de cache te vernieuwen
+const CACHE_NAME = 'meandery-cache-v2'; // Verhoog de versie voor een schone update
 const urlsToCache = [
   '/',
   'index.html',
-  'icon-192x192.png', // Icoon uit manifest.json
-  'icon-512x512.png'  // Icoon uit manifest.json
+  'icon-192x192.png', // Voeg het icoon uit manifest.json toe
+  'icon-512x512.png'  // Voeg het icoon uit manifest.json toe
 ];
 
 // Install the service worker and cache the app shell
@@ -24,12 +24,10 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Cache hit - return response
         if (response) {
-          return response;
+          return response; // Geef het antwoord uit de cache
         }
-        return fetch(event.request);
-      }
-    )
+        return fetch(event.request); // Vraag het netwerk aan als het niet in de cache zit
+      })
   );
 });

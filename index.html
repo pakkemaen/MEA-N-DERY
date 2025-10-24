@@ -2496,11 +2496,11 @@ async function clearInventory() {
     if (titleMatch && titleMatch[1]) { data.recipeName = titleMatch[1].trim(); }
     console.log("parseRecipeData - Found Title:", data.recipeName); // DEBUG
 
-    const ogMatch = markdown.match(/(?:Target OG|Original Gravity|Start SG|O\.G\.)[\s\w:]*(\d\.\d{3})/i);
+    const ogMatch = markdown.match(/(?:Target OG|Original Gravity|Start SG|O\.G\.)\s*:\s*(\d\.\d{3})/i); // More specific about colon and spaces
     if (ogMatch && ogMatch[1]) { data.targetOG = ogMatch[1]; }
     console.log("parseRecipeData - Found OG:", data.targetOG, "Match:", ogMatch); // DEBUG
 
-    const fgMatch = markdown.match(/(?:Target FG|Final Gravity|Eind SG|F\.G\.)[\s\w:]*(\d\.\d{3})/i);
+    const fgMatch = markdown.match(/(?:Target FG|Final Gravity|Eind SG|F\.G\.)\s*:\s*(\d\.\d{3})/i); // More specific about colon and spaces
     if (fgMatch && fgMatch[1]) { data.targetFG = fgMatch[1]; }
     console.log("parseRecipeData - Found FG:", data.targetFG, "Match:", fgMatch); // DEBUG
 

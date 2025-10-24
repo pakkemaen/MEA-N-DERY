@@ -2716,13 +2716,13 @@ Your response MUST be structured with the following headings in this exact order
     - "## Key Stats" must contain the OG, FG, ABV, and Final Batch Size.
     **Example of CORRECT format:**
 
-    **OG: 1.110:**
+    OG: 1.110
 
-    **FG: 1.030**
+    FG: 1.030
 
-    **ABV: 10.5%**
+    ABV: 10.5%
 
-    **Final Batch Size: 5 Liters**
+    Final Batch Size: 5 Liters
 6.  **Fermenter:** Must contain ONLY the name of the chosen fermenter. This sections is MANDATORY.
 7.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST use bolded titles on the same line as the text, followed by a colon (e.g., "**Ingredient Rationale:** ..."). This is mandatory for correct formatting.
 
@@ -5164,7 +5164,7 @@ window.showBrewDay2Detail = function(brewId) {
                 skipTimer(stepIndex);
                 break;
             case 'completeStep':
-                completeStep(stepIndex);
+                completeStep(stepIndex, true); // Pass 'true' to indicate a skip
                 break;
             case 'resetBrewDay':
                 resetBrewDay();
@@ -5601,7 +5601,7 @@ function skipTimer(stepIndex) {
                 }
             }
 
-async function completeStep(stepIndex) {
+async function completeStep(stepIndex, isSkipping = false) {
     // --- Timer Cleanup (No Change) ---
     if (stepTimerInterval) {
         clearInterval(stepTimerInterval);
@@ -5636,7 +5636,7 @@ async function completeStep(stepIndex) {
     const completedStepData = allSteps[stepIndex];
 
     // 3. Check if the COMPLETED step itself has a timer duration
-    if (completedStepData && completedStepData.duration > 0) {
+    if (completedStepData && completedStepData.duration > 0 && !isSkipping) {
         // YES, this step initiates a wait. Start its timer immediately.
         // We pass the index of the completed step itself to startStepTimer now.
         startStepTimer(stepIndex);

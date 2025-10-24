@@ -1228,7 +1228,7 @@
                           <button id="getWaterAdviceBtn" class="w-full bg-purple-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-800 btn">Get Brewing Advice</button>
                       </div>
                       <div id="water-advice-output" class="prose max-w-none text-app-primary">
-                          <p class="text-center text-app-secondary/80">Select a water source and a desired mead character, then ask the Alchemist for advice.</p>
+                          <p class="text-center text-app-secondary/80">Select a water source and a desired mead character, then ask your buddy for advice.</p>
                       </div>
                   </main>
                </div>
@@ -2513,7 +2513,7 @@ async function clearInventory() {
 }
 
 async function generateRecipe() {
-    recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Consulting the Alchemist... your custom recipe is being crafted.</p>';
+    recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is thinking ... relax while your custom recipe is being crafted.</p>';
     generateBtn.disabled = true;
     generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
     currentPredictedProfile = null;
@@ -2623,7 +2623,7 @@ async function generateRecipe() {
 
     } catch (error) {
         console.error("Error calling Gemini API:", error);
-        recipeOutput.innerHTML = `<p class="text-center text-red-600 font-bold">Sorry, the Alchemist is busy. Please try again.</p><p class="text-center text-sm text-app-secondary/80">${error.message}</p>`;
+        recipeOutput.innerHTML = `<p class="text-center text-red-600 font-bold">Sorry, your buddy is busy. Please try again.</p><p class="text-center text-sm text-app-secondary/80">${error.message}</p>`;
     } finally {
         generateBtn.disabled = false;
         generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -2823,7 +2823,7 @@ window.freeformTweakRecipe = async function(brewId) {
     }
     
     const tweakOutput = document.getElementById(`tweak-output-${brew.id}`);
-    tweakOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">The Alchemist is tweaking your recipe...</p>';
+    tweakOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is tweaking your recipe...</p>';
 
     const prompt = `You are an expert mead maker. A user wants to tweak the following original recipe based on their request.
 
@@ -5158,7 +5158,7 @@ window.showBrewDay2Detail = function(brewId) {
                 startStepTimer(stepIndex);
                 break;
             case 'pauseTimer':
-                pauseStepTimer();
+                pauseStepTimer(stepIndex);
                 break;
             case 'skipTimer':
                 skipTimer(stepIndex);
@@ -5508,7 +5508,7 @@ window.showBrewDay2Detail = function(brewId) {
         return;
     }
 
-                let timeLeft = resumeTime !== null ? resumeTime : brewDaySteps[stepIndex].duration;
+                let timeLeft = resumeTime !== null ? resumeTime : (remainingTime > 0 ? remainingTime : allSteps[stepIndex].duration);
                 
                 // --- Sla de eindtijd van de timer op ---
                 const endTime = Date.now() + timeLeft * 1000;
@@ -5524,6 +5524,7 @@ window.showBrewDay2Detail = function(brewId) {
                 `;
                 
                 stepTimerInterval = setInterval(() => {
+                    remainingTime = 0; // Clear the global remaining time
                     timeLeft--;
                     timerDisplay.textContent = formatTime(timeLeft);
 
@@ -5538,12 +5539,12 @@ window.showBrewDay2Detail = function(brewId) {
                 }, 1000);
             }
 
-            function pauseStepTimer() {
+            function pauseStepTimer(stepIndex) {
                 clearInterval(stepTimerInterval);
                 stepTimerInterval = null;
                 
                 // --- Sla de resterende tijd op en verwijder de eindtijd ---
-                const timerDisplay = document.getElementById(`timer-${currentStepIndex}`);
+                const timerDisplay = document.getElementById(`timer-${stepIndex}`);
                 localStorage.removeItem('activeBrewDayTimer');
                 const timeParts = timerDisplay.textContent.split(':');
                 if (timeParts.length === 2) {
@@ -5552,8 +5553,8 @@ window.showBrewDay2Detail = function(brewId) {
                     remainingTime = parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseInt(timeParts[2]);
                 }
 
-                const controlsDiv = document.getElementById(`controls-${currentStepIndex}`);
-                controlsDiv.innerHTML = `<button data-action="startTimer" data-step="${currentStepIndex}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Resume</button>`;
+                const controlsDiv = document.getElementById(`controls-${stepIndex}`);
+                controlsDiv.innerHTML = `<button data-action="startTimer" data-step="${stepIndex}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Resume</button>`;
             }
 
 
@@ -5583,7 +5584,7 @@ function skipTimer(stepIndex) {
     }
 
     // Now call completeStep to handle saving state and activating the next step (no change)
-    completeStep(stepIndex);
+    completeStep(stepIndex, true);
 }
 
             function resetBrewDay() {
@@ -5995,7 +5996,7 @@ window.startActualBrewDay = async function(brewId) {
                 document.getElementById('social-output-container').classList.remove('hidden');
                 const socialContainer = document.getElementById('social-content-container');
                 const imageContainer = document.getElementById('social-image-container');
-                socialContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">The Alchemist is writing a post for you...</p>';
+                socialContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is writing a post for you...</p>';
                 imageContainer.innerHTML = '';
                 const persona = document.getElementById('social-persona').value;
                 const platform = document.getElementById('social-platform').value;
@@ -6049,7 +6050,7 @@ document.getElementById('trigger-image-generation-btn').addEventListener('click'
                     return;
                 }
                 document.getElementById('social-output-container').classList.remove('hidden');
-                socialContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">De Alchemist schrijft een nieuw bericht voor je...</p>';
+                socialContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Je buddy schrijft een nieuw bericht voor je...</p>';
                 imageContainer.innerHTML = '';
                 const persona = document.getElementById('social-persona').value;
                 const platform = document.getElementById('social-platform').value;
@@ -6116,7 +6117,7 @@ function populateSocialRecipeDropdown() {
 
             async function generateSocialImage(title, description) {
     const imageContainer = document.getElementById('social-image-container');
-    imageContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">The Alchemist is painting a masterpiece...</p>';
+    imageContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is painting a masterpiece...</p>';
 
     const imageApiKey = userSettings.imageApiKey;
     if (!imageApiKey) {

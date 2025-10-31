@@ -1376,7 +1376,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.9.8.4 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - EXP v0.9 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2250,7 +2250,8 @@ function refreshCurrentChecklistView() {
         const docSnap = await getDoc(settingsDocRef);
         if (docSnap.exists()) {
             userSettings = docSnap.data();
-            currentBrewDay = userSettings.currentBrewDay || { brewId: null, checklist: {} };
+            // --- AANGEPAST: currentBrewDay is nu veel simpeler ---
+            currentBrewDay = userSettings.currentBrewDay || { brewId: null };
             if(currentBrewDay.brewId) {
                renderBrewDay(currentBrewDay.brewId);
             }
@@ -2298,7 +2299,8 @@ function refreshCurrentChecklistView() {
         defaultBatchSize: parseFloat(defaultBatchSizeInput.value) || 5,
         currencySymbol: defaultCurrencyInput.value.trim() || '€',
         theme: themeToggle.checked ? 'dark' : 'light',
-        currentBrewDay: currentBrewDay
+        // --- AANGEPAST: Sla enkel de ID op, niet de checklist ---
+        currentBrewDay: { brewId: currentBrewDay.brewId }
     };
     try {
         await setDoc(settingsDocRef, newSettings, { merge: true });
@@ -2308,20 +2310,6 @@ function refreshCurrentChecklistView() {
     } catch (error) {
         console.error("Error saving settings:", error);
         showToast('Failed to save settings.', 'error');
-    }
-}
-
-// Slaat enkel de voortgang van de checklist op, zonder de verkeerde toast-melding.
-async function saveChecklistState() {
-    if (!userId) return;
-    const appId = 'meandery-aa05e';
-    const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'main');
-    try {
-        // Update enkel het currentBrewDay veld, en laat de rest van de settings met rust.
-        await updateDoc(settingsDocRef, { currentBrewDay: currentBrewDay });
-    } catch (error) {
-        console.error("Error saving checklist state:", error);
-        showToast('Failed to save progress.', 'error');
     }
 }
 
@@ -2486,29 +2474,39 @@ async function clearInventory() {
 }
 
             function parseRecipeData(markdown) {
-    console.log("--- Entering parseRecipeData ---"); // ENTRY LOG
+    console.log("--- Entering parseRecipeData ---");
     const data = {};
     try {
         const titleMatch = markdown.match(/^#\s*(.*)/m);
         if (titleMatch && titleMatch[1]) { data.recipeName = titleMatch[1].trim(); }
         console.log("parseRecipeData - Found Title:", data.recipeName);
 
-        const ogMatch = markdown.match(/(?:Target OG|Original Gravity|Start SG|O\.G\.|OG)\s*:\s*~?\s*([\d.,]+)/i);
+        // --- ROBUUSTERE REGEX ---
+        // Deze regex zoekt naar 'OG', 'FG', of 'ABV', negeert (optionele) interpunctie zoals ':',
+        // en pakt het eerste getal (met punt of komma) dat volgt.
+        const createRegex = (key) => new RegExp(`(?:${key}|${key.replace('.', '\\.')})[\\s\\*:]*~?([\\d.,]+)`, 'i');
+
+        const ogRegex = createRegex('Target OG|Original Gravity|Start SG|O\\.G\\.|OG');
+        const fgRegex = createRegex('Target FG|Final Gravity|Eind SG|F\\.G\\.|FG');
+        const abvRegex = createRegex('Target ABV|ABV|Alcoholpercentage'); // ABV-getal heeft vaak een % erachter
+
+        const ogMatch = markdown.match(ogRegex);
         if (ogMatch && ogMatch[1]) { data.targetOG = ogMatch[1]; }
-        console.log("parseRecipeData - Found OG:", data.targetOG, "Match:", ogMatch);
+        console.log("parseRecipeData - Found OG:", data.targetOG);
 
-        const fgMatch = markdown.match(/(?:Target FG|Final Gravity|Eind SG|F\.G\.|FG)\s*:\s*~?\s*([\d.,]+)/i);
+        const fgMatch = markdown.match(fgRegex);
         if (fgMatch && fgMatch[1]) { data.targetFG = fgMatch[1]; }
-        console.log("parseRecipeData - Found FG:", data.targetFG, "Match:", fgMatch);
+        console.log("parseRecipeData - Found FG:", data.targetFG);
 
-        const abvMatch = markdown.match(/(?:Target ABV|ABV|Alcoholpercentage)\s*:\s*~?\s*([\d.,]+)\s*%/i);
-        if (abvMatch && abvMatch[1]) { data.targetABV = abvMatch[1]; }
-        console.log("parseRecipeData - Found ABV:", data.targetABV, "Match:", abvMatch);
+        // Voor ABV passen we de regex iets aan om het %-teken correct te negeren
+        const abvMatchGlobal = markdown.match(new RegExp(`(?:Target ABV|ABV|Alcoholpercentage)[\\s\\*:]*~?([\\d.,]+)\\s*%?`, 'i'));
+        if (abvMatchGlobal && abvMatchGlobal[1]) { data.targetABV = abvMatchGlobal[1]; }
+        console.log("parseRecipeData - Found ABV:", data.targetABV);
 
     } catch (e) {
-        console.error("!!! Error during parseRecipeData regex matching:", e); // CATCH BLOCK
+        console.error("!!! Error during parseRecipeData regex matching:", e);
     }
-    console.log("--- Exiting parseRecipeData ---"); // EXIT LOG
+    console.log("--- Exiting parseRecipeData ---");
     return data;
 }
 
@@ -2641,7 +2639,7 @@ function buildPrompt() {
             .map(p => `${p.name} (${p.capacityLiters}L total capacity, ${p.trubLossLiters || 0}L loss)`)
             .join('; ');
 
-        let basePrompt = `You are an award-winning mead maker and logistics expert named "MEA(N)DERY". Your primary goal is to create a practical, world-class, feasible recipe that fits the user's equipment.
+        let basePrompt = `You are an award-winning mead maker, logistics expert, AND BREWING SCIENTIST named "MEA(N)DERY". Your primary goal is to create a practical, world-class, feasible recipe that fits the user's equipment.
 
 **WORLD-CLASS RECIPE PHILOSOPHY:**
 1.  **Time-Based Design:** If the user's request includes a timeline (e.g., "ready by Spring 2026"), this becomes a **primary design goal**. You MUST actively choose ingredients and techniques (yeast strain, fining agents, tannin levels) that allow the mead to mature and be ready by that date. You MUST explain these choices in the "Cellaring Note".
@@ -2658,6 +2656,11 @@ function buildPrompt() {
         - **Nutrient Schedule:** Justify the chosen nutrient schedule, comparing it to the ideal if different.
         - **Cellaring Note:** Provide a cellaring guideline that is consistent with the Time-Based Design goal if one was provided.
         - **Food Pairing:** Suggest at least two food pairings.
+5.  **Scientific & Practical Rigor (MANDATORY):** You MUST validate your own suggestions against practical brewing science.
+        - **No Illogical Recipes:** Do NOT suggest illogical ingredient combinations (e.g., NEVER add water to a recipe explicitly described as 'no-water' or 'juice-only').
+        - **No Impractical Actions:** Do NOT suggest physically impractical actions (e.g., adding kilograms of whole fruit to a fermenter named 'Carboy' or 'Demijohn'). You MUST select a fermenter appropriate for the ingredients (see Equipment Logic).
+        - **Chemical Validation:** You MUST identify and warn against chemically problematic combinations (e.g., adding lactose/dairy with high-acid citrus *before* stabilization, as this causes curdling). You must ensure pH-sensitive steps (like pectic enzyme use) are placed correctly in the instructions.
+
     **Example of CORRECT format:**
 
     **Honey Choice:** Wildflower was chosen for its balanced profile...
@@ -2676,7 +2679,10 @@ function buildPrompt() {
     -   **Priority 2 (User Specified Ingredients):** If the description provides constraints on key ingredients (e.g., "use max 2kg honey", "use 3kg plums") but NOT a volume, your goal is to determine the **OPTIMAL BATCH SIZE** to create a world-class recipe with those ingredients.
     -   **Priority 3 (Default):** If neither of the above applies, use the default target of **${batchSize} liters**.
 2.  **Design Initial Recipe & Calculate Volume:** Based on the determined target size, design the recipe and calculate the **Total Required Fermenter Volume** (liquids + solids displacement).
-3.  **Feasibility Check & Selection:** Check if the recipe fits in the available fermenters: [${availableFermenters}]. If it fits, select the best one (prioritizing wide-mouth for fruit).
+3.  **Feasibility Check & Selection:** Check if the recipe fits in the available fermenters: [${availableFermenters}].
+    -   **A) Practicality Check (Fruit):** If the recipe contains a significant volume of solid fruit (e.g., a Melomel), you MUST prioritize selecting a fermenter whose name implies a wide opening. Look for names like 'Speidel', 'Bucket', 'Emmers', or 'Wide Mouth'.
+    -   **B) Fallback (Narrow Neck):** If no wide-mouth fermenter is available BUT a narrow-neck fermenter (e.g., 'Carboy', 'Demijohn', 'Fles') *is* available and has enough volume, you MUST adapt the \`## Instructions\` to explicitly state that all fruit MUST be placed in a 'brew bag' (brouwzak / BIAB bag) so it can be easily removed.
+    -   **C) Final Selection:** Select the best *and most practical* fermenter based on these checks.
 4.  **Fallback (Scale Down):** If the initial design does not fit in any available fermenter, you MUST **SCALE DOWN THE ENTIRE RECIPE** until it fits in the largest available fermenter with adequate headspace.
 5.  **Communicate:** In the "Brewer's Notes", "Key Stats", and "Selected Fermenter" sections, you MUST clearly state the final batch size and the chosen fermenter, and explain if/why you scaled the recipe down.
 
@@ -2723,8 +2729,16 @@ Your response MUST be structured with the following headings in this exact order
     ABV: 10.5%
 
     Final Batch Size: 5 Liters
+
 6.  **Fermenter:** Must contain ONLY the name of the chosen fermenter. This sections is MANDATORY.
 7.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST use bolded titles on the same line as the text, followed by a colon (e.g., "**Ingredient Rationale:** ..."). This is mandatory for correct formatting.
+8.  **No-Water Melomel Logic (MANDATORY):** If the user's free-text description contains phrases like 'no-water', 'no water melomel', 'juice-only', or '100% fruit juice', you MUST NOT include 'Water' in the `## Ingredients` list (except for small, specified amounts for yeast rehydration if absolutely necessary). The primary liquid (must) MUST be composed of only honey and the juice from the specified fruit. You MUST acknowledge this choice in the `## Brewer's Notes`.
+9.  **Yeast vs. ABV Conflict (MANDATORY):** You MUST scientifically validate the conflict between Target ABV, Final Sweetness, and Yeast Tolerance.
+    - The selected yeast (especially from inventory) MUST have an alcohol tolerance *equal to or higher than* the Target ABV.
+    - If the inventory yeast's tolerance is *lower* than the Target ABV (e.g., Target 18%, Yeast 14%), you MUST warn the user in the Brewer's Notes, state that the 18% target is *not achievable* with that yeast, and adjust the recipe's OG to match the yeast's 14% tolerance.
+10. **Bochet Method & Safety (MANDATORY):** If the style is 'Bochet', you must *first* decide on the best caramelization method (e.g., traditional stove-top, oven-bake, or using pre-caramelized honey).
+    - **If recommending a heat-based method (stove-top, oven):** You MUST include a dedicated safety warning in the `## Instructions`. This warning MUST state in all caps (e.g., 'WARNING: RISK OF BOIL-OVER') that the honey will expand and foam dramatically. You MUST instruct the user to use a pot/vessel that is at least 3 to 4 times larger than the volume of the honey.
+     - **If a 'no-heat' or 'low-heat' (e.g., oven, slow-cooker) method is more appropriate, safer, or fits the recipe better, you MAY propose it,** but you must still provide clear, detailed instructions and any relevant safety warnings (e.g., hot surfaces).
 
 Now, generate the recipe based on the following user request:
 ---`;
@@ -2984,7 +2998,7 @@ window.showBrewDetail = function(brewId) {
         ${logHtml}
 
         <div class="mt-4 no-print">
-            <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>
+            <button onclick="window.updateBrewLog('${brew.id}', 'history-detail-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>
         </div>
 
         <div class="mt-6 pt-4 border-t-2 border-app-brand no-print">
@@ -3036,7 +3050,13 @@ window.recalculateBatchCost = async function(brewId) {
     }
 
     // Roep de globale, correcte parseerfunctie aan
-    const newTotalCost = parseIngredientsAndCalculateCost(brew.recipeMarkdown, inventory, brew.batchSize);
+    const costResult = parseIngredientsAndCalculateCost(brew.recipeMarkdown, inventory, brew.batchSize);
+    const newTotalCost = costResult.cost;
+
+    // NIEUW: Toon de waarschuwingen als die er zijn
+    if (costResult.warnings.length > 0) {
+        showToast(`Cost Warning: Could not calculate cost for some items:\n- ${costResult.warnings.join('\n- ')}`, 'error', 7000);
+    }
     const oldTotalCost = brew.totalCost || 0;
 
     if (confirm(`The new calculated total ingredient cost is ${userSettings.currencySymbol || '€'}${newTotalCost.toFixed(2)} (was ${oldTotalCost.toFixed(2)}). Do you want to update?`)) {
@@ -3151,17 +3171,29 @@ window.cloneBrew = async function(brewId) {
                 historyListContainer.classList.remove('hidden');
             }
             
-            window.updateBrewLog = async function(brewId) {
+            window.updateBrewLog = async function(brewId, containerId) { // 1. Argument toegevoegd
                  if (!userId || !brewId) return;
-                 const logData = getLogDataFromDOM(`history-detail-container`);
+
+                 // 2. Argument wordt hier gebruikt i.p.v. hardgecodeerde waarde
+                 const logData = getLogDataFromDOM(containerId); 
+
                  try {
                     const appId = 'meandery-aa05e';
                     const brewDocRef = doc(db, 'artifacts', appId, 'users', userId, 'brews', brewId);
                     await updateDoc(brewDocRef, { logData: logData });
                     showToast('Log updated successfully!', 'success');
         
-                    // Ververs de detailweergave om de grafiek te tonen
-                    showBrewDetail(brewId);
+                    // 3. Stuurt je enkel naar de historiek-view als je daar al was
+                    if (containerId === 'history-detail-container') {
+                        // Ververs de detailweergave om de grafiek te tonen
+                        showBrewDetail(brewId);
+                    } else {
+                        // Update de lokale 'brews' array zodat de data actueel is
+                        const brewIndex = brews.findIndex(b => b.id === brewId);
+                        if (brewIndex > -1) {
+                            brews[brewIndex].logData = logData;
+                        }
+                    }
 
                  } catch(error) {
                     console.error("Error updating log:", error);
@@ -4639,14 +4671,14 @@ async function bottleBatch(e) {
             // --- Utility Functions ---
 function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
     let totalCost = 0;
+    const warnings = []; // NIEUW: Array om waarschuwingen op te slaan
     const requiredIngredients = parseIngredientsFromMarkdown(markdown);
 
     if (requiredIngredients.length === 0) {
         console.warn("Cost calculation: No ingredients found by the parser.");
-        return 0;
+        return { cost: 0, warnings: [] }; // AANGEPAST: Geef een object terug
     }
 
-    // Helper functie om alles naar een basis-eenheid (g of ml) om te rekenen
     const convertToBaseUnit = (quantity, unit) => {
         const u = (unit || '').toLowerCase();
         if (u === 'kg') return { quantity: quantity * 1000, unit: 'g' };
@@ -4658,27 +4690,27 @@ function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
         const inventoryItem = inventory.find(item => item.name.toLowerCase() === req.name.toLowerCase());
         
         if (inventoryItem && typeof inventoryItem.price === 'number' && inventoryItem.qty > 0) {
-            // Stap 1: Converteer de benodigde hoeveelheid naar de basis-eenheid.
             const requiredAmountInBase = convertToBaseUnit(req.quantity, req.unit);
-
-            // Stap 2: Bereken de prijs per basis-eenheid uit de inventaris.
             const inventoryAmountInBase = convertToBaseUnit(inventoryItem.qty, inventoryItem.unit);
             
-            // Controleer of de eenheden overeenkomen na conversie (bv. g met g, ml met ml)
             if (requiredAmountInBase.unit === inventoryAmountInBase.unit) {
                 const costPerBaseUnit = inventoryItem.price / inventoryAmountInBase.quantity;
-
-                // Stap 3: Vermenigvuldig de benodigde hoeveelheid (in basis-eenheid) met de prijs per basis-eenheid.
                 if (!isNaN(costPerBaseUnit)) {
                     totalCost += requiredAmountInBase.quantity * costPerBaseUnit;
                 }
             } else {
-                 console.warn(`Cannot calculate cost for '${req.name}'. Incompatible units: recipe wants '${requiredAmountInBase.unit}', inventory has '${inventoryAmountInBase.unit}'.`);
+                 // AANGEPAST: Voeg de waarschuwing toe aan de array i.p.v. de console
+                 const warningMsg = `'${req.name}': Mismatch (Recept: ${requiredAmountInBase.unit}, Inventaris: ${inventoryAmountInBase.unit})`;
+                 warnings.push(warningMsg);
+                 console.warn(`Cannot calculate cost for ${warningMsg}`);
             }
+        } else if (!inventoryItem || inventoryItem.price === 0) {
+             // NIEUW: Waarschuw ook als het item niet in de inventaris zit of geen prijs heeft
+             warnings.push(`'${req.name}': Item not found in inventory or has no price.`);
         }
     });
 
-    return totalCost;
+    return { cost: totalCost, warnings: warnings }; // AANGEPAST: Geef het object terug
 }
 
             window.printEmptyLog = function() {
@@ -4957,9 +4989,12 @@ function renderBrewDay(brewId) {
          return;
     }
 
+    // --- NIEUW: Haal de checklist op van het brouwsel zelf ---
+    const checklist = brew.checklist || {};
+
     // Genereer de HTML voor elke stap in de checklist
     let stepsHtml = primarySteps.map((step, index) => {
-        const isCompleted = currentBrewDay.checklist[`step-${index}`] || false;
+        const isCompleted = checklist[`step-${index}`] || false; // Gebruik de lokale checklist
         const timerHtml = step.duration > 0 ? `<p class="timer-display my-2" id="timer-${index}">${formatTime(step.duration)}</p>` : '';
         const buttonsHtml = step.duration > 0 ? `
             <button data-action="startTimer" data-step="${index}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Start Timer</button>
@@ -5006,7 +5041,7 @@ function renderBrewDay(brewId) {
         <hr class="my-8 border-app">
         ${logHtml} {/* Log HTML wordt hier ingevoegd */}
         <div class="mt-4 no-print">
-            <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>
+            <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>
         </div>
     `;
 
@@ -5056,7 +5091,9 @@ window.showBrewDay2Detail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    currentBrewDay = userSettings.currentBrewDay?.brewId === brewId ? userSettings.currentBrewDay : { brewId: brewId, checklist: {} };
+    // --- AANGEPAST: `currentBrewDay` is nu enkel een ID-pointer. De checklist komt uit het brouwsel.
+    currentBrewDay = { brewId: brewId }; 
+    const checklist = brew.checklist || {};
 
     const view = document.getElementById('brew-day-2-view');
     const secondarySteps = brew.secondarySteps || [];
@@ -5066,7 +5103,7 @@ window.showBrewDay2Detail = function(brewId) {
     if (secondarySteps.length > 0) {
         secondaryStepsHtml = secondarySteps.map((step, index) => {
             const originalIndex = stepOffset + index;
-            const isCompleted = currentBrewDay.checklist[`step-${originalIndex}`] || false;
+            const isCompleted = checklist[`step-${originalIndex}`] || false; // Gebruik de lokale checklist
 
             const timerHtml = step.duration > 0 ? `<p class="timer-display my-2" id="timer-${originalIndex}">${formatTime(step.duration)}</p>` : '';
             const buttonsHtml = step.duration > 0 ? `
@@ -5110,7 +5147,7 @@ window.showBrewDay2Detail = function(brewId) {
             <hr class="my-8 border-app">
             ${logHtml}
             <div class="mt-4 no-print">
-                <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
+                <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-2-view')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
             </div>
         </div>
     `;
@@ -5174,39 +5211,58 @@ window.showBrewDay2Detail = function(brewId) {
 }
 
             function parseStepsForBrewDay(markdown) {
-                const steps = { primary: [], secondary: [] };
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = marked.parse(markdown);
+    const steps = { primary: [], secondary: [] };
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = marked.parse(markdown);
 
-                const primaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('primary fermentation'));
-                const secondaryHeader = Array.from(tempDiv.querySelectorAll('h3')).find(h => h.textContent.toLowerCase().includes('secondary & aging'));
+    // --- ROBUUSTERE HEADER ZOEKFUNCTIE ---
+    // Zoekt naar ELK header-type (h1-h4) dat de sleutelwoorden bevat.
+    const findHeader = (keywords) => {
+        const headers = tempDiv.querySelectorAll('h1, h2, h3, h4');
+        return Array.from(headers).find(h => {
+            const text = h.textContent.toLowerCase();
+            // Zorg ervoor dat alle sleutelwoorden aanwezig zijn
+            return keywords.every(keyword => text.includes(keyword));
+        });
+    };
 
-                // 'parseStepText' is de nieuwe, slimme functie die we in Stap 2 hebben gemaakt.
-                
-                const processSection = (header, stepArray) => {
-                    if (header) {
-                        let element = header.nextElementSibling;
-                        while (element && element.tagName !== 'H2' && element.tagName !== 'H3') {
-                            if (element.tagName === 'OL' || element.tagName === 'UL') {
-                                Array.from(element.children).forEach(li => {
-                                    if (li.tagName === 'LI') {
-                                        const text = li.textContent.trim();
-                                        // Geen complexe logica meer.
-                                        // De nieuwe parseStepText doet al het werk.
-                                        stepArray.push(parseStepText(text));
-                                    }
-                                });
+    const primaryHeader = findHeader(['primary']);
+    const secondaryHeader = findHeader(['secondary', 'aging']);
+    
+    const processSection = (header, stepArray) => {
+        if (header) {
+            let element = header.nextElementSibling;
+            // Blijf doorgaan totdat je een ANDERE header van hetzelfde of een hoger niveau tegenkomt
+            while (element && !['H1', 'H2', 'H3', 'H4'].includes(element.tagName)) {
+                if (element.tagName === 'OL' || element.tagName === 'UL') {
+                    Array.from(element.children).forEach(li => {
+                        if (li.tagName === 'LI') {
+                            const text = li.textContent.trim();
+                            if (text) { // Sla lege list-items over
+                                stepArray.push(parseStepText(text));
                             }
-                            element = element.nextElementSibling;
                         }
-                    }
-                };
-
-                processSection(primaryHeader, steps.primary);
-                processSection(secondaryHeader, steps.secondary);
-
-                return steps;
+                    });
+                }
+                element = element.nextElementSibling;
             }
+        } else {
+             console.warn("Kopje niet gevonden tijdens parsen van stappen.");
+        }
+    };
+
+    processSection(primaryHeader, steps.primary);
+    processSection(secondaryHeader, steps.secondary);
+    
+    // Fallback: Als 'secondary' geen stappen heeft, maar 'aging' wel, probeer die te vinden
+    if (steps.secondary.length === 0 && !secondaryHeader) {
+         const agingHeader = findHeader(['aging']);
+         processSection(agingHeader, steps.secondary);
+    }
+    
+    console.log(`Steps parsed: ${steps.primary.length} primary, ${steps.secondary.length} secondary.`);
+    return steps;
+}
 
             const parseStepText = (text) => {
                 let duration = 0;
@@ -5243,7 +5299,13 @@ window.saveBrewToHistory = async function() {
     saveButton.textContent = 'Saving...';
     saveButton.disabled = true;
 
-    const totalBatchCost = parseIngredientsAndCalculateCost(currentRecipeMarkdown, inventory, parseFloat(document.getElementById('batchSize').value) || 5);
+    const costResult = parseIngredientsAndCalculateCost(currentRecipeMarkdown, inventory, parseFloat(document.getElementById('batchSize').value) || 5);
+    const totalBatchCost = costResult.cost;
+
+    // NIEUW: Toon de waarschuwingen als die er zijn
+    if (costResult.warnings.length > 0) {
+        showToast(`Cost Warning: Could not calculate cost for some items:\n- ${costResult.warnings.join('\n- ')}`, 'error', 7000);
+    }
     const brewDayStepsObject = parseStepsForBrewDay(currentRecipeMarkdown);
     
     const initialLogData = parseRecipeData(currentRecipeMarkdown);
@@ -5358,7 +5420,7 @@ function renderBrewDay(brewId) {
         <hr class="my-8 border-app">
         ${logHtml}
         <div class="mt-4 no-print">
-            <button onclick="window.updateBrewLog('${brew.id}')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
+            <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
         </div>
     `;
 
@@ -5484,7 +5546,12 @@ window.showBrewDay2Detail = function(brewId) {
                     }
                 }
                 
-                const lastCompleted = Object.keys(currentBrewDay.checklist).length - 1;
+                // --- NIEUW: Haal de checklist op van de actieve brew ---
+                const activeBrew = brews.find(b => b.id === currentBrewDay.brewId);
+                const checklist = (activeBrew && activeBrew.checklist) ? activeBrew.checklist : {};
+                
+                // Gebruik de checklist van het brouwsel, niet de globale
+                const lastCompleted = Object.keys(checklist).length - 1;
                 currentStepIndex = lastCompleted >= 0 ? lastCompleted + 1 : 0;
                 updateUI();
             }
@@ -5587,18 +5654,35 @@ function skipTimer(stepIndex) {
     completeStep(stepIndex, true);
 }
 
-            function resetBrewDay() {
-                if (confirm("Are you sure you want to reset your progress for this brew day?")) {
-                    currentBrewDay.checklist = {};
-                    saveChecklistState();
+            async function resetBrewDay() {
+                if (!confirm("Are you sure you want to reset your progress for this brew day?")) return;
+                
+                const brewId = currentBrewDay.brewId;
+                if (!brewId) return;
+
+                const brewIndex = brews.findIndex(b => b.id === brewId);
+                if (brewIndex === -1) return;
+
+                // 1. Update de lokale data
+                brews[brewIndex].checklist = {};
+
+                // 2. Sla de wijziging op in Firestore
+                try {
+                    const appId = 'meandery-aa05e';
+                    const brewDocRef = doc(db, 'artifacts', appId, 'users', userId, 'brews', brewId);
+                    await updateDoc(brewDocRef, { checklist: {} });
                     
-                    // --- Verwijder een eventuele actieve timer ---
+                    // 3. Reset de UI en timer-staat
                     clearInterval(stepTimerInterval);
                     stepTimerInterval = null;
                     remainingTime = 0;
                     localStorage.removeItem('activeBrewDayTimer');
 
-                    renderBrewDay(currentBrewDay.brewId);
+                    renderBrewDay(brewId); // Her-render de UI met de lege checklist
+                    showToast("Progress reset.", "success");
+                } catch (error) {
+                    console.error("Error resetting checklist:", error);
+                    showToast("Could not reset progress.", "error");
                 }
             }
 
@@ -5611,9 +5695,40 @@ async function completeStep(stepIndex, isSkipping = false) {
         localStorage.removeItem('activeBrewDayTimer');
     }
 
-    // --- Mark Step Complete & Save (No Change) ---
-    currentBrewDay.checklist[`step-${stepIndex}`] = true;
-    await saveChecklistState();
+    // --- AANGEPAST: Markeer stap als voltooid en sla op in het BREW OBJECT ---
+    const brewId = currentBrewDay.brewId;
+    if (!brewId) {
+        console.error("completeStep: No active brewId found.");
+        return;
+    }
+    const brewIndex = brews.findIndex(b => b.id === brewId);
+    if (brewIndex === -1) {
+        console.error("completeStep: Active brew not found in local array.");
+        return;
+    }
+
+    // Initialiseer checklist als deze niet bestaat
+    if (!brews[brewIndex].checklist) {
+        brews[brewIndex].checklist = {};
+    }
+    
+    // Update de lokale checklist
+    brews[brewIndex].checklist[`step-${stepIndex}`] = true;
+    
+    // Sla de gewijzigde checklist op in Firestore
+    try {
+        const appId = 'meandery-aa05e';
+        const brewDocRef = doc(db, 'artifacts', appId, 'users', userId, 'brews', brewId);
+        // We slaan enkel het checklist-object op om data te besparen
+        await updateDoc(brewDocRef, { checklist: brews[brewIndex].checklist });
+    } catch (error) {
+        console.error("Error saving checklist update to Firestore:", error);
+        showToast("Failed to save progress.", "error");
+        // Optioneel: zet de lokale wijziging terug
+        delete brews[brewIndex].checklist[`step-${stepIndex}`];
+        return; // Stop als het opslaan mislukt
+    }
+    // --- EINDE AANPASSING ---
 
     // --- Update UI for CURRENT Step (No Change) ---
     const stepDiv = document.getElementById(`step-${stepIndex}`);
@@ -5730,7 +5845,7 @@ window.finalizeBrewDay1 = async function() {
     window.switchSubView('brew-day-2', 'brewing-main-view');
 
     // Stap 3: Reset de Brew Day 1 status
-    currentBrewDay = { brewId: null, checklist: {} };
+    currentBrewDay = { brewId: null };
     await saveUserSettings(); // Sla de lege status op in de database
 
     // Stap 4: Maak de Brew Day 1 view visueel leeg voor de volgende batch
@@ -5947,13 +6062,12 @@ window.startActualBrewDay = async function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    // --- NIEUWE LOGICA: Zet de datum hier ---
+    // --- (Datum logica blijft hetzelfde) ---
     if (!brew.logData.brewDate) {
         brew.logData.brewDate = new Date().toISOString().split('T')[0];
         try {
             const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
             await updateDoc(brewDocRef, { logData: brew.logData });
-            // Forceer een update van de lokale data, zodat de Brew Day 2 lijst direct correct is.
             const brewIndex = brews.findIndex(b => b.id === brewId);
             if (brewIndex > -1) {
                 brews[brewIndex].logData.brewDate = brew.logData.brewDate;
@@ -5964,9 +6078,30 @@ window.startActualBrewDay = async function(brewId) {
         }
     }
 
+    // --- AANGEPAST: Stel de *globale* pointer in...
+    currentBrewDay = { brewId: brewId };
+    saveUserSettings(); // Sla de *pointer* op
+
+    // --- ...en controleer de *lokale* checklist van het brouwsel.
+    const brewIndex = brews.findIndex(b => b.id === brewId);
+    if (brewIndex > -1) {
+        // We wissen de checklist alleen als de gebruiker dit vraagt.
+        // We gaan ervan uit dat als ze "Start" klikken, ze een verse start willen.
+        if (brews[brewIndex].checklist && Object.keys(brews[brewIndex].checklist).length > 0) {
+            if (confirm("You have existing progress for this brew. Do you want to reset it and start over?")) {
+                brews[brewIndex].checklist = {};
+                // Sla de lege checklist meteen op
+                try {
+                    const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
+                    await updateDoc(brewDocRef, { checklist: {} });
+                } catch (e) { console.error("Could not reset checklist", e); }
+            }
+        } else {
+             brews[brewIndex].checklist = {}; // Initialiseer als leeg
+        }
+    }
+
     window.switchSubView('brew-day-1', 'brewing-main-view');
-    currentBrewDay = { brewId: brewId, checklist: {} };
-    saveUserSettings();
     renderBrewDay(brewId);
 }
 

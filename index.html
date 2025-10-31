@@ -2787,7 +2787,7 @@ function buildPrompt() {
         }
         if (inventoryToggles.Nutrient) {
             nutrientLogicPrompt = `3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal.`;
-        }`;
+        }
         
         const availableFermenters = equipmentProfiles
             .filter(p => p.type === 'Fermenter' && p.capacityLiters)

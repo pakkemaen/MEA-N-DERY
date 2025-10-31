@@ -426,6 +426,25 @@
             transition: width 0.5s ease-in-out;
         }
         /* EINDE: STYLES FOR BREW DAY TIMER */
+
+        /* --- FIX VOOR WITTE INPUT VELDEN IN DARK MODE --- */
+        /* Target alle inputs/textareas BEHALVE readonly */
+        .dark .brew-log-section .log-item input:not([readonly]),
+        .dark .brew-log-section .log-item textarea,
+        .dark .fermentation-table input {
+            background-color: transparent !important; /* Forceer transparant */
+            color: var(--text-primary); /* Forceer lichte tekst */
+        }
+        
+        /* Fix voor browser autofill (die een witte achtergrond forceert) */
+        .dark input:-webkit-autofill,
+        .dark input:-webkit-autofill:hover, 
+        .dark input:-webkit-autofill:focus,
+        .dark input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px var(--bg-tertiary) inset !important; /* Gebruik een donkere kleur */
+            -webkit-text-fill-color: var(--text-primary) !important; /* Lichte tekst */
+            border-color: var(--border-color) !important; /* Zorg dat de border klopt */
+        }
   
 </style>
     <!-- Service Worker Registration -->
@@ -694,16 +713,39 @@
                         </div>
                         
                         <div class="space-y-4 pt-4 border-t-2 border-app-brand mt-6">
-                             <div class="flex items-center">
-                                <input type="checkbox" id="useInventory" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand">
-                                <label for="useInventory" class="ml-3 block text-sm font-bold text-app-brand">Create recipe from my inventory</label>
-                                <span id="inventory-helper-text" class="hidden ml-3 text-xs text-amber-600 dark:text-amber-400">De app gebruikt uw inventaris als basis en de andere opties als richtlijn.</span>
+                            <label class="block text-sm font-bold text-app-brand">Gebruik Inventaris Voor:</label>
+                            
+                            <div id="inventory-options-container" class="grid grid-cols-2 gap-x-4 gap-y-2 pl-3">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="useInventory_Yeast" data-category="Yeast" class="inventory-toggle h-4 w-4 rounded text-app-brand focus:ring-app-brand">
+                                    <label for="useInventory_Yeast" class="ml-2 block text-sm font-medium">Gist</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="useInventory_Nutrients" data-category="Nutrient" class="inventory-toggle h-4 w-4 rounded text-app-brand focus:ring-app-brand">
+                                    <label for="useInventory_Nutrients" class="ml-2 block text-sm font-medium">Nutriënten</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="useInventory_Honey" data-category="Honey" class="inventory-toggle h-4 w-4 rounded text-app-brand focus:ring-app-brand">
+                                    <label for="useInventory_Honey" class="ml-2 block text-sm font-medium">Honing</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="useInventory_Fruits" data-category="Fruit" class="inventory-toggle h-4 w-4 rounded text-app-brand focus:ring-app-brand">
+                                    <label for="useInventory_Fruits" class="ml-2 block text-sm font-medium">Fruit</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="useInventory_Spices" data-category="Spice" class="inventory-toggle h-4 w-4 rounded text-app-brand focus:ring-app-brand">
+                                    <label for="useInventory_Spices" class="ml-2 block text-sm font-medium">Kruiden</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="useInventory_Other" data-category="Other" class="inventory-toggle h-4 w-4 rounded text-app-brand focus:ring-app-brand">
+                                    <label for="useInventory_Other" class="ml-2 block text-sm font-medium">Overig</label>
+                                </div>
                             </div>
                             
-                            <div id="budget-section" class="hidden pl-7 space-y-2">
+                            <div id="budget-section" class="hidden pl-3 space-y-2 pt-2 border-t border-app">
                                 <div class="flex items-center">
                                     <input type="checkbox" id="useBudget" class="h-4 w-4 rounded border-gray-300 text-app-brand focus:ring-app-brand">
-                                    <label for="useBudget" class="ml-3 block text-sm font-bold">Generate within budget?</label>
+                                    <label for="useBudget" class="ml-3 block text-sm font-bold">Genereer binnen budget?</label>
                                 </div>
                                 <div id="budget-input-container" class="hidden">
                                     <label for="maxBudget" class="block text-sm font-bold mb-1">Max Budget</label>
@@ -711,6 +753,7 @@
                                 </div>
                             </div>
                         </div>
+
                         <div class="mt-8">
                             <button id="generateBtn" class="w-full bg-app-action text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-all duration-300 shadow-md btn">
                                 Generate Recipe
@@ -2118,10 +2161,14 @@ function refreshCurrentChecklistView() {
     document.getElementById('bottling-form').addEventListener('submit', bottleBatch);
     document.getElementById('scan-barcode-btn').addEventListener('click', startScanner);
     document.getElementById('close-scanner-btn').addEventListener('click', stopScanner);
-    document.getElementById('useInventory').addEventListener('change', (e) => {
-                document.getElementById('budget-section').classList.toggle('hidden', !e.target.checked);
-                handleInventoryToggle(e);
+    // Event listener voor de NIEUWE inventory toggles
+        document.querySelectorAll('.inventory-toggle').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                // Toon de budget-sectie als *ten minste één* box is aangevinkt
+                const anyChecked = Array.from(document.querySelectorAll('.inventory-toggle')).some(cb => cb.checked);
+                document.getElementById('budget-section').classList.toggle('hidden', !anyChecked);
             });
+        });
     document.getElementById('useBudget').addEventListener('change', (e) => {
         document.getElementById('budget-input-container').classList.toggle('hidden', !e.target.checked);
     });
@@ -2511,128 +2558,236 @@ async function clearInventory() {
 }
 
 async function generateRecipe() {
-    recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is thinking ... relax while your custom recipe is being crafted.</p>';
-    generateBtn.disabled = true;
-    generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    currentPredictedProfile = null;
-
-    try {
-        const prompt = buildPrompt();
-        lastGeneratedPrompt = prompt;
-        currentRecipeMarkdown = await performApiCall(prompt);
-        
-        currentPredictedProfile = await getPredictedFlavorProfile(currentRecipeMarkdown); 
-        
-        let flavorProfileHtml = `
-            <div id="flavor-profile-section" class="mt-8 pt-6 border-t border-app">
-                <h3 class="text-2xl font-header font-bold text-center mb-4">Predicted Flavor Profile</h3>
-        `;
-
-        if (currentPredictedProfile) {
-            // Gelukt: toon de canvas
-            flavorProfileHtml += `
-                <div class="card p-4 rounded-lg max-w-sm mx-auto">
-                    <canvas id="generated-flavor-wheel"></canvas>
-                </div>
-            `;
-        } else {
-            // Mislukt: toon de knop
-             flavorProfileHtml += `
-                <div class="card p-4 rounded-lg max-w-sm mx-auto text-center">
-                    <p class="text-app-secondary/80 text-sm mb-4">Could not generate profile initially. Try again?</p>
-                    <button id="retry-flavor-btn" onclick="window.regenerateFlavorProfile()" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 btn">
-                        Generate Profile
-                    </button>
-                    <div id="flavor-generation-status" class="mt-2 text-sm"></div> 
-                </div>
-            `;
-        }
-        flavorProfileHtml += `</div>`; // Sluit de section div
-        
-        let finalMarkdown = currentRecipeMarkdown;
-        const jsonRegex = /(?:```json\s*([\s\S]*?)\s*```|(\[\s*\{[\s\S]*?\}\s*\]))/;
-        const jsonMatch = currentRecipeMarkdown.match(jsonRegex);
-        let tableMarkdown = ''; // Initialize tableMarkdown
-
-        if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
-            const jsonString = jsonMatch[1] || jsonMatch[2];
-            try {
-                // *** TRY TO PARSE ***
-                const ingredientsArray = JSON.parse(jsonString);
-                tableMarkdown = '| Ingredient | Quantity | Unit |\n';
-                tableMarkdown += '|---|---|---|\n';
-                ingredientsArray.forEach(item => {
-                    let displayQty = item.quantity;
-                    let displayUnit = item.unit;
-
-                    // Unit conversion logic...
-                    if ((displayUnit || '').toLowerCase() === 'g' && displayQty >= 1000) {
-                        displayQty /= 1000; displayUnit = 'kg';
-                    } else if ((displayUnit || '').toLowerCase() === 'ml' && displayQty >= 1000) {
-                        displayQty /= 1000; displayUnit = 'L';
-                    }
-                    if (displayQty % 1 !== 0) { displayQty = parseFloat(displayQty.toFixed(2)); }
-
-                    tableMarkdown += `| ${item.ingredient} | ${displayQty} | ${displayUnit} |\n`;
-                });
-                // Replace the JSON block with the generated table
-                finalMarkdown = currentRecipeMarkdown.replace(jsonRegex, tableMarkdown);
-
-            } catch (e) {
-                // *** CATCH PARSING ERRORS ***
-                console.error("Failed to parse ingredients JSON from AI response:", e);
-                // Create an error message instead of a table
-                tableMarkdown = `\n**Error:** Could not display ingredients. The AI provided invalid data.\n`;
-                // Replace the JSON block with the error message
-                finalMarkdown = currentRecipeMarkdown.replace(jsonRegex, tableMarkdown);
+                recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is thinking ... relax while your custom recipe is being crafted.</p>';
+                generateBtn.disabled = true;
+                generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                currentPredictedProfile = null;
+            
+                try {
+                    const prompt = buildPrompt();
+                    lastGeneratedPrompt = prompt;
+                    currentRecipeMarkdown = await performApiCall(prompt); // 1. Sla het resultaat op
+                    
+                    await renderRecipeOutput(currentRecipeMarkdown); // 2. Roep de nieuwe render-functie aan
+            
+                } catch (error) {
+                    console.error("Error calling Gemini API:", error);
+                    recipeOutput.innerHTML = `<p class="text-center text-red-600 font-bold">Sorry, your buddy is busy. Please try again.</p><p class="text-center text-sm text-app-secondary/80">${error.message}</p>`;
+                } finally {
+                    generateBtn.disabled = false;
+                    generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
             }
-        } else {
-            console.warn("Could not find ingredients JSON block in AI response.");
-            // Optional: You could add a message here too if the JSON block is completely missing
-        }
 
-        finalMarkdown = finalMarkdown.replace(/\[d:[\d:]+\]/g, '');
-        const recipeHtml = marked.parse(finalMarkdown);
+// --- NIEUWE FUNCTIE: RENDER RECEPT OUTPUT ---
+            async function renderRecipeOutput(markdown) {
+                // 'markdown' is de parameter, vervangt 'currentRecipeMarkdown'
+                
+                currentPredictedProfile = await getPredictedFlavorProfile(markdown); 
+                
+                let flavorProfileHtml = `
+                    <div id="flavor-profile-section" class="mt-8 pt-6 border-t border-app">
+                        <h3 class="text-2xl font-header font-bold text-center mb-4">Predicted Flavor Profile</h3>
+                `;
         
-        const fullHtml = `
-            <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
-                <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
-                    Show AI Prompt
-                </button>
-                <button onclick="window.print()" class="bg-stone-600 text-white py-2 px-4 rounded-lg hover:bg-stone-700 transition-colors btn">
-                    Print Recipe
-                </button>
-            </div>
-            <div class="recipe-content">${recipeHtml}</div>
-            ${flavorProfileHtml}
-            <div class="mt-6 no-print">
-                <button id="saveBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-800 transition-colors btn">
-                    Save to Brew History
-                </button>
-            </div>
-        `;
-        recipeOutput.innerHTML = fullHtml;
+                if (currentPredictedProfile) {
+                    flavorProfileHtml += `
+                        <div class="card p-4 rounded-lg max-w-sm mx-auto">
+                            <canvas id="generated-flavor-wheel"></canvas>
+                        </div>
+                    `;
+                } else {
+                     flavorProfileHtml += `
+                        <div class="card p-4 rounded-lg max-w-sm mx-auto text-center">
+                            <p class="text-app-secondary/80 text-sm mb-4">Could not generate profile initially. Try again?</p>
+                            <button id="retry-flavor-btn" onclick="window.regenerateFlavorProfile()" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 btn">
+                                Generate Profile
+                            </button>
+                            <div id="flavor-generation-status" class="mt-2 text-sm"></div> 
+                        </div>
+                    `;
+                }
+                flavorProfileHtml += `</div>`;
+                
+                let finalMarkdown = markdown; // Gebruik de parameter
+                const jsonRegex = /(?:```json\s*([\s\S]*?)\s*```|(\[\s*\{[\s\S]*?\}\s*\]))/;
+                const jsonMatch = markdown.match(jsonRegex); // Gebruik de parameter
+                let tableMarkdown = ''; 
 
-        if (currentPredictedProfile) {
-            renderGeneratedFlavorWheel(currentPredictedProfile);
-        }
+                if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
+                    const jsonString = jsonMatch[1] || jsonMatch[2];
+                    try {
+                        const ingredientsArray = JSON.parse(jsonString);
+                        tableMarkdown = '| Ingredient | Quantity | Unit |\n';
+                        tableMarkdown += '|---|---|---|\n';
+                        ingredientsArray.forEach(item => {
+                            let displayQty = item.quantity;
+                            let displayUnit = item.unit;
+                            if ((displayUnit || '').toLowerCase() === 'g' && displayQty >= 1000) {
+                                displayQty /= 1000; displayUnit = 'kg';
+                            } else if ((displayUnit || '').toLowerCase() === 'ml' && displayQty >= 1000) {
+                                displayQty /= 1000; displayUnit = 'L';
+                            }
+                            if (displayQty % 1 !== 0) { displayQty = parseFloat(displayQty.toFixed(2)); }
+                            tableMarkdown += `| ${item.ingredient} | ${displayQty} | ${displayUnit} |\n`;
+                        });
+                        finalMarkdown = markdown.replace(jsonRegex, tableMarkdown); // Gebruik de parameter
+                    } catch (e) {
+                        console.error("Failed to parse ingredients JSON from AI response:", e);
+                        tableMarkdown = `\n**Error:** Could not display ingredients. The AI provided invalid data.\n`;
+                        finalMarkdown = markdown.replace(jsonRegex, tableMarkdown); // Gebruik de parameter
+                    }
+                } else {
+                    console.warn("Could not find ingredients JSON block in AI response.");
+                }
+        
+                finalMarkdown = finalMarkdown.replace(/\[d:[\d:]+\]/g, '');
+                const recipeHtml = marked.parse(finalMarkdown);
+                
+                // --- AANGEPAST: Voeg de Tweak-sectie toe ---
+                const fullHtml = `
+                    <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
+                        <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
+                            Show AI Prompt
+                        </button>
+                        <button onclick="window.print()" class="bg-stone-600 text-white py-2 px-4 rounded-lg hover:bg-stone-700 transition-colors btn">
+                            Print Recipe
+                        </button>
+                    </div>
+                    <div class="recipe-content">${recipeHtml}</div>
+                    ${flavorProfileHtml}
+                    
+                    <div id="tweak-unsaved-section" class="mt-6 pt-6 border-t-2 border-app-brand no-print">
+                        <h3 class="text-2xl font-header font-bold text-center mb-4">Not quite right? Tweak it.</h3>
+                        <div class="card p-4 rounded-lg">
+                            <label for="tweak-unsaved-request" class="block text-sm font-bold mb-2">Describe what you want to change:</label>
+                            <textarea id="tweak-unsaved-request" rows="3" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary" placeholder="e.g., 'Make this for 20 liters', or 'Replace the apples with pears'"></textarea>
+                            <button id="tweak-unsaved-btn" class="w-full mt-3 bg-purple-700 text-white py-3 px-4 rounded-lg hover:bg-purple-800 btn">
+                                Generate Tweaked Recipe
+                            </button>
+                        </div>
+                        <div id="tweak-unsaved-output" class="mt-6"></div>
+                    </div>
 
-        document.getElementById('saveBtn').addEventListener('click', saveBrewToHistory);
+                    <div class="mt-6 no-print">
+                        <button id="saveBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-800 transition-colors btn">
+                            Save to Brew History
+                        </button>
+                    </div>
+                `;
+                recipeOutput.innerHTML = fullHtml;
+        
+                if (currentPredictedProfile) {
+                    renderGeneratedFlavorWheel(currentPredictedProfile);
+                }
+        
+                // --- AANGEPAST: Voeg BEIDE listeners toe ---
+                document.getElementById('saveBtn').addEventListener('click', saveBrewToHistory);
+                document.getElementById('tweak-unsaved-btn').addEventListener('click', tweakUnsavedRecipe);
+            }
 
-    } catch (error) {
-        console.error("Error calling Gemini API:", error);
-        recipeOutput.innerHTML = `<p class="text-center text-red-600 font-bold">Sorry, your buddy is busy. Please try again.</p><p class="text-center text-sm text-app-secondary/80">${error.message}</p>`;
-    } finally {
-        generateBtn.disabled = false;
-        generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    }
-}          
+// --- NIEUWE FUNCTIE: TWEAK OPGESLAGEN RECEPT ---
+            async function tweakUnsavedRecipe() {
+                const tweakRequest = document.getElementById('tweak-unsaved-request').value.trim();
+                if (!tweakRequest) {
+                    showToast("Please enter your tweak request.", "error");
+                    return;
+                }
+            
+                const tweakOutput = document.getElementById('tweak-unsaved-output');
+                tweakOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is tweaking...</p>';
+                const tweakBtn = document.getElementById('tweak-unsaved-btn');
+                tweakBtn.disabled = true;
+            
+                const prompt = `You are an expert mead maker. A user wants to tweak the following original recipe based on their request.
+            
+                Original Recipe Markdown:
+                ---
+                ${currentRecipeMarkdown}
+                ---
+            
+                User's Tweak Request: "${tweakRequest}"
+            
+                Generate the complete, new, and improved recipe that incorporates the user's request. Ensure the output is fully formatted in Markdown, including a new creative title in 'Name: Subtitle' format, and a complete ingredient table.`;
+            
+                try {
+                    const tweakedMarkdown = await performApiCall(prompt);
+                    currentRecipeMarkdown = tweakedMarkdown; // Update de globale status met het NIEUWE recept
+                    
+                    // Render de *volledige* recept-output opnieuw met de aangepaste markdown
+                    await renderRecipeOutput(tweakedMarkdown); 
+                    
+                    // Scroll naar de bovenkant van de output
+                    recipeOutput.scrollTop = 0;
+                    
+                    // Zoek de *nieuwe* tweak-output div (die net is ge-renderd) en plaats daar een succesbericht
+                    const newTweakOutput = document.getElementById('tweak-unsaved-output');
+                    if (newTweakOutput) {
+                        newTweakOutput.innerHTML = `<p class="text-center text-green-600 font-bold">Recipe updated successfully! See the new version above. You can tweak it again or save it.</p>`;
+                    }
+            
+                } catch (error) {
+                    console.error("Error tweaking recipe:", error);
+                    tweakOutput.innerHTML = `<p class="text-center text-red-500">Could not tweak recipe: ${error.message}</p>`;
+                } finally {
+                    // De knop die we hebben uitgeschakeld, bestaat niet meer (omdat de UI is her-renderd),
+                    // maar de *nieuwe* knop zal standaard ingeschakeld zijn.
+                    // We hoeven hier niets te doen, tenzij de error optrad vóór het her-renderen.
+                    if (tweakBtn) tweakBtn.disabled = false; 
+                }
+            }          
 
 function buildPrompt() {
     try {
         const batchSize = document.getElementById('batchSize').value || '5';
-        const yeastInInventory = inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available';
-        const nutrientsInInventory = inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available';
+        
+        // --- AANGEPAST: Lees de individuele checkboxes ---
+        const inventoryToggles = {
+            Yeast: document.getElementById('useInventory_Yeast').checked,
+            Nutrient: document.getElementById('useInventory_Nutrients').checked,
+            Honey: document.getElementById('useInventory_Honey').checked,
+            Fruit: document.getElementById('useInventory_Fruits').checked,
+            Spice: document.getElementById('useInventory_Spices').checked,
+            Other: document.getElementById('useInventory_Other').checked
+        };
+        // Bepaal of *enige* inventaris-optie is geselecteerd
+        const useAnyInventory = Object.values(inventoryToggles).some(val => val === true);
+        
+        // Definieer de "Overige" categorieën
+        const otherCategories = ['Malt Extract', 'Adjunct', 'Chemical', 'Water'];
+        const requestedCategories = Object.keys(inventoryToggles).filter(k => inventoryToggles[k]);
+
+        // --- AANGEPAST: Maak de inventaris-strings conditioneel ---
+        const yeastInInventory = inventoryToggles.Yeast 
+            ? (inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available')
+            : 'INVENTORY NOT REQUESTED';
+        
+        const nutrientsInInventory = inventoryToggles.Nutrient
+            ? (inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available')
+            : 'INVENTORY NOT REQUESTED';
+        
+        // Bouw de algemene inventaris string *enkel* met de gevraagde categorieën
+        const inventoryString = inventory
+            .filter(item => {
+                // Speciaal geval: 'Other' omvat alles wat niet expliciet is genoemd
+                if (inventoryToggles.Other && otherCategories.includes(item.category)) return true;
+                // Check de direct aangevinkte categorieën
+                return requestedCategories.includes(item.category);
+            })
+            .map(item => `${item.name}: ${item.qty} ${item.unit}`)
+            .join('; ');
+
+        // --- AANGEPAST: Creëer dynamische prompt-regels ---
+        let yeastLogicPrompt = `2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. You MUST state this ideal yeast in the "## Brewer's Notes".`;
+        let nutrientLogicPrompt = `3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule** and recommend the ideal nutrients (e.g., "Fermaid O, Fermaid K"). You MUST explain this in the "## Brewer's Notes".`;
+
+        // Overschrijf de 'from scratch' regels indien aangevinkt
+        if (inventoryToggles.Yeast) {
+            yeastLogicPrompt = `2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. Then, check the user's inventory: [${yeastInInventory}]. You MUST use a suitable yeast from the inventory. In "## Brewer's Notes", you MUST state if the chosen inventory yeast was the ideal choice. If not, you MUST specify which yeast you would have preferred and why.`;
+        }
+        if (inventoryToggles.Nutrient) {
+            nutrientLogicPrompt = `3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal.`;
+        }`;
         
         const availableFermenters = equipmentProfiles
             .filter(p => p.type === 'Fermenter' && p.capacityLiters)
@@ -2696,7 +2851,7 @@ Your primary task is to invent a captivating name that stands out. Follow this e
 3.  **Invent a Name:** Create a unique name that perfectly fits the chosen style.
 4.  **HARD CONSTRAINTS:**
     -   The title **MUST NOT** be a simple list of ingredients (e.g., "Plum & Almond Mead").
-    -   The title **MUST NOT** use generic, "hippie" or cheesy words like 'Delight', 'Kiss', 'Symphony', 'Embrace', 'Nectar', or 'Elixir'.
+    -   The title **MUST NOT** use generic, "hippie" or cheesy words like 'Delight', 'Kiss', 'Symphony', 'Embrace', 'Nectar', 'Alchemy', Serenade' or 'Elixir'.
 5.  **Examples of EXCELLENT Titles (by Style):**
     -   **Style A (Witty):** '# Berry Manilow: A Mixed Berry Melomel'
     -   **Style B (Modern):** '# Oak & Ember: A Dark Caramel Bochet'
@@ -2715,8 +2870,8 @@ Your response MUST be structured with the following headings in this exact order
 
 **ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
 1.  **Recipe Inspiration:** The "## Description" section MUST begin with a single sentence explaining the recipe's inspiration. This sentence MUST be a standalone paragraph. You MUST insert a full blank line after it before the main description begins. Do NOT use italics.
-2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. Then, check the user's inventory: [${yeastInInventory}]. You MUST use a suitable yeast from the inventory. In "## Brewer's Notes", under **"Ingredient Rationale:"**, you MUST state if the chosen inventory yeast was the ideal choice. If not, you MUST specify which yeast you would have preferred and why.
-3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal. 
+${yeastLogicPrompt}
+${nutrientLogicPrompt} 
 4.  **Water Choice:** In "## Recommended Water", recommend a specific Belgian bottled water and explain your choice.
 5.  **Key Stats Section:** This sections is MANDATORY. 
     - "## Key Stats" must contain the OG, FG, ABV, and Final Batch Size.
@@ -2744,26 +2899,36 @@ Now, generate the recipe based on the following user request:
 ---`;
         
         let creativeBrief = ''; 
-        const inventoryString = inventory.map(item => `${item.name}: ${item.qty} ${item.unit}`).join('; ');
-        
         const customDescription = document.getElementById('customDescription').value;
-        const useInventory = document.getElementById('useInventory').checked;
 
         if (customDescription.trim() !== '') {
-            creativeBrief += `The user's request is a free-text description: "${customDescription}". Prioritize using ingredients from their inventory if suitable: [${inventoryString}].`;
-        } else if (useInventory) {
+            // --- AANGEPAST: Gebruik `useAnyInventory` ---
+            let inventoryConstraint = ''; 
+            if (useAnyInventory) { // <-- NIEUWE CHECK
+                inventoryConstraint = `Prioritize using ingredients from their inventory if suitable (ONLY for the categories the user selected): [${inventoryString || 'None requested'}].`;
+            }
+            creativeBrief += `The user's request is a free-text description: "${customDescription}". ${inventoryConstraint}`;
+        
+        } else if (useAnyInventory) { // <-- NIEUWE CHECK
+            // --- AANGEPAST: Bouw de 'richInventoryString' op basis van de toggles ---
             const currency = userSettings.currencySymbol || '€';
             const useBudget = document.getElementById('useBudget').checked;
             const maxBudget = document.getElementById('maxBudget').value;
-            const richInventoryString = inventory.map(item => {
-                let costPerUnit = 0; let baseUnit = item.unit; if (item.qty > 0 && item.price > 0) { costPerUnit = item.price / item.qty; } if (item.unit === 'kg') { costPerUnit /= 1000; baseUnit = 'g'; } else if (item.unit === 'L') { costPerUnit /= 1000; baseUnit = 'ml'; }
-                return `${item.name}: ${item.qty} ${item.unit} available (Cost: ${costPerUnit.toFixed(2)} ${currency}/${baseUnit})`;
-            }).join('; ');
+
+            const richInventoryString = inventory
+                .filter(item => {
+                    if (inventoryToggles.Other && otherCategories.includes(item.category)) return true;
+                    return requestedCategories.includes(item.category);
+                })
+                .map(item => {
+                    let costPerUnit = 0; let baseUnit = item.unit; if (item.qty > 0 && item.price > 0) { costPerUnit = item.price / item.qty; } if (item.unit === 'kg') { costPerUnit /= 1000; baseUnit = 'g'; } else if (item.unit === 'L') { costPerUnit /= 1000; baseUnit = 'ml'; }
+                    return `${item.name}: ${item.qty} ${item.unit} available (Cost: ${costPerUnit.toFixed(2)} ${currency}/${baseUnit})`;
+                }).join('; ');
             
-            creativeBrief += `The user wants a recipe created from their inventory: [${richInventoryString}]. Use these parameters as guidelines:\n- Target ABV: Approximately ${document.getElementById('abv').value || '12'}%\n- Final Sweetness: ${document.getElementById('sweetness').selectedOptions[0].text}\n- Style Inspiration: ${document.getElementById('style').selectedOptions[0].text}`;
+            creativeBrief += `The user wants a recipe created from their inventory (using only the categories they selected): [${richInventoryString || 'No items for requested categories'}]. Use these parameters as guidelines:\n- Target ABV: Approximately ${document.getElementById('abv').value || '12'}%\n- Final Sweetness: ${document.getElementById('sweetness').selectedOptions[0].text}\n- Style Inspiration: ${document.getElementById('style').selectedOptions[0].text}`;
             
             if (useBudget && maxBudget) {
-                creativeBrief += `\n\nCRUCIAL CONSTRAINT: The total cost of the ingredients for this recipe MUST NOT EXCEED ${maxBudget} ${currency}. You must use the provided ingredient costs to calculate this and stay within budget. In the Brewer's Notes, state the calculated total cost.`;
+                creativeBrief += `\n\nCRUCIAL CONSTRAINT: The total cost of the ingredients for this recipe (from the *selected* inventory) MUST NOT EXCEED ${maxBudget} ${currency}. You must use the provided ingredient costs to calculate this and stay within budget. In the Brewer's Notes, state the calculated total cost.`;
             }
         } else {
             const style = document.getElementById('style').selectedOptions[0].text;
@@ -6904,7 +7069,6 @@ window.hideTitleEditor = function(brewId) {
     document.getElementById(`title-editor-${brewId}`).classList.add('hidden');
 }
 
-// Slaat de nieuwe titel op in Firestore
 window.saveNewTitle = async function(brewId) {
     if (!userId) return;
     const newTitle = document.getElementById(`title-input-${brewId}`).value.trim();
@@ -6916,11 +7080,21 @@ window.saveNewTitle = async function(brewId) {
     try {
         const appId = 'meandery-aa05e';
         const brewDocRef = doc(db, 'artifacts', appId, 'users', userId, 'brews', brewId);
-        await updateDoc(brewDocRef, { recipeName: newTitle });
+        
+        // --- AANGEPAST: Update de hoofdtitel EN de log-titel ---
+        await updateDoc(brewDocRef, { 
+            recipeName: newTitle,
+            'logData.recipeName': newTitle // Update ook het veld in de logData
+        });
 
         // Update de lokale data en UI onmiddellijk voor een snelle respons
         const brew = brews.find(b => b.id === brewId);
-        if (brew) brew.recipeName = newTitle;
+        if (brew) {
+            brew.recipeName = newTitle;
+            if (brew.logData) {
+                brew.logData.recipeName = newTitle; // Update ook de lokale logData
+            }
+        }
         
         document.querySelector(`#title-display-${brewId} h2`).textContent = newTitle;
         hideTitleEditor(brewId);

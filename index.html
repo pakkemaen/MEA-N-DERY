@@ -2712,10 +2712,19 @@ async function generateRecipe() {
             
                 try {
                     const tweakedMarkdown = await performApiCall(prompt);
-                    currentRecipeMarkdown = tweakedMarkdown; // Update de globale status met het NIEUWE recept
+                    currentRecipeMarkdown = tweakedMarkdown; // Sla de *ruwe* response op
+
+                    // --- NIEUW: Strip potential markdown code fences ---
+                    let processedMarkdown = tweakedMarkdown.trim();
+                    if (processedMarkdown.startsWith("```markdown")) {
+                        processedMarkdown = processedMarkdown.substring(10, processedMarkdown.lastIndexOf("```")).trim();
+                    } else if (processedMarkdown.startsWith("```")) {
+                        processedMarkdown = processedMarkdown.substring(3, processedMarkdown.lastIndexOf("```")).trim();
+                    }
+                    // --- EINDE NIEUW ---
                     
-                    // Render de *volledige* recept-output opnieuw met de aangepaste markdown
-                    await renderRecipeOutput(tweakedMarkdown); 
+                    // Render de *volledige* recept-output opnieuw met de *verwerkte* markdown
+                    await renderRecipeOutput(processedMarkdown); 
                     
                     // Scroll naar de bovenkant van de output
                     recipeOutput.scrollTop = 0;
@@ -3013,7 +3022,8 @@ ${brew.recipeMarkdown}
 
 User's Tweak Request: "${tweakRequest}"
 
-Generate the complete, new, and improved recipe that incorporates the user's request. Ensure the output is fully formatted in Markdown, including a new creative title in 'Name: Subtitle' format, and a complete ingredient table.`;
+Generate the complete, new, and improved recipe that incorporates the user's request. Ensure the output is fully formatted in Markdown, including a new creative title in 'Name: Subtitle' format, and a complete ingredient table.
+CRUCIAL: Do not wrap your response in a markdown code block using triple backticks (```).`;
 
     try {
         const tweakedMarkdown = await performApiCall(prompt);

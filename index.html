@@ -2806,7 +2806,7 @@ function buildPrompt() {
                 2.  Second, check the user's inventory: [${yeastInInventory}].
                 3.  **Selection:** You MUST select the *most suitable yeast from the inventory* for the \`## Ingredients\` list.
                 4.  **Fallback:** If no yeast in the inventory is suitable at all, you MUST use the *ideal yeast* from step 1 in the \`## Ingredients\` list.
-                5.  **Notes & Validation (MANDATORY):** In "## Brewer's Notes", you MUST state which yeast was chosen. You MUST *also* state its known technical specs (specifically its **alcohol tolerance** and **ideal temperature range**) based on your training data, as these specs are crucial for the Yeast vs. ABV Conflict rule.`;
+                5.  **Notes & Validation (MANDATORY):** In "## Brewer's Notes", you MUST state which yeast was chosen. You MUST *also* state its known technical specs (specifically its **alcohol tolerance** and **ideal temperature range**) based on your training data, as these specs are crucial for the \`Yeast vs. ABV Conflict\` rule.`;
         }
         if (inventoryToggles.Nutrient) {
             nutrientLogicPrompt = `3.  **Nutrient Logic:** You MUST use nutrients from inventory: [${nutrientsInInventory}].
@@ -2842,7 +2842,7 @@ function buildPrompt() {
         - **No Impractical Actions:** Do NOT suggest physically impractical actions (e.g., adding kilograms of whole fruit to a fermenter named 'Carboy' or 'Demijohn'). You MUST select a fermenter appropriate for the ingredients (see Equipment Logic).
         - **Chemical Validation:** You MUST identify and warn against chemically problematic combinations (e.g., adding lactose/dairy with high-acid citrus *before* stabilization, as this causes curdling). You must ensure pH-sensitive steps (like pectic enzyme use) are placed correctly in the instructions.
 6.  **Gastronomic Validation (MANDATORY):** You are a world-class chef and creative partner. You MUST critically evaluate if all requested ingredients are gastronomically complementary.    
-    -   You MUST **always** include a `**Gastronomic Validation:**` entry in the `## Brewer's Notes` (as shown in the example).
+    -   You MUST **always** include a \`**Gastronomic Validation:**\` entry in the `## Brewer's Notes` (as shown in the example).
     -   **If a user's idea is good:**
         1.  Use this note to confirm the synergy (e.g., "The requested cherries and vanilla are a classic, rich combination...").
         2.  **You MUST also** propose 1-2 "Tweak Alternatives"—complementary ingredients that would also create a world-class mead. You MUST explain *how* this alternative ingredient would change the flavor profile (e.g., "Tweak Alternative: Adding a single vanilla bean in secondary would enhance the cherry's sweetness and add a creamy finish.").

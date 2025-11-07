@@ -1419,7 +1419,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - EXP v0.9 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - EXP v0.9.1 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2914,7 +2914,10 @@ Your response MUST be structured with the following headings in this exact order
 1.  **Recipe Inspiration:** The "## Description" section MUST begin with a single sentence explaining the recipe's inspiration. This sentence MUST be a standalone paragraph. You MUST insert a full blank line after it before the main description begins. Do NOT use italics.
 ${yeastLogicPrompt}
 ${nutrientLogicPrompt} 
-4.  **Water Choice:** In "## Recommended Water", recommend an *ideal* and *widely available* bottled water for this recipe's style. You MUST scientifically justify your choice (e.g., explain *why* a low-mineral water is best, OR *why* a specific higher-mineral water might be better for this style).
+4.  **Water Choice:** In "## Recommended Water", you MUST recommend an *ideal* **bottled spring water** that is **widely available in Belgium / Western Europe** (e.g., Spa Reine, Mont Roucous, Chaudfontaine, Evian).
+    -   **CRUCIAL (Location):** The user is in Belgium. You MUST NOT recommend brands that are primarily available in the USA (e.g., Poland Spring, Crystal Geyser, Arrowhead).
+    -   **CRUCIAL (Type):** You MUST NOT recommend distilled water or reverse osmosis (RO) water, as the brewer will not be adding brewing salts or minerals.
+    -   **You MUST** justify your choice based on the *spring water's* mineral profile (e.g., "Spa Reine is chosen for its very low mineral content...").
 5.  **Key Stats Section:** This sections is MANDATORY. 
     - "## Key Stats" must contain the OG, FG, ABV, and Final Batch Size.
     **Example of CORRECT format:**
@@ -2936,6 +2939,7 @@ ${nutrientLogicPrompt}
 10. **Bochet Method & Safety (MANDATORY):** If the style is 'Bochet', you must *first* decide on the best caramelization method (e.g., traditional stove-top, oven-bake, or using pre-caramelized honey).
     - **If recommending a heat-based method (stove-top, oven):** You MUST include a dedicated safety warning in the "## Instructions". This warning MUST state in all caps (e.g., 'WARNING: RISK OF BOIL-OVER') that the honey will expand and foam dramatically. You MUST instruct the user to use a pot/vessel that is at least 3 to 4 times larger than the volume of the honey.
      - **If a 'no-heat' or 'low-heat' (e.g., oven, slow-cooker) method is more appropriate, safer, or fits the recipe better, you MAY propose it,** but you must still provide clear, detailed instructions and any relevant safety warnings (e.g., hot surfaces).
+11. **Nutrient Timing Logic (MANDATORY):** You MUST NOT instruct the user to add any YAN-providing nutrients (e.g., Fermaid, VitaFerm, DAP, Nutrisal, Nutrivit) *after* the primary fermentation has completed (i.e., NOT in the "## Secondary & Aging" section). This is scientifically incorrect and risks spoilage. Non-YAN adjuncts (like oak, spices, or fining agents) are allowed in secondary.
 
     **FINAL VALIDATION (MANDATORY):**
     Before you output *anything*, you MUST perform this final two-step validation.
@@ -2944,7 +2948,7 @@ ${nutrientLogicPrompt}
     First, you MUST internally review the recipe *body* (everything EXCEPT the title). Ask yourself:
     1.  **Is this "World-Class"?** (Is this recipe interesting, balanced, and an upgrade from a basic-level recipe? Or is it a "bland" recipe?)
     2.  **Is the Gastronomy Sound?** (Did I *critically* evaluate the ingredients as a chef, as per the 'Gastronomic Validation' rule?)
-    3.  **Is the Science Correct?** (Does the Target ABV *realistically* match the selected yeast's tolerance? Is the choice of yeast correct and logically motivated?)
+    3.  **Is the Science Correct?** (Does the Target ABV *realistically* match the selected yeast's tolerance? Is the yeast choice correct and logically motivated? **AND (Crucial) Is the nutrient timing correct (i.e., NO YAN-providing nutrients added in secondary)?**)
     
     If the answer to any of these is "No," you MUST stop, go back, and fix the **recipe content** until you can answer "Yes" to all.
 

@@ -713,20 +713,20 @@
                         </div>
                         
                         <div class="space-y-4 pt-4 border-t-2 border-app-brand mt-6">
-                            <label class="block text-sm font-bold text-app-brand">Gebruik Inventaris Voor:</label>
+                            <label class="block text-sm font-bold text-app-brand">Use inventory for:</label>
                             
                             <div id="inventory-options-container" class="grid grid-cols-2 gap-x-4 gap-y-2 pl-3">
                                 <div class="flex items-center">
                                     <input type="checkbox" id="useInventory_Yeast" data-category="Yeast" class="inventory-toggle h-4 w-4 rounded text-app-brand focus:ring-app-brand">
-                                    <label for="useInventory_Yeast" class="ml-2 block text-sm font-medium">Gist</label>
+                                    <label for="useInventory_Yeast" class="ml-2 block text-sm font-medium">Yeast</label>
                                 </div>
                                 <div class="flex items-center">
                                     <input type="checkbox" id="useInventory_Nutrients" data-category="Nutrient" class="inventory-toggle h-4 w-4 rounded text-app-brand focus:ring-app-brand">
-                                    <label for="useInventory_Nutrients" class="ml-2 block text-sm font-medium">Nutriënten</label>
+                                    <label for="useInventory_Nutrients" class="ml-2 block text-sm font-medium">Nutrients</label>
                                 </div>
                                 <div class="flex items-center">
                                     <input type="checkbox" id="useInventory_Honey" data-category="Honey" class="inventory-toggle h-4 w-4 rounded text-app-brand focus:ring-app-brand">
-                                    <label for="useInventory_Honey" class="ml-2 block text-sm font-medium">Honing</label>
+                                    <label for="useInventory_Honey" class="ml-2 block text-sm font-medium">Honey</label>
                                 </div>
                                 <div class="flex items-center">
                                     <input type="checkbox" id="useInventory_Fruits" data-category="Fruit" class="inventory-toggle h-4 w-4 rounded text-app-brand focus:ring-app-brand">
@@ -734,11 +734,11 @@
                                 </div>
                                 <div class="flex items-center">
                                     <input type="checkbox" id="useInventory_Spices" data-category="Spice" class="inventory-toggle h-4 w-4 rounded text-app-brand focus:ring-app-brand">
-                                    <label for="useInventory_Spices" class="ml-2 block text-sm font-medium">Kruiden</label>
+                                    <label for="useInventory_Spices" class="ml-2 block text-sm font-medium">Spices</label>
                                 </div>
                                 <div class="flex items-center">
                                     <input type="checkbox" id="useInventory_Other" data-category="Other" class="inventory-toggle h-4 w-4 rounded text-app-brand focus:ring-app-brand">
-                                    <label for="useInventory_Other" class="ml-2 block text-sm font-medium">Overig</label>
+                                    <label for="useInventory_Other" class="ml-2 block text-sm font-medium">Other</label>
                                 </div>
                             </div>
                             
@@ -2786,16 +2786,33 @@ function buildPrompt() {
             .map(item => `${item.name}: ${item.qty} ${item.unit}`)
             .join('; ');
 
-        // --- AANGEPAST: Creëer dynamische prompt-regels ---
-        let yeastLogicPrompt = `2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. You MUST state this ideal yeast in the "## Brewer's Notes".`;
-        let nutrientLogicPrompt = `3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule** and recommend the ideal nutrients (e.g., "Fermaid O, Fermaid K"). You MUST explain this in the "## Brewer's Notes".`;
+        // --- Creëer dynamische prompt-regels ---
+        
+        // Standaard ("From Scratch") Logica
+        let yeastLogicPrompt = `2.  **Yeast Logic:**
+            1.  As an expert, determine the single **ideal yeast** for a world-class version of this recipe.
+            2.  **Selection:** This ideal yeast MUST be the one used in the \`## Ingredients\` list.
+            3.  **Notes:** In "## Brewer's Notes", you MUST justify this choice.`;
+        
+        let nutrientLogicPrompt = `3.  **Nutrient Logic:**
+            1.  First, as an expert, determine the **best nutrient schedule** and ideal nutrients (e.g., "Fermaid O, Fermaid K").
+            2.  **Selection:** These ideal nutrients MUST be used in the \`## Ingredients\` list.
+            3.  **Notes:** In "## Brewer's Notes", you MUST explain the schedule under \`**Nutrient Schedule:**\` AND you MUST justify your total YAN target (in mg/L) and how this schedule achieves it under a new topic \`**YAN Calculation:**\`.`;
 
         // Overschrijf de 'from scratch' regels indien aangevinkt
         if (inventoryToggles.Yeast) {
-            yeastLogicPrompt = `2.  **Yeast Logic:** Determine the ideal yeast for a world-class version of this recipe. Then, check the user's inventory: [${yeastInInventory}]. You MUST use a suitable yeast from the inventory. In "## Brewer's Notes", you MUST state if the chosen inventory yeast was the ideal choice. If not, you MUST specify which yeast you would have preferred and why.`;
+            yeastLogicPrompt = `2.  **Yeast Logic:**
+                1.  First, as an expert, determine the single **ideal yeast** (e.g., Wyeast 4783) for a world-class version of this recipe.
+                2.  Second, check the user's inventory: [${yeastInInventory}].
+                3.  **Selection:** You MUST select the *most suitable yeast from the inventory* for the \`## Ingredients\` list.
+                4.  **Fallback:** If no yeast in the inventory is suitable at all, you MUST use the *ideal yeast* from step 1 in the \`## Ingredients\` list.
+                5.  **Notes & Validation (MANDATORY):** In "## Brewer's Notes", you MUST state which yeast was chosen. You MUST *also* state its known technical specs (specifically its **alcohol tolerance** and **ideal temperature range**) based on your training data, as these specs are crucial for the `Yeast vs. ABV Conflict` rule.`;
         }
         if (inventoryToggles.Nutrient) {
-            nutrientLogicPrompt = `3.  **Nutrient Logic:** First, as an expert, determine the **best nutrient schedule**. You MUST use nutrients from inventory: [${nutrientsInInventory}]. In "## Brewer's Notes", explain if the schedule is optimal.`;
+            nutrientLogicPrompt = `3.  **Nutrient Logic:** You MUST use nutrients from inventory: [${nutrientsInInventory}].
+                1.  Determine the **best nutrient schedule** using these nutrients.
+                2.  **Notes:** In "## Brewer's Notes", you MUST explain the schedule under \`**Nutrient Schedule:**\`.
+                3.  **YAN Calculation (MANDATORY):** In "## Brewer's Notes", under a new topic \`**YAN Calculation:**\`, you MUST state your target YAN (in mg/L) for this recipe AND show a simple calculation of how the chosen nutrients (and their assumed YAN values) achieve this target. (e.g., "Target: 200 mg/L. Honey provides ~20 mg/L. Fermaid K (4g) provides ~100 mg/L...").`;
         }
         
         const availableFermenters = equipmentProfiles
@@ -2824,14 +2841,26 @@ function buildPrompt() {
         - **No Illogical Recipes:** Do NOT suggest illogical ingredient combinations (e.g., NEVER add water to a recipe explicitly described as 'no-water' or 'juice-only').
         - **No Impractical Actions:** Do NOT suggest physically impractical actions (e.g., adding kilograms of whole fruit to a fermenter named 'Carboy' or 'Demijohn'). You MUST select a fermenter appropriate for the ingredients (see Equipment Logic).
         - **Chemical Validation:** You MUST identify and warn against chemically problematic combinations (e.g., adding lactose/dairy with high-acid citrus *before* stabilization, as this causes curdling). You must ensure pH-sensitive steps (like pectic enzyme use) are placed correctly in the instructions.
+6.  **Gastronomic Validation (MANDATORY):** You are a world-class chef and creative partner. You MUST critically evaluate if all requested ingredients are gastronomically complementary.    
+    -   You MUST **always** include a `**Gastronomic Validation:**` entry in the `## Brewer's Notes` (as shown in the example).
+    -   **If a user's idea is good:**
+        1.  Use this note to confirm the synergy (e.g., "The requested cherries and vanilla are a classic, rich combination...").
+        2.  **You MUST also** propose 1-2 "Tweak Alternatives"—complementary ingredients that would also create a world-class mead. You MUST explain *how* this alternative ingredient would change the flavor profile (e.g., "Tweak Alternative: Adding a single vanilla bean in secondary would enhance the cherry's sweetness and add a creamy finish.").
+    -   **If a user's idea is bad (e.g., flavors clash, one ingredient will overpower another):**
+        1.  You MUST "adjust the plan" (het plan bijsturen).
+        2.  Use this note to justify your substitution (e.g., "I have substituted Ingredient X for Y, as X would clash...").
 
     **Example of CORRECT format:**
 
     **Honey Choice:** Wildflower was chosen for its balanced profile...
 
+    **Gastronomic Validation:** The requested apple and cinnamon are a classic, robust pairing. Tweak Alternative: Consider adding 10g of dried orange peel in secondary to add a bright, citrus complexity.
+
     **Yeast Choice:** Lalvin 71B was selected because it enhances fruity esters...
 
     **Nutrient Schedule:** A staggered nutrient addition using Fermaid K...
+
+    **YAN Calculation:** Target: 250 mg/L. Honey (3.5kg) provides ~25 mg/L. Fermaid K (4g) adds ~100 mg/L. Fermaid O (5g) adds ~125 mg/L.
 
     **Cellaring Note:** This mead should peak within 1-2 years...
 
@@ -2850,21 +2879,25 @@ function buildPrompt() {
 4.  **Fallback (Scale Down):** If the initial design does not fit in any available fermenter, you MUST **SCALE DOWN THE ENTIRE RECIPE** until it fits in the largest available fermenter with adequate headspace.
 5.  **Communicate:** In the "Brewer's Notes", "Key Stats", and "Selected Fermenter" sections, you MUST clearly state the final batch size and the chosen fermenter, and explain if/why you scaled the recipe down.
 
-**CRUCIAL TITLE RULE: You are a branding expert, not just a writer.**
-Your primary task is to invent a captivating name that stands out. Follow this exact thought process:
-1.  **Analyze the Recipe:** Look at the core ingredients, style, and potential flavor profile.
-2.  **Choose a Creative Style:** Select ONE of the following three styles for the name:
-    -   **Style A (Clever & Witty):** A smart pun or wordplay related to the ingredients or mead making.
-    -   **Style B (Modern & Evocative):** A short, powerful, and elegant name, often combining two concepts (e.g., ingredients, textures, colors). This style is simple and confident.
-    -   **Style C (The Craft & Technique):** The name is a direct reference to a crucial technique or process detail in the recipe. It's a confident name that highlights the craftsmanship (e.g., caramelization level, a specific yeast action, aging method).
-3.  **Invent a Name:** Create a unique name that perfectly fits the chosen style.
+**CRUCIAL TITLE RULE: You are a branding expert with a talent for **dry humor** and **witty, concise branding**.
+Your primary task is to invent a captivating, **bold**, and **memorable** name that stands out. **Bland or weak names are explicitly forbidden.** Follow this exact thought process:
+
+1.  **Analyze & Brainstorm (Internal Monologue):** First, analyze the core ingredients and style. Then, you MUST internally brainstorm 3-5 creative name ideas. **You MUST prioritize wit and conciseness.** Consider:
+    -   **Puns & Wordplay:** (e.g., 'Berry Manilow', 'On the Dregs')
+    -   **Witty Understatement (Dry Humor):** (e.g., 'Just Some Honey', 'It's Probably Mead', 'My Plums')
+    -   **The Brewing Process:** (e.g., 'The Third Scorch', 'The Long Wait')
+    -   **A Factual, Confident Name:** (e.g., 'A 14% Bochet', 'The Apple Experiment')
+2.  **Select the Best:** From your internal brainstorm, choose the single **strongest and most creative** name that aligns with this witty, down-to-earth style.
+3.  **Choose a Justifying Style:** Assign your chosen name to ONE of the three styles below (A, B, or C) that best fits your creative choice.
+    -   **Style A (Clever & Witty):** A smart pun, **a touch of dry humor, or a witty understatement.**
+    -   **Style B (Modern & Direct):** A short, powerful, **unpretentious, and direct** name. **No flowery or poetic language.**
+    -   **Style C (The Craft & Technique):** The name is a direct reference to a crucial technique or process detail in the recipe. It's a confident name that highlights the craftsmanship (e.g., 'The Third Scorch').
 4.  **HARD CONSTRAINTS:**
     -   The title **MUST NOT** be a simple list of ingredients (e.g., "Plum & Almond Mead").
-    -   The title **MUST NOT** use generic, "hippie" or cheesy words like 'Delight', 'Kiss', 'Symphony', 'Embrace', 'Nectar', 'Alchemy', Serenade' or 'Elixir'.
-5.  **Examples of EXCELLENT Titles (by Style):**
-    -   **Style A (Witty):** '# Berry Manilow: A Mixed Berry Melomel'
-    -   **Style B (Modern):** '# Oak & Ember: A Dark Caramel Bochet'
-    -   **Style C (The Craft):** '# The Third Scorch: A Dark Caramel Bochet'
+    -   The title **MUST NOT** use generic, "hippie" or cheesy words (e.g., 'Delight', 'Kiss', 'Symphony', 'Embrace', 'Harmony', 'Nectar', 'Alchemy', 'Serenade' or 'Elixir').
+    -   The title **MUST NOT** be boring, safe, or overly simple (e.g., 'My Mead', 'Simple Honey Brew', 'Good Melomel', 'Honey Wine').
+    -   The title **MUST NOT** use clichéd mythology or fantasy tropes (e.g., 'Dragon's Blood', 'Viking's Nectar', 'Mjolnir's Brew', 'Elven Gold').
+    -   **NEW:** The title **MUST NOT** use abstract, poetic, or "feeling" words (e.g., 'Warmth', 'Silence', 'Velvet', 'Ember', 'Dream', 'Solitude', 'Whisper').
 
 **FORMAT:** The title MUST be the very first line, formatted as a Markdown H1 heading (e.g., '# Invented Name: A Brief Description'). Do NOT use square brackets [].
 
@@ -2881,7 +2914,7 @@ Your response MUST be structured with the following headings in this exact order
 1.  **Recipe Inspiration:** The "## Description" section MUST begin with a single sentence explaining the recipe's inspiration. This sentence MUST be a standalone paragraph. You MUST insert a full blank line after it before the main description begins. Do NOT use italics.
 ${yeastLogicPrompt}
 ${nutrientLogicPrompt} 
-4.  **Water Choice:** In "## Recommended Water", recommend a specific Belgian bottled water and explain your choice.
+4.  **Water Choice:** In "## Recommended Water", recommend an *ideal* and *widely available* bottled water for this recipe's style. You MUST scientifically justify your choice (e.g., explain *why* a low-mineral water is best, OR *why* a specific higher-mineral water might be better for this style).
 5.  **Key Stats Section:** This sections is MANDATORY. 
     - "## Key Stats" must contain the OG, FG, ABV, and Final Batch Size.
     **Example of CORRECT format:**
@@ -2903,6 +2936,25 @@ ${nutrientLogicPrompt}
 10. **Bochet Method & Safety (MANDATORY):** If the style is 'Bochet', you must *first* decide on the best caramelization method (e.g., traditional stove-top, oven-bake, or using pre-caramelized honey).
     - **If recommending a heat-based method (stove-top, oven):** You MUST include a dedicated safety warning in the "## Instructions". This warning MUST state in all caps (e.g., 'WARNING: RISK OF BOIL-OVER') that the honey will expand and foam dramatically. You MUST instruct the user to use a pot/vessel that is at least 3 to 4 times larger than the volume of the honey.
      - **If a 'no-heat' or 'low-heat' (e.g., oven, slow-cooker) method is more appropriate, safer, or fits the recipe better, you MAY propose it,** but you must still provide clear, detailed instructions and any relevant safety warnings (e.g., hot surfaces).
+
+    **FINAL VALIDATION (MANDATORY):**
+    Before you output *anything*, you MUST perform this final two-step validation.
+
+    **Step 1: Recipe Content Review**
+    First, you MUST internally review the recipe *body* (everything EXCEPT the title). Ask yourself:
+    1.  **Is this "World-Class"?** (Is this recipe interesting, balanced, and an upgrade from a basic-level recipe? Or is it a "bland" recipe?)
+    2.  **Is the Gastronomy Sound?** (Did I *critically* evaluate the ingredients as a chef, as per the 'Gastronomic Validation' rule?)
+    3.  **Is the Science Correct?** (Does the Target ABV *realistically* match the selected yeast's tolerance? Is the choice of yeast correct and logically motivated?)
+    
+    If the answer to any of these is "No," you MUST stop, go back, and fix the **recipe content** until you can answer "Yes" to all.
+
+    **Step 2: Title Review (After Recipe is Final)**
+    *After* you are 100% confident the recipe content is "World-Class," you MUST *then* generate the title. You must apply the `CRUCIAL TITLE RULE` (the 'dry humor/concise' persona) with maximum creativity.
+    
+    You MUST ask yourself:
+    1.  **Is this Title Bold & Witty?** (Does this title meet the 'dry humor/concise' persona, or is it a 'bland' or clichéd name I chose out of laziness?)
+
+    If the answer is "No," you MUST generate a *new title*, but **you MUST NOT** change the *recipe content* that you already finalized in Step 1.
 
 Now, generate the recipe based on the following user request:
 ---`;

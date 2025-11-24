@@ -3440,7 +3440,7 @@ window.cloneBrew = async function(brewId) {
                  }
             }
 
-            // --- NIEUWE FUNCTIE OM REGEL TOE TE VOEGEN ---
+            // --- NIEUWE FUNCTIE OM LOG REGEL TOE TE VOEGEN ---
 window.addLogLine = function(idSuffix) {
     const tableBody = document.querySelector(`#fermentationTable-${idSuffix} tbody`);
     if (!tableBody) return;
@@ -3497,7 +3497,33 @@ window.addLogLine = function(idSuffix) {
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save Post to Recipe Notes';
                 }
-            } 
+            }
+
+// --- NIEUWE FUNCTIE: AUTOMATISCHE ABV BEREKENING ---
+window.autoCalculateABV = function(idSuffix) {
+    const ogInput = document.getElementById(`actualOG-${idSuffix}`);
+    const fgInput = document.getElementById(`actualFG-${idSuffix}`);
+    const abvInput = document.getElementById(`finalABV-${idSuffix}`);
+
+    if (!ogInput || !fgInput || !abvInput) return;
+
+    // Vervang komma's door punten voor de zekerheid en parse naar getal
+    const og = parseFloat(ogInput.value.replace(',', '.'));
+    const fg = parseFloat(fgInput.value.replace(',', '.'));
+
+    // Voer berekening alleen uit als we twee geldige getallen hebben
+    if (!isNaN(og) && !isNaN(fg)) {
+        // Standaard formule: (OG - FG) * 131.25
+        const abv = (og - fg) * 131.25;
+        
+        // Als het resultaat positief is, vul het in (1 decimaal + %)
+        if (abv >= 0) {
+            abvInput.value = abv.toFixed(1) + '%';
+        } else {
+            abvInput.value = ''; // Wis als het onlogisch is (FG > OG)
+        }
+    }
+};
 
 window.generateFlavorWheel = async function(brewId) {
     const container = document.getElementById(`flavor-wheel-container-${brewId}`);
@@ -5088,14 +5114,19 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
                 <div class="log-item"><label for="brewDate-${idSuffix}">Brew Date:</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}"></div>
             </div>
             <div class="log-grid">
-                 <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${useTargetOG}" readonly class="bg-app-primary"></div>
-                 <div class="log-item">
+                <div class="log-item"><label for="targetOG-${idSuffix}">Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${useTargetOG}" readonly class="bg-app-primary"></div>
+                <div class="log-item">
                     <label for="actualOG-${idSuffix}">Actual OG:</label>
-                    <input type="text" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" oninput="${copyOgToLogScript}">
-                 </div>
-                 <div class="log-item"><label for="targetFG-${idSuffix}">Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${useTargetFG}" readonly class="bg-app-primary"></div>
-                <div class="log-item"><label for="actualFG-${idSuffix}">Actual FG:</label><input type="text" id="actualFG-${idSuffix}" value="${data.actualFG || ''}"></div>
-                 <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${useTargetABV}%" readonly class="bg-app-primary"></div>
+                    <input type="text" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" 
+                           oninput="${copyOgToLogScript}; window.autoCalculateABV('${idSuffix}')">
+                </div>
+                <div class="log-item"><label for="targetFG-${idSuffix}">Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${useTargetFG}" readonly class="bg-app-primary"></div>
+                <div class="log-item">
+                    <label for="actualFG-${idSuffix}">Actual FG:</label>
+                    <input type="text" id="actualFG-${idSuffix}" value="${data.actualFG || ''}" 
+                           oninput="window.autoCalculateABV('${idSuffix}')">
+                </div>
+                <div class="log-item"><label for="targetABV-${idSuffix}">Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${useTargetABV}%" readonly class="bg-app-primary"></div>
                 <div class="log-item"><label for="finalABV-${idSuffix}">Final ABV:</label><input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}"></div>
             </div>
             <div class="log-item">

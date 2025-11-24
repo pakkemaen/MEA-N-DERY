@@ -1419,7 +1419,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - EXP v0.9.1 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - EXP v0.9 - 21/11/25 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2933,9 +2933,13 @@ ${nutrientLogicPrompt}
 6.  **Fermenter:** Must contain ONLY the name of the chosen fermenter. This sections is MANDATORY.
 7.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST use bolded titles on the same line as the text, followed by a colon (e.g., "**Ingredient Rationale:** ..."). This is mandatory for correct formatting.
 8.  **No-Water Melomel Logic (MANDATORY):** If the user's free-text description contains phrases like 'no-water', 'no water melomel', 'juice-only', or '100% fruit juice', you MUST NOT include 'Water' in the "## Ingredients" list (except for small, specified amounts for yeast rehydration if absolutely necessary). The primary liquid (must) MUST be composed of only honey and the juice from the specified fruit. You MUST acknowledge this choice in the "## Brewer's Notes".
-9.  **Yeast vs. ABV Conflict (MANDATORY):** You MUST scientifically validate the conflict between Target ABV, Final Sweetness, and Yeast Tolerance.
-    - The selected yeast (especially from inventory) MUST have an alcohol tolerance *equal to or higher than* the Target ABV.
-    - If the inventory yeast's tolerance is *lower* than the Target ABV (e.g., Target 18%, Yeast 14%), you MUST warn the user in the Brewer's Notes, state that the 18% target is *not achievable* with that yeast, and adjust the recipe's OG to match the yeast's 14% tolerance.
+9.  **Yeast & Sweetness Strategy (CRUCIAL):**
+    - You have two allowed strategies to achieve sweetness. You must choose the safest one based on the user's goal.
+    - **Strategy A (Stabilization - PREFERRED):** Design the recipe to ferment dry (to ~1.000). Then, in "## Secondary & Aging", explicitly include steps to stabilize (sorbate/sulfite) and then backsweeten. Use this for precise control.
+    - **Strategy B (Tolerance/Delle Method):** If you aim for residual sugar by exceeding the yeast's alcohol tolerance, you MUST prove the math in "## Brewer's Notes".
+        - Calculation required: Show that `(Potential ABV of total sugars) > (Yeast stated tolerance)`.
+        - Warning required: You must warn the user that yeast can sometimes overshoot its tolerance and the mead might end up dryer/stronger than planned.
+    - **Inventory Constraint:** If using yeast from inventory, you MUST respect its actual alcohol tolerance. Do not plan a 18% ABV mead with a 14% tolerance yeast unless you are intentionally step-feeding (which you must then explain).
 10. **Bochet Method & Safety (MANDATORY):** If the style is 'Bochet', you must *first* decide on the best caramelization method (e.g., traditional stove-top, oven-bake, or using pre-caramelized honey).
     - **If recommending a heat-based method (stove-top, oven):** You MUST include a dedicated safety warning in the "## Instructions". This warning MUST state in all caps (e.g., 'WARNING: RISK OF BOIL-OVER') that the honey will expand and foam dramatically. You MUST instruct the user to use a pot/vessel that is at least 3 to 4 times larger than the volume of the honey.
      - **If a 'no-heat' or 'low-heat' (e.g., oven, slow-cooker) method is more appropriate, safer, or fits the recipe better, you MAY propose it,** but you must still provide clear, detailed instructions and any relevant safety warnings (e.g., hot surfaces).
@@ -3137,6 +3141,10 @@ function renderHistoryList() {
 }
 
 window.showBrewDetail = function(brewId) {
+    / 1. FIX: Zorg dat we eerst naar de juiste hoofdpagina en subtab navigeren
+    switchMainView('brewing');
+    switchSubView('history', 'brewing-main-view');
+
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
@@ -3364,7 +3372,7 @@ window.cloneBrew = async function(brewId) {
     newLogData.actualOG = ''; 
     newLogData.actualFG = ''; 
     newLogData.finalABV = '';
-    newLogData.fermentationLog = Array.from({ length: 8 }, () => ({ date: '', temp: '', sg: '', notes: '' }));
+    newLogData.fermentationLog = Array.from({ length: 3 }, () => ({ date: '', temp: '', sg: '', notes: '' }));
     newLogData.agingNotes = ''; 
     newLogData.bottlingNotes = ''; 
     newLogData.tastingNotes = '';
@@ -3431,6 +3439,21 @@ window.cloneBrew = async function(brewId) {
                     showToast('Failed to update log.', 'error');
                  }
             }
+
+            // --- NIEUWE FUNCTIE OM REGEL TOE TE VOEGEN ---
+window.addLogLine = function(idSuffix) {
+    const tableBody = document.querySelector(`#fermentationTable-${idSuffix} tbody`);
+    if (!tableBody) return;
+
+    const newRow = document.createElement('tr');
+    newRow.innerHTML = `
+        <td><input type="date" class="w-full"></td>
+        <td><input type="number" step="0.5" placeholder="18.5" class="w-full text-center"></td>
+        <td><input type="number" step="0.001" placeholder="1.050" class="w-full text-center"></td>
+        <td><input type="text" class="w-full"></td>
+    `;
+    tableBody.appendChild(newRow);
+}
 
             window.saveSocialPost = async function() {
                 const saveBtn = document.getElementById('save-social-post-btn');
@@ -5052,7 +5075,7 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
 
     console.log(`DEBUG: Final values for log -> OG: ${useTargetOG}, FG: ${useTargetFG}, ABV: ${useTargetABV}`); // DEBUG
 
-    const fermLog = data.fermentationLog || Array.from({ length: 8 }, () => ({}));
+    const fermLog = data.fermentationLog || Array.from({ length: 3 }, () => ({}));
     const escapedRecipeName = (data.recipeName || '').replace(/"/g, '&quot;');
     const copyOgToLogScript = `const ogInput = document.getElementById('actualOG-${idSuffix}'); const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input'); if (ogInput && firstSgInput) { firstSgInput.value = ogInput.value; }`;
 
@@ -5087,7 +5110,11 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
                                 <td><input type="text" value="${row.notes || ''}" class="w-full"></td>
                             </tr>`).join('')}</tbody>
                     </table>
-                </div>
+                    
+                    <div class="text-right mt-1">
+                        <button onclick="window.addLogLine('${idSuffix}')" class="text-xs text-app-brand hover:text-app-primary underline">+ Add Row</button>
+                    </div>
+                    </div>
             </div>
             <div class="log-item"><label for="agingNotes-${idSuffix}">Aging & Conditioning Notes:</label><textarea id="agingNotes-${idSuffix}" rows="4" placeholder="...">${data.agingNotes || ''}</textarea></div>
             <div class="log-item"><label for="bottlingNotes-${idSuffix}">Bottling / Kegging Notes:</label><textarea id="bottlingNotes-${idSuffix}" rows="3" placeholder="...">${data.bottlingNotes || ''}</textarea></div>
@@ -5341,13 +5368,51 @@ function renderBrewDay(brewId) {
     const checklist = brew.checklist || {};
 
     // Genereer de HTML voor elke stap in de checklist
+    // IN renderBrewDay functie:
+
     let stepsHtml = primarySteps.map((step, index) => {
-        const isCompleted = checklist[`step-${index}`] || false; // Gebruik de lokale checklist
+        // --- Slimme detectie van ingrediënten in de stap ---
+        // We zoeken naar een patroon als "2.5 kg" of "5 g" in de titel of beschrijving
+        const amountMatch = (step.title + " " + step.description).match(/(\d+[.,]?\d*)\s*(kg|g|l|ml|oz|lbs)/i);
+        let inputHtml = '';
+        let detectedAmount = '';
+        let detectedUnit = '';
+
+        // Check of deze stap al eerder is afgevinkt en of er data is opgeslagen
+        // We slaan dit op in checklist als object: { completed: true, actualAmount: 5.2 }
+        const stepState = currentBrewDay.checklist[`step-${index}`]; 
+        const isCompleted = stepState === true || (stepState && stepState.completed);
+        const savedAmount = (stepState && stepState.actualAmount) ? stepState.actualAmount : '';
+
+        if (amountMatch && !isCompleted) {
+            detectedAmount = amountMatch[1];
+            detectedUnit = amountMatch[2].toLowerCase();
+            // Toon een invoerveld als we een hoeveelheid detecteren
+            inputHtml = `
+                <div class="mt-2 flex items-center gap-2 bg-app-tertiary p-2 rounded">
+                    <label class="text-xs font-bold text-app-secondary uppercase">Actual Added:</label>
+                    <input type="number" step="0.01" id="step-input-${index}" 
+                           class="w-24 p-1 text-sm border rounded bg-app-primary border-app text-app-primary" 
+                           placeholder="${detectedAmount}" value="${detectedAmount}">
+                    <span class="text-sm font-bold">${detectedUnit}</span>
+                </div>
+            `;
+        } else if (isCompleted && savedAmount) {
+             // Als het al klaar is, toon wat we hebben ingevuld
+             inputHtml = `
+                <div class="mt-2 text-xs text-green-700 dark:text-green-400 font-mono">
+                    Recorded: ${savedAmount} ${detectedUnit || ''}
+                </div>
+            `;
+        }
+
         const timerHtml = step.duration > 0 ? `<p class="timer-display my-2" id="timer-${index}">${formatTime(step.duration)}</p>` : '';
+        
+        // Let op: Ik geef 'detectedUnit' mee aan de knop zodat we die kunnen opslaan
         const buttonsHtml = step.duration > 0 ? `
             <button data-action="startTimer" data-step="${index}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Start Timer</button>
         ` : `
-            <button data-action="completeStep" data-step="${index}" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 btn">Mark as Complete</button>
+            <button data-action="completeStep" data-step="${index}" data-unit="${detectedUnit}" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 btn">Mark as Complete</button>
         `;
 
         return `
@@ -5355,7 +5420,8 @@ function renderBrewDay(brewId) {
                 <div>
                     <p class="step-title">${index + 1}. ${step.title}</p>
                     <p class="text-sm text-app-secondary">${step.description}</p>
-                    <div class="mt-4">
+                    
+                    ${inputHtml} <div class="mt-4">
                         ${timerHtml}
                         <div class="space-x-2" id="controls-${index}">
                             ${isCompleted ? '<span class="text-sm font-bold text-green-600">✓ Completed</span>' : buttonsHtml}

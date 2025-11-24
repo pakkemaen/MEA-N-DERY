@@ -125,6 +125,15 @@
             border-radius: 10px;
             border: 2px solid var(--bg-secondary);
         }
+        /* Verberg scrollbar voor Chrome, Safari en Opera */
+        .overflow-x-auto::-webkit-scrollbar {
+          display: none;
+        }
+        /* Verberg scrollbar voor IE, Edge en Firefox */
+        .overflow-x-auto {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
         .recipe-content h1, .recipe-content h2, .recipe-content h3 {
             font-family: 'Barlow Semi Condensed', sans-serif;
             font-weight: 600;
@@ -445,7 +454,24 @@
             -webkit-text-fill-color: var(--text-primary) !important; /* Lichte tekst */
             border-color: var(--border-color) !important; /* Zorg dat de border klopt */
         }
-  
+        /* Maak knoppen in lijsten makkelijker te raken op touchscreens */
+        @media (max-width: 768px) {
+            td button, .card button {
+            padding: 8px 12px !important; /* Groter raakvlak */
+            margin-bottom: 4px;
+        }
+        /* Zorg dat de inputs in de log-tabel niet te klein zijn (voorkomt inzoomen op iPhone) */
+        input, select, textarea {
+            font-size: 16px !important; 
+       }
+       .fermentation-table th { 
+           background-color: var(--bg-primary); 
+           position: sticky; /* Plakkerig */
+           top: 0;           /* Bovenaan */
+           z-index: 10;      /* Boven de inhoud */
+           box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* Klein schaduwlijntje */
+       }
+   }
 </style>
     <!-- Service Worker Registration -->
     <script>
@@ -1419,7 +1445,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - EXP v0.9 - 21/11/25 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - EXP v0.9 (BP2.0) - 24/11/25 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2398,52 +2424,58 @@ function refreshCurrentChecklistView() {
                 exportData(inventory, 'meandery_inventory_export.json');
             }
 
-            function importData(event, collectionName) {
-                const file = event.target.files[0];
-                if (!file) return;
-                
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    try {
-                        const data = JSON.parse(e.target.result);
-                        if (!Array.isArray(data)) throw new Error("Invalid JSON format. Expected an array.");
+            // --- VERBETERDE IMPORT FUNCTIE ---
+function importData(event, collectionName) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            // De 'reviver' functie checkt elke waarde tijdens het parsen
+            const data = JSON.parse(e.target.result, (key, value) => {
+                // Regex om ISO datums te herkennen (YYYY-MM-DDTHH:mm:ss.sssZ)
+                const dateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d*)?Z$/;
+                if (typeof value === "string" && dateFormat.test(value)) {
+                    return new Date(value);
+                }
+                return value;
+            });
 
-                        if (!confirm(`This will OVERWRITE your current ${collectionName}. This cannot be undone. Are you sure?`)) return;
+            if (!Array.isArray(data)) throw new Error("Invalid JSON format. Expected an array.");
 
-                        showToast(`Importing ${collectionName}...`);
-                        const appId = 'meandery-aa05e';
-                        const collectionRef = collection(db, 'artifacts', appId, 'users', userId, collectionName);
-                        
-                        await clearCollection(collectionName, false);
+            if (!confirm(`This will OVERWRITE your current ${collectionName}. This cannot be undone. Are you sure?`)) return;
 
-                        const batch = writeBatch(db);
-                        data.forEach(item => {
-                            const { id, ...itemData } = item;
-                            if (itemData.createdAt && typeof itemData.createdAt === 'string') {
-                                itemData.createdAt = new Date(itemData.createdAt);
-                            }
-                            const newDocRef = doc(collectionRef);
-                            batch.set(newDocRef, itemData);
-                        });
-                        await batch.commit();
-                        showToast(`${collectionName} imported successfully!`, 'success');
-                    } catch (error) {
-                        console.error(`Error importing ${collectionName}:`, error);
-                        showToast(`Error: ${error.message}`, 'error');
-                    } finally {
-                        event.target.value = '';
-                    }
-                };
-                reader.readAsText(file);
-            }
+            showToast(`Importing ${collectionName}...`);
+            const appId = 'meandery-aa05e';
+            const collectionRef = collection(db, 'artifacts', appId, 'users', userId, collectionName);
+            
+            // Maak eerst de collectie leeg
+            await clearCollection(collectionName, false);
 
-            function importHistory(e) {
-                importData(e, 'brews');
-            }
-
-            function importInventory(e) {
-                importData(e, 'inventory');
-            }
+            const batch = writeBatch(db);
+            data.forEach(item => {
+                // Verwijder de oude ID om conflicten te voorkomen, Firestore maakt nieuwe
+                const { id, ...itemData } = item; 
+                const newDocRef = doc(collectionRef); // Nieuw ID genereren
+                batch.set(newDocRef, itemData);
+            });
+            await batch.commit();
+            showToast(`${collectionName} imported successfully!`, 'success');
+            
+            // Herlaad de data direct zodat je het resultaat ziet
+            if(collectionName === 'brews') loadHistory();
+            if(collectionName === 'inventory') loadInventory();
+            
+        } catch (error) {
+            console.error(`Error importing ${collectionName}:`, error);
+            showToast(`Error: ${error.message}`, 'error');
+        } finally {
+            event.target.value = ''; // Reset input zodat je hetzelfde bestand nog eens kunt kiezen
+        }
+    };
+    reader.readAsText(file);
+}
 
             async function clearCollection(collectionName, confirmFirst = true) {
     if (confirmFirst && !confirm(`DANGER: This will permanently delete all your ${collectionName}. This cannot be undone. Are you sure?`)) {
@@ -2579,6 +2611,56 @@ async function generateRecipe() {
                 }
             }
 
+// --- NIEUWE FUNCTIE: Creative Title Generator (Persona Based) ---
+async function generateAndInjectCreativeTitle(markdown) {
+    // Zoek de titel in de huidige weergave
+    const titleHeader = document.querySelector('#recipe-output h1');
+    if (!titleHeader) return;
+
+    // Visuele feedback dat hij nadenkt (subtiel)
+    const originalTitle = titleHeader.textContent;
+    titleHeader.innerHTML = `${originalTitle} <span class="text-sm font-normal text-app-brand animate-pulse">...brewing a name...</span>`;
+
+    const prompt = `You are a witty, cynical, modern branding expert for a high-end craft meadery. 
+    
+    **YOUR TASK:** Read this mead recipe and invent a SINGLE, bold, creative name for it.
+
+    **RECIPE CONTEXT:**
+    ${markdown.substring(0, 1000)}... [truncated]
+
+    **PERSONALITY & INSPIRATION (CRUCIAL):**
+    - **The Vibe:** Channel the dry, self-aware wit of **Ryan Reynolds** (Aviation Gin marketing) mixed with the abstract minimalism of a **Scandi-style craft brewery** (like Mikkeller or Omnipollo).
+    - **The Rules:** 1. **NO CLICHÉS:** If it sounds like a fantasy novel (Viking, Thor, Elixir, Nectar, Blood), DELETE IT.
+        2. **Dry Humor:** Use understatement, irony, or a slightly absurd statement.
+        3. **Short & Punchy:** Maximum 4 words. Ideally 2 or 3.
+    
+    **WHAT TO AIM FOR:**
+    - Instead of "Sweet Cherry Mead", say "Expensive Juice" or "Red".
+    - Instead of "Spiced Holiday Brew", say "December Issues" or "Liquid Sweater".
+    - Instead of "Strong Oak Aged Mead", say "The Wood One" or "Patience".
+
+    **Format:** Output ONLY the name. No quotes, no explanations. Just the text.
+    `;
+
+    try {
+        // Korte API call
+        const newTitle = await performApiCall(prompt);
+        const cleanTitle = newTitle.replace(/['"]/g, '').trim();
+
+        // 1. Update de DOM (Zichtbaar voor gebruiker)
+        titleHeader.textContent = cleanTitle;
+
+        // 2. Update de opgeslagen Markdown (Zodat Save to History werkt)
+        if (currentRecipeMarkdown) {
+            currentRecipeMarkdown = currentRecipeMarkdown.replace(/^#\s*(.*)/m, `# ${cleanTitle}`);
+        }
+
+    } catch (error) {
+        console.warn("Title generation failed:", error);
+        titleHeader.textContent = originalTitle; // Zet terug bij fout
+    }
+}
+
 // --- NIEUWE FUNCTIE: RENDER RECEPT OUTPUT ---
             async function renderRecipeOutput(markdown) {
                 // 'markdown' is de parameter, vervangt 'currentRecipeMarkdown'
@@ -2681,12 +2763,15 @@ async function generateRecipe() {
                     renderGeneratedFlavorWheel(currentPredictedProfile);
                 }
         
-                // --- AANGEPAST: Voeg BEIDE listeners toe ---
                 document.getElementById('saveBtn').addEventListener('click', saveBrewToHistory);
                 document.getElementById('tweak-unsaved-btn').addEventListener('click', tweakUnsavedRecipe);
+
+                // --- NIEUW: Trigger de titel generator ---
+                // We doen dit als laatste, zodat de gebruiker het recept al kan lezen
+                generateAndInjectCreativeTitle(markdown);
             }
 
-// --- NIEUWE FUNCTIE: TWEAK OPGESLAGEN RECEPT ---
+            // --- NIEUWE FUNCTIE: TWEAK OPGESLAGEN RECEPT ---
             async function tweakUnsavedRecipe() {
                 const tweakRequest = document.getElementById('tweak-unsaved-request').value.trim();
                 if (!tweakRequest) {
@@ -2748,9 +2833,44 @@ async function generateRecipe() {
 
 function buildPrompt() {
     try {
-        const batchSize = document.getElementById('batchSize').value || '5';
+        // --- STAP 1: DATA VERZAMELEN ---
+        const batchSize = parseFloat(document.getElementById('batchSize').value) || 5;
+        const targetABV = parseFloat(document.getElementById('abv').value) || 12;
+        const sweetness = document.getElementById('sweetness').value;
+        const style = document.getElementById('style').selectedOptions[0].text;
+        const customDescription = document.getElementById('customDescription').value;
         
-        // --- AANGEPAST: Lees de individuele checkboxes ---
+        // --- STAP 2: MATH INJECTION (De Wiskunde vooraf doen) ---
+        // Formule: 1% ABV vereist ~19g honing per liter (afhankelijk van suikergehalte honing, maar 19 is een veilige standaard)
+        const honeyGramsPerLiter = targetABV * 19; 
+        const totalHoneyKg = (honeyGramsPerLiter * batchSize) / 1000;
+        
+        // Bepaal de Nutriëntbehoefte (YAN) basisregel
+        // Low N gist + Laag ABV = Laag YAN. High N gist + Hoog ABV = Hoog YAN.
+        let targetGravityPoints = targetABV * 7.5; // Groffe schatting voor SG punten (bijv 10% = 75 punten = 1.075)
+        
+        const mathContext = `
+**CALCULATED TARGETS (YOU MUST ADHERE TO THESE MATHEMATICAL TRUTHS):**
+- **Batch Size:** ${batchSize} Liters
+- **Target ABV:** ${targetABV}%
+- **Estimated Original Gravity (OG):** ~1.${Math.round(targetGravityPoints)}
+- **Required Honey:** Approximately ${totalHoneyKg.toFixed(2)} kg (Adjust slightly based on fruit sugar contribution).
+- **Nutrient Strategy:** Use the calculated OG to determine Yeast Assimilable Nitrogen (YAN) requirements.
+`;
+
+        // --- STAP 3: YEAST INTELLIGENCE (Kennis uit Excel sheet) ---
+        // We helpen de AI door specificaties van populaire gisten mee te geven
+        const yeastSpecs = {
+            "71B": "Tolerance: 14%. Nitrogen: Low. Temp: 15-30°C. Special: Metabolizes malic acid (good for high-acid fruit).",
+            "EC1118": "Tolerance: 18%. Nitrogen: Low. Temp: 10-30°C. Special: Powerhouse, strips flavor, good for restarting stalls.",
+            "D47": "Tolerance: 14%. Nitrogen: Low. Temp: 15-20°C (CRITICAL). Special: Produces fusel alcohols (jet fuel) if fermented above 20°C.",
+            "K1 V1116": "Tolerance: 18%. Nitrogen: Low. Temp: 10-35°C. Special: Floral esters, good for difficult conditions.",
+            "RC212": "Tolerance: 16%. Nitrogen: Medium. Temp: 20-30°C. Special: Good for color retention in red fruits.",
+            "M05": "Tolerance: 18%. Nitrogen: Medium. Temp: 15-30°C. Special: High ester production.",
+            "US-05": "Tolerance: 11-12%. Nitrogen: Medium. Temp: 15-24°C. Special: Ale yeast, clean profile."
+        };
+
+        // Check of de gebruiker inventaris gebruikt of een specifieke gist vraagt
         const inventoryToggles = {
             Yeast: document.getElementById('useInventory_Yeast').checked,
             Nutrient: document.getElementById('useInventory_Nutrients').checked,
@@ -2759,338 +2879,137 @@ function buildPrompt() {
             Spice: document.getElementById('useInventory_Spices').checked,
             Other: document.getElementById('useInventory_Other').checked
         };
-        // Bepaal of *enige* inventaris-optie is geselecteerd
-        const useAnyInventory = Object.values(inventoryToggles).some(val => val === true);
         
-        // Definieer de "Overige" categorieën
+        const useAnyInventory = Object.values(inventoryToggles).some(val => val === true);
         const otherCategories = ['Malt Extract', 'Adjunct', 'Chemical', 'Water'];
         const requestedCategories = Object.keys(inventoryToggles).filter(k => inventoryToggles[k]);
 
-        // --- AANGEPAST: Maak de inventaris-strings conditioneel ---
         const yeastInInventory = inventoryToggles.Yeast 
             ? (inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available')
             : 'INVENTORY NOT REQUESTED';
         
-        const nutrientsInInventory = inventoryToggles.Nutrient
-            ? (inventory.filter(i => i.category === 'Nutrient').map(i => i.name).join(', ') || 'None available')
-            : 'INVENTORY NOT REQUESTED';
-        
-        // Bouw de algemene inventaris string *enkel* met de gevraagde categorieën
+        // Zoek of een bekende gist in de inventaris zit voor extra context
+        let selectedYeastContext = "";
+        if (inventoryToggles.Yeast) {
+            for (const [key, spec] of Object.entries(yeastSpecs)) {
+                if (yeastInInventory.includes(key)) {
+                    selectedYeastContext += `\n- **Known Spec for ${key}:** ${spec}`;
+                }
+            }
+        }
+
+        // Bouw de inventaris string
         const inventoryString = inventory
             .filter(item => {
-                // Speciaal geval: 'Other' omvat alles wat niet expliciet is genoemd
                 if (inventoryToggles.Other && otherCategories.includes(item.category)) return true;
-                // Check de direct aangevinkte categorieën
                 return requestedCategories.includes(item.category);
             })
             .map(item => `${item.name}: ${item.qty} ${item.unit}`)
             .join('; ');
 
-        // --- Creëer dynamische prompt-regels ---
-        
-        // Standaard ("From Scratch") Logica
-        let yeastLogicPrompt = `2.  **Yeast Logic:**
-            1.  As an expert, determine the single **ideal yeast** for a world-class version of this recipe.
-            2.  **Selection:** This ideal yeast MUST be the one used in the \`## Ingredients\` list.
-            3.  **Notes:** In "## Brewer's Notes", you MUST justify this choice.`;
-        
-        let nutrientLogicPrompt = `3.  **Nutrient Logic:**
-            1.  First, as an expert, determine the **best nutrient schedule** and ideal nutrients (e.g., "Fermaid O, Fermaid K").
-            2.  **Selection:** These ideal nutrients MUST be used in the \`## Ingredients\` list.
-            3.  **Notes:** In "## Brewer's Notes", you MUST explain the schedule under \`**Nutrient Schedule:**\` AND you MUST justify your total YAN target (in mg/L) and how this schedule achieves it under a new topic \`**YAN Calculation:**\`.`;
+        // --- STAP 4: DE DOCTORAAT PROMPT ---
+        let basePrompt = `You are "MEA(N)DERY", a master mazer and fermentation scientist. You do not guess; you engineer recipes based on the **Scott Labs Fermentation Handbook**, **BOMM Protocol**, and **UC Davis Enology** standards.
 
-        // Overschrijf de 'from scratch' regels indien aangevinkt
-        if (inventoryToggles.Yeast) {
-            yeastLogicPrompt = `2.  **Yeast Logic:**
-                1.  First, as an expert, determine the single **ideal yeast** (e.g., Wyeast 4783) for a world-class version of this recipe.
-                2.  Second, check the user's inventory: [${yeastInInventory}].
-                3.  **Selection:** You MUST select the *most suitable yeast from the inventory* for the \`## Ingredients\` list.
-                4.  **Fallback:** If no yeast in the inventory is suitable at all, you MUST use the *ideal yeast* from step 1 in the \`## Ingredients\` list.
-                5.  **Notes & Validation (MANDATORY):** In "## Brewer's Notes", you MUST state which yeast was chosen. You MUST *also* state its known technical specs (specifically its **alcohol tolerance** and **ideal temperature range**) based on your training data, as these specs are crucial for the \`Yeast vs. ABV Conflict\` rule.`;
-        }
-        if (inventoryToggles.Nutrient) {
-            nutrientLogicPrompt = `3.  **Nutrient Logic:** You MUST use nutrients from inventory: [${nutrientsInInventory}].
-                1.  Determine the **best nutrient schedule** using these nutrients.
-                2.  **Notes:** In "## Brewer's Notes", you MUST explain the schedule under \`**Nutrient Schedule:**\`.
-                3.  **YAN Calculation (MANDATORY):** In "## Brewer's Notes", under a new topic \`**YAN Calculation:**\`, you MUST state your target YAN (in mg/L) for this recipe AND show a simple calculation of how the chosen nutrients (and their assumed YAN values) achieve this target. (e.g., "Target: 200 mg/L. Honey provides ~20 mg/L. Fermaid K (4g) provides ~100 mg/L...").`;
-        }
-        
-        const availableFermenters = equipmentProfiles
-            .filter(p => p.type === 'Fermenter' && p.capacityLiters)
-            .map(p => `${p.name} (${p.capacityLiters}L total capacity, ${p.trubLossLiters || 0}L loss)`)
-            .join('; ');
+${mathContext}
+${selectedYeastContext ? `**YEAST DATA FROM LAB:**${selectedYeastContext}` : ''}
 
-        let basePrompt = `You are an award-winning mead maker, logistics expert, AND BREWING SCIENTIST named "MEA(N)DERY". Your primary goal is to create a practical, world-class, feasible recipe that fits the user's equipment.
+**SCIENTIFIC CONSTRAINTS (NON-NEGOTIABLE):**
 
-**WORLD-CLASS RECIPE PHILOSOPHY:**
-1.  **Time-Based Design:** If the user's request includes a timeline (e.g., "ready by Spring 2026"), this becomes a **primary design goal**. You MUST actively choose ingredients and techniques (yeast strain, fining agents, tannin levels) that allow the mead to mature and be ready by that date. You MUST explain these choices in the "Cellaring Note".
-2.  **Balance & Synergy:** In the "## Description", you MUST explain the intended balance and the synergy between at least two key ingredients.
-3.  **Process & Clarity:** The "## Instructions" MUST include best practices for achieving a clear final product and specify ideal fermentation temperature ranges.
-4.  **Brewer's Notes - Rationale (MANDATORY FORMATTING):** The "## Brewer's Notes" section MUST contain the specified bolded sub-topics below.
-    - **Crucial Formatting:**
-        - Each topic MUST start on a **completely new paragraph**. You MUST insert a **full blank line** before starting the next topic's paragraph.
-        - The bolded title AND its explanation text MUST appear on the **exact same line**, separated by a colon and a space.
-        - Do NOT use any list formatting (like dashes or bullets).
-    - **Required Topics:**
-        - **Honey Choice:** Justify the specific honey variety selected.
-        - **Yeast Choice:** Justify the specific yeast strain selected, comparing it to the ideal if different.
-        - **Nutrient Schedule:** Justify the chosen nutrient schedule, comparing it to the ideal if different.
-        - **Cellaring Note:** Provide a cellaring guideline that is consistent with the Time-Based Design goal if one was provided.
-        - **Food Pairing:** Suggest at least two food pairings.
-5.  **Scientific & Practical Rigor (MANDATORY):** You MUST validate your own suggestions against practical brewing science.
-        - **No Illogical Recipes:** Do NOT suggest illogical ingredient combinations (e.g., NEVER add water to a recipe explicitly described as 'no-water' or 'juice-only').
-        - **No Impractical Actions:** Do NOT suggest physically impractical actions (e.g., adding kilograms of whole fruit to a fermenter named 'Carboy' or 'Demijohn'). You MUST select a fermenter appropriate for the ingredients (see Equipment Logic).
-        - **Chemical Validation:** You MUST identify and warn against chemically problematic combinations (e.g., adding lactose/dairy with high-acid citrus *before* stabilization, as this causes curdling). You must ensure pH-sensitive steps (like pectic enzyme use) are placed correctly in the instructions.
-6.  **Gastronomic Validation (MANDATORY):** You are a world-class chef and creative partner. You MUST critically evaluate if all requested ingredients are gastronomically complementary.    
-    -   You MUST **always** include a \`**Gastronomic Validation:**\` entry in the \`## Brewer's Notes\` (as shown in the example).
-    -   **If a user's idea is good:**
-        1.  Use this note to confirm the synergy (e.g., "The requested cherries and vanilla are a classic, rich combination...").
-        2.  **You MUST also** propose 1-2 "Tweak Alternatives"—complementary ingredients that would also create a world-class mead. You MUST explain *how* this alternative ingredient would change the flavor profile (e.g., "Tweak Alternative: Adding a single vanilla bean in secondary would enhance the cherry's sweetness and add a creamy finish.").
-    -   **If a user's idea is bad (e.g., flavors clash, one ingredient will overpower another):**
-        1.  You MUST "adjust the plan".
-        2.  Use this note to justify your substitution (e.g., "I have substituted Ingredient X for Y, as X would clash...").
+1.  **The "Buffer" Rule (BOMM Protocol):** - Honey is acidic and unbuffered. As fermentation starts, pH drops. If pH hits 2.9, fermentation stalls.
+    - **Constraint:** If this is a Traditional Mead, Cyser, or Metheglin (which lack fruit buffering capacity), you MUST include "Potassium Carbonate" or "Potassium Bicarbonate" in the ingredients (approx 2g per 10L) to prevent a pH crash.
 
-    **Example of CORRECT format:**
+2.  **The Nutrient Protocol (TOSNA / YAN):**
+    - Honey is nitrogen-deficient. Yeast STARVES without added YAN (Yeast Assimilable Nitrogen).
+    - **Constraint:** You MUST prescribe a **Staggered Nutrient Addition (SNA)** in the Instructions.
+    - **Priority:** Prioritize organic nitrogen (Fermaid O / Nutrivit) for the first 1/2 of fermentation to avoid yeast stress. 
+    - **DAP Rule:** Do NOT recommend DAP (Diammonium Phosphate) in the first 24 hours unless the gravity is very high (>1.110). Never add DAP after 9% ABV.
+    - **Timing:** Schedule additions at: 24h, 48h, 72h, and the 1/3 Sugar Break.
 
-    **Honey Choice:** Wildflower was chosen for its balanced profile...
+3.  **The "Delle Unit" Stability Principle:**
+    - You cannot simply "stop" fermentation at a specific sweetness without chemical intervention or exceeding yeast tolerance.
+    - **Constraint:** If the user wants a **SWEET** or **SEMI-SWEET** mead, you MUST output a recipe that ferments **DRY (1.000)** first. 
+    - **Mandatory Instruction:** In the "## Secondary & Aging" section, you must instruct the user to:
+        1. Verify stable SG (reading unchanged for 3 days).
+        2. Stabilize with Potassium Sorbate AND Potassium Metabisulfite (Campden).
+        3. Wait 24 hours.
+        4. Backsweeten with honey to the target gravity.
 
-    **Gastronomic Validation:** The requested apple and cinnamon are a classic, robust pairing. Tweak Alternative: Consider adding 10g of dried orange peel in secondary to add a bright, citrus complexity.
+4.  **Fruit Management (Melomels):**
+    - **Contact Time:** Fruit left too long extracts bitter tannins from seeds/skins.
+    - **Instruction:** In "Secondary", explicitly instruct the user to remove fruit solids after 2-3 weeks max, or when the fruit loses its color.
+    - **Pectic Enzyme:** MUST be added at the start (mixed with fruit) to break down pectin and prevent haze.
 
-    **Yeast Choice:** Lalvin 71B was selected because it enhances fruity esters...
+5.  **Yeast Selection Logic (If not specified):**
+    - **Lalvin 71B:** Best for high-acid fruits (metabolizes malic acid). 14% tolerance.
+    - **Lalvin EC-1118:** The "Nuclear Option". Strips flavor, high tolerance (18%), works in poor conditions. Use only for high gravity, carbonated recipes, or restarting stalls.
+    - **Mangrove Jack M05:** High ester production, excellent for Traditionals.
 
-    **Nutrient Schedule:** A staggered nutrient addition using Fermaid K...
-
-    **YAN Calculation:** Target: 250 mg/L. Honey (3.5kg) provides ~25 mg/L. Fermaid K (4g) adds ~100 mg/L. Fermaid O (5g) adds ~125 mg/L.
-
-    **Cellaring Note:** This mead should peak within 1-2 years...
-
-    **Food Pairing:** Pairs well with aged cheddar or spicy dishes...
-
-**CRUCIAL EQUIPMENT & VOLUME LOGIC (MUST FOLLOW IN ORDER):**
-1.  **Determine Target Size (Hierarchy of Goals):**
-    -   **Priority 1 (User Specified Volume):** If the user's free-text description explicitly mentions a target volume (e.g., "make a 10 liter mead"), you MUST use that as your goal.
-    -   **Priority 2 (User Specified Ingredients):** If the description provides constraints on key ingredients (e.g., "use max 2kg honey", "use 3kg plums") but NOT a volume, your goal is to determine the **OPTIMAL BATCH SIZE** to create a world-class recipe with those ingredients.
-    -   **Priority 3 (Default):** If neither of the above applies, use the default target of **${batchSize} liters**.
-2.  **Design Initial Recipe & Calculate Volume:** Based on the determined target size, design the recipe and calculate the **Total Required Fermenter Volume** (liquids + solids displacement).
-3.  **Feasibility Check & Selection:** Check if the recipe fits in the available fermenters: [${availableFermenters}].
-    -   **A) Practicality Check (Fruit):** If the recipe contains a significant volume of solid fruit (e.g., a Melomel), you MUST prioritize selecting a fermenter whose name implies a wide opening. Look for names like 'Speidel', 'Bucket', 'Emmers', or 'Wide Mouth'.
-    -   **B) Fallback (Narrow Neck):** If no wide-mouth fermenter is available BUT a narrow-neck fermenter (e.g., 'Carboy', 'Demijohn', 'Fles') *is* available and has enough volume, you MUST adapt the \`## Instructions\` to explicitly state that all fruit MUST be placed in a 'brew bag' (brouwzak / BIAB bag) so it can be easily removed.
-    -   **C) Final Selection:** Select the best *and most practical* fermenter based on these checks.
-4.  **Fallback (Scale Down):** If the initial design does not fit in any available fermenter, you MUST **SCALE DOWN THE ENTIRE RECIPE** until it fits in the largest available fermenter with adequate headspace.
-5.  **Communicate:** In the "Brewer's Notes", "Key Stats", and "Selected Fermenter" sections, you MUST clearly state the final batch size and the chosen fermenter, and explain if/why you scaled the recipe down.
-
-**CRUCIAL TITLE RULE: You are a branding expert with a talent for **dry humor** and **witty, concise branding**.
-Your primary task is to invent a captivating, **bold**, and **memorable** name that stands out. **Bland or weak names are explicitly forbidden.** Follow this exact thought process:
-
-1.  **Analyze & Brainstorm (Internal Monologue):** First, analyze the core ingredients and style. Then, you MUST internally brainstorm 3-5 creative name ideas. **You MUST prioritize wit and conciseness.** Consider:
-    -   **Puns & Wordplay:** (e.g., 'Berry Manilow', 'On the Dregs')
-    -   **Witty Understatement (Dry Humor):** (e.g., 'Just Some Honey', 'It's Probably Mead', 'My Plums')
-    -   **The Brewing Process:** (e.g., 'The Third Scorch', 'The Long Wait')
-    -   **A Factual, Confident Name:** (e.g., 'A 14% Bochet', 'The Apple Experiment')
-2.  **Select the Best:** From your internal brainstorm, choose the single **strongest and most creative** name that aligns with this witty, down-to-earth style.
-3.  **Choose a Justifying Style:** Assign your chosen name to ONE of the three styles below (A, B, or C) that best fits your creative choice.
-    -   **Style A (Clever & Witty):** A smart pun, **a touch of dry humor, or a witty understatement.**
-    -   **Style B (Modern & Direct):** A short, powerful, **unpretentious, and direct** name. **No flowery or poetic language.**
-    -   **Style C (The Craft & Technique):** The name is a direct reference to a crucial technique or process detail in the recipe. It's a confident name that highlights the craftsmanship (e.g., 'The Third Scorch').
-4.  **HARD CONSTRAINTS:**
-    -   The title **MUST NOT** be a simple list of ingredients (e.g., "Plum & Almond Mead").
-    -   The title **MUST NOT** use generic, "hippie" or cheesy words (e.g., 'Delight', 'Kiss', 'Symphony', 'Embrace', 'Harmony', 'Nectar', 'Alchemy', 'Serenade' or 'Elixir').
-    -   The title **MUST NOT** be boring, safe, or overly simple (e.g., 'My Mead', 'Simple Honey Brew', 'Good Melomel', 'Honey Wine').
-    -   The title **MUST NOT** use clichéd mythology or fantasy tropes (e.g., 'Dragon's Blood', 'Viking's Nectar', 'Mjolnir's Brew', 'Elven Gold').
-    -   **NEW:** The title **MUST NOT** use abstract, poetic, or "feeling" words (e.g., 'Warmth', 'Silence', 'Velvet', 'Ember', 'Dream', 'Solitude', 'Whisper').
-
-**FORMAT:** The title MUST be the very first line, formatted as a Markdown H1 heading (e.g., '# Invented Name: A Brief Description'). Do NOT use square brackets [].
-
-Your response MUST be structured with the following headings in this exact order:
-## Description
-## Key Stats
-## Fermenter
-## Ingredients
-## Instructions
-## Brewer's Notes
-## Recommended Water
-
-**ADVANCED LOGIC & SUBSTITUTION RULES (YOU MUST FOLLOW THESE):**
-1.  **Recipe Inspiration:** The "## Description" section MUST begin with a single sentence explaining the recipe's inspiration. This sentence MUST be a standalone paragraph. You MUST insert a full blank line after it before the main description begins. Do NOT use italics.
-${yeastLogicPrompt}
-${nutrientLogicPrompt} 
-4.  **Water Choice:** In "## Recommended Water", you MUST recommend an *ideal* **bottled spring water** that is **widely available in Belgium / Western Europe** (e.g., Spa Reine, Mont Roucous, Chaudfontaine, Evian).
-    -   **CRUCIAL (Location):** The user is in Belgium. You MUST NOT recommend brands that are primarily available in the USA (e.g., Poland Spring, Crystal Geyser, Arrowhead).
-    -   **CRUCIAL (Type):** You MUST NOT recommend distilled water or reverse osmosis (RO) water, as the brewer will not be adding brewing salts or minerals.
-    -   **You MUST** justify your choice based on the *spring water's* mineral profile (e.g., "Spa Reine is chosen for its very low mineral content...").
-5.  **Key Stats Section:** This sections is MANDATORY. 
-    - "## Key Stats" must contain the OG, FG, ABV, and Final Batch Size.
-    **Example of CORRECT format:**
-
-    OG: 1.110
-
-    FG: 1.030
-
-    ABV: 10.5%
-
-    Final Batch Size: 5 Liters
-
-6.  **Fermenter:** Must contain ONLY the name of the chosen fermenter. This sections is MANDATORY.
-7.  **Brewer's Notes Structure:** The "## Brewer's Notes" section MUST use bolded titles on the same line as the text, followed by a colon (e.g., "**Ingredient Rationale:** ..."). This is mandatory for correct formatting.
-8.  **No-Water Melomel Logic (MANDATORY):** If the user's free-text description contains phrases like 'no-water', 'no water melomel', 'juice-only', or '100% fruit juice', you MUST NOT include 'Water' in the "## Ingredients" list (except for small, specified amounts for yeast rehydration if absolutely necessary). The primary liquid (must) MUST be composed of only honey and the juice from the specified fruit. You MUST acknowledge this choice in the "## Brewer's Notes".
-9.  **Yeast & Sweetness Strategy (CRUCIAL):**
-    - You have two allowed strategies to achieve sweetness. You must choose the safest one based on the user's goal.
-    - **Strategy A (Stabilization - PREFERRED):** Design the recipe to ferment dry (to ~1.000). Then, in "## Secondary & Aging", explicitly include steps to stabilize (sorbate/sulfite) and then backsweeten. Use this for precise control.
-    - **Strategy B (Tolerance/Delle Method):** If you aim for residual sugar by exceeding the yeast's alcohol tolerance, you MUST prove the math in "## Brewer's Notes".
-        - Calculation required: Show that (Potential ABV of total sugars) > (Yeast stated tolerance).
-        - Warning required: You must warn the user that yeast can sometimes overshoot its tolerance and the mead might end up dryer/stronger than planned.
-    - **Inventory Constraint:** If using yeast from inventory, you MUST respect its actual alcohol tolerance. Do not plan a 18% ABV mead with a 14% tolerance yeast unless you are intentionally step-feeding (which you must then explain).
-10. **Bochet Method & Safety (MANDATORY):** If the style is 'Bochet', you must *first* decide on the best caramelization method (e.g., traditional stove-top, oven-bake, or using pre-caramelized honey).
-    - **If recommending a heat-based method (stove-top, oven):** You MUST include a dedicated safety warning in the "## Instructions". This warning MUST state in all caps (e.g., 'WARNING: RISK OF BOIL-OVER') that the honey will expand and foam dramatically. You MUST instruct the user to use a pot/vessel that is at least 3 to 4 times larger than the volume of the honey.
-     - **If a 'no-heat' or 'low-heat' (e.g., oven, slow-cooker) method is more appropriate, safer, or fits the recipe better, you MAY propose it,** but you must still provide clear, detailed instructions and any relevant safety warnings (e.g., hot surfaces).
-11. **Nutrient Timing Logic (MANDATORY):** You MUST NOT instruct the user to add any YAN-providing nutrients (e.g., Fermaid, VitaFerm, DAP, Nutrisal, Nutrivit) *after* the primary fermentation has completed (i.e., NOT in the "## Secondary & Aging" section). This is scientifically incorrect and risks spoilage. Non-YAN adjuncts (like oak, spices, or fining agents) are allowed in secondary.
-
-    **FINAL VALIDATION (MANDATORY):**
-    Before you output *anything*, you MUST perform this final two-step validation.
-
-    **Step 1: Recipe Content Review**
-    First, you MUST internally review the recipe *body* (everything EXCEPT the title). Ask yourself:
-    1.  **Is this "World-Class"?** (Is this recipe interesting, balanced, and an upgrade from a basic-level recipe? Or is it a "bland" recipe?)
-    2.  **Is the Gastronomy Sound?** (Did I *critically* evaluate the ingredients as a chef, as per the 'Gastronomic Validation' rule?)
-    3.  **Is the Science Correct?** (Does the Target ABV *realistically* match the selected yeast's tolerance? Is the yeast choice correct and logically motivated? **AND (Crucial) Is the nutrient timing correct (i.e., NO YAN-providing nutrients added in secondary)?**)
-    
-    If the answer to any of these is "No," you MUST stop, go back, and fix the **recipe content** until you can answer "Yes" to all.
-
-    **Step 2: Title Review (After Recipe is Final)**
-    *After* you are 100% confident the recipe content is "World-Class," you MUST *then* generate the title. You must apply the \`CRUCIAL TITLE RULE\` (the 'dry humor/concise' persona) with maximum creativity.
-    
-    You MUST ask yourself:
-    1.  **Is this Title Bold & Witty?** (Does this title meet the 'dry humor/concise' persona, or is it a 'bland' or clichéd name I chose out of laziness?)
-
-    If the answer is "No," you MUST generate a *new title*, but **you MUST NOT** change the *recipe content* that you already finalized in Step 1.
-
-Now, generate the recipe based on the following user request:
----`;
-        
-        let creativeBrief = ''; 
-        const customDescription = document.getElementById('customDescription').value;
-
-        if (customDescription.trim() !== '') {
-            // --- AANGEPAST: Gebruik `useAnyInventory` ---
-            let inventoryConstraint = ''; 
-            if (useAnyInventory) { // <-- NIEUWE CHECK
-                inventoryConstraint = `Prioritize using ingredients from their inventory if suitable (ONLY for the categories the user selected): [${inventoryString || 'None requested'}].`;
-            }
-            creativeBrief += `The user's request is a free-text description: "${customDescription}". ${inventoryConstraint}`;
-        
-        } else if (useAnyInventory) { // <-- NIEUWE CHECK
-            // --- AANGEPAST: Bouw de 'richInventoryString' op basis van de toggles ---
-            const currency = userSettings.currencySymbol || '€';
-            const useBudget = document.getElementById('useBudget').checked;
-            const maxBudget = document.getElementById('maxBudget').value;
-
-            const richInventoryString = inventory
-                .filter(item => {
-                    if (inventoryToggles.Other && otherCategories.includes(item.category)) return true;
-                    return requestedCategories.includes(item.category);
-                })
-                .map(item => {
-                    let costPerUnit = 0; let baseUnit = item.unit; if (item.qty > 0 && item.price > 0) { costPerUnit = item.price / item.qty; } if (item.unit === 'kg') { costPerUnit /= 1000; baseUnit = 'g'; } else if (item.unit === 'L') { costPerUnit /= 1000; baseUnit = 'ml'; }
-                    return `${item.name}: ${item.qty} ${item.unit} available (Cost: ${costPerUnit.toFixed(2)} ${currency}/${baseUnit})`;
-                }).join('; ');
-            
-            creativeBrief += `The user wants a recipe created from their inventory (using only the categories they selected): [${richInventoryString || 'No items for requested categories'}]. Use these parameters as guidelines:\n- Target ABV: Approximately ${document.getElementById('abv').value || '12'}%\n- Final Sweetness: ${document.getElementById('sweetness').selectedOptions[0].text}\n- Style Inspiration: ${document.getElementById('style').selectedOptions[0].text}`;
-            
-            if (useBudget && maxBudget) {
-                creativeBrief += `\n\nCRUCIAL CONSTRAINT: The total cost of the ingredients for this recipe (from the *selected* inventory) MUST NOT EXCEED ${maxBudget} ${currency}. You must use the provided ingredient costs to calculate this and stay within budget. In the Brewer's Notes, state the calculated total cost.`;
-            }
-        } else {
-            const style = document.getElementById('style').selectedOptions[0].text;
-            let honeyValue = document.getElementById('honeyVariety').options[document.getElementById('honeyVariety').selectedIndex].text;
-            const honeySelectValue = document.getElementById('honeyVariety').value;
-            if (honeySelectValue === 'other') { const otherHoney = document.getElementById('honeyVarietyOther').value; if(otherHoney) honeyValue = otherHoney; }
-
-            creativeBrief += `The user wants a recipe from scratch with these options:\n- Target ABV: Approximately ${document.getElementById('abv').value || '12'}%\n- Final Sweetness: ${document.getElementById('sweetness').selectedOptions[0].text}\n- Style Inspiration: ${style}\n- Primary Honey: ${honeyValue}`;
-            if (style.includes('Melomel')) {
-                const fruits = Array.from(document.querySelectorAll('#fruit-section input[type=checkbox]:checked')).map(el => el.labels[0].innerText);
-                const otherFruits = document.getElementById('fruitOther').value.split(',').map(f => f.trim()).filter(f => f);
-                creativeBrief += `\n- Featured Fruits: ${[...fruits, ...otherFruits].join(', ') || 'Suggest a classic combination.'}`;
-            } else if (style.includes('Metheglin')) {
-                const spices = Array.from(document.querySelectorAll('#spice-section input[type=checkbox]:checked')).map(el => el.labels[0].innerText);
-                const otherSpices = document.getElementById('spiceOther').value.split(',').map(s => s.trim()).filter(s => s);
-                creativeBrief += `\n- Featured Spices: ${[...spices, ...otherSpices].join(', ') || 'Suggest a classic blend.'}`;
-            }
-            if (style.toLowerCase().includes('bochet')) {
-                creativeBrief += `\n- Bochet Method: You MUST recommend the best method for caramelizing the honey and provide detailed, safe instructions.`;
-            }
-            if (style.includes('Braggot')) {
-                creativeBrief += `\n- Braggot Base: Based on a ${document.getElementById('braggotStyle').value} style. Provide an extract-based recipe.`;
-            }
-            if (document.getElementById('addOak').checked) {
-                creativeBrief += '\n- Oak Aging: The recipe must include a step for aging with oak.';
-            }
-            const specialIngredients = document.getElementById('specialIngredients').value;
-            if (specialIngredients && specialIngredients.trim() !== '') {
-                creativeBrief += `\n- Special Ingredients: The recipe must creatively incorporate: ${specialIngredients}.`;
-            }
-        }
-        
-        const formattingRules = `
----
-**FINAL AND MOST IMPORTANT INSTRUCTIONS - YOUR ENTIRE RESPONSE MUST CONFORM TO THESE RULES:**
+**RECIPE STRUCTURE & FORMATTING (MANDATORY):**
 Your response must be a single, valid Markdown document.
 
 1.  **INGREDIENTS MUST BE A JSON CODE BLOCK:**
-    - **VALIDATION:** Before outputting, you MUST internally validate that the JSON is syntactically correct (correct commas, quotes, brackets). Invalid JSON will break the app.
-    - **UNIQUENESS RULE:** Each ingredient must be unique. If added at multiple stages, you MUST sum the total quantity and list the ingredient only ONCE.
-    - **YEAST UNIT:** Yeast quantity MUST always be specified in **grams (g)**, even if it corresponds to a standard sachet size. Do NOT use "sachet" or "packet" as a unit for yeast.
-    - **Example Format:** \`\`\`json[{"ingredient": "Honey", "quantity": 1.5, "unit": "kg"}]\`\`\`
-2.  **STRUCTURED INSTRUCTIONS:** The "## Instructions" section MUST have "### Primary Fermentation" and "### Secondary & Aging" subheadings.
-3.  **UNIVERSAL TIMER RULE (MANDATORY):**
-    You MUST end *any* instruction list item that requires a specific wait time *after* it is completed with a generic timer tag in the format \`[TIMER:HH:MM:SS]\`. // <-- Escape backticks here
-    - **CRUCIAL Meaning:** The time specified (HH:MM:SS) MUST represent the required waiting duration **AFTER** completing the current step **BEFORE** the next *timed* action (like the next nutrient addition) should occur. Place the tag on the step that *initiates* the waiting period.
-    - **Nutrient Schedule Exception:** Do **NOT** add a \`[TIMER:...] \` tag to the **final** timed nutrient addition in a schedule. // <-- Escape backticks here
-    - For immediate steps ('at pitch' nutrients *without* a subsequent timed addition, general mixing, etc.), do NOT add a tag.
-    - **Example 1 (Yeast):** "...Rehydrate yeast and wait 15 minutes. \`[TIMER:00:15:00]\`" // <-- Escape backticks here
-    - **Example 2 (Nutrient Schedule Start):** "Add 2g Nutrisal at pitch. \`[TIMER:24:00:00]\`" // <-- Escape backticks here // Starts 24h wait for next nutrient step
-    - **Example 3 (Nutrient Schedule Middle):** "At 24 hours after pitching, add 1g VitaFerm. \`[TIMER:24:00:00]\`" // <-- Escape backticks here // Starts 24h wait for 48h step
-    - **Example 4 (Nutrient Schedule End):** "At 48 hours after pitching, add 1g Nutrisal." // NO TIMER TAG - This is the last timed addition.
-    This tag is the ONLY reliable way the app creates a timer.`;
+    - **VALIDATION:** Before outputting, you MUST internally validate that the JSON is syntactically correct.
+    - **UNIQUENESS RULE:** Each ingredient must be unique. Sum quantities if added at multiple stages.
+    - **Example Format:** \`\`\`json[{"ingredient": "Honey", "quantity": 1.5, "unit": "kg"}, {"ingredient": "Water", "quantity": 3.5, "unit": "L"}]\`\`\`
 
-        return basePrompt + creativeBrief + formattingRules;
+2.  **STRUCTURED INSTRUCTIONS:** - The "## Instructions" section MUST have "### Primary Fermentation" and "### Secondary & Aging" subheadings.
+    - **UNIVERSAL TIMER RULE:** You MUST end any instruction list item that requires a waiting period with a tag: \`[TIMER:HH:MM:SS]\`.
+        - Example: "Add yeast and wait 15 min. \`[TIMER:00:15:00]\`"
+        - Example: "Add nutrients at 24h. \`[TIMER:24:00:00]\`" (This starts the clock for the *next* step).
+
+3.  **BREWER'S NOTES (Rationale):**
+    - The "## Brewer's Notes" section is critical for scientific validation.
+    - **Required Topics:** - **Honey Choice:** Why this variety?
+        - **Yeast Strategy:** Justify the strain based on ABV tolerance vs Target ABV.
+        - **Nutrient Schedule:** Explain the chosen YAN target (Low/Med/High) and schedule.
+        - **Gastronomic Validation:** Evaluate the flavor pairing logic.
+
+Now, generate the world-class recipe based on the following user request:
+---`;
+
+        // --- STAP 5: USER INPUT VERWERKING ---
+        let creativeBrief = ''; 
+
+        if (customDescription.trim() !== '') {
+            let inventoryConstraint = ''; 
+            if (useAnyInventory) {
+                inventoryConstraint = `Prioritize using ingredients from their inventory: [${inventoryString || 'None requested'}].`;
+            }
+            creativeBrief += `User Request (Free Text): "${customDescription}". ${inventoryConstraint}`;
+        } else if (useAnyInventory) {
+            creativeBrief += `User Request (Inventory Based): Create a recipe using: [${inventoryString}]. 
+            Targets: ABV ${targetABV}%, Sweetness: ${sweetness}, Style: ${style}.`;
+        } else {
+            let honeyValue = document.getElementById('honeyVariety').options[document.getElementById('honeyVariety').selectedIndex].text;
+            if (document.getElementById('honeyVariety').value === 'other') { 
+                honeyValue = document.getElementById('honeyVarietyOther').value; 
+            }
+
+            creativeBrief += `User Request (Structured):
+            - Style: ${style}
+            - Honey: ${honeyValue}
+            - Targets: ABV ${targetABV}%, Sweetness: ${sweetness}`;
+            
+            if (style.includes('Melomel')) {
+                const fruits = Array.from(document.querySelectorAll('#fruit-section input[type=checkbox]:checked')).map(el => el.labels[0].innerText);
+                const otherFruits = document.getElementById('fruitOther').value;
+                creativeBrief += `\n- Fruits: ${[...fruits, otherFruits].filter(Boolean).join(', ')}`;
+            } 
+            if (style.includes('Metheglin')) {
+                const spices = Array.from(document.querySelectorAll('#spice-section input[type=checkbox]:checked')).map(el => el.labels[0].innerText);
+                const otherSpices = document.getElementById('spiceOther').value;
+                creativeBrief += `\n- Spices: ${[...spices, otherSpices].filter(Boolean).join(', ')}`;
+            }
+            if (document.getElementById('addOak').checked) {
+                creativeBrief += '\n- Requirement: Include Oak Aging.';
+            }
+        }
+
+        return basePrompt + "\n" + creativeBrief;
 
     } catch (error) {
         console.error("Error building prompt:", error);
         throw new Error(`Failed to build the prompt. (Details: ${error.message})`);
-    }
-}
-
-window.freeformTweakRecipe = async function(brewId) {
-    const brew = brews.find(b => b.id === brewId);
-    if (!brew) return;
-    
-    const tweakRequest = document.getElementById(`tweak-request-${brew.id}`).value;
-    if (!tweakRequest.trim()) {
-        alert("Please enter your tweak request in the text box.");
-        return;
-    }
-    
-    const tweakOutput = document.getElementById(`tweak-output-${brew.id}`);
-    tweakOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is tweaking your recipe...</p>';
-
-    const prompt = `You are an expert mead maker. A user wants to tweak the following original recipe based on their request.
-
-Original Recipe Markdown:
----
-${brew.recipeMarkdown}
----
-
-User's Tweak Request: "${tweakRequest}"
-
-Generate the complete, new, and improved recipe that incorporates the user's request. Ensure the output is fully formatted in Markdown, including a new creative title in 'Name: Subtitle' format, and a complete ingredient table.
-CRUCIAL: Do not wrap your response in a markdown code block using triple backticks.`;
-
-    try {
-        const tweakedMarkdown = await performApiCall(prompt);
-        tweakOutput.innerHTML = `<div class="mt-4 p-4 border-t-2 border-purple-700">${marked.parse(tweakedMarkdown)}</div>`;
-    } catch (error) {
-        console.error("Error tweaking recipe:", error);
-        tweakOutput.innerHTML = `<p class="text-center text-red-500">Could not get a tweaked recipe: ${error.message}</p>`;
     }
 }
 
@@ -3410,45 +3329,82 @@ window.cloneBrew = async function(brewId) {
                 historyListContainer.classList.remove('hidden');
             }
             
-            window.updateBrewLog = async function(brewId, containerId) { // 1. Argument toegevoegd
-                 if (!userId || !brewId) return;
+            window.updateBrewLog = async function(brewId, containerId) {
+    if (!userId || !brewId) return;
 
-                 // 2. Argument wordt hier gebruikt i.p.v. hardgecodeerde waarde
-                 const logData = getLogDataFromDOM(containerId); 
+    // Find the specific button that was clicked inside the container
+    const container = document.getElementById(containerId);
+    const btn = container ? container.querySelector('button[onclick*="updateBrewLog"]') : null;
+    const originalText = btn ? btn.innerText : 'Save Log Changes';
+    
+    if(btn) {
+        btn.disabled = true;
+        btn.innerText = "Saving...";
+    }
 
-                 try {
-                    const appId = 'meandery-aa05e';
-                    const brewDocRef = doc(db, 'artifacts', appId, 'users', userId, 'brews', brewId);
-                    await updateDoc(brewDocRef, { logData: logData });
-                    showToast('Log updated successfully!', 'success');
+    const logData = getLogDataFromDOM(containerId); 
+
+    try {
+        const appId = 'meandery-aa05e';
+        const brewDocRef = doc(db, 'artifacts', appId, 'users', userId, 'brews', brewId);
+        await updateDoc(brewDocRef, { logData: logData });
         
-                    // 3. Stuurt je enkel naar de historiek-view als je daar al was
-                    if (containerId === 'history-detail-container') {
-                        // Ververs de detailweergave om de grafiek te tonen
-                        showBrewDetail(brewId);
-                    } else {
-                        // Update de lokale 'brews' array zodat de data actueel is
-                        const brewIndex = brews.findIndex(b => b.id === brewId);
-                        if (brewIndex > -1) {
-                            brews[brewIndex].logData = logData;
-                        }
-                    }
+        // We don't need the toast anymore if the button gives feedback, 
+        // but keeping it doesn't hurt:
+        showToast('Log updated successfully!', 'success');
 
-                 } catch(error) {
-                    console.error("Error updating log:", error);
-                    showToast('Failed to update log.', 'error');
-                 }
+        if (containerId === 'history-detail-container') {
+            showBrewDetail(brewId);
+        } else {
+            const brewIndex = brews.findIndex(b => b.id === brewId);
+            if (brewIndex > -1) {
+                brews[brewIndex].logData = logData;
             }
+        }
+
+        if(btn) {
+            btn.innerText = "Saved!";
+            btn.classList.remove('bg-app-action'); // Remove standard color
+            btn.classList.add('bg-green-600');     // Add success color
+            
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerText = originalText;
+                btn.classList.remove('bg-green-600');
+                btn.classList.add('bg-app-action'); // Restore standard color
+            }, 2000);
+        }
+
+    } catch(error) {
+        console.error("Error updating log:", error);
+        showToast('Failed to update log.', 'error');
+        
+        // Reset button on error
+        if(btn) {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+    }
+}
 
             // --- NIEUWE FUNCTIE OM LOG REGEL TOE TE VOEGEN ---
 window.addLogLine = function(idSuffix) {
     const tableBody = document.querySelector(`#fermentationTable-${idSuffix} tbody`);
     if (!tableBody) return;
 
+    // Zoek de laatste rij om waarden te kopiëren
+    const lastRow = tableBody.lastElementChild;
+    let lastTemp = '';
+    if (lastRow) {
+        const tempInput = lastRow.querySelector('td:nth-child(2) input');
+        if (tempInput) lastTemp = tempInput.value;
+    }
+
     const newRow = document.createElement('tr');
+    // Vul de placeholder of value met de laatste temperatuur
     newRow.innerHTML = `
-        <td><input type="date" class="w-full"></td>
-        <td><input type="number" step="0.5" placeholder="18.5" class="w-full text-center"></td>
+        <td><input type="date" class="w-full" ondblclick="this.value = new Date().toISOString().split('T')[0]"></td>
+        <td><input type="number" step="0.5" value="${lastTemp}" placeholder="18.5" class="w-full text-center"></td>
         <td><input type="number" step="0.001" placeholder="1.050" class="w-full text-center"></td>
         <td><input type="text" class="w-full"></td>
     `;

@@ -2937,7 +2937,7 @@ ${nutrientLogicPrompt}
     - You have two allowed strategies to achieve sweetness. You must choose the safest one based on the user's goal.
     - **Strategy A (Stabilization - PREFERRED):** Design the recipe to ferment dry (to ~1.000). Then, in "## Secondary & Aging", explicitly include steps to stabilize (sorbate/sulfite) and then backsweeten. Use this for precise control.
     - **Strategy B (Tolerance/Delle Method):** If you aim for residual sugar by exceeding the yeast's alcohol tolerance, you MUST prove the math in "## Brewer's Notes".
-        - Calculation required: Show that `(Potential ABV of total sugars) > (Yeast stated tolerance)`.
+        - Calculation required: Show that (Potential ABV of total sugars) > (Yeast stated tolerance).
         - Warning required: You must warn the user that yeast can sometimes overshoot its tolerance and the mead might end up dryer/stronger than planned.
     - **Inventory Constraint:** If using yeast from inventory, you MUST respect its actual alcohol tolerance. Do not plan a 18% ABV mead with a 14% tolerance yeast unless you are intentionally step-feeding (which you must then explain).
 10. **Bochet Method & Safety (MANDATORY):** If the style is 'Bochet', you must *first* decide on the best caramelization method (e.g., traditional stove-top, oven-bake, or using pre-caramelized honey).
@@ -5371,7 +5371,7 @@ function renderBrewDay(brewId) {
     // IN renderBrewDay functie:
 
     let stepsHtml = primarySteps.map((step, index) => {
-        // --- Slimme detectie van ingrediënten in de stap ---
+        // --- NIEUW: Slimme detectie van ingrediënten in de stap ---
         // We zoeken naar een patroon als "2.5 kg" of "5 g" in de titel of beschrijving
         const amountMatch = (step.title + " " + step.description).match(/(\d+[.,]?\d*)\s*(kg|g|l|ml|oz|lbs)/i);
         let inputHtml = '';

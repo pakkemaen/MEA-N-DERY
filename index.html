@@ -145,7 +145,7 @@
         -webkit-text-fill-color: var(--text-primary) !important;
     }
 
-    /* --- 5. BUTTONS --- */
+    /* --- 5. BUTTONS (FIXED FOR DARK MODE) --- */
     .btn {
         font-weight: 600;
         text-transform: uppercase;
@@ -159,12 +159,42 @@
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        color: var(--text-primary); /* Standaard donkere tekst in light mode */
+        /* Standaard tekstkleur: donker in light mode, licht in dark mode */
+        color: var(--text-primary); 
     }
 
-    /* Specifieke knoppen die een donkere achtergrond hebben (zoals actie knoppen) moeten witte tekst houden */
-    .bg-app-action, .bg-green-600, .bg-red-600, .bg-blue-600, .bg-purple-700 {
+    /* CRUCIAL FIX: Actieknoppen (blauw, groen, rood, etc.) moeten ALTIJD witte tekst hebben */
+    /* Dit overschrijft de standaard var(--text-primary) */
+    .bg-app-action, 
+    .bg-green-600, .bg-green-700, 
+    .bg-red-600, .bg-red-700, 
+    .bg-blue-600, .bg-blue-700, 
+    .bg-purple-600, .bg-purple-700,
+    .bg-gray-600, .bg-gray-500 {
         color: #ffffff !important;
+    }
+
+    /* FIX VOOR NAVIGATIE KNOPPEN (Quick Access) */
+    /* In light mode zijn deze wit (met donkere tekst). */
+    /* In dark mode zijn deze donkergrijs (met lichte tekst). */
+    .main-nav-btn {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+    
+    .main-nav-btn:hover {
+        border-color: var(--brand-color);
+        /* In dark mode, maak de hover achtergrond iets lichter zodat je verschil ziet */
+        background-color: var(--bg-tertiary); 
+    }
+
+    /* FIX VOOR SECUNDAIRE KNOPPEN (Grijze knoppen zoals 'Cancel') */
+    /* Zorg dat deze in dark mode niet wegvallen */
+    .bg-app-tertiary {
+        background-color: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color); /* Randje toevoegen voor contrast */
     }
     
     .btn:hover { opacity: 0.9; transform: translateY(-1px); }

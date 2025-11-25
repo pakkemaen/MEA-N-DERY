@@ -1486,9 +1486,9 @@
                 <h3 class="text-xl font-header font-bold text-app-brand border-b border-app pb-2">Science & Process</h3>
                 
                 <div class="card p-4 rounded-lg hover:shadow-md transition-shadow">
-                    <h4 class="font-bold text-lg">Scott Labs Fermentation Handbook</h4>
+                    <h4 class="font-bold text-lg">Scott Labs Winemaking Handbook (2025-2026)</h4>
                     <p class="text-sm text-app-secondary mb-3">The absolute bible for yeast nutrition, rehydration, and fermentation protocols. Essential for TOSNA logic.</p>
-                    <a href="https://scottlab.com/content/files/Documents/Handbooks/FermentationHandbook2023.pdf" target="_blank" class="text-blue-600 hover:underline font-semibold text-sm flex items-center">
+                    <a href="https://scottlab.com/content/files/documents/handbooks/2025-2026%20scott%20labs%20winemaking%20handbook.pdf" target="_blank" class="text-blue-600 hover:underline font-semibold text-sm flex items-center">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                         Open PDF
                     </a>
@@ -5412,7 +5412,7 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
                 `;
             }
 
-            // --- Functie voor de Actieve Batch Tijdlijn ---
+            // --- VERBETERDE FUNCTIE: PROGRESSIE OP BASIS VAN STAPPEN ---
 function renderActiveBrewTimeline() {
     const card = document.getElementById('current-brew-card');
     if (!card) return;
@@ -5427,34 +5427,57 @@ function renderActiveBrewTimeline() {
 
     const now = new Date();
     const brewDate = new Date(activeBrew.logData.brewDate);
-    const daysFermenting = (now - brewDate) / (1000 * 60 * 60 * 24);
+    const daysFermenting = Math.floor((now - brewDate) / (1000 * 60 * 60 * 24));
 
-    // Bepaal de stadia en de voortgang
-    const stages = [
-        { name: 'Brew Day', day: 0 },
-        { name: 'Primary End', day: 21 }, // Gemiddeld einde van primaire gisting
-        { name: 'Aging', day: 60 }, // Een ijkpunt voor rijpen
-        { name: 'Bottling Ready', day: 90 } // Indicatie dat het klaar zou kunnen zijn
-    ];
-    
-    let statusText = `Day ${Math.round(daysFermenting)}: `;
-    if (daysFermenting < stages[1].day) {
+    // --- NIEUWE LOGICA: STAPPEN VS TIJD ---
+    let progressPercentage = 0;
+    let statusText = `Day ${daysFermenting}: `;
+    let currentStageIndex = 0; // 0=Start, 1=Primary Done, 2=Aging, 3=Ready
+
+    // Haal de checklist op (veiligheidshalve)
+    const checklist = activeBrew.checklist || {};
+    const completedCount = Object.keys(checklist).filter(k => checklist[k] === true).length;
+
+    if (!activeBrew.primaryComplete) {
+        // --- FASE 1: PRIMAIRE GISTING ---
         statusText += "Primary Fermentation";
-    } else if (daysFermenting < stages[2].day) {
-        statusText += "Secondary / Clearing";
+        const totalPrimarySteps = (activeBrew.brewDaySteps || []).length || 1; // Voorkom delen door 0
+        
+        // Bereken percentage van de eerste 50% van de balk
+        const phaseProgress = Math.min(1, completedCount / totalPrimarySteps);
+        progressPercentage = phaseProgress * 50; 
+        
+        currentStageIndex = 0; // We zijn nog bezig met de start
     } else {
-        statusText += "Aging";
+        // --- FASE 2: SECUNDAIR / RIJPEN ---
+        statusText += "Secondary / Conditioning";
+        const totalSecondarySteps = (activeBrew.secondarySteps || []).length || 1;
+        
+        // We beginnen op 50% en vullen de rest
+        const phaseProgress = Math.min(1, completedCount / totalSecondarySteps);
+        progressPercentage = 50 + (phaseProgress * 50);
+        
+        currentStageIndex = 2; // We zijn voorbij primary
+        
+        // Als we bijna klaar zijn met secundaire stappen, zet status op 'Ready'
+        if (phaseProgress > 0.9) {
+            statusText = `Day ${daysFermenting}: Bottling Ready?`;
+            currentStageIndex = 3;
+        }
     }
 
-    // Bereken de voortgang in procenten voor de progress bar
-    const totalDuration = stages[stages.length - 1].day;
-    const progressPercentage = Math.min(100, (daysFermenting / totalDuration) * 100);
+    // Bepaal de stadia voor de bolletjes
+    const stages = [
+        { name: 'Brew Day', active: true }, // Altijd aan
+        { name: 'Primary End', active: activeBrew.primaryComplete || progressPercentage >= 50 },
+        { name: 'Aging', active: activeBrew.primaryComplete && progressPercentage >= 75 }, 
+        { name: 'Bottling Ready', active: progressPercentage >= 95 }
+    ];
 
     let timelineItemsHtml = '';
     stages.forEach((stage) => {
-        const isActive = daysFermenting >= stage.day;
         timelineItemsHtml += `
-            <div class="timeline-item ${isActive ? 'active' : ''}">
+            <div class="timeline-item ${stage.active ? 'active' : ''}">
                 <div class="timeline-node"></div>
                 <div class="timeline-label">${stage.name}</div>
             </div>
@@ -5462,9 +5485,19 @@ function renderActiveBrewTimeline() {
     });
 
     card.innerHTML = `
-        <h3 class="text-xl font-header font-bold mb-1">${activeBrew.recipeName}</h3>
-        <p class="text-app-secondary mb-4">${statusText}</p>
-        <div class="timeline-container">
+        <div class="flex justify-between items-end mb-2">
+            <div>
+                <h3 class="text-xl font-header font-bold text-app-brand">${activeBrew.recipeName}</h3>
+                <p class="text-app-secondary text-sm font-semibold">${statusText}</p>
+            </div>
+            <div class="text-right">
+                <button onclick="window.showBrewDetail('${activeBrew.id}')" class="text-xs bg-app-tertiary border border-app px-2 py-1 rounded hover:bg-app-primary transition-colors">
+                    View Details
+                </button>
+            </div>
+        </div>
+        
+        <div class="timeline-container mt-4">
             <div class="timeline-connector">
                 <div class="timeline-progress" style="width: ${progressPercentage}%;"></div>
             </div>

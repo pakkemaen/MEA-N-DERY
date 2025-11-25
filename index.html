@@ -25,7 +25,9 @@
         --bg-secondary: #ffffff;     /* Puur wit voor panelen */
         --bg-tertiary: #f9f9f7;      /* Zeer licht grijs voor inputs/sub-kaarten */
         --text-primary: #2d2a26;     /* Bijna zwart (Charcoal) */
-        --text-secondary: #6b655d;   /* Midden grijs */
+        /* OUD: --text-secondary: #6b655d; */
+        /* NIEUW (Meer contrast): */
+        --text-secondary: #59544d;
         --border-color: #e0dbd0;     /* Zachte rand */
         
         /* Brand Colors */
@@ -63,6 +65,16 @@
         color: var(--text-primary);
         transition: background-color 0.3s, color 0.3s;
         line-height: 1.6;
+    }
+
+    /* Zorg dat placeholders leesbaar zijn in light mode */
+    ::placeholder {
+        color: #a8a29e; /* Een iets donkerder grijs */
+        opacity: 1;
+    }
+
+    .dark ::placeholder {
+        color: #525252; /* Iets lichter voor dark mode */
     }
 
     /* --- 2. TYPOGRAPHY (UNIFIED) --- */
@@ -147,6 +159,12 @@
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
+        color: var(--text-primary); /* Standaard donkere tekst in light mode */
+    }
+
+    /* Specifieke knoppen die een donkere achtergrond hebben (zoals actie knoppen) moeten witte tekst houden */
+    .bg-app-action, .bg-green-600, .bg-red-600, .bg-blue-600, .bg-purple-700 {
+        color: #ffffff !important;
     }
     
     .btn:hover { opacity: 0.9; transform: translateY(-1px); }
@@ -204,20 +222,19 @@
         border-radius: 20px; /* Pill shape */
         font-size: 0.9rem;
         font-weight: 600;
-        color: var(--text-secondary);
-        background-color: transparent;
-        border: 1px solid transparent;
-        transition: all 0.2s;
+        color: var(--text-secondary); /* Dit is #6b655d in light mode - kan te licht zijn */
     }
 
+    /* FIX: Maak de tekst donkerder bij hover in light mode */
     .sub-tab:hover {
         background-color: var(--bg-tertiary);
-        color: var(--text-primary);
+        color: var(--brand-dark); /* Gebruik de donkere brand kleur (#6e6b5c) */
     }
 
+    /* FIX: Zorg voor hard contrast bij actieve tab */
     .sub-tab.active {
-        background-color: var(--text-primary);
-        color: var(--bg-primary);
+        background-color: var(--text-primary); /* Donkergrijs in light mode */
+        color: #ffffff; /* Geforceerd wit voor leesbaarheid */
         border-color: var(--text-primary);
     }
     
@@ -287,7 +304,17 @@
     
     /* Timeline Styles (Behouden) */
     .timeline-container { position: relative; display: flex; justify-content: space-between; padding: 1rem 0; }
-    .timeline-connector { position: absolute; top: 50%; left: 0; right: 0; height: 4px; background: var(--border-color); transform: translateY(-50%); z-index: 1; }
+    /* Standaard connector stijl */
+    .timeline-connector { 
+        position: absolute; top: 50%; left: 0; right: 0; height: 4px; 
+        background: #d1cec4; /* Standaard donkerder voor light mode */
+        transform: translateY(-50%); z-index: 1; 
+    }
+    /* Dark mode override */
+    .dark .timeline-connector {
+        background-color: var(--border-color);
+    }
+
     .timeline-progress { position: absolute; top: 0; left: 0; height: 100%; background: var(--brand-color); transition: width 0.5s; }
     .timeline-item { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; width: 25%; }
     .timeline-node { width: 20px; height: 20px; background: var(--bg-tertiary); border: 4px solid var(--border-color); border-radius: 50%; }
@@ -295,6 +322,17 @@
     .timeline-label { margin-top: 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
     .timeline-item.active .timeline-label { color: var(--text-primary); }
     
+    /* Progress Bar Styles */
+    .progress-bar-bg {
+        background-color: var(--border-color); /* Lichtgrijs in light, donkergrijs in dark */
+        overflow: hidden; /* Zorgt dat de vulling niet buiten de ronding komt */
+    }
+    
+    .progress-bar-fg {
+        background-color: var(--brand-color);
+        transition: width 0.5s ease-in-out;
+    }
+
     /* Toggle Switch */
     .theme-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
     .theme-switch input { opacity: 0; width: 0; height: 0; }
@@ -342,58 +380,64 @@
 
         <!-- Main Content Area -->
         <div id="dashboard-main-view">
-            <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 80vh;">
-                
-                <div id="current-brew-card" class="card p-6 rounded-lg mb-6 hidden">
-                    <!-- Content injected by JS -->
-                </div>
-
-               <div id="next-action-widget" class="card p-6 rounded-lg mb-6 hidden bg-app-tertiary border-app">
-                    <h3 class="text-xl font-header font-bold mb-3 text-app-header">What's next?</h3>
-                    <ul id="next-action-list" class="list-disc pl-5 space-y-2 text-app-secondary">
-                        </ul>
-               </div>
-
-               <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                    <button data-view="brewing" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 mb-4 text-app-brand">
-                            <path d="M10 2v7.31"></path><path d="M14 9.31V2"></path><path d="M8.5 2h7"></path><path d="M14 9.31C16.57 10.92 18 14.11 18 17.69V20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-2.31C6 14.11 7.43 10.92 10 9.31Z"></path>
-                        </svg>
-                        <h3 class="text-xl font-header font-bold">Brewing</h3>
-                        <p class="text-app-secondary/80 text-sm">Creator, Brew Day, History</p>
-                    </button>
-                    <button data-view="management" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 mb-4 text-app-brand">
-                            <rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path>
-                        </svg>
-                        <h3 class="text-xl font-header font-bold">Management</h3>
-                        <p class="text-app-secondary/80 text-sm">Inventory, Planning, Financials</p>
-                    </button>
-                    <button data-view="tools" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 mb-4 text-app-brand">
-                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-                        </svg>
-                        <h3 class="text-xl font-header font-bold">Tools</h3>
-                        <p class="text-app-secondary/80 text-sm">Calculators, Water, Social</p>
-                    </button>
-                    <button data-view="settings" class="main-nav-btn card p-6 rounded-lg text-center hover:shadow-lg transition-shadow btn flex flex-col items-center justify-center">
-                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 mb-4 text-app-brand">
-                            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.4l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2.4l.15.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                        <h3 class="text-xl font-header font-bold">Settings</h3>
-                        <p class="text-app-secondary/80 text-sm">Configure your app</p>
-                    </button>
-                </div>
-
-                <div id="low-stock-card" class="card p-6 rounded-lg mb-6 hidden">
-                     <h3 class="text-xl font-header font-bold mb-2 text-red-500">Low Stock Alerts</h3>
-                     <ul id="low-stock-list" class="list-disc pl-5 text-app-secondary">
-                        <!-- Content injected by JS -->
-                     </ul>
-                </div>
-
+    <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 80vh;">
+        
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="card p-3 text-center border-l-4 border-app-brand">
+                <p class="text-xs text-app-secondary uppercase font-bold">Fermenting</p>
+                <p id="stat-active-batches" class="text-2xl font-header font-bold text-app-primary">--</p>
+            </div>
+            <div class="card p-3 text-center border-l-4 border-blue-500">
+                <p class="text-xs text-app-secondary uppercase font-bold">In Cellar</p>
+                <p id="stat-bottles" class="text-2xl font-header font-bold text-app-primary">--</p>
+            </div>
+            <div class="card p-3 text-center border-l-4 border-action">
+                <p class="text-xs text-app-secondary uppercase font-bold">Spent</p>
+                <p id="stat-spent" class="text-xl font-header font-bold text-app-primary">--</p>
             </div>
         </div>
+
+        <div id="current-brew-card" class="card p-6 rounded-lg mb-6 hidden border-2 border-app-brand/20 bg-app-tertiary">
+            </div>
+
+        <div id="next-action-widget" class="card p-6 rounded-lg mb-6 hidden border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-900/10">
+            <h3 class="text-xl font-header font-bold mb-3 text-app-header flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                What's next?
+            </h3>
+            <ul id="next-action-list" class="list-disc pl-5 space-y-2 text-app-secondary"></ul>
+        </div>
+
+        <div id="low-stock-card" class="card p-4 rounded-lg mb-6 hidden bg-red-50 dark:bg-red-900/10 border border-red-200">
+             <h3 class="text-md font-bold mb-2 text-red-600 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                Low Stock Alerts
+             </h3>
+             <ul id="low-stock-list" class="list-disc pl-5 text-sm text-app-secondary"></ul>
+        </div>
+
+        <h3 class="text-sm font-bold text-app-secondary uppercase mb-3 ml-1">Quick Access</h3>
+        <div class="grid grid-cols-4 gap-3 mb-4">
+            <button data-view="brewing" class="main-nav-btn card p-3 rounded-lg text-center hover:shadow-md transition-all btn flex flex-col items-center justify-center gap-1 bg-app-primary hover:bg-white">
+                <svg class="w-6 h-6 text-app-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                <span class="text-xs font-bold">Brew</span>
+            </button>
+            <button data-view="management" class="main-nav-btn card p-3 rounded-lg text-center hover:shadow-md transition-all btn flex flex-col items-center justify-center gap-1 bg-app-primary hover:bg-white">
+                <svg class="w-6 h-6 text-app-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                <span class="text-xs font-bold">Manage</span>
+            </button>
+            <button data-view="tools" class="main-nav-btn card p-3 rounded-lg text-center hover:shadow-md transition-all btn flex flex-col items-center justify-center gap-1 bg-app-primary hover:bg-white">
+                <svg class="w-6 h-6 text-app-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span class="text-xs font-bold">Tools</span>
+            </button>
+            <button data-view="settings" class="main-nav-btn card p-3 rounded-lg text-center hover:shadow-md transition-all btn flex flex-col items-center justify-center gap-1 bg-app-primary hover:bg-white">
+                <svg class="w-6 h-6 text-app-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                <span class="text-xs font-bold">Settings</span>
+            </button>
+        </div>
+
+    </div>
+</div>
 
         <div id="brewing-main-view" class="hidden">
     <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
@@ -2999,6 +3043,7 @@ Now, generate the world-class recipe based on the following user request:
                     updateCostAnalysis();
                     renderActiveBrewTimeline();
                     updateNextActionWidget();
+                    updateDashboardStats();
                 }, (error) => {
                     console.error("Error loading history: ", error);
                     historyList.innerHTML = `<p class="text-red-500">Could not load brew history.</p>`;
@@ -3784,6 +3829,7 @@ window.regenerateFlavorProfile = async function() {
         renderInventory();
         updateCostAnalysis();
         updateNextActionWidget(); // Update dashboard with potential expiry warnings
+        updateDashboardStats();
     }, (error) => {
         console.error("Error loading inventory: ", error);
         inventoryList.innerHTML = `<p class="text-red-500">Could not load inventory.</p>`;
@@ -4193,6 +4239,7 @@ window.renderInventory = function() {
                     }
                     renderCellar();
                     updateNextActionWidget();
+                    updateDashboardStats();
                 }, (error) => {
                     console.error("Error loading cellar: ", error);
                     document.getElementById('cellar-list').innerHTML = `<p class="text-red-500">Could not load cellar.</p>`;
@@ -5230,6 +5277,37 @@ function renderActiveBrewTimeline() {
     `;
 
     card.classList.remove('hidden');
+}
+
+// --- NIEUWE FUNCTIE: UPDATE DASHBOARD STATS ---
+function updateDashboardStats() {
+    // 1. Active Batches: Alles wat een startdatum heeft maar niet gebotteld is
+    const activeCount = brews.filter(b => b.logData && b.logData.brewDate && !b.isBottled).length;
+    const activeEl = document.getElementById('stat-active-batches');
+    if(activeEl) activeEl.textContent = activeCount;
+
+    // 2. Bottles in Cellar: Tel alle flessen in alle batches op
+    let totalBottles = 0;
+    if (cellar && cellar.length > 0) {
+        cellar.forEach(item => {
+            if (item.bottles) {
+                totalBottles += item.bottles.reduce((acc, b) => acc + (parseInt(b.quantity) || 0), 0);
+            }
+        });
+    }
+    const bottlesEl = document.getElementById('stat-bottles');
+    if(bottlesEl) bottlesEl.textContent = totalBottles;
+
+    // 3. Total Spent: Totale waarde van de inventaris
+    let totalSpent = 0;
+    if (inventory && inventory.length > 0) {
+        totalSpent = inventory.reduce((acc, item) => acc + (parseFloat(item.price) || 0), 0);
+    }
+    const currency = userSettings.currencySymbol || '€';
+    const spentEl = document.getElementById('stat-spent');
+    
+    // We ronden af voor een netter getal op het dashboard
+    if(spentEl) spentEl.textContent = `${currency}${Math.round(totalSpent)}`;
 }
 
             function updateNextActionWidget() {

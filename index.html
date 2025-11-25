@@ -19,566 +19,290 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        :root {
-            --bg-primary: #f3f0e9;
-            --bg-secondary: #fdfaf2;
-            --bg-tertiary: #ffffff;
-            --text-primary: #4a3c2c;
-            --text-secondary: #5a4a3a;
-            --border-color: #dcd0c0;
-            --accent-color: #a89a87;
-            --header-color: #4a3c2c;
-            --brand-color: #8F8C79;
-            --action-color: #b45309;
-            --danger-color: #ef4444;
-            --success-color: #22c55e;
-            --info-color: #3b82f6;
-        }
-
-        .dark {
-            --bg-primary: #000000;        /* ECHT ZWART: voor de hoofdachtergrond */
-            --bg-secondary: #121212;      /* BIJNA ZWART: voor panelen en achtergronden */
-            --bg-tertiary: #1e1e1e;       /* DONKERGRIJS: voor kaarten en knoppen */
-            --text-primary: #e0e0e0;      /* Iets zachter wit voor minder hard contrast */
-            --text-secondary: #b3b3b3;    /* Leesbaar secundair grijs */
-            --border-color: #2e2e2e;      /* Subtiele randen */
-            --accent-color: #c7c4b6; 
-            --header-color: #ffffff;
-            --brand-color: #adaa9a; 
-            --action-color: #f59e0b; 
-            --danger-color: #f87171;
-            --success-color: #4ade80;
-            --info-color: #60a5fa;
-        }
-
-        .dark input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            cursor: pointer;
-        }
-
-        .dark .bg-app-primary input, .dark .bg-app-primary select {
-            background-color: var(--bg-tertiary);
-        }
-
-        .orientation-btn.active {
-            border-color: var(--color-app-brand);
-            border-width: 2px;
-            color: var(--color-app-brand);
-        }
-
-        #label-preview.horizontal {
-            transform-origin: center;
-            transform: rotate(90deg) scale(0.7);
-        }
-        #label-preview.horizontal > * {
-            transform: rotate(-90deg);
-            width: 250px;
-        }
-        #label-preview.horizontal h3 {
-            font-size: 1.4rem;
-        }
-        #label-preview.horizontal p {
-            font-size: 0.7rem;
-        }
-        #label-preview.horizontal #label-details-container,
-        #label-preview.horizontal #label-allergens-container {
-            font-size: 0.6rem;
-        }
-
-        // Roteer de inhoud van het label mee
-        #label-preview.horizontal > * {
-            transform: rotate(-90deg);
-        }
-
-        body {
-            font-family: 'Barlow Semi Condensed', sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            transition: background-color 0.3s, color 0.3s;
-        }
-        .bg-app-primary { background-color: var(--bg-primary); }
-        .bg-app-secondary { background-color: var(--bg-secondary); }
-        .bg-app-tertiary { background-color: var(--bg-tertiary); }
-        .text-app-primary { color: var(--text-primary); }
-        .text-app-secondary { color: var(--text-secondary); }
-        .border-app { border-color: var(--border-color); }
-        .text-app-header { color: var(--header-color); }
-        .text-app-brand { color: var(--brand-color); }
-        .bg-app-action { background-color: var(--action-color); }
-        .tab.active { border-bottom-color: var(--brand-color); color: var(--brand-color); }
-        .sub-tab.active { background-color: var(--brand-color); color: var(--bg-secondary); }
-
-
-        .font-header {
-            font-family: 'Barlow Semi Condensed', sans-serif;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-        }
-        .control-panel::-webkit-scrollbar, main::-webkit-scrollbar, .inventory-panel::-webkit-scrollbar, .calculator-panel::-webkit-scrollbar, .settings-panel::-webkit-scrollbar {
-            width: 8px;
-        }
-        .control-panel::-webkit-scrollbar-track, main::-webkit-scrollbar-track, .inventory-panel::-webkit-scrollbar-track, .calculator-panel::-webkit-scrollbar-track, .settings-panel::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-        .control-panel::-webkit-scrollbar-thumb, main::-webkit-scrollbar-thumb, .inventory-panel::-webkit-scrollbar-thumb, .calculator-panel::-webkit-scrollbar-thumb, .settings-panel::-webkit-scrollbar-thumb {
-            background-color: var(--accent-color);
-            border-radius: 10px;
-            border: 2px solid var(--bg-secondary);
-        }
-        /* Verberg scrollbar voor Chrome, Safari en Opera */
-        .overflow-x-auto::-webkit-scrollbar {
-          display: none;
-        }
-        /* Verberg scrollbar voor IE, Edge en Firefox */
-        .overflow-x-auto {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
-        }
-/* --- ALGEMENE RECEPT STIJL (Unified Look) --- */
-
-/* 1. Koppen (H2, H3) in dezelfde stijl als de tabel-header */
-.recipe-content h2, 
-.recipe-content h3 {
-    font-family: 'Barlow Semi Condensed', sans-serif;
-    color: var(--brand-color); /* De accentkleur */
-    border-bottom: 2px solid var(--border-color);
-    padding-bottom: 0.5rem;
-    margin-top: 2rem;
-    margin-bottom: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.recipe-content h2 { font-size: 1.8rem; border-bottom-width: 3px; }
-.recipe-content h3 { font-size: 1.4rem; color: var(--text-primary); }
-
-/* 2. "Kaarten" voor tekstblokken (Instructies, Notes) */
-/* We zorgen dat paragrafen en lijsten eruit springen als nette blokken */
-.recipe-content p, 
-.recipe-content ul, 
-.recipe-content ol {
-    background-color: var(--bg-tertiary);
-    padding: 1rem 1.5rem;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    margin-bottom: 1rem;
-    line-height: 1.7;
-}
-
-/* 3. Lijsten (Stappenplan) mooier maken */
-.recipe-content ol {
-    list-style: none; /* Verberg standaard nummers */
-    counter-reset: recipe-counter;
-}
-
-.recipe-content ol li {
-    counter-increment: recipe-counter;
-    position: relative;
-    padding-left: 2rem;
-    margin-bottom: 1rem;
-}
-
-/* Custom nummers voor de stappen */
-.recipe-content ol li::before {
-    content: counter(recipe-counter);
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 1.5rem;
-    height: 1.5rem;
-    background-color: var(--brand-color);
-    color: #fff;
-    border-radius: 50%;
-    text-align: center;
-    line-height: 1.5rem;
-    font-size: 0.8rem;
-    font-weight: bold;
-}
-
-/* Bolletjes lijsten (bijv. notities) */
-.recipe-content ul {
-    list-style: none;
-}
-
-.recipe-content ul li {
-    position: relative;
-    padding-left: 1.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.recipe-content ul li::before {
-    content: "•";
-    position: absolute;
-    left: 0;
-    color: var(--brand-color);
-    font-weight: bold;
-    font-size: 1.2rem;
-    line-height: 1.5rem;
-}
-
-/* 4. De Tabel (die je al mooi vond, iets aangescherpt) */
-.recipe-content table {
-    width: 100%;
-    border-collapse: separate; /* Nodig voor border-radius */
-    border-spacing: 0;
-    margin: 1.5rem 0;
-    background-color: var(--bg-tertiary);
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-}
-
-.recipe-content th {
-    background-color: var(--text-primary); /* Donkerder voor contrast */
-    color: var(--bg-primary);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 12px 15px;
-    text-align: left;
-}
-
-.recipe-content td {
-    padding: 12px 15px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.recipe-content tr:last-child td {
-    border-bottom: none;
-}
-
-/* Zebra striping voor leesbaarheid */
-.recipe-content tr:nth-child(even) {
-    background-color: rgba(0, 0, 0, 0.02);
-}
-.dark .recipe-content tr:nth-child(even) {
-    background-color: rgba(255, 255, 255, 0.03);
-}
-
-/* Dark mode specifieke aanpassingen */
-.dark .recipe-content p, 
-.dark .recipe-content ul, 
-.dark .recipe-content ol {
-    background-color: var(--bg-secondary); /* Iets donkerder in dark mode */
-    border-color: var(--border-color);
-}
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--accent-color);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 2rem auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .brew-log-section { padding-top: 1rem; }
-        .brew-log-section h3 {
-             font-family: 'Barlow Semi Condensed', sans-serif;
-             font-weight: 600;
-             font-size: 1.5rem;
-             text-align: center;
-             border-bottom: 2px solid var(--text-primary);
-             padding-bottom: 0.5rem;
-             margin-bottom: 1rem;
-        }
-        .brew-log-section .log-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-         .brew-log-section .log-item label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-        .brew-log-section .log-item input, .brew-log-section .log-item textarea {
-            width: 100%; padding: 8px; border: none;
-            border-bottom: 1px solid var(--border-color);
-            border-radius: 0; background-color: transparent;
-            font-family: 'Barlow Semi Condensed', sans-serif;
-            transition: border-color 0.3s;
-            color: var(--text-primary);
-        }
-        .brew-log-section .log-item input:focus, .brew-log-section .log-item textarea:focus {
-            outline: none; border-bottom: 1px solid var(--accent-color);
-        }
-        .fermentation-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        .fermentation-table th, .fermentation-table td { border: 1px solid var(--border-color); padding: 8px; text-align: left; }
-        .fermentation-table th { background-color: var(--bg-primary); }
-        .fermentation-table input { width: 100%; border: none; background: transparent; padding: 4px; color: var(--text-primary); }
+    /* --- 1. VARIABLES & THEME SETUP --- */
+    :root {
+        --bg-primary: #f4f1ea;       /* Iets warmer wit/grijs (Paper) */
+        --bg-secondary: #ffffff;     /* Puur wit voor panelen */
+        --bg-tertiary: #f9f9f7;      /* Zeer licht grijs voor inputs/sub-kaarten */
+        --text-primary: #2d2a26;     /* Bijna zwart (Charcoal) */
+        --text-secondary: #6b655d;   /* Midden grijs */
+        --border-color: #e0dbd0;     /* Zachte rand */
         
-        .tab {
-            transition: color 0.2s, border-color 0.2s;
-            padding: 10px 16px; /* Added padding for spacing */
-        }
+        /* Brand Colors */
+        --brand-color: #8F8C79;      /* Jouw Olive/Grey brand kleur */
+        --brand-dark: #6e6b5c;       /* Donkere variant voor hover */
+        --action-color: #b45309;     /* Amber/Oranje voor acties */
         
-        .btn {
-            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .dark .btn:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-
-        .card {
-            background-color: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-        }
-
-        /* Theme Toggle Slider */
-        .theme-switch-wrapper {
-            display: flex;
-            align-items: center;
-        }
-        .theme-switch {
-            display: inline-block;
-            height: 34px;
-            position: relative;
-            width: 60px;
-        }
-        .theme-switch input {
-            display:none;
-        }
-        .slider {
-            background-color: #ccc;
-            bottom: 0;
-            cursor: pointer;
-            left: 0;
-            position: absolute;
-            right: 0;
-            top: 0;
-            transition: .4s;
-        }
-        .slider:before {
-            background-color: #fff;
-            bottom: 4px;
-            content: "";
-            height: 26px;
-            left: 4px;
-            position: absolute;
-            transition: .4s;
-            width: 26px;
-        }
-        input:checked + .slider {
-            background-color: var(--brand-color);
-        }
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-        .slider.round {
-            border-radius: 34px;
-        }
-        .slider.round:before {
-            border-radius: 50%;
-        }
-
-        #social-content-container, 
-        #social-content-container code, 
-        #social-content-container pre {
-            font-family: 'Barlow Semi Condensed', sans-serif;
-        }
-        #social-content-container h1, 
-        #social-content-container h2, 
-        #social-content-container h3 {
-            font-weight: 600;
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
-        }
-        #social-content-container h2 { font-size: 1.5rem; }
-        #social-content-container h3 { font-size: 1.25rem; }
-        #social-content-container p { line-height: 1.6; margin-bottom: 1rem; }
-        #social-content-container strong { font-weight: 700; color: var(--text-primary); }
-        #social-content-container ul, #social-content-container ol {
-            padding-left: 20px;
-            margin-bottom: 1rem;
-        }
-        #social-content-container li { 
-            margin-bottom: 0.5rem; 
-            line-height: 1.6; 
-        }
-        #social-content-container code, #social-content-container pre {
-             background-color: transparent;
-             padding: 0;
-             white-space: pre-wrap;
-        }
-
-        #label-preview { border: 2px dashed var(--border-color); transition: all 0.3s; }
-        /* --- LABEL STIJLEN --- */
-
-        /* Stijl 1: Minimalist (Standaard) */
-        .label-minimalist {
-            background-color: #ffffff !important; color: #121212 !important;
-            font-family: 'Barlow Semi Condensed', sans-serif; border: 1px solid #e0e0e0;
-        }
-        .label-minimalist h3 { font-weight: 300; font-size: 2rem; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 0.5rem; }
-        .label-minimalist p { font-weight: 600; color: #8F8C79; font-size: 0.9rem; letter-spacing: 2px; }
-        .label-minimalist #label-details-container { border-top: 1px solid #e0e0e0; font-size: 0.8rem; color: #888; }
-
-        /* Stijl 2: Industrial */
-        .label-industrial {
-            background: #FFF !important; color: #121212 !important;
-            font-family: monospace; border: 1px solid #121212; text-align: left;
-        }
-        .label-industrial h3 { font-weight: bold; font-size: 1.5rem; background-color: #121212; color: #ffffff; padding: 0.25rem 0.5rem; display: inline-block; margin-bottom: 0.5rem; }
-        .label-industrial p { font-size: 0.8rem; text-transform: uppercase; color: #555; }
-        .label-industrial #label-details-container { border-top: 2px solid #121212; color: #333; font-weight: bold; font-size: 0.9rem; }
+        --danger-color: #ef4444;
+        --success-color: #22c55e;
+        --info-color: #3b82f6;
         
-        /* Stijl 3: Professional */
-        .label-professional {
-            background-color: #ffffff !important; color: #2b2118 !important;
-            font-family: serif; border: 4px double #2b2118;
-        }
-        .label-professional h3 { font-size: 2.2rem; font-weight: bold; }
-        .label-professional p { font-style: italic; font-size: 1.1rem; }
-        .label-professional #label-details-container { border-top: 1px solid #dcd0c0; font-size: 0.85rem; }
-        .label-professional .professional-only { display: flex !important; justify-content: space-between; margin-top: 0.25rem;}
+        /* Spacing & Radius */
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .dark {
+        --bg-primary: #0f0f0f;       /* Diep zwart */
+        --bg-secondary: #1a1a1a;     /* Donkergrijs panel */
+        --bg-tertiary: #262626;      /* Lichter grijs inputs */
+        --text-primary: #e5e5e5;     /* Off-white */
+        --text-secondary: #a3a3a3;
+        --border-color: #333333;
         
-        /* Algemene styling voor details */
-        .professional-only { display: none; }
-        #label-allergens-container { font-style: normal; font-size: 0.7rem; color: #666; }
+        --brand-color: #a3a08f;      /* Iets lichter voor contrast */
+        --brand-dark: #8F8C79;
+        --action-color: #d97706;
+    }
 
-        .timeline-container {
-            position: relative;
-            display: flex;
-            justify-content: space-between;
-            padding: 1rem 0;
-        }
-        .timeline-connector {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background-color: var(--border-color);
-            transform: translateY(-50%);
-            z-index: 1;
-        }
-        .timeline-progress {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            background-color: var(--brand-color);
-            transition: width 0.5s ease-in-out;
-        }
-        .timeline-item {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 25%; /* 4 items */
-        }
-        .timeline-node {
-            width: 20px;
-            height: 20px;
-            background-color: var(--bg-tertiary);
-            border: 4px solid var(--border-color);
-            border-radius: 50%;
-            transition: all 0.3s;
-        }
-        .timeline-item.active .timeline-node {
-            background-color: var(--brand-color);
-            border-color: var(--brand-color);
-        }
-        .timeline-label {
-            margin-top: 0.75rem;
-            font-size: 0.8rem;
-            text-align: center;
-            font-weight: 600;
-        }
-        .timeline-item.active .timeline-label {
-            color: var(--text-primary);
-        }
-        .timeline-item .timeline-label {
-            color: var(--text-secondary);
-        }
+    body {
+        font-family: 'Barlow Semi Condensed', sans-serif;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        transition: background-color 0.3s, color 0.3s;
+        line-height: 1.6;
+    }
 
-        .step-item {
-            border-left: 3px solid var(--border-color);
-            transition: all 0.3s;
-        }
-        .step-item.active {
-            border-left-color: var(--brand-color);
-            background-color: var(--bg-primary);
-        }
-        .step-item.completed {
-            border-left-color: var(--success-color);
-            opacity: 0.6;
-        }
-        .step-item.completed .step-title {
-            text-decoration: line-through;
-        }
-        .step-title {
-            font-weight: 600;
-            font-size: 1.1rem;
-        }
-        .timer-display {
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-        }
-        .progress-bar-bg {
-            background-color: var(--border-color);
-        }
-        .progress-bar-fg {
-            background-color: var(--brand-color);
-            transition: width 0.5s ease-in-out;
-        }
-        /* EINDE: STYLES FOR BREW DAY TIMER */
+    /* --- 2. TYPOGRAPHY (UNIFIED) --- */
+    /* Alle koppen krijgen nu de 'Recipe Style' */
+    h1, h2, h3, h4, .font-header {
+        font-family: 'Barlow Semi Condensed', sans-serif;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-primary);
+    }
 
-        /* --- FIX VOOR WITTE INPUT VELDEN IN DARK MODE --- */
-        /* Target alle inputs/textareas BEHALVE readonly */
-        .dark .brew-log-section .log-item input:not([readonly]),
-        .dark .brew-log-section .log-item textarea,
-        .dark .fermentation-table input {
-            background-color: transparent !important; /* Forceer transparant */
-            color: var(--text-primary); /* Forceer lichte tekst */
-        }
+    h1 { font-size: 2.5rem; line-height: 1.1; }
+    h2 { font-size: 1.75rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; }
+    h3 { font-size: 1.25rem; margin-bottom: 1rem; color: var(--brand-color); }
+
+    .text-app-secondary { color: var(--text-secondary) !important; }
+    .text-app-brand { color: var(--brand-color) !important; }
+
+    /* --- 3. CARDS & CONTAINERS --- */
+    /* Maak alle vlakken consistent */
+    .card, .bg-app-secondary {
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    /* Specifiek voor dashboard knoppen */
+    button.card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-color: var(--brand-color);
+    }
+
+    /* --- 4. FORMS & INPUTS (MODERN) --- */
+    input[type="text"], input[type="number"], input[type="date"], 
+    input[type="password"], select, textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        background-color: var(--bg-tertiary);
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 1rem;
+        transition: all 0.2s;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: var(--brand-color);
+        background-color: var(--bg-secondary);
+        box-shadow: 0 0 0 3px rgba(143, 140, 121, 0.15); /* Glow effect */
+    }
+
+    /* Dark mode fixes voor inputs */
+    .dark input, .dark select, .dark textarea {
+        background-color: var(--bg-tertiary) !important;
+        color: var(--text-primary) !important;
+    }
+    
+    /* Fix voor browser autofill (witte achtergrond) */
+    .dark input:-webkit-autofill {
+        -webkit-box-shadow: 0 0 0 30px var(--bg-tertiary) inset !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
+    }
+
+    /* --- 5. BUTTONS --- */
+    .btn {
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-radius: var(--radius-md);
+        padding: 10px 20px;
+        transition: all 0.2s;
+        cursor: pointer;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    /* --- 6. TABLES (RECIPE STYLE EVERYWHERE) --- */
+    /* Dit trekt de stijl door naar Logs, Inventaris tabellen, etc. */
+    table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin: 1rem 0;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+    }
+
+    th {
+        background-color: var(--text-primary); /* Dark header */
+        color: var(--bg-primary); /* Light text */
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        padding: 12px 16px;
+        text-align: left;
+        letter-spacing: 0.05em;
+    }
+
+    td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.95rem;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) { background-color: rgba(0,0,0,0.02); }
+    .dark tr:nth-child(even) { background-color: rgba(255,255,255,0.03); }
+
+    /* Specifiek voor de fermentation log inputs binnen een tabel */
+    table input {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 4px 0 !important;
+        border-radius: 0 !important;
+    }
+    table input:focus {
+        box-shadow: none !important;
+        border-bottom: 2px solid var(--brand-color) !important;
+    }
+
+    /* --- 7. NAVIGATION TABS --- */
+    .sub-tab {
+        padding: 8px 16px;
+        border-radius: 20px; /* Pill shape */
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        background-color: transparent;
+        border: 1px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .sub-tab:hover {
+        background-color: var(--bg-tertiary);
+        color: var(--text-primary);
+    }
+
+    .sub-tab.active {
+        background-color: var(--text-primary);
+        color: var(--bg-primary);
+        border-color: var(--text-primary);
+    }
+    
+    .dark .sub-tab.active {
+        background-color: var(--brand-color);
+        color: #000;
+        border-color: var(--brand-color);
+    }
+
+    /* --- 8. RECIPE CONTENT SPECIFICS (Behouden van vorige stap) --- */
+    .recipe-content h2, .recipe-content h3 { color: var(--brand-color); margin-top: 2rem; }
+    .recipe-content h2 { border-bottom: 2px solid var(--border-color); }
+    .recipe-content p, .recipe-content ul, .recipe-content ol {
+        background-color: var(--bg-tertiary);
+        padding: 1rem 1.5rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-color);
+        margin-bottom: 1rem;
+    }
+    .recipe-content ol { list-style: none; counter-reset: recipe-counter; }
+    .recipe-content ol li { counter-increment: recipe-counter; position: relative; padding-left: 2.5rem; }
+    .recipe-content ol li::before {
+        content: counter(recipe-counter);
+        position: absolute; left: 0; top: 0;
+        width: 1.8rem; height: 1.8rem;
+        background-color: var(--brand-color); color: #fff;
+        border-radius: 50%; text-align: center; line-height: 1.8rem; font-weight: bold;
+    }
+
+    /* --- 9. UTILITIES & MOBILE --- */
+    .hidden { display: none !important; }
+    
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--brand-color); }
+    
+    .loader {
+        border: 3px solid var(--bg-tertiary);
+        border-top: 3px solid var(--brand-color);
+        border-radius: 50%;
+        width: 30px; height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 2rem auto;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+        h1 { font-size: 2rem; }
+        .card { padding: 1rem !important; } /* Minder padding op mobiel */
+        input, select, textarea { font-size: 16px !important; } /* Zoom fix */
+        th, td { padding: 8px 10px; font-size: 0.85rem; } /* Compactere tabellen */
         
-        /* Fix voor browser autofill (die een witte achtergrond forceert) */
-        .dark input:-webkit-autofill,
-        .dark input:-webkit-autofill:hover, 
-        .dark input:-webkit-autofill:focus,
-        .dark input:-webkit-autofill:active {
-            -webkit-box-shadow: 0 0 0 30px var(--bg-tertiary) inset !important; /* Gebruik een donkere kleur */
-            -webkit-text-fill-color: var(--text-primary) !important; /* Lichte tekst */
-            border-color: var(--border-color) !important; /* Zorg dat de border klopt */
+        /* Sticky headers voor lange lijsten */
+        .inventory-panel th, .fermentation-table th {
+            position: sticky; top: 0; z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        /* Maak knoppen in lijsten makkelijker te raken op touchscreens */
-        @media (max-width: 768px) {
-            td button, .card button {
-            padding: 8px 12px !important; /* Groter raakvlak */
-            margin-bottom: 4px;
-        }
-        /* Zorg dat de inputs in de log-tabel niet te klein zijn (voorkomt inzoomen op iPhone) */
-        input, select, textarea {
-            font-size: 16px !important; 
-       }
-       .fermentation-table th { 
-           background-color: var(--bg-primary); 
-           position: sticky; /* Plakkerig */
-           top: 0;           /* Bovenaan */
-           z-index: 10;      /* Boven de inhoud */
-           box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* Klein schaduwlijntje */
-       }
-   }
+    }
+    
+    /* Label Preview Styles (Behouden) */
+    #label-preview { transition: all 0.3s; }
+    .label-minimalist { background: #fff; color: #000; border: 1px solid #ccc; font-family: sans-serif; }
+    .label-industrial { background: #fff; color: #000; border: 2px solid #000; font-family: monospace; }
+    .label-professional { background: #fff; color: #2b2118; border: 4px double #2b2118; font-family: serif; }
+    
+    /* Timeline Styles (Behouden) */
+    .timeline-container { position: relative; display: flex; justify-content: space-between; padding: 1rem 0; }
+    .timeline-connector { position: absolute; top: 50%; left: 0; right: 0; height: 4px; background: var(--border-color); transform: translateY(-50%); z-index: 1; }
+    .timeline-progress { position: absolute; top: 0; left: 0; height: 100%; background: var(--brand-color); transition: width 0.5s; }
+    .timeline-item { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; width: 25%; }
+    .timeline-node { width: 20px; height: 20px; background: var(--bg-tertiary); border: 4px solid var(--border-color); border-radius: 50%; }
+    .timeline-item.active .timeline-node { background: var(--brand-color); border-color: var(--brand-color); }
+    .timeline-label { margin-top: 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
+    .timeline-item.active .timeline-label { color: var(--text-primary); }
+    
+    /* Toggle Switch */
+    .theme-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+    .theme-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: var(--brand-color); }
+    input:checked + .slider:before { transform: translateX(24px); }
+
 </style>
     <!-- Service Worker Registration -->
     <script>

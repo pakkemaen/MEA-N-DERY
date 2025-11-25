@@ -157,6 +157,45 @@
         .recipe-content th, .recipe-content td {
             padding: 0.25rem 0.75rem; /* Voegt consistente opvulling toe aan alle cellen */
         }
+        /* --- MOOIERE TABELLEN VOOR RECEPTEN --- */
+.recipe-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.95rem;
+    background-color: var(--bg-tertiary); /* Achtergrond kleur van de tabel */
+    border-radius: 8px;
+    overflow: hidden; /* Zorgt dat ronde hoeken werken */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.recipe-content th {
+    background-color: var(--brand-color);
+    color: #ffffff; /* Witte tekst op de header */
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 15px;
+    text-align: left;
+}
+
+.recipe-content td {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Om en om een andere kleur regel (zebra striping) */
+.recipe-content tr:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+.dark .recipe-content tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Laatste lijn geen randje */
+.recipe-content tr:last-child td {
+    border-bottom: none;
+}
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid var(--accent-color);
@@ -2222,8 +2261,9 @@ function refreshCurrentChecklistView() {
     themeToggle.addEventListener('change', (e) => applyTheme(e.target.checked ? 'dark' : 'light'));
     exportHistoryBtn.addEventListener('click', exportHistory);
     exportInventoryBtn.addEventListener('click', exportInventory);
-    importHistoryFile.addEventListener('change', importHistory);
-    importInventoryFile.addEventListener('change', importInventory);
+    // We gebruiken een anonieme functie om de generieke 'importData' aan te roepen met het juiste type
+    importHistoryFile.addEventListener('change', (e) => importData(e, 'brews'));
+    importInventoryFile.addEventListener('change', (e) => importData(e, 'inventory'));
     clearHistoryBtn.addEventListener('click', clearHistory);
     clearInventoryBtn.addEventListener('click', clearInventory);
     
@@ -2590,26 +2630,38 @@ async function clearInventory() {
 }
 
 async function generateRecipe() {
-                recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is thinking ... relax while your custom recipe is being crafted.</p>';
-                generateBtn.disabled = true;
-                generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                currentPredictedProfile = null;
-            
-                try {
-                    const prompt = buildPrompt();
-                    lastGeneratedPrompt = prompt;
-                    currentRecipeMarkdown = await performApiCall(prompt); // 1. Sla het resultaat op
-                    
-                    await renderRecipeOutput(currentRecipeMarkdown); // 2. Roep de nieuwe render-functie aan
-            
-                } catch (error) {
-                    console.error("Error calling Gemini API:", error);
-                    recipeOutput.innerHTML = `<p class="text-center text-red-600 font-bold">Sorry, your buddy is busy. Please try again.</p><p class="text-center text-sm text-app-secondary/80">${error.message}</p>`;
-                } finally {
-                    generateBtn.disabled = false;
-                    generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                }
-            }
+    recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is thinking ... relax while your custom recipe is being crafted.</p>';
+    generateBtn.disabled = true;
+    generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    currentPredictedProfile = null;
+
+    try {
+        const prompt = buildPrompt();
+        lastGeneratedPrompt = prompt;
+        
+        // 1. Haal het ruwe antwoord op
+        let rawResponse = await performApiCall(prompt); 
+        
+        // 2. SCHOONMAAK ACTIE: Verwijder Markdown code blocks (```markdown ... ```)
+        let cleanedResponse = rawResponse.trim();
+        if (cleanedResponse.startsWith("```markdown")) {
+            cleanedResponse = cleanedResponse.substring(11, cleanedResponse.lastIndexOf("```"));
+        } else if (cleanedResponse.startsWith("```")) {
+            cleanedResponse = cleanedResponse.substring(3, cleanedResponse.lastIndexOf("```"));
+        }
+        
+        currentRecipeMarkdown = cleanedResponse.trim(); // Sla de schone versie op
+
+        await renderRecipeOutput(currentRecipeMarkdown); 
+
+    } catch (error) {
+        console.error("Error calling Gemini API:", error);
+        recipeOutput.innerHTML = `<p class="text-center text-red-600 font-bold">Sorry, your buddy is busy. Please try again.</p><p class="text-center text-sm text-app-secondary/80">${error.message}</p>`;
+    } finally {
+        generateBtn.disabled = false;
+        generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+}
 
 // --- NIEUWE FUNCTIE: Creative Title Generator (Persona Based) ---
 async function generateAndInjectCreativeTitle(markdown) {

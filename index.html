@@ -134,44 +134,105 @@
           -ms-overflow-style: none;  /* IE and Edge */
           scrollbar-width: none;  /* Firefox */
         }
-        .recipe-content h1, .recipe-content h2, .recipe-content h3 {
-            font-family: 'Barlow Semi Condensed', sans-serif;
-            font-weight: 600;
-            margin-top: 1.5rem;
-            margin-bottom: 0.75rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.25rem;
-        }
-        .recipe-content h2 { font-size: 1.5rem; }
-        .recipe-content h3 { font-size: 1.25rem; }
-        .recipe-content ul, .recipe-content ol {
-            padding-left: 20px;
-            margin-bottom: 1rem;
-        }
-        .recipe-content p { line-height: 1.7; margin-bottom: 1.25rem; }
-        .recipe-content li { margin-bottom: 0.75rem; line-height: 1.6; }
-        .recipe-content strong { font-weight: 600; color: var(--text-primary); }
-        .recipe-content th:nth-child(2) {
-            padding-right: 2rem; /* Voegt extra ruimte toe na de "Quantity" kolomkop */
-        }
-        .recipe-content th, .recipe-content td {
-            padding: 0.25rem 0.75rem; /* Voegt consistente opvulling toe aan alle cellen */
-        }
-        /* --- MOOIERE TABELLEN VOOR RECEPTEN --- */
+/* --- ALGEMENE RECEPT STIJL (Unified Look) --- */
+
+/* 1. Koppen (H2, H3) in dezelfde stijl als de tabel-header */
+.recipe-content h2, 
+.recipe-content h3 {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    color: var(--brand-color); /* De accentkleur */
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.recipe-content h2 { font-size: 1.8rem; border-bottom-width: 3px; }
+.recipe-content h3 { font-size: 1.4rem; color: var(--text-primary); }
+
+/* 2. "Kaarten" voor tekstblokken (Instructies, Notes) */
+/* We zorgen dat paragrafen en lijsten eruit springen als nette blokken */
+.recipe-content p, 
+.recipe-content ul, 
+.recipe-content ol {
+    background-color: var(--bg-tertiary);
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    margin-bottom: 1rem;
+    line-height: 1.7;
+}
+
+/* 3. Lijsten (Stappenplan) mooier maken */
+.recipe-content ol {
+    list-style: none; /* Verberg standaard nummers */
+    counter-reset: recipe-counter;
+}
+
+.recipe-content ol li {
+    counter-increment: recipe-counter;
+    position: relative;
+    padding-left: 2rem;
+    margin-bottom: 1rem;
+}
+
+/* Custom nummers voor de stappen */
+.recipe-content ol li::before {
+    content: counter(recipe-counter);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: var(--brand-color);
+    color: #fff;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 1.5rem;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+/* Bolletjes lijsten (bijv. notities) */
+.recipe-content ul {
+    list-style: none;
+}
+
+.recipe-content ul li {
+    position: relative;
+    padding-left: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.recipe-content ul li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--brand-color);
+    font-weight: bold;
+    font-size: 1.2rem;
+    line-height: 1.5rem;
+}
+
+/* 4. De Tabel (die je al mooi vond, iets aangescherpt) */
 .recipe-content table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate; /* Nodig voor border-radius */
+    border-spacing: 0;
     margin: 1.5rem 0;
-    font-size: 0.95rem;
-    background-color: var(--bg-tertiary); /* Achtergrond kleur van de tabel */
+    background-color: var(--bg-tertiary);
     border-radius: 8px;
-    overflow: hidden; /* Zorgt dat ronde hoeken werken */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
 .recipe-content th {
-    background-color: var(--brand-color);
-    color: #ffffff; /* Witte tekst op de header */
+    background-color: var(--text-primary); /* Donkerder voor contrast */
+    color: var(--bg-primary);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -180,21 +241,28 @@
 }
 
 .recipe-content td {
-    padding: 10px 15px;
+    padding: 12px 15px;
     border-bottom: 1px solid var(--border-color);
 }
 
-/* Om en om een andere kleur regel (zebra striping) */
+.recipe-content tr:last-child td {
+    border-bottom: none;
+}
+
+/* Zebra striping voor leesbaarheid */
 .recipe-content tr:nth-child(even) {
     background-color: rgba(0, 0, 0, 0.02);
 }
 .dark .recipe-content tr:nth-child(even) {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.03);
 }
 
-/* Laatste lijn geen randje */
-.recipe-content tr:last-child td {
-    border-bottom: none;
+/* Dark mode specifieke aanpassingen */
+.dark .recipe-content p, 
+.dark .recipe-content ul, 
+.dark .recipe-content ol {
+    background-color: var(--bg-secondary); /* Iets donkerder in dark mode */
+    border-color: var(--border-color);
 }
         .loader {
             border: 4px solid #f3f3f3;
@@ -1056,6 +1124,7 @@
                     <button id="water-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Water</button>
                     <button id="troubleshoot-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Troubleshoot</button>
                     <button id="social-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Social</button>
+                    <button id="library-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Library</button>
                 </nav>
             </div>
             
@@ -1404,6 +1473,78 @@
             <div id="social-content-container" class="mb-6"></div>
             <h3 class="text-2xl font-header font-bold mb-4">Generated Image</h3>
             <div id="social-image-container" class="p-4 card rounded-lg text-center"></div>
+        </div>
+    </div>
+</div>
+<div id="library-view" class="hidden mt-4">
+    <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 70vh;">
+        <h2 class="text-3xl font-header font-bold mb-6 text-center">The Mazer's Library</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="space-y-4">
+                <h3 class="text-xl font-header font-bold text-app-brand border-b border-app pb-2">Science & Process</h3>
+                
+                <div class="card p-4 rounded-lg hover:shadow-md transition-shadow">
+                    <h4 class="font-bold text-lg">Scott Labs Fermentation Handbook</h4>
+                    <p class="text-sm text-app-secondary mb-3">The absolute bible for yeast nutrition, rehydration, and fermentation protocols. Essential for TOSNA logic.</p>
+                    <a href="https://scottlab.com/content/files/Documents/Handbooks/FermentationHandbook2023.pdf" target="_blank" class="text-blue-600 hover:underline font-semibold text-sm flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Open PDF
+                    </a>
+                </div>
+
+                <div class="card p-4 rounded-lg hover:shadow-md transition-shadow">
+                    <h4 class="font-bold text-lg">The BOMM Protocol (Bray Denard)</h4>
+                    <p class="text-sm text-app-secondary mb-3">Scientific approach to making mead drinkable in one month. Focuses heavily on pH buffering and temperature control.</p>
+                    <a href="https://denardbrewing.com/blog/post/Start/" target="_blank" class="text-blue-600 hover:underline font-semibold text-sm flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                        Visit Website
+                    </a>
+                </div>
+
+                <div class="card p-4 rounded-lg hover:shadow-md transition-shadow">
+                    <h4 class="font-bold text-lg">UC Davis Mead Making Resources</h4>
+                    <p class="text-sm text-app-secondary mb-3">Academic papers and troubleshooting guides from the premier Enology university.</p>
+                    <a href="https://honey.ucdavis.edu/learn/mead-making" target="_blank" class="text-blue-600 hover:underline font-semibold text-sm flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                        Visit Website
+                    </a>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-xl font-header font-bold text-app-brand border-b border-app pb-2">Styles & Standards</h3>
+
+                <div class="card p-4 rounded-lg hover:shadow-md transition-shadow">
+                    <h4 class="font-bold text-lg">BJCP Mead Style Guidelines (2015)</h4>
+                    <p class="text-sm text-app-secondary mb-3">The official standard for categorizing mead. Learn the difference between a Melomel, Metheglin, and Open Category.</p>
+                    <a href="https://www.bjcp.org/style/2015/m1/" target="_blank" class="text-blue-600 hover:underline font-semibold text-sm flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                        Read Guidelines
+                    </a>
+                </div>
+
+                <div class="card p-4 rounded-lg hover:shadow-md transition-shadow">
+                    <h4 class="font-bold text-lg">GotMead? Forum</h4>
+                    <p class="text-sm text-app-secondary mb-3">The oldest and largest community of mead makers. Excellent for searching specific ingredient combinations.</p>
+                    <a href="https://gotmead.com/blog/forum/" target="_blank" class="text-blue-600 hover:underline font-semibold text-sm flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
+                        Visit Forum
+                    </a>
+                </div>
+                
+                <div class="card p-4 rounded-lg hover:shadow-md transition-shadow bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500">
+                    <h4 class="font-bold text-lg">MEA(N)DERY Best Practices</h4>
+                    <p class="text-sm text-app-secondary mb-2">Quick reminders for this app:</p>
+                    <ul class="list-disc pl-4 text-xs text-app-secondary space-y-1">
+                        <li>Always rehydrate dry yeast with Go-Ferm.</li>
+                        <li>Degas daily during the first 1/3 of fermentation.</li>
+                        <li>Add nutrients at 24h, 48h, 72h, and 1/3 break.</li>
+                        <li>Never boil your honey (unless making a Bochet).</li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -2823,7 +2964,8 @@ async function generateAndInjectCreativeTitle(markdown) {
                 generateAndInjectCreativeTitle(markdown);
             }
 
-            // --- NIEUWE FUNCTIE: TWEAK OPGESLAGEN RECEPT ---
+            // --- VERBETERDE FUNCTIE: TWEAK OPGESLAGEN RECEPT ---
+            // --- VERBETERDE FUNCTIE: TWEAK OPGESLAGEN RECEPT (UNIVERSELE HERBEREKENING) ---
             async function tweakUnsavedRecipe() {
                 const tweakRequest = document.getElementById('tweak-unsaved-request').value.trim();
                 if (!tweakRequest) {
@@ -2832,11 +2974,41 @@ async function generateAndInjectCreativeTitle(markdown) {
                 }
             
                 const tweakOutput = document.getElementById('tweak-unsaved-output');
-                tweakOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is tweaking...</p>';
+                tweakOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is recalculating the entire recipe...</p>';
                 const tweakBtn = document.getElementById('tweak-unsaved-btn');
                 tweakBtn.disabled = true;
             
-                const prompt = `You are an expert mead maker. A user wants to tweak the following original recipe based on their request.
+                // --- HIER ZIT DE MAGIE: DE UNIVERSELE DOMINO-REGEL ---
+                const logicInstructions = `
+                **SCIENTIFIC RE-CALCULATION (THE UNIVERSAL DOMINO RULE):**
+                You are a fermentation scientist. You must assume that changing ONE variable affects the WHOLE recipe. 
+                You MUST perform these checks before outputting:
+                
+                1.  **The Sugar/Gravity Link:** - If the user adds/removes Honey or Fruit -> You MUST recalculate the **Original Gravity (OG)** and **Nutrient Requirement** (Higher SG = More Nutrients needed).
+                    - If the user changes Target ABV -> You MUST adjust the **Honey** quantity to match.
+                
+                2.  **The Acidity/Buffer Link:**
+                    - If the user adds acidic Fruit (e.g., Lemon, Currants) -> You MUST check if the pH buffer (Potassium Carbonate) needs to increase.
+                    - If the user removes Fruit -> You might need to increase water to keep the volume correct.
+                
+                3.  **The Volume Link:**
+                    - If the user changes Batch Size -> You MUST scale **ALL** ingredients proportionally (Yeast, Nutrients, Honey, Water, Fruit).
+                
+                4.  **The Yeast Link:**
+                    - If Yeast changes -> Re-evaluate Temperature limits and Nutrient needs (Low/Med/High requirement).
+
+                **OUTPUT REQUIREMENT:** Provide the FULLY recalculated recipe, not just the changes.
+                `;
+
+                const formattingRules = `
+                **CRITICAL OUTPUT RULES:**
+                1.  **FORMAT:** The entire response must be valid Markdown. Do NOT wrap the whole response in a code block.
+                2.  **INGREDIENTS:** You MUST provide the ingredients list strictly as a **JSON code block**. 
+                    - Format: \`\`\`json [{"ingredient": "Name", "quantity": 0, "unit": "g"}] \`\`\`
+                3.  **STRUCTURE:** Keep the headers (## Description, ## Ingredients, ## Instructions, ## Brewer's Notes).
+                `;
+
+                const prompt = `You are an expert mead maker. A user wants to tweak the following original recipe.
             
                 Original Recipe Markdown:
                 ---
@@ -2845,40 +3017,35 @@ async function generateAndInjectCreativeTitle(markdown) {
             
                 User's Tweak Request: "${tweakRequest}"
             
-                Generate the complete, new, and improved recipe that incorporates the user's request. Ensure the output is fully formatted in Markdown, including a new creative title in 'Name: Subtitle' format, and a complete ingredient table.`;
+                **TASK:** Generate the complete, new, and improved recipe.
+                ${logicInstructions}
+                ${formattingRules}`;
             
                 try {
                     const tweakedMarkdown = await performApiCall(prompt);
-                    currentRecipeMarkdown = tweakedMarkdown; // Sla de *ruwe* response op
-
-                    // --- NIEUW: Strip potential markdown code fences ---
+                    
+                    // Schoonmaak actie
                     let processedMarkdown = tweakedMarkdown.trim();
                     if (processedMarkdown.startsWith("```markdown")) {
-                        processedMarkdown = processedMarkdown.substring(10, processedMarkdown.lastIndexOf("```")).trim();
+                        processedMarkdown = processedMarkdown.substring(11, processedMarkdown.lastIndexOf("```")).trim();
                     } else if (processedMarkdown.startsWith("```")) {
                         processedMarkdown = processedMarkdown.substring(3, processedMarkdown.lastIndexOf("```")).trim();
                     }
-                    // --- EINDE NIEUW ---
                     
-                    // Render de *volledige* recept-output opnieuw met de *verwerkte* markdown
+                    currentRecipeMarkdown = processedMarkdown; 
+                    
                     await renderRecipeOutput(processedMarkdown); 
-                    
-                    // Scroll naar de bovenkant van de output
                     recipeOutput.scrollTop = 0;
                     
-                    // Zoek de *nieuwe* tweak-output div (die net is ge-renderd) en plaats daar een succesbericht
                     const newTweakOutput = document.getElementById('tweak-unsaved-output');
                     if (newTweakOutput) {
-                        newTweakOutput.innerHTML = `<p class="text-center text-green-600 font-bold">Recipe updated successfully! See the new version above. You can tweak it again or save it.</p>`;
+                        newTweakOutput.innerHTML = `<p class="text-center text-green-600 font-bold">Recipe recalculated and updated! See above.</p>`;
                     }
             
                 } catch (error) {
                     console.error("Error tweaking recipe:", error);
                     tweakOutput.innerHTML = `<p class="text-center text-red-500">Could not tweak recipe: ${error.message}</p>`;
                 } finally {
-                    // De knop die we hebben uitgeschakeld, bestaat niet meer (omdat de UI is her-renderd),
-                    // maar de *nieuwe* knop zal standaard ingeschakeld zijn.
-                    // We hoeven hier niets te doen, tenzij de error optrad vóór het her-renderen.
                     if (tweakBtn) tweakBtn.disabled = false; 
                 }
             }          
@@ -2958,6 +3125,35 @@ function buildPrompt() {
             })
             .map(item => `${item.name}: ${item.qty} ${item.unit}`)
             .join('; ');
+
+         const inventoryLogicInstruction = `
+**INVENTORY INTELLIGENCE:** - You have access to the user's inventory: [${inventoryString}].
+- **MATCHING RULE:** If the recipe needs a chemical or nutrient (e.g., "Potassium Metabisulfite"), and the inventory contains a brand-name equivalent (e.g., "Vinoferm Campden" or "Sulfiet"), YOU MUST USE THE INVENTORY ITEM NAME.
+- **Form vs Type:** If the recipe needs tablets but the user has powder (or vice versa), use the user's format and adjust the quantity instruction.
+`;
+
+// --- WATER LOGIC ---
+        let waterContext = "";
+        if (currentWaterProfile) {
+            waterContext = `
+**WATER SOURCE (LOCKED):**
+The user has explicitly selected a specific water source: "${currentWaterProfile.name}".
+- Profile (mg/L): Ca:${currentWaterProfile.ca}, Mg:${currentWaterProfile.mg}, Na:${currentWaterProfile.na}, SO4:${currentWaterProfile.so4}, Cl:${currentWaterProfile.cl}, HCO3:${currentWaterProfile.hco3}.
+- **INSTRUCTION:** You MUST use this water in the ingredients list. Analyze if it fits the style. Only recommend brewing salts if there is a CRITICAL deficiency that would ruin the batch. Otherwise, keep it simple.
+`;
+        } else {
+            // Geen profiel geselecteerd? Geef ADVIES over het TYPE water
+            waterContext = `
+**WATER SELECTION GUIDE (NO BRANDS):**
+The user prefers buying bottled spring water.
+- **CRITICAL:** Do NOT recommend specific brand names (like Spa, Evian, etc.).
+- **INSTRUCTION:** Instead, describe the **Ideal Mineral Profile** the user should look for on the label in the supermarket.
+- **How to recommend:**
+    - If the style is Light/Traditional: "Look for a **very soft water** with low total mineral content (Dry Residue < 50mg/L)."
+    - If the style is Dark/Bochet: "Look for water with **moderate bicarbonate/alkalinity** to buffer the acidity."
+    - If the style highlights hops/tannins: "Look for water with **higher sulfate** content."
+`;
+        }
 
         // --- STAP 4: DE DOCTORAAT PROMPT ---
         let basePrompt = `You are "MEA(N)DERY", a master mazer and fermentation scientist. You do not guess; you engineer recipes based on the **Scott Labs Fermentation Handbook**, **BOMM Protocol**, and **UC Davis Enology** standards.

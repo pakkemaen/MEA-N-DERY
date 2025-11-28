@@ -199,6 +199,18 @@
         background-color: var(--bg-secondary);
     }
 
+    /* --- TEXTAREA FIXES --- */
+    textarea {
+        /* 1. Meer ademruimte: tekst en placeholder schuiven naar binnen */
+        padding: 16px !important; 
+        
+        /* 2. Verwijder het 'puntje' (resize handle) rechtsonder */
+        resize: none !important; 
+        
+        /* Zorg dat de tekst mooi leest */
+        line-height: 1.6 !important;
+    }
+
     /* 5. NAVIGATION BUTTONS (Dashboard tegels) */
     .main-nav-btn {
         background-color: var(--bg-secondary);
@@ -212,8 +224,7 @@
         background-color: var(--bg-tertiary);
     }
 
-    /* --- 6. TABLES (RECIPE STYLE EVERYWHERE) --- */
-    /* Dit trekt de stijl door naar Logs, Inventaris tabellen, etc. */
+    /* --- 6. TABLES (CLEAN & TRANSPARENT) --- */
     table {
         width: 100%;
         border-collapse: separate;
@@ -225,8 +236,8 @@
     }
 
     th {
-        background-color: var(--text-primary); /* Dark header */
-        color: var(--bg-primary); /* Light text */
+        background-color: var(--text-primary);
+        color: var(--bg-primary);
         font-weight: 700;
         text-transform: uppercase;
         font-size: 0.85rem;
@@ -236,26 +247,52 @@
     }
 
     td {
-        padding: 12px 16px;
+        padding: 0; /* Geen padding in de cel zelf, de input vult hem op */
         border-bottom: 1px solid var(--border-color);
         font-size: 0.95rem;
+        height: 3rem; /* Vaste hoogte voor rust */
+        position: relative;
     }
 
     tr:last-child td { border-bottom: none; }
+    
+    /* Zebra striping */
     tr:nth-child(even) { background-color: rgba(0,0,0,0.02); }
     .dark tr:nth-child(even) { background-color: rgba(255,255,255,0.03); }
 
-    /* Specifiek voor de fermentation log inputs binnen een tabel */
-    table input {
+    /* --- DE FIX: TRANSPARANTE INPUTS --- */
+    table input, table select {
+        background-color: transparent !important; /* Geen achtergrondkleur! */
         border: none !important;
-        background: transparent !important;
         box-shadow: none !important;
-        padding: 4px 0 !important;
         border-radius: 0 !important;
+        
+        width: 100%;
+        height: 100%;
+        padding: 0 12px !important; /* Padding in de input zelf */
+        
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 0.95rem;
     }
+
+    /* Zorg dat datums en nummers niet verspringen */
+    table input[type="date"], 
+    table input[type="number"] {
+        text-align: left;
+        cursor: pointer; /* Laat zien dat het klikbaar is */
+    }
+
+    /* Centreer de nummers in de middelste kolommen als je dat wilt */
+    table td:not(:first-child):not(:last-child) input {
+        text-align: center;
+    }
+
+    /* Alleen als je erop klikt/typt krijg je een highlight */
     table input:focus {
-        box-shadow: none !important;
-        border-bottom: 2px solid var(--brand-color) !important;
+        background-color: var(--bg-tertiary) !important; /* Lichte highlight */
+        outline: 2px solid var(--brand-color);
+        outline-offset: -2px; /* Randje binnenin */
     }
 
     /* --- 7. NAVIGATION TABS --- */
@@ -297,13 +334,31 @@
         margin-bottom: 1rem;
     }
     .recipe-content ol { list-style: none; counter-reset: recipe-counter; }
-    .recipe-content ol li { counter-increment: recipe-counter; position: relative; padding-left: 2.5rem; }
+    /* --- RECIPE STEPS FIX --- */
+    .recipe-content ol li { 
+        counter-increment: recipe-counter; 
+        position: relative; 
+        padding-left: 3rem; /* Iets meer ruimte rechts van het bolletje */
+        margin-bottom: 1.5rem; /* Meer ruimte ONDER elke stap */
+        min-height: 2.2rem; /* CRUCIAAL: Zorgt dat de regel nooit kleiner is dan de bol */
+        line-height: 1.6;
+    }
+
     .recipe-content ol li::before {
         content: counter(recipe-counter);
-        position: absolute; left: 0; top: 0;
-        width: 1.8rem; height: 1.8rem;
-        background-color: var(--brand-color); color: #fff;
-        border-radius: 50%; text-align: center; line-height: 1.8rem; font-weight: bold;
+        position: absolute; 
+        left: 0; 
+        top: -0.2em; /* Ietsje hoger plaatsen voor optische uitlijning met tekst */
+        width: 2rem; 
+        height: 2rem;
+        background-color: var(--brand-color); 
+        color: #fff;
+        border-radius: 50%; 
+        text-align: center; 
+        line-height: 2rem; /* Zorgt dat cijfer verticaal middenin bol staat */
+        font-weight: bold;
+        font-size: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     /* --- 9. UTILITIES & MOBILE --- */
@@ -425,21 +480,21 @@
     <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 80vh;">
         
         <div class="grid grid-cols-3 gap-4 mb-6">
-            <div onclick="switchMainView('brewing')" 
+            <div onclick="switchMainView('brewing'); switchSubView('brew-day-1', 'brewing-main-view')" 
                  class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 group">
                 <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-brand">Fermenting</p>
                 <p id="stat-active-batches" class="text-2xl font-header font-bold text-app-primary">--</p>
             </div>
 
             <div onclick="switchMainView('management'); switchSubView('cellar', 'management-main-view')" 
-                 class="card p-3 text-center border-l-4 border-blue-500 bg-app-tertiary cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 group">
-                <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-blue-600">In Cellar</p>
+                 class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 group">
+                <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-brand">In Cellar</p>
                 <p id="stat-bottles" class="text-2xl font-header font-bold text-app-primary">--</p>
             </div>
 
             <div onclick="switchMainView('management'); switchSubView('financials', 'management-main-view')" 
-                 class="card p-3 text-center border-l-4 border-action bg-app-tertiary cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 group">
-                <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-action-color">Spent</p>
+                 class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 group">
+                <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-brand">Spent</p>
                 <p id="stat-spent" class="text-xl font-header font-bold text-app-primary">--</p>
             </div>
         </div>
@@ -447,12 +502,12 @@
         <div id="current-brew-card" class="card p-6 rounded-lg mb-6 hidden border-2 border-app-brand/20 bg-app-tertiary">
             </div>
 
-        <div id="next-action-widget" class="card p-6 rounded-lg mb-6 hidden border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-900/10">
-            <h3 class="text-xl font-header font-bold mb-3 text-app-header flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <div id="next-action-widget" class="card p-5 rounded-lg mb-6 hidden border border-app-brand/30 bg-app-secondary shadow-sm">
+            <h3 class="text-lg font-header font-bold mb-3 text-app-brand flex items-center gap-2 uppercase tracking-wider">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 What's next?
             </h3>
-            <ul id="next-action-list" class="list-disc pl-5 space-y-2 text-app-secondary"></ul>
+            <ul id="next-action-list" class="list-disc pl-5 space-y-2 text-app-primary text-sm leading-relaxed"></ul>
         </div>
 
         <div id="low-stock-card" class="card p-4 rounded-lg mb-6 hidden bg-red-50 dark:bg-red-900/10 border border-red-200">
@@ -1440,7 +1495,7 @@
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - EXP v0.9 (BP2.0) - 24/11/25 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - EXP v0.9 (BP2.0) - 28/11/25 - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2263,7 +2318,7 @@ function refreshCurrentChecklistView() {
     }
 
             // --- View Management ---
-            function switchMainView(viewName) {
+            window.switchMainView = function(viewName) {
                 if (window.hideBottlingModal) hideBottlingModal();
                 
                 [dashboardMainView, brewingMainView, managementMainView, toolsMainView, settingsView].forEach(v => v.classList.add('hidden'));
@@ -5230,7 +5285,6 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
                 `;
             }
 
-            // --- VERBETERDE FUNCTIE: PROGRESSIE OP BASIS VAN STAPPEN ---
 function renderActiveBrewTimeline() {
     const card = document.getElementById('current-brew-card');
     if (!card) return;
@@ -5247,46 +5301,29 @@ function renderActiveBrewTimeline() {
     const brewDate = new Date(activeBrew.logData.brewDate);
     const daysFermenting = Math.floor((now - brewDate) / (1000 * 60 * 60 * 24));
 
-    // --- NIEUWE LOGICA: STAPPEN VS TIJD ---
     let progressPercentage = 0;
     let statusText = `Day ${daysFermenting}: `;
-    let currentStageIndex = 0; // 0=Start, 1=Primary Done, 2=Aging, 3=Ready
-
-    // Haal de checklist op (veiligheidshalve)
+    
+    // Check de fases
     const checklist = activeBrew.checklist || {};
     const completedCount = Object.keys(checklist).filter(k => checklist[k] === true).length;
 
     if (!activeBrew.primaryComplete) {
-        // --- FASE 1: PRIMAIRE GISTING ---
         statusText += "Primary Fermentation";
-        const totalPrimarySteps = (activeBrew.brewDaySteps || []).length || 1; // Voorkom delen door 0
-        
-        // Bereken percentage van de eerste 50% van de balk
+        const totalPrimarySteps = (activeBrew.brewDaySteps || []).length || 1; 
         const phaseProgress = Math.min(1, completedCount / totalPrimarySteps);
         progressPercentage = phaseProgress * 50; 
-        
-        currentStageIndex = 0; // We zijn nog bezig met de start
     } else {
-        // --- FASE 2: SECUNDAIR / RIJPEN ---
         statusText += "Secondary / Conditioning";
         const totalSecondarySteps = (activeBrew.secondarySteps || []).length || 1;
-        
-        // We beginnen op 50% en vullen de rest
         const phaseProgress = Math.min(1, completedCount / totalSecondarySteps);
         progressPercentage = 50 + (phaseProgress * 50);
         
-        currentStageIndex = 2; // We zijn voorbij primary
-        
-        // Als we bijna klaar zijn met secundaire stappen, zet status op 'Ready'
-        if (phaseProgress > 0.9) {
-            statusText = `Day ${daysFermenting}: Bottling Ready?`;
-            currentStageIndex = 3;
-        }
+        if (phaseProgress > 0.9) statusText = `Day ${daysFermenting}: Bottling Ready?`;
     }
 
-    // Bepaal de stadia voor de bolletjes
     const stages = [
-        { name: 'Brew Day', active: true }, // Altijd aan
+        { name: 'Brew Day', active: true },
         { name: 'Primary End', active: activeBrew.primaryComplete || progressPercentage >= 50 },
         { name: 'Aging', active: activeBrew.primaryComplete && progressPercentage >= 75 }, 
         { name: 'Bottling Ready', active: progressPercentage >= 95 }
@@ -5297,25 +5334,24 @@ function renderActiveBrewTimeline() {
         timelineItemsHtml += `
             <div class="timeline-item ${stage.active ? 'active' : ''}">
                 <div class="timeline-node"></div>
-                <div class="timeline-label">${stage.name}</div>
+                <div class="timeline-label text-[10px] uppercase tracking-wide">${stage.name}</div>
             </div>
         `;
     });
 
+    // --- NIEUWE LAYOUT MET KNOP RECHTSBOVEN ---
     card.innerHTML = `
-        <div class="flex justify-between items-end mb-2">
-            <div>
-                <h3 class="text-xl font-header font-bold text-app-brand">${activeBrew.recipeName}</h3>
-                <p class="text-app-secondary text-sm font-semibold">${statusText}</p>
+        <div class="flex justify-between items-start mb-4">
+            <div class="pr-4">
+                <h3 class="text-xl font-header font-bold text-app-brand leading-tight">${activeBrew.recipeName}</h3>
+                <p class="text-app-secondary text-sm font-semibold mt-1">${statusText}</p>
             </div>
-            <div class="text-right">
-                <button onclick="window.showBrewDetail('${activeBrew.id}')" class="text-xs bg-app-tertiary border border-app px-2 py-1 rounded hover:bg-app-primary transition-colors">
-                    View Details
-                </button>
-            </div>
+            <button onclick="window.showBrewDetail('${activeBrew.id}')" class="flex-shrink-0 bg-transparent border border-app-brand text-app-brand hover:bg-app-brand hover:text-white text-xs font-bold uppercase px-3 py-2 rounded transition-colors">
+                View Details
+            </button>
         </div>
         
-        <div class="timeline-container mt-4">
+        <div class="timeline-container mt-6 mb-2">
             <div class="timeline-connector">
                 <div class="timeline-progress" style="width: ${progressPercentage}%;"></div>
             </div>

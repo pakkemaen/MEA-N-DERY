@@ -709,7 +709,15 @@ table.fermentation-table {
                                 <div class="pt-2">
                                     <label for="fruitOther" class="block text-xs font-bold text-app-secondary">Other Fruits (comma-separated)</label>
                                     <input type="text" id="fruitOther" placeholder="e.g., Mango, Passion Fruit" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                                </div> 
+                                </div>
+
+                                <div class="mt-2 pt-2 border-t border-app-brand/30">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" id="isNoWaterCheckbox" class="h-4 w-4 text-app-brand focus:ring-app-brand rounded border-gray-300">
+                                        <label for="isNoWaterCheckbox" class="ml-2 block text-sm font-bold text-app-brand">No-Water Method (Pure Juice)</label>
+                                    </div>
+                                    <p class="text-xs text-app-secondary ml-6">Requires ~1.8kg fruit per liter. No water added.</p>
+                                </div>  
                             </div>
 
                              <div id="spice-section" class="hidden space-y-2">
@@ -2870,91 +2878,94 @@ async function generateAndInjectCreativeTitle(markdown) {
                 generateAndInjectCreativeTitle(markdown);
             }
 
-            // --- VERBETERDE FUNCTIE: TWEAK OPGESLAGEN RECEPT ---
-            // --- VERBETERDE FUNCTIE: TWEAK OPGESLAGEN RECEPT (UNIVERSELE HERBEREKENING) ---
             async function tweakUnsavedRecipe() {
-                const tweakRequest = document.getElementById('tweak-unsaved-request').value.trim();
-                if (!tweakRequest) {
-                    showToast("Please enter your tweak request.", "error");
-                    return;
-                }
-            
-                const tweakOutput = document.getElementById('tweak-unsaved-output');
-                tweakOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is recalculating the entire recipe...</p>';
-                const tweakBtn = document.getElementById('tweak-unsaved-btn');
-                tweakBtn.disabled = true;
-            
-                // --- HIER ZIT DE MAGIE: DE UNIVERSELE DOMINO-REGEL ---
-                const logicInstructions = `
-                **SCIENTIFIC RE-CALCULATION (THE UNIVERSAL DOMINO RULE):**
-                You are a fermentation scientist. You must assume that changing ONE variable affects the WHOLE recipe. 
-                You MUST perform these checks before outputting:
-                
-                1.  **The Sugar/Gravity Link:** - If the user adds/removes Honey or Fruit -> You MUST recalculate the **Original Gravity (OG)** and **Nutrient Requirement** (Higher SG = More Nutrients needed).
-                    - If the user changes Target ABV -> You MUST adjust the **Honey** quantity to match.
-                
-                2.  **The Acidity/Buffer Link:**
-                    - If the user adds acidic Fruit (e.g., Lemon, Currants) -> You MUST check if the pH buffer (Potassium Carbonate) needs to increase.
-                    - If the user removes Fruit -> You might need to increase water to keep the volume correct.
-                
-                3.  **The Volume Link:**
-                    - If the user changes Batch Size -> You MUST scale **ALL** ingredients proportionally (Yeast, Nutrients, Honey, Water, Fruit).
-                
-                4.  **The Yeast Link:**
-                    - If Yeast changes -> Re-evaluate Temperature limits and Nutrient needs (Low/Med/High requirement).
+    const tweakRequest = document.getElementById('tweak-unsaved-request').value.trim();
+    if (!tweakRequest) { showToast("Please enter your tweak request.", "error"); return; }
 
-                **OUTPUT REQUIREMENT:** Provide the FULLY recalculated recipe, not just the changes.
-                `;
+    const tweakOutput = document.getElementById('tweak-unsaved-output');
+    tweakOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Recalculating with Fort Knox protocols...</p>';
+    const tweakBtn = document.getElementById('tweak-unsaved-btn');
+    tweakBtn.disabled = true;
 
-                const formattingRules = `
-                **CRITICAL OUTPUT RULES:**
-                1.  **FORMAT:** The entire response must be valid Markdown. Do NOT wrap the whole response in a code block.
-                2.  **INGREDIENTS:** You MUST provide the ingredients list strictly as a **JSON code block**. 
-                    - Format: \`\`\`json [{"ingredient": "Name", "quantity": 0, "unit": "g"}] \`\`\`
-                3.  **STRUCTURE:** Keep the headers (## Description, ## Ingredients, ## Instructions, ## Brewer's Notes).
-                `;
+    // 0. BEWAAR DE DATA (State Preservation)
+    // We kijken of er al een log-sectie is en halen de naam/datum op
+    let preservedTitle = '';
+    let preservedDate = '';
+    const currentNameInput = document.querySelector('input[id^="recipeName-new"]');
+    const currentDateInput = document.querySelector('input[id^="brewDate-new"]');
+    
+    if (currentNameInput) preservedTitle = currentNameInput.value;
+    if (currentDateInput) preservedDate = currentDateInput.value;
 
-                const prompt = `You are an expert mead maker. A user wants to tweak the following original recipe.
-            
-                Original Recipe Markdown:
-                ---
-                ${currentRecipeMarkdown}
-                ---
-            
-                User's Tweak Request: "${tweakRequest}"
-            
-                **TASK:** Generate the complete, new, and improved recipe.
-                ${logicInstructions}
-                ${formattingRules}`;
-            
-                try {
-                    const tweakedMarkdown = await performApiCall(prompt);
-                    
-                    // Schoonmaak actie
-                    let processedMarkdown = tweakedMarkdown.trim();
-                    if (processedMarkdown.startsWith("```markdown")) {
-                        processedMarkdown = processedMarkdown.substring(11, processedMarkdown.lastIndexOf("```")).trim();
-                    } else if (processedMarkdown.startsWith("```")) {
-                        processedMarkdown = processedMarkdown.substring(3, processedMarkdown.lastIndexOf("```")).trim();
-                    }
-                    
-                    currentRecipeMarkdown = processedMarkdown; 
-                    
-                    await renderRecipeOutput(processedMarkdown); 
-                    recipeOutput.scrollTop = 0;
-                    
-                    const newTweakOutput = document.getElementById('tweak-unsaved-output');
-                    if (newTweakOutput) {
-                        newTweakOutput.innerHTML = `<p class="text-center text-green-600 font-bold">Recipe recalculated and updated! See above.</p>`;
-                    }
-            
-                } catch (error) {
-                    console.error("Error tweaking recipe:", error);
-                    tweakOutput.innerHTML = `<p class="text-center text-red-500">Could not tweak recipe: ${error.message}</p>`;
-                } finally {
-                    if (tweakBtn) tweakBtn.disabled = false; 
-                }
-            }          
+    // 1. Context Analyse
+    const contextLower = (currentRecipeMarkdown + tweakRequest).toLowerCase();
+    const isNoWater = contextLower.includes('no-water') || contextLower.includes('no water');
+    const isBraggot = contextLower.includes('braggot');
+    const isHydromel = contextLower.includes('session') || contextLower.includes('hydromel');
+    const isWild = contextLower.includes('wild') || contextLower.includes('sour') || contextLower.includes('brett');
+
+    // 2. Haal Wetten op
+    const laws = getFortKnoxLaws(isNoWater, isBraggot, isHydromel, false, isWild);
+
+    // 3. NIEUW: Inventory Context ophalen (Hetzelfde als in buildPrompt)
+    const relevantCategories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
+    const fullInventoryList = inventory.filter(item => relevantCategories.includes(item.category));
+    const inventoryString = fullInventoryList.map(item => `${item.name} (${item.qty} ${item.unit})`).join('; ');
+    const inventoryContext = `\n**INVENTORY CONTEXT:** The user has the following items in stock: [${inventoryString}]. If the tweak requires adding ingredients, prioritize these items if appropriate.`;
+
+    const prompt = `You are "MEA(N)DERY", a master mazer. A user wants to tweak a recipe.
+    
+    Original Recipe:
+    ---
+    ${currentRecipeMarkdown}
+    ---
+
+    User Tweak Request: "${tweakRequest}"
+
+    **TASK:** Rewrite the FULL recipe to incorporate the tweak.
+    
+    ${laws}
+    ${inventoryContext}  <-- HIER IS HET GEHEUGEN
+
+    **LOGIC CHECK:**
+    - If the user changed the Batch Size -> Recalculate ALL ingredients.
+    - If the user changed the Fruit -> Check if Honey needs adjustment for ABV targets.
+    `;
+
+    try {
+        const tweakedMarkdown = await performApiCall(prompt);
+        // ... (rest van je bestaande logica: cleanup, render, etc.) ...
+        let processedMarkdown = tweakedMarkdown.trim();
+        if (processedMarkdown.startsWith("```markdown")) {
+             processedMarkdown = processedMarkdown.substring(11, processedMarkdown.lastIndexOf("```")).trim();
+        } else if (processedMarkdown.startsWith("```")) {
+             processedMarkdown = processedMarkdown.substring(3, processedMarkdown.lastIndexOf("```")).trim();
+        }
+
+        currentRecipeMarkdown = processedMarkdown;
+        await renderRecipeOutput(processedMarkdown);
+
+        // 4. HERSTEL DE DATA (State Restoration)
+        // De render functie heeft nieuwe inputs gemaakt met 'new' suffix. Vul ze terug in.
+        if (preservedTitle) {
+            const newNameInput = document.querySelector('input[id^="recipeName-new"]');
+            if(newNameInput) newNameInput.value = preservedTitle;
+        }
+        if (preservedDate) {
+            const newDateInput = document.querySelector('input[id^="brewDate-new"]');
+            if(newDateInput) newDateInput.value = preservedDate;
+        }
+        recipeOutput.scrollTop = 0;
+        
+        if(tweakBtn) tweakBtn.disabled = false;
+        tweakOutput.innerHTML = '';
+
+    } catch (error) {
+        console.error("Error tweaking:", error);
+        tweakOutput.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+        tweakBtn.disabled = false;
+    }
+}          
 
 function buildPrompt() {
     try {
@@ -2968,8 +2979,21 @@ function buildPrompt() {
         
         // --- STAP 1.5: INPUT ANALYSE ---
         const inputString = (customDescription + " " + style).toLowerCase();
-        const isNoWater = inputString.includes('no-water') || inputString.includes('no water');
-        const isBraggot = inputString.includes('braggot'); // Nieuwe detectie
+        const noWaterCheckbox = document.getElementById('isNoWaterCheckbox');
+        
+        // Context detectie
+        const isNoWater = (noWaterCheckbox && noWaterCheckbox.checked) || inputString.includes('no-water') || inputString.includes('no water');
+        const isBraggot = inputString.includes('braggot');
+        
+        // --- BUDGET DETECTIE (DE FIX) ---
+        const useBudget = document.getElementById('useBudget')?.checked;
+        let budgetContext = "";
+        if (useBudget) {
+             const maxBudget = parseFloat(document.getElementById('maxBudget').value);
+             if (maxBudget > 0) {
+                 budgetContext = `\n- **STRICT BUDGET CONSTRAINT:** The total cost of ingredients MUST be below **€${maxBudget}**. Prioritize cheaper ingredients or smaller batches if necessary to hit this target.`;
+             }
+        }
 
         // --- STAP 2: MATH INJECTION ---
         const honeyGramsPerLiter = targetABV * 22; 
@@ -2981,7 +3005,7 @@ function buildPrompt() {
 - **Batch:** ${batchSize}L | **Target ABV:** ${targetABV}%
 - **Honey Baseline:** ~${totalHoneyKg.toFixed(2)} kg (Assuming honey provides 100% of the alcohol).
 - **SHOPPING LIST RULE:** If target is **SWEET**, add ~15% extra honey to the JSON for backsweetening.
-- **Nitrogen Target:** ~${estimatedYAN} PPM YAN.
+- **Nitrogen Target:** ~${estimatedYAN} PPM YAN.${budgetContext}  <-- HIER WORDT HET BUDGET GEÏNJECTEERD
 `;
         // SPECIAL MATH LOGIC
         if (isNoWater) {
@@ -2999,7 +3023,7 @@ function buildPrompt() {
 `;
         }
 
-        // --- STAP 3: INVENTORY ANALYSE ---
+        // --- STAP 3: INVENTORY ANALYSE (Fort Knox Upgrade) ---
         const inventoryToggles = {
             Yeast: document.getElementById('useInventory_Yeast').checked,
             Nutrient: document.getElementById('useInventory_Nutrients').checked,
@@ -3008,23 +3032,41 @@ function buildPrompt() {
             Spice: document.getElementById('useInventory_Spices').checked,
             Other: document.getElementById('useInventory_Other').checked
         };
-        const useAnyInventory = Object.values(inventoryToggles).some(val => val === true);
-        const requestedCategories = Object.keys(inventoryToggles).filter(k => inventoryToggles[k]);
-        const otherCategories = ['Malt Extract', 'Adjunct', 'Chemical', 'Water'];
-        const relevantInventory = inventory.filter(item => {
-             if (inventoryToggles.Other && otherCategories.includes(item.category)) return true;
-             return requestedCategories.includes(item.category);
-        });
-        const inventoryString = relevantInventory.map(item => `${item.name} (${item.qty} ${item.unit})`).join('; ');
         
+        // 1. Haal ALLES op wat relevant is voor brouwen (niet filteren op vinkjes!)
+        const relevantCategories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
+        const fullInventoryList = inventory.filter(item => relevantCategories.includes(item.category));
+        
+        // 2. Maak de string voor de AI
+        const inventoryString = fullInventoryList.map(item => `${item.name} (${item.qty} ${item.unit})`).join('; ');
+        
+        // 3. Bepaal de INSTRUCTIE op basis van de vinkjes
+        const useAnyInventory = Object.values(inventoryToggles).some(val => val === true);
+        
+        // Filter welke categorieën specifiek zijn aangevraagd (voor de prompt instructie)
+        const requestedCategories = Object.keys(inventoryToggles).filter(k => inventoryToggles[k]);
+        
+        let inventoryInstruction = "";
+        
+        if (useAnyInventory) {
+             // Als er vinkjes staan: "Probeer deze te gebruiken"
+             inventoryInstruction = `**INVENTORY MODE:** The user wants to use their stock. Prioritize using items from the following categories: ${requestedCategories.join(', ')}.`;
+        } else {
+             // Als er geen vinkjes staan: "Ter info, dit hebben ze."
+             inventoryInstruction = `**STOCK AWARENESS:** The user has these items in stock (see list). You are NOT forced to use them, but if an item matches the style perfectly, suggest using it instead of buying new.`;
+        }
+
+        // 4. De Slimme Nutriënten Logic (Blijft hetzelfde, maar gebruikt nu fullInventoryList)
         const invLower = inventoryString.toLowerCase();
         const hasSafeOrganic = invLower.includes('fermaid o') || invLower.includes('ferm o') || invLower.includes('cellvit') || invLower.includes('yeast hulls');
         const hasDAP = invLower.includes('dap') || invLower.includes('diammonium') || invLower.includes('nutrisal');
         const hasHybrid = invLower.includes('nutrivit') || invLower.includes('fermaid k') || invLower.includes('combi') || invLower.includes('ultra') || invLower.includes('tronozym');
         
         let baseNutrientRule = "";
-        if (inventoryToggles.Nutrient) {
-            if (!hasSafeOrganic && (hasHybrid || hasDAP)) {
+        // (Hieronder gaat je bestaande nutriënten logica verder...)
+        if (inventoryToggles.Nutrient) { 
+             // ... etc (je huidige logica voor nutriënten is prima)
+             if (!hasSafeOrganic && (hasHybrid || hasDAP)) {
                 baseNutrientRule = `1. **Nutrients (HYBRID SCHEDULE):** Detected Inorganic/Hybrid stock (Nutrisal/Combi) but NO Fermaid O. Use ONLY this stock. **WARNING:** Instruct user to STOP adding these after 1/3 sugar break (9% ABV).`;
             } else if (hasSafeOrganic) {
                 baseNutrientRule = `1. **Nutrients (ORGANIC):** Use Fermaid O/Cellvit from stock.`;
@@ -3035,7 +3077,7 @@ function buildPrompt() {
              baseNutrientRule = `1. **Nutrients (Standard):** Use standard TOSNA guidelines.`;
         }
 
-        const inventoryLogic = `**INVENTORY LOGIC:** Current Stock: [${inventoryString}]. Rule: List TOTAL quantity in JSON. Tell user to buy difference.`;
+        const inventoryLogic = `${inventoryInstruction} \n **FULL STOCK LIST:** [${inventoryString}]. \n Rule: List TOTAL quantity in JSON. Tell user to buy difference.`;
 
         // --- STAP 4: STYLE ROUTER ---
         const sourKeywords = ['sour', 'wild', 'gueuze', 'lambic', 'brett', 'funky', 'farmhouse', 'lacto', 'pedio', 'geuze'];
@@ -3180,6 +3222,33 @@ ${creativeBrief}
         console.error("Error building prompt:", error);
         throw new Error(`Failed to build the prompt. (Details: ${error.message})`);
     }
+}
+
+// Deze functie retourneert de harde wetten die voor ELKE prompt gelden
+function getFortKnoxLaws(isNoWater = false, isBraggot = false, isHydromel = false, isHeavy = false, isWild = false) {
+    return `
+**THE FORT KNOX PROTOCOLS (NON-NEGOTIABLE):**
+
+1.  **GLOBAL SAFETY OVERRIDE:**
+    - **Temp:** NEVER recommend a fermentation temp exceeding the yeast manufacturer's limit (e.g. D47 <20°C).
+    - **Sanity Check:** If the user requests impossible physics (e.g. 25% ABV without distillation, or 0 days fermentation), correct them politely.
+
+2.  **SCIENTIFIC LAWS:**
+    - **Buffer:** Traditionals/Cysers MUST have Potassium Carbonate.
+    - **Stability:** Ferment DRY -> Stabilize -> Backsweeten.
+    - ${isNoWater ? '**NO-WATER RULE:** DO NOT ADD WATER. Liquid must come from fruit juice/maceration only.' : ''}
+    - ${isBraggot ? '**BRAGGOT MATH:** Malt provides 30-50% sugar. Reduce honey to prevent overshooting ABV.' : ''}
+    - ${isHydromel ? '**HYDROMEL BODY:** Low ABV needs Erythritol/Lactose/Carbonation to avoid tasting watery.' : ''}
+
+3.  **NUTRIENT SECURITY:**
+    - If user has *only* DAP/Nutrisal: WARN against adding it after 9% ABV (Ammonia taste).
+    - If style is *Wild/Sour*: Reduce nutrient dosage by 50% and front-load.
+
+**OUTPUT FORMAT (STRICT):**
+- **Markdown** structure.
+- **Ingredients JSON:** \`\`\`json [{"ingredient": "Name", "quantity": 0, "unit": "kg"}] \`\`\` (List ALL ingredients with calculated amounts).
+- **Timers:** \`[TIMER:HH:MM:SS]\` for wait steps.
+`;
 }
 
             function loadHistory() {
@@ -5140,9 +5209,23 @@ function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
     }
 
     const convertToBaseUnit = (quantity, unit) => {
-        const u = (unit || '').toLowerCase();
+        const u = (unit || '').toLowerCase().trim();
+        
+        // Standaard conversies
         if (u === 'kg') return { quantity: quantity * 1000, unit: 'g' };
-        if (u === 'l') return { quantity: quantity * 1000, unit: 'ml' };
+        if (u === 'l' || u === 'liter' || u === 'liters') return { quantity: quantity * 1000, unit: 'ml' };
+        
+        // Slimme 'Packet' conversie (Aanname: 1 packet gist/voeding is vaak 5g, 10g of 11g)
+        // Omdat we het niet zeker weten, proberen we het te matchen met 'items' of 'packets' in de inventory
+        if (u === 'packet' || u === 'packets' || u === 'sachet' || u === 'pkg' || u === 'pack') {
+            return { quantity: quantity, unit: 'packets' }; // We normaliseren alles naar 'packets'
+        }
+        
+        // Stuks
+        if (u === 'item' || u === 'items' || u === 'st' || u === 'piece' || u === 'pieces') {
+             return { quantity: quantity, unit: 'items' };
+        }
+
         return { quantity, unit: u };
     };
 
@@ -5153,9 +5236,34 @@ function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
             const requiredAmountInBase = convertToBaseUnit(req.quantity, req.unit);
             const inventoryAmountInBase = convertToBaseUnit(inventoryItem.qty, inventoryItem.unit);
             
+            let match = false;
+            let costPerBaseUnit = 0;
+
+            // Directe match (g == g, ml == ml)
             if (requiredAmountInBase.unit === inventoryAmountInBase.unit) {
-                const costPerBaseUnit = inventoryItem.price / inventoryAmountInBase.quantity;
-                if (!isNaN(costPerBaseUnit)) {
+                match = true;
+                costPerBaseUnit = inventoryItem.price / inventoryAmountInBase.quantity;
+            }
+            // Gist packet fix: Als recept 'g' vraagt, maar inventory is 'packets' (bijv 11g packet)
+            else if (requiredAmountInBase.unit === 'g' && inventoryAmountInBase.unit === 'packets') {
+                // Aanname: We kunnen dit niet perfect berekenen zonder te weten hoeveel gram er in een packet zit.
+                // Fallback strategie: We rekenen 1 packet als "genoeg" voor kleine hoeveelheden gists.
+                // Dit is de "Luxury" trade-off: liever iets te hoog inschatten dan 0.
+                match = true;
+                // Stel: 1 packet kost 3 euro. Recept vraagt 5g. We rekenen de prijs van 1 heel packet.
+                // Dit is veiliger voor budgettering.
+                // We berekenen de kosten per *recept-unit* (gram) niet, we voegen gewoon de item-prijs toe als we < 1 packet gebruiken.
+                // Maar om het simpel te houden in deze loop:
+                
+                // Als we < 15g nodig hebben en we hebben packets, reken 1 packet prijs.
+                if (requiredAmountInBase.quantity <= 15) {
+                     totalCost += (inventoryItem.price / inventoryItem.qty) * 1; // Prijs van 1 packet
+                     continue; // Ga naar volgende item, we hebben kosten al toegevoegd
+                }
+            }
+            
+            if (match) {
+                 if (!isNaN(costPerBaseUnit)) {
                     totalCost += requiredAmountInBase.quantity * costPerBaseUnit;
                 }
             } else {

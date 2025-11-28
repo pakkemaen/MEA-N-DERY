@@ -295,6 +295,40 @@
         outline-offset: -2px; /* Randje binnenin */
     }
 
+    /* 1. De Container (Het kader om alles heen) */
+.log-container {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg); /* Mooie ronde hoeken */
+    overflow: hidden; /* Zorgt dat de hoeken van de tabel niet uitsteken */
+    background-color: var(--bg-secondary); /* Achtergrondkleur */
+    margin-bottom: 0.5rem; /* Ruimte onder de tabel */
+}
+
+/* 2. De Tabel zelf resetten */
+table.fermentation-table {
+    border: none !important; /* Geen dubbele randen */
+    border-radius: 0 !important;
+    margin: 0 !important; /* Geen marges binnen het kader */
+}
+
+/* 3. De Header Balk */
+.fermentation-table th {
+    background-color: var(--text-primary); /* Zwart/Donker */
+    color: var(--bg-primary); /* Wit/Licht tekst */
+    border: none;
+}
+
+/* 4. De Rijen */
+.fermentation-table td {
+    border-bottom: 1px solid var(--border-color);
+    /* Zorg dat de inputs transparant zijn zodat de rij-kleur zichtbaar blijft */
+}
+
+/* De allerlaatste rij mag geen lijntje onderaan hebben, anders ziet het er dubbel uit met het kader */
+.fermentation-table tr:last-child td {
+    border-bottom: none;
+}
+
     /* --- 7. NAVIGATION TABS --- */
     .sub-tab {
         padding: 8px 16px;
@@ -326,6 +360,8 @@
     /* --- 8. RECIPE CONTENT SPECIFICS (Behouden van vorige stap) --- */
     .recipe-content h2, .recipe-content h3 { color: var(--brand-color); margin-top: 2rem; }
     .recipe-content h2 { border-bottom: 2px solid var(--border-color); }
+        padding-bottom: 0.5rem; /* Iets ruimte tussen tekst en de lijn */
+        margin-bottom: 1.5rem;  /* CRUCIAAL: Dit duwt het kader (de box) naar beneden */
     .recipe-content p, .recipe-content ul, .recipe-content ol {
         background-color: var(--bg-tertiary);
         padding: 1rem 1.5rem;
@@ -5208,7 +5244,7 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
             </div>
             <div class="log-item">
                 <label>Fermentation Log</label>
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto log-container">
                      <table class="fermentation-table table-fixed w-full" id="fermentationTable-${idSuffix}" style="min-width: 500px;">
                         <thead><tr><th style="width: 120px;">Date</th><th style="width: 80px;">Temp (°C)</th><th style="width: 90px;">S.G.</th><th>Notes</th></tr></thead>
                         <tbody>${fermLog.map(row => `<tr>

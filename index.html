@@ -1531,7 +1531,7 @@ table.fermentation-table {
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - EXP v0.9 (BP2.0) - 28/11/25 - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.0 - Fort Knox - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2962,40 +2962,44 @@ function buildPrompt() {
         const batchSize = parseFloat(document.getElementById('batchSize').value) || 5;
         const targetABV = parseFloat(document.getElementById('abv').value) || 12;
         const sweetness = document.getElementById('sweetness').value;
-        const style = document.getElementById('style').selectedOptions[0].text;
+        const styleSelect = document.getElementById('style');
+        const style = styleSelect.selectedOptions.length > 0 ? styleSelect.selectedOptions[0].text : 'Traditional Mead';
         const customDescription = document.getElementById('customDescription').value;
         
-        // --- STAP 2: MATH INJECTION (De Wiskunde vooraf doen) ---
-        // Formule: 1% ABV vereist ~19g honing per liter (afhankelijk van suikergehalte honing, maar 19 is een veilige standaard)
-        const honeyGramsPerLiter = targetABV * 19; 
+        // --- STAP 1.5: INPUT ANALYSE ---
+        const inputString = (customDescription + " " + style).toLowerCase();
+        const isNoWater = inputString.includes('no-water') || inputString.includes('no water');
+        const isBraggot = inputString.includes('braggot'); // Nieuwe detectie
+
+        // --- STAP 2: MATH INJECTION ---
+        const honeyGramsPerLiter = targetABV * 22; 
         const totalHoneyKg = (honeyGramsPerLiter * batchSize) / 1000;
+        const estimatedYAN = Math.round(targetABV * 10); 
         
-        // Bepaal de Nutriëntbehoefte (YAN) basisregel
-        // Low N gist + Laag ABV = Laag YAN. High N gist + Hoog ABV = Hoog YAN.
-        let targetGravityPoints = targetABV * 7.5; // Groffe schatting voor SG punten (bijv 10% = 75 punten = 1.075)
-        
-        const mathContext = `
-**CALCULATED TARGETS (YOU MUST ADHERE TO THESE MATHEMATICAL TRUTHS):**
-- **Batch Size:** ${batchSize} Liters
-- **Target ABV:** ${targetABV}%
-- **Estimated Original Gravity (OG):** ~1.${Math.round(targetGravityPoints)}
-- **Required Honey:** Approximately ${totalHoneyKg.toFixed(2)} kg (Adjust slightly based on fruit sugar contribution).
-- **Nutrient Strategy:** Use the calculated OG to determine Yeast Assimilable Nitrogen (YAN) requirements.
+        let mathContext = `
+**CALCULATED TARGETS:**
+- **Batch:** ${batchSize}L | **Target ABV:** ${targetABV}%
+- **Honey Baseline:** ~${totalHoneyKg.toFixed(2)} kg (Assuming honey provides 100% of the alcohol).
+- **SHOPPING LIST RULE:** If target is **SWEET**, add ~15% extra honey to the JSON for backsweetening.
+- **Nitrogen Target:** ~${estimatedYAN} PPM YAN.
 `;
+        // SPECIAL MATH LOGIC
+        if (isNoWater) {
+            mathContext += `
+- **PROTOCOL: NO-WATER MELOMEL.** 1. No added water. 2. Need ~1.8kg fruit/Liter. 3. **SUGAR ALERT:** Fruit adds sugar. REDUCE Honey Baseline significantly to maintain ABV target.
+`;
+        } else if (isBraggot) { // FIX: Braggot Math
+            mathContext += `
+- **PROTOCOL: BRAGGOT (MEAD/BEER HYBRID).** 1. This style requires Malt Extract or Grain.
+  2. **SUGAR SPLIT:** You MUST assume Malt provides ~30-50% of the sugars. **REDUCE** the Honey Baseline calculated above proportionally so the TOTAL ABV remains ${targetABV}%.
+`;
+        } else {
+            mathContext += `
+- **JUICE WARNING:** If replacing water with Fruit Juice (Cyser), reduce honey to prevent overshooting ABV.
+`;
+        }
 
-        // --- STAP 3: YEAST INTELLIGENCE (Kennis uit Excel sheet) ---
-        // We helpen de AI door specificaties van populaire gisten mee te geven
-        const yeastSpecs = {
-            "71B": "Tolerance: 14%. Nitrogen: Low. Temp: 15-30°C. Special: Metabolizes malic acid (good for high-acid fruit).",
-            "EC1118": "Tolerance: 18%. Nitrogen: Low. Temp: 10-30°C. Special: Powerhouse, strips flavor, good for restarting stalls.",
-            "D47": "Tolerance: 14%. Nitrogen: Low. Temp: 15-20°C (CRITICAL). Special: Produces fusel alcohols (jet fuel) if fermented above 20°C.",
-            "K1 V1116": "Tolerance: 18%. Nitrogen: Low. Temp: 10-35°C. Special: Floral esters, good for difficult conditions.",
-            "RC212": "Tolerance: 16%. Nitrogen: Medium. Temp: 20-30°C. Special: Good for color retention in red fruits.",
-            "M05": "Tolerance: 18%. Nitrogen: Medium. Temp: 15-30°C. Special: High ester production.",
-            "US-05": "Tolerance: 11-12%. Nitrogen: Medium. Temp: 15-24°C. Special: Ale yeast, clean profile."
-        };
-
-        // Check of de gebruiker inventaris gebruikt of een specifieke gist vraagt
+        // --- STAP 3: INVENTORY ANALYSE ---
         const inventoryToggles = {
             Yeast: document.getElementById('useInventory_Yeast').checked,
             Nutrient: document.getElementById('useInventory_Nutrients').checked,
@@ -3004,162 +3008,173 @@ function buildPrompt() {
             Spice: document.getElementById('useInventory_Spices').checked,
             Other: document.getElementById('useInventory_Other').checked
         };
-        
         const useAnyInventory = Object.values(inventoryToggles).some(val => val === true);
-        const otherCategories = ['Malt Extract', 'Adjunct', 'Chemical', 'Water'];
         const requestedCategories = Object.keys(inventoryToggles).filter(k => inventoryToggles[k]);
-
-        const yeastInInventory = inventoryToggles.Yeast 
-            ? (inventory.filter(i => i.category === 'Yeast').map(i => i.name).join(', ') || 'None available')
-            : 'INVENTORY NOT REQUESTED';
+        const otherCategories = ['Malt Extract', 'Adjunct', 'Chemical', 'Water'];
+        const relevantInventory = inventory.filter(item => {
+             if (inventoryToggles.Other && otherCategories.includes(item.category)) return true;
+             return requestedCategories.includes(item.category);
+        });
+        const inventoryString = relevantInventory.map(item => `${item.name} (${item.qty} ${item.unit})`).join('; ');
         
-        // Zoek of een bekende gist in de inventaris zit voor extra context
-        let selectedYeastContext = "";
-        if (inventoryToggles.Yeast) {
-            for (const [key, spec] of Object.entries(yeastSpecs)) {
-                if (yeastInInventory.includes(key)) {
-                    selectedYeastContext += `\n- **Known Spec for ${key}:** ${spec}`;
-                }
+        const invLower = inventoryString.toLowerCase();
+        const hasSafeOrganic = invLower.includes('fermaid o') || invLower.includes('ferm o') || invLower.includes('cellvit') || invLower.includes('yeast hulls');
+        const hasDAP = invLower.includes('dap') || invLower.includes('diammonium') || invLower.includes('nutrisal');
+        const hasHybrid = invLower.includes('nutrivit') || invLower.includes('fermaid k') || invLower.includes('combi') || invLower.includes('ultra') || invLower.includes('tronozym');
+        
+        let baseNutrientRule = "";
+        if (inventoryToggles.Nutrient) {
+            if (!hasSafeOrganic && (hasHybrid || hasDAP)) {
+                baseNutrientRule = `1. **Nutrients (HYBRID SCHEDULE):** Detected Inorganic/Hybrid stock (Nutrisal/Combi) but NO Fermaid O. Use ONLY this stock. **WARNING:** Instruct user to STOP adding these after 1/3 sugar break (9% ABV).`;
+            } else if (hasSafeOrganic) {
+                baseNutrientRule = `1. **Nutrients (ORGANIC):** Use Fermaid O/Cellvit from stock.`;
+            } else {
+                baseNutrientRule = `1. **Nutrients (Recommendation):** Prescribe standard TOSNA (Fermaid O).`;
             }
+        } else {
+             baseNutrientRule = `1. **Nutrients (Standard):** Use standard TOSNA guidelines.`;
         }
 
-        // Bouw de inventaris string
-        const inventoryString = inventory
-            .filter(item => {
-                if (inventoryToggles.Other && otherCategories.includes(item.category)) return true;
-                return requestedCategories.includes(item.category);
-            })
-            .map(item => `${item.name}: ${item.qty} ${item.unit}`)
-            .join('; ');
+        const inventoryLogic = `**INVENTORY LOGIC:** Current Stock: [${inventoryString}]. Rule: List TOTAL quantity in JSON. Tell user to buy difference.`;
 
-         const inventoryLogicInstruction = `
-**INVENTORY INTELLIGENCE:** - You have access to the user's inventory: [${inventoryString}].
-- **MATCHING RULE:** If the recipe needs a chemical or nutrient (e.g., "Potassium Metabisulfite"), and the inventory contains a brand-name equivalent (e.g., "Vinoferm Campden" or "Sulfiet"), YOU MUST USE THE INVENTORY ITEM NAME.
-- **Form vs Type:** If the recipe needs tablets but the user has powder (or vice versa), use the user's format and adjust the quantity instruction.
-`;
+        // --- STAP 4: STYLE ROUTER ---
+        const sourKeywords = ['sour', 'wild', 'gueuze', 'lambic', 'brett', 'funky', 'farmhouse', 'lacto', 'pedio', 'geuze'];
+        const isQuickSour = inputString.includes('philly') || inputString.includes('kettle');
+        const isWildMode = sourKeywords.some(k => inputString.includes(k));
 
-// --- WATER LOGIC ---
-        let waterContext = "";
-        if (currentWaterProfile) {
-            waterContext = `
-**WATER SOURCE (LOCKED):**
-The user has explicitly selected a specific water source: "${currentWaterProfile.name}".
-- Profile (mg/L): Ca:${currentWaterProfile.ca}, Mg:${currentWaterProfile.mg}, Na:${currentWaterProfile.na}, SO4:${currentWaterProfile.so4}, Cl:${currentWaterProfile.cl}, HCO3:${currentWaterProfile.hco3}.
-- **INSTRUCTION:** You MUST use this water in the ingredients list. Analyze if it fits the style. Only recommend brewing salts if there is a CRITICAL deficiency that would ruin the batch. Otherwise, keep it simple.
-`;
-        } else {
-            // Geen profiel geselecteerd? Geef ADVIES over het TYPE water
-            waterContext = `
-**WATER SELECTION GUIDE (NO BRANDS):**
-The user prefers buying bottled spring water.
-- **CRITICAL:** Do NOT recommend specific brand names (like Spa, Evian, etc.).
-- **INSTRUCTION:** Instead, describe the **Ideal Mineral Profile** the user should look for on the label in the supermarket.
-- **How to recommend:**
-    - If the style is Light/Traditional: "Look for a **very soft water** with low total mineral content (Dry Residue < 50mg/L)."
-    - If the style is Dark/Bochet: "Look for water with **moderate bicarbonate/alkalinity** to buffer the acidity."
-    - If the style highlights hops/tannins: "Look for water with **higher sulfate** content."
-`;
-        }
+        const belgianKeywords = ['quad', 'tripel', 'dubbel', 'belgian', 'abbey', 'trappist', 'saison', 'blond', 'bruin', 'stout', 'barleywine'];
+        // Braggot valt ook onder complex/monastic als het geen sour braggot is
+        const isBelgianMode = belgianKeywords.some(k => inputString.includes(k)) || isBraggot; 
 
-        // --- STAP 4: DE DOCTORAAT PROMPT ---
-        let basePrompt = `You are "MEA(N)DERY", a master mazer and fermentation scientist. You do not guess; you engineer recipes based on the **Scott Labs Fermentation Handbook**, **BOMM Protocol**, and **UC Davis Enology** standards.
+        const heavyKeywords = ['rum', 'bourbon', 'whisky', 'barrel', 'oak', 'bochet', 'dessert', 'pastry', 'sack', 'port', 'sherry', 'amaretto', 'chocolate', 'vanilla', 'coffee', 'maple'];
+        const isHydromel = targetABV < 8 || inputString.includes('session') || inputString.includes('hydromel');
+        const isHeavyMode = heavyKeywords.some(k => inputString.includes(k)) || targetABV > 15;
 
-${mathContext}
-${selectedYeastContext ? `**YEAST DATA FROM LAB:**${selectedYeastContext}` : ''}
+        // --- STAP 5: PROTOCOLLEN ---
+        let protocolContext = "";
+        let specificLaws = "";
 
-**SCIENTIFIC CONSTRAINTS (NON-NEGOTIABLE):**
-
-1.  **The "Buffer" Rule (BOMM Protocol):** - Honey is acidic and unbuffered. As fermentation starts, pH drops. If pH hits 2.9, fermentation stalls.
-    - **Constraint:** If this is a Traditional Mead, Cyser, or Metheglin (which lack fruit buffering capacity), you MUST include "Potassium Carbonate" or "Potassium Bicarbonate" in the ingredients (approx 2g per 10L) to prevent a pH crash.
-
-2.  **The Nutrient Protocol (TOSNA / YAN):**
-    - Honey is nitrogen-deficient. Yeast STARVES without added YAN (Yeast Assimilable Nitrogen).
-    - **Constraint:** You MUST prescribe a **Staggered Nutrient Addition (SNA)** in the Instructions.
-    - **Priority:** Prioritize organic nitrogen (Fermaid O / Nutrivit) for the first 1/2 of fermentation to avoid yeast stress. 
-    - **DAP Rule:** Do NOT recommend DAP (Diammonium Phosphate) in the first 24 hours unless the gravity is very high (>1.110). Never add DAP after 9% ABV.
-    - **Timing:** Schedule additions at: 24h, 48h, 72h, and the 1/3 Sugar Break.
-
-3.  **The "Delle Unit" Stability Principle:**
-    - You cannot simply "stop" fermentation at a specific sweetness without chemical intervention or exceeding yeast tolerance.
-    - **Constraint:** If the user wants a **SWEET** or **SEMI-SWEET** mead, you MUST output a recipe that ferments **DRY (1.000)** first. 
-    - **Mandatory Instruction:** In the "## Secondary & Aging" section, you must instruct the user to:
-        1. Verify stable SG (reading unchanged for 3 days).
-        2. Stabilize with Potassium Sorbate AND Potassium Metabisulfite (Campden).
-        3. Wait 24 hours.
-        4. Backsweeten with honey to the target gravity.
-
-4.  **Fruit Management (Melomels):**
-    - **Contact Time:** Fruit left too long extracts bitter tannins from seeds/skins.
-    - **Instruction:** In "Secondary", explicitly instruct the user to remove fruit solids after 2-3 weeks max, or when the fruit loses its color.
-    - **Pectic Enzyme:** MUST be added at the start (mixed with fruit) to break down pectin and prevent haze.
-
-5.  **Yeast Selection Logic (If not specified):**
-    - **Lalvin 71B:** Best for high-acid fruits (metabolizes malic acid). 14% tolerance.
-    - **Lalvin EC-1118:** The "Nuclear Option". Strips flavor, high tolerance (18%), works in poor conditions. Use only for high gravity, carbonated recipes, or restarting stalls.
-    - **Mangrove Jack M05:** High ester production, excellent for Traditionals.
-
-**RECIPE STRUCTURE & FORMATTING (MANDATORY):**
-Your response must be a single, valid Markdown document.
-
-1.  **INGREDIENTS MUST BE A JSON CODE BLOCK:**
-    - **VALIDATION:** Before outputting, you MUST internally validate that the JSON is syntactically correct.
-    - **UNIQUENESS RULE:** Each ingredient must be unique. Sum quantities if added at multiple stages.
-    - **Example Format:** \`\`\`json[{"ingredient": "Honey", "quantity": 1.5, "unit": "kg"}, {"ingredient": "Water", "quantity": 3.5, "unit": "L"}]\`\`\`
-
-2.  **STRUCTURED INSTRUCTIONS:** - The "## Instructions" section MUST have "### Primary Fermentation" and "### Secondary & Aging" subheadings.
-    - **UNIVERSAL TIMER RULE:** You MUST end any instruction list item that requires a waiting period with a tag: \`[TIMER:HH:MM:SS]\`.
-        - Example: "Add yeast and wait 15 min. \`[TIMER:00:15:00]\`"
-        - Example: "Add nutrients at 24h. \`[TIMER:24:00:00]\`" (This starts the clock for the *next* step).
-
-3.  **BREWER'S NOTES (Rationale):**
-    - The "## Brewer's Notes" section is critical for scientific validation.
-    - **Required Topics:** - **Honey Choice:** Why this variety?
-        - **Yeast Strategy:** Justify the strain based on ABV tolerance vs Target ABV.
-        - **Nutrient Schedule:** Explain the chosen YAN target (Low/Med/High) and schedule.
-        - **Gastronomic Validation:** Evaluate the flavor pairing logic.
-
-Now, generate the world-class recipe based on the following user request:
----`;
-
-        // --- STAP 5: USER INPUT VERWERKING ---
-        let creativeBrief = ''; 
-
-        if (customDescription.trim() !== '') {
-            let inventoryConstraint = ''; 
-            if (useAnyInventory) {
-                inventoryConstraint = `Prioritize using ingredients from their inventory: [${inventoryString || 'None requested'}].`;
-            }
-            creativeBrief += `User Request (Free Text): "${customDescription}". ${inventoryConstraint}`;
-        } else if (useAnyInventory) {
-            creativeBrief += `User Request (Inventory Based): Create a recipe using: [${inventoryString}]. 
-            Targets: ABV ${targetABV}%, Sweetness: ${sweetness}, Style: ${style}.`;
-        } else {
-            let honeyValue = document.getElementById('honeyVariety').options[document.getElementById('honeyVariety').selectedIndex].text;
-            if (document.getElementById('honeyVariety').value === 'other') { 
-                honeyValue = document.getElementById('honeyVarietyOther').value; 
-            }
-
-            creativeBrief += `User Request (Structured):
-            - Style: ${style}
-            - Honey: ${honeyValue}
-            - Targets: ABV ${targetABV}%, Sweetness: ${sweetness}`;
+        // SCENARIO A: SOUR & WILD
+        if (isWildMode) {
+            protocolContext = `**PROTOCOL: WILD & SOUR.**`;
+            let timeRule = isQuickSour 
+                ? `**Time:** Philly Sour acts fast. Treat like ale.` 
+                : `**Time:** Genuine Wild/Brett needs **6-24 months** aging.`;
             
-            if (style.includes('Melomel')) {
+            let wildNutrientRule = baseNutrientRule;
+            if (hasDAP || hasHybrid) {
+                wildNutrientRule = `1. **Nutrients (WILD CAUTION):** User has Inorganic nutrients. **REDUCE DOSAGE by 50%** and front-load.`;
+            }
+
+            specificLaws = `
+**WILD LAWS:**
+${wildNutrientRule}
+2.  **Yeast:** Recommend Philly Sour, Lambic Blend, or Brett. Warn about plastic.
+3.  **Acidity:** NO Carbonate buffers.
+4.  ${timeRule}
+5.  **Hops:** Aged Hops for Gueuze.
+`;
+
+        // SCENARIO B: BELGIAN & COMPLEX (Include Braggot)
+        } else if (isBelgianMode) {
+            protocolContext = `**PROTOCOL: MONASTIC/COMPLEX (BELGIAN/BRAGGOT).** Focus on Esters, Phenols, and Malt/Syrup character.`;
+            specificLaws = `
+**MONASTIC LAWS:**
+${baseNutrientRule}
+2.  **Yeast:** Ale Yeasts (M47, BE-256, WLP500).
+3.  **Temp:** Warmer (20-25°C) permitted *IF* yeast strain allows.
+4.  **Ingredients:** Consider Dark Candi Syrup or Malt Extract.
+5.  **Carbonation:** Recommend bottle conditioning.
+`;
+
+        // SCENARIO C: STANDARD SCIENTIFIC
+        } else {
+            protocolContext = `**PROTOCOL: STANDARD SCIENTIFIC (BOMM).**`;
+
+            let timeAndAgingRule = "";
+            let hydromelRule = "";
+
+            if (isHydromel) {
+                timeAndAgingRule = `4. **Efficiency:** Fast turnaround (1 month).`;
+                hydromelRule = `5. **Hydromel Body:** Low ABV mead feels watery. Recommend adding **Erythritol, Lactose, or Maltodextrin** for mouthfeel, OR carbonating.`;
+            } else if (isHeavyMode || isNoWater) {
+                timeAndAgingRule = `4. **Aging:** High Gravity/Fruit load requires **3-6 months bulk aging**.`;
+            } else {
+                timeAndAgingRule = `4. **Efficiency:** Aim for clean ferment ready in 2-3 months.`;
+            }
+
+            specificLaws = `
+**SCIENTIFIC LAWS:**
+${baseNutrientRule}
+2.  **Yeast:** Reliable strains (71B, EC-1118, D47, US-05).
+3.  **Buffer:** Traditionals MUST have Potassium Carbonate.
+4.  **Stability:** Ferment DRY -> Stabilize -> Backsweeten.
+${timeAndAgingRule}
+${hydromelRule}
+`;
+        }
+
+        // --- STAP 6: WATER ---
+        let waterContext = "";
+        if (isNoWater) {
+            waterContext = `**WATER RULE:** DO NOT ADD WATER. Liquid must come from fruit juice/maceration only.`;
+        } else if (currentWaterProfile) {
+            waterContext = `Use Water: ${currentWaterProfile.name}`;
+        } else {
+            waterContext = `Recommend Ideal Water Profile.`;
+        }
+
+        // --- STAP 7: INPUT VERWERKING ---
+        let creativeBrief = ""; 
+        if (customDescription.trim() !== '') {
+             creativeBrief = `User Vision: "${customDescription}". Override stats only if specified. Base: ${batchSize}L, ${targetABV}%.`;
+        } else {
+             creativeBrief = `Structure: ${style}, Batch: ${batchSize}L, Target: ${targetABV}%, Sweetness: ${sweetness}.`;
+             if (style.includes('Melomel')) {
                 const fruits = Array.from(document.querySelectorAll('#fruit-section input[type=checkbox]:checked')).map(el => el.labels[0].innerText);
                 const otherFruits = document.getElementById('fruitOther').value;
-                creativeBrief += `\n- Fruits: ${[...fruits, otherFruits].filter(Boolean).join(', ')}`;
-            } 
-            if (style.includes('Metheglin')) {
+                const fStr = [...fruits, otherFruits].filter(Boolean).join(', ');
+                if(fStr) creativeBrief += `\n- Fruits: ${fStr}`;
+             }
+             if (style.includes('Metheglin')) {
                 const spices = Array.from(document.querySelectorAll('#spice-section input[type=checkbox]:checked')).map(el => el.labels[0].innerText);
                 const otherSpices = document.getElementById('spiceOther').value;
-                creativeBrief += `\n- Spices: ${[...spices, otherSpices].filter(Boolean).join(', ')}`;
-            }
-            if (document.getElementById('addOak').checked) {
-                creativeBrief += '\n- Requirement: Include Oak Aging.';
-            }
+                const sStr = [...spices, otherSpices].filter(Boolean).join(', ');
+                if(sStr) creativeBrief += `\n- Spices: ${sStr}`;
+             }
+             if (style.includes('Braggot')) {
+                 creativeBrief += `\n- Braggot Base: ${document.getElementById('braggotStyle').value}`;
+             }
+             const useBudget = document.getElementById('useBudget')?.checked;
+             if(useBudget) {
+                 const maxBudget = parseFloat(document.getElementById('maxBudget').value);
+                 if(maxBudget) creativeBrief += `\n- Budget Constraint: Try to keep the recipe cost around €${maxBudget}.`;
+             }
         }
 
-        return basePrompt + "\n" + creativeBrief;
+        // --- STAP 8: FINAL PROMPT ---
+        return `You are "MEA(N)DERY", a master mazer. 
+
+${mathContext}
+${protocolContext}
+${specificLaws}
+${inventoryLogic}
+${waterContext}
+
+**GLOBAL SAFETY OVERRIDE:**
+1. **Temp:** NEVER recommend a fermentation temp exceeding the yeast manufacturer's limit (e.g. D47 <20°C).
+2. **Sanity Check:** If the user requests impossible physics (e.g. 25% ABV without distillation, or 0 days fermentation), correct them politely and provide a realistic recipe.
+
+**OUTPUT FORMAT (STRICT):**
+1. **Markdown** structure.
+2. **Ingredients JSON:** \`\`\`json [{"ingredient": "Name", "quantity": 0, "unit": "kg"}] \`\`\` (List ALL ingredients with calculated amounts).
+3. **Timers:** \`[TIMER:HH:MM:SS]\` for wait steps.
+4. **Notes:** Explain choices based on the Active Protocol.
+
+Request:
+---
+${creativeBrief}
+---`;
 
     } catch (error) {
         console.error("Error building prompt:", error);

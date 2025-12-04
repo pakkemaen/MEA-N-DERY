@@ -543,17 +543,32 @@ table.fermentation-table {
     border-color: var(--bg-secondary) !important;
 }
 
-    /* --- JUWELIERS FINISH: INVISIBLE SCROLL (NUCLEAR OPTION) --- */
-.no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-}
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
-    background: transparent; /* Chrome, Safari, Opera */
-}
+    /* --- JUWELIERS FINISH: INVISIBLE SCROLL (NUCLEAR OPTION V2) --- */
+    .no-scrollbar {
+        -ms-overflow-style: none !important;  /* IE and Edge */
+        scrollbar-width: none !important;  /* Firefox */
+    }
+    
+    /* Verberg de scrollbar zelf */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        background: transparent !important;
+        -webkit-appearance: none !important;
+    }
+
+    /* Verberg de 'track' (de achtergrondbalk) */
+    .no-scrollbar::-webkit-scrollbar-track {
+        display: none !important;
+        background: transparent !important;
+    }
+
+    /* Verberg de 'thumb' (het schuifblokje) */
+    .no-scrollbar::-webkit-scrollbar-thumb {
+        display: none !important;
+        background: transparent !important;
+    }
     
     /* Label Preview Styles (Behouden) */
     #label-preview { transition: all 0.3s; }
@@ -3026,7 +3041,7 @@ async function renderRecipeOutput(markdown) {
                 finalMarkdown = finalMarkdown.replace(/\[d:[\d:]+\]/g, '');
                 const recipeHtml = marked.parse(finalMarkdown);
                 
-                // --- AANGEPAST: Voeg de Tweak-sectie toe ---
+                // --- AANGEPAST: Voeg de Tweak-sectie EN de Water-sectie toe ---
                 const fullHtml = `
                     <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
                         <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
@@ -3036,7 +3051,19 @@ async function renderRecipeOutput(markdown) {
                             Print Recipe
                         </button>
                     </div>
+                    
                     <div class="recipe-content">${recipeHtml}</div>
+                    
+                    <div class="mt-4 p-4 border border-blue-200 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex justify-between items-center no-print">
+                        <div>
+                            <h4 class="font-bold text-blue-800 dark:text-blue-200 text-sm uppercase">Water Chemistry</h4>
+                            <p class="text-xs text-blue-600 dark:text-blue-300">Need help adjusting your water based on the recommendation above?</p>
+                        </div>
+                        <button onclick="switchMainView('tools'); switchSubView('water', 'tools-main-view');" class="bg-blue-600 text-white py-2 px-3 rounded text-sm hover:bg-blue-700 btn">
+                            Open Water Tool
+                        </button>
+                    </div>
+
                     ${flavorProfileHtml}
                     
                     <div id="tweak-unsaved-section" class="mt-6 pt-6 border-t-2 border-app-brand no-print">
@@ -3057,6 +3084,7 @@ async function renderRecipeOutput(markdown) {
                         </button>
                     </div>
                 `;
+
                 recipeOutput.innerHTML = fullHtml;
         
                 if (currentPredictedProfile) {
@@ -3187,17 +3215,15 @@ function buildPrompt() {
         const inputString = (customDescription + " " + style).toLowerCase();
         const noWaterCheckbox = document.getElementById('isNoWaterCheckbox');
         
-        // Context detectie
         const isNoWater = (noWaterCheckbox && noWaterCheckbox.checked) || inputString.includes('no-water') || inputString.includes('no water');
         const isBraggot = inputString.includes('braggot');
         
-        // --- BUDGET DETECTIE (DE FIX) ---
         const useBudget = document.getElementById('useBudget')?.checked;
         let budgetContext = "";
         if (useBudget) {
              const maxBudget = parseFloat(document.getElementById('maxBudget').value);
              if (maxBudget > 0) {
-                 budgetContext = `\n- **STRICT BUDGET CONSTRAINT:** The total cost of ingredients MUST be below **€${maxBudget}**. Prioritize cheaper ingredients or smaller batches if necessary to hit this target.`;
+                 budgetContext = `\n- **STRICT BUDGET CONSTRAINT:** The total cost of ingredients MUST be below **€${maxBudget}**. Prioritize cheaper ingredients or smaller batches if necessary.`;
              }
         }
 
@@ -3209,27 +3235,19 @@ function buildPrompt() {
         let mathContext = `
 **CALCULATED TARGETS:**
 - **Batch:** ${batchSize}L | **Target ABV:** ${targetABV}%
-- **Honey Baseline:** ~${totalHoneyKg.toFixed(2)} kg (Assuming honey provides 100% of the alcohol).
+- **Honey Baseline:** ~${totalHoneyKg.toFixed(2)} kg (Assuming honey provides 100% of alcohol).
 - **SHOPPING LIST RULE:** If target is **SWEET**, add ~15% extra honey to the JSON for backsweetening.
-- **Nitrogen Target:** ~${estimatedYAN} PPM YAN.${budgetContext}  <-- HIER WORDT HET BUDGET GEÏNJECTEERD
+- **Nitrogen Target:** ~${estimatedYAN} PPM YAN.${budgetContext}
 `;
-        // SPECIAL MATH LOGIC
         if (isNoWater) {
-            mathContext += `
-- **PROTOCOL: NO-WATER MELOMEL.** 1. No added water. 2. Need ~1.8kg fruit/Liter. 3. **SUGAR ALERT:** Fruit adds sugar. REDUCE Honey Baseline significantly to maintain ABV target.
-`;
-        } else if (isBraggot) { // FIX: Braggot Math
-            mathContext += `
-- **PROTOCOL: BRAGGOT (MEAD/BEER HYBRID).** 1. This style requires Malt Extract or Grain.
-  2. **SUGAR SPLIT:** You MUST assume Malt provides ~30-50% of the sugars. **REDUCE** the Honey Baseline calculated above proportionally so the TOTAL ABV remains ${targetABV}%.
-`;
+            mathContext += `\n- **PROTOCOL: NO-WATER MELOMEL.** 1. No added water. 2. Need ~1.8kg fruit/Liter. 3. **SUGAR ALERT:** Fruit adds sugar. REDUCE Honey Baseline significantly.`;
+        } else if (isBraggot) {
+            mathContext += `\n- **PROTOCOL: BRAGGOT.** Malt provides 30-50% sugar. REDUCE Honey Baseline proportionally.`;
         } else {
-            mathContext += `
-- **JUICE WARNING:** If replacing water with Fruit Juice (Cyser), reduce honey to prevent overshooting ABV.
-`;
+            mathContext += `\n- **JUICE WARNING:** If replacing water with Fruit Juice, reduce honey to prevent overshooting ABV.`;
         }
 
-        // --- STAP 3: INVENTORY ANALYSE (Fort Knox Upgrade) ---
+        // --- STAP 3: INVENTORY ANALYSE (THE SILENCE UPDATE) ---
         const inventoryToggles = {
             Yeast: document.getElementById('useInventory_Yeast').checked,
             Nutrient: document.getElementById('useInventory_Nutrients').checked,
@@ -3239,79 +3257,69 @@ function buildPrompt() {
             Other: document.getElementById('useInventory_Other').checked
         };
         
-        // 1. Haal ALLES op wat relevant is voor brouwen (niet filteren op vinkjes!)
         const relevantCategories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
         const fullInventoryList = inventory.filter(item => relevantCategories.includes(item.category));
-        
-        // 2. Maak de string voor de AI
         const inventoryString = fullInventoryList.map(item => `${item.name} (${item.qty} ${item.unit})`).join('; ');
         
-        // 3. Bepaal de INSTRUCTIE op basis van de vinkjes
         const useAnyInventory = Object.values(inventoryToggles).some(val => val === true);
-        
-        // Filter welke categorieën specifiek zijn aangevraagd (voor de prompt instructie)
         const requestedCategories = Object.keys(inventoryToggles).filter(k => inventoryToggles[k]);
         
         let inventoryInstruction = "";
         
         if (useAnyInventory) {
-             // Als er vinkjes staan: "Probeer deze te gebruiken"
-             inventoryInstruction = `**INVENTORY MODE:** The user wants to use their stock. Prioritize using items from the following categories: ${requestedCategories.join(', ')}.`;
+             inventoryInstruction = `**INVENTORY MODE:** The user wants to use their stock. Prioritize using items from: ${requestedCategories.join(', ')}.`;
         } else {
-             // Als er geen vinkjes staan: "Ter info, dit hebben ze."
-             inventoryInstruction = `**STOCK AWARENESS:** The user has these items in stock (see list). You are NOT forced to use them, but if an item matches the style perfectly, suggest using it instead of buying new.`;
+             inventoryInstruction = `**STOCK AWARENESS:** The user has these items available. Suggest them if they fit the style perfectly.`;
         }
 
-        // 4. De Slimme Nutriënten Logic (Blijft hetzelfde, maar gebruikt nu fullInventoryList)
+        // Nutriënten logica (Vinoferm detectie)
         const invLower = inventoryString.toLowerCase();
         const hasSafeOrganic = invLower.includes('fermaid o') || invLower.includes('ferm o') || invLower.includes('cellvit') || invLower.includes('yeast hulls');
         const hasDAP = invLower.includes('dap') || invLower.includes('diammonium') || invLower.includes('nutrisal');
         const hasHybrid = invLower.includes('nutrivit') || invLower.includes('fermaid k') || invLower.includes('combi') || invLower.includes('ultra') || invLower.includes('tronozym');
         
         let baseNutrientRule = "";
-        // (Hieronder gaat je bestaande nutriënten logica verder...)
         if (inventoryToggles.Nutrient) { 
-             // ... etc (je huidige logica voor nutriënten is prima)
              if (!hasSafeOrganic && (hasHybrid || hasDAP)) {
-                baseNutrientRule = `1. **Nutrients (HYBRID SCHEDULE):** Detected Inorganic/Hybrid stock (Nutrisal/Combi) but NO Fermaid O. Use ONLY this stock. **WARNING:** Instruct user to STOP adding these after 1/3 sugar break (9% ABV).`;
+                baseNutrientRule = `1. **Nutrients (HYBRID):** Detected Inorganic/Hybrid stock but NO Fermaid O. Use ONLY this stock. **WARNING:** Instruct user to STOP adding after 9% ABV.`;
             } else if (hasSafeOrganic) {
                 baseNutrientRule = `1. **Nutrients (ORGANIC):** Use Fermaid O/Cellvit from stock.`;
             } else {
-                baseNutrientRule = `1. **Nutrients (Recommendation):** Prescribe standard TOSNA (Fermaid O).`;
+                baseNutrientRule = `1. **Nutrients:** Prescribe standard TOSNA.`;
             }
         } else {
-             baseNutrientRule = `1. **Nutrients (Standard):** Use standard TOSNA guidelines.`;
+             baseNutrientRule = `1. **Nutrients:** Use standard TOSNA guidelines.`;
         }
 
+        // FIX: STRICT SILENCE PROTOCOL
         const inventoryLogic = `
         ${inventoryInstruction} 
         **FULL STOCK LIST:** [${inventoryString}]. 
         
         **CRITICAL INVENTORY RULES:**
         1. **JSON Block:** MUST contain the **TOTAL** ingredients required for the recipe (ignore stock here, list full amounts).
-        2. **Text/Notes:** - If (Stock >= Required): **DO NOT MENTION IT.** Keep silent. Do not write "No need to buy".
-           - If (Stock < Required): Explicitly tell the user to buy the **DIFFERENCE**.
-           - **Goal:** The text should only list the "To Buy" items. If the user has everything, simply say "You have all ingredients in stock."
+        2. **Text/Notes:** - **NEGATIVE CONSTRAINT:** If the user has enough of an item in stock, **DO NOT MENTION IT** in the text. Do not write "No need to buy". Just omit it entirely.
+           - Only list items where (Stock < Required). Tell the user to buy the **DIFFERENCE**.
+           - If the user has EVERYTHING, simply write: "You have all ingredients in stock."
         `;
 
         // --- STAP 4: STYLE ROUTER ---
+        const inputStringLowercase = (customDescription + " " + style).toLowerCase();
         const sourKeywords = ['sour', 'wild', 'gueuze', 'lambic', 'brett', 'funky', 'farmhouse', 'lacto', 'pedio', 'geuze'];
-        const isQuickSour = inputString.includes('philly') || inputString.includes('kettle');
-        const isWildMode = sourKeywords.some(k => inputString.includes(k));
+        const isQuickSour = inputStringLowercase.includes('philly') || inputStringLowercase.includes('kettle');
+        const isWildMode = sourKeywords.some(k => inputStringLowercase.includes(k));
 
         const belgianKeywords = ['quad', 'tripel', 'dubbel', 'belgian', 'abbey', 'trappist', 'saison', 'blond', 'bruin', 'stout', 'barleywine'];
-        // Braggot valt ook onder complex/monastic als het geen sour braggot is
-        const isBelgianMode = belgianKeywords.some(k => inputString.includes(k)) || isBraggot; 
+        const isBelgianMode = belgianKeywords.some(k => inputStringLowercase.includes(k)) || isBraggot; 
 
         const heavyKeywords = ['rum', 'bourbon', 'whisky', 'barrel', 'oak', 'bochet', 'dessert', 'pastry', 'sack', 'port', 'sherry', 'amaretto', 'chocolate', 'vanilla', 'coffee', 'maple'];
-        const isHydromel = targetABV < 8 || inputString.includes('session') || inputString.includes('hydromel');
-        const isHeavyMode = heavyKeywords.some(k => inputString.includes(k)) || targetABV > 15;
+        const isHydromel = targetABV < 8 || inputStringLowercase.includes('session') || inputStringLowercase.includes('hydromel');
+        const isHeavyMode = heavyKeywords.some(k => inputStringLowercase.includes(k)) || targetABV > 15;
 
         // --- STAP 5: PROTOCOLLEN ---
         let protocolContext = "";
         let specificLaws = "";
 
-        // SCENARIO A: SOUR & WILD
         if (isWildMode) {
             protocolContext = `**PROTOCOL: WILD & SOUR.**`;
             let timeRule = isQuickSour 
@@ -3331,23 +3339,18 @@ ${wildNutrientRule}
 4.  ${timeRule}
 5.  **Hops:** Aged Hops for Gueuze.
 `;
-
-        // SCENARIO B: BELGIAN & COMPLEX (Include Braggot)
         } else if (isBelgianMode) {
-            protocolContext = `**PROTOCOL: MONASTIC/COMPLEX (BELGIAN/BRAGGOT).** Focus on Esters, Phenols, and Malt/Syrup character.`;
+            protocolContext = `**PROTOCOL: MONASTIC/COMPLEX.** Focus on Esters/Phenols.`;
             specificLaws = `
 **MONASTIC LAWS:**
 ${baseNutrientRule}
 2.  **Yeast:** Ale Yeasts (M47, BE-256, WLP500).
 3.  **Temp:** Warmer (20-25°C) permitted *IF* yeast strain allows.
-4.  **Ingredients:** Consider Dark Candi Syrup or Malt Extract.
+4.  **Ingredients:** Consider Dark Candi Syrup.
 5.  **Carbonation:** Recommend bottle conditioning.
 `;
-
-        // SCENARIO C: STANDARD SCIENTIFIC
         } else {
             protocolContext = `**PROTOCOL: STANDARD SCIENTIFIC (BOMM).**`;
-
             let timeAndAgingRule = "";
             let hydromelRule = "";
 
@@ -3420,13 +3423,13 @@ ${waterContext}
 
 **GLOBAL SAFETY OVERRIDE:**
 1. **Temp:** NEVER recommend a fermentation temp exceeding the yeast manufacturer's limit (e.g. D47 <20°C).
-2. **Sanity Check:** If the user requests impossible physics (e.g. 25% ABV without distillation, or 0 days fermentation), correct them politely and provide a realistic recipe.
+2. **Sanity Check:** If the user requests impossible physics, correct them politely.
 
 **OUTPUT FORMAT (STRICT):**
 1. **Markdown** structure.
 2. **Ingredients JSON:** \`\`\`json [{"ingredient": "Name", "quantity": 0, "unit": "kg"}] \`\`\` (List ALL ingredients with calculated amounts).
 3. **Timers:** \`[TIMER:HH:MM:SS]\` for wait steps.
-4. **Notes:** Explain choices based on the Active Protocol.
+4. **Brewer's Notes:** Include a dedicated section titled "## Brewer's Notes". Explain your choices, the flavor profile, and specifically discuss the water profile recommendation here.
 
 Request:
 ---

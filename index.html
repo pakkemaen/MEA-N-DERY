@@ -2877,15 +2877,14 @@ async function generateRecipe() {
     }
 }
 
-// --- NIEUWE FUNCTIE: Creative Title Generator (Persona Based) ---
+// --- CREATIVE TITLE GENERATOR: RYAN REYNOLDS 2.0 (The Functional Wit) ---
 async function generateAndInjectCreativeTitle(markdown) {
-    // Zoek de titel in de huidige weergave
     const titleHeader = document.querySelector('#recipe-output h1');
     if (!titleHeader) return;
 
-    // Visuele feedback dat hij nadenkt (subtiel)
+    // Visuele feedback
     const originalTitle = titleHeader.textContent;
-    titleHeader.innerHTML = `${originalTitle} <span class="text-sm font-normal text-app-brand animate-pulse">...brewing a name...</span>`;
+    titleHeader.innerHTML = `${originalTitle} <span class="text-sm font-normal text-app-brand animate-pulse">...branding in progress...</span>`;
 
     const prompt = `You are a witty, cynical, modern branding expert for a high-end craft meadery. 
     
@@ -2894,42 +2893,51 @@ async function generateAndInjectCreativeTitle(markdown) {
     **RECIPE CONTEXT:**
     ${markdown.substring(0, 1000)}... [truncated]
 
-    **PERSONALITY & INSPIRATION (CRUCIAL):**
-    - **The Vibe:** Channel the dry, self-aware wit of **Ryan Reynolds** (Aviation Gin marketing) mixed with the abstract minimalism of a **Scandi-style craft brewery** (like Mikkeller or Omnipollo).
-    - **The Rules:** 1. **NO CLICHÉS:** If it sounds like a fantasy novel (Viking, Thor, Elixir, Nectar, Blood), DELETE IT.
-        2. **Dry Humor:** Use understatement, irony, or a slightly absurd statement.
-        3. **Short & Punchy:** Maximum 4 words. Ideally 2 or 3.
-    
-    **WHAT TO AIM FOR:**
-    - Instead of "Sweet Cherry Mead", say "Expensive Juice" or "Red".
-    - Instead of "Spiced Holiday Brew", say "December Issues" or "Liquid Sweater".
-    - Instead of "Strong Oak Aged Mead", say "The Wood One" or "Patience".
+    **THE VIBE (Ryan Reynolds / Aviation Gin style):**
+    - Dry, self-aware wit.
+    - Minimalist but punchy.
+    - Slightly expensive/exclusive sounding, but with a wink.
 
-    **Format:** Output ONLY the name. No quotes, no explanations. Just the text.
+    **THE RULES:**
+    1. **NO FANTASY CLICHÉS:** If it sounds like Dungeons & Dragons (Viking, Thor, Elixir, Blood, Slayer), DELETE IT immediately.
+    2. **FUNCTIONAL WIT:** The name must vaguely hint at the flavor or style, but creatively.
+       - Don't say: "Strawberry Mead".
+       - Do say: "Expensive Strawberry Juice" or "Red & Patient".
+    3. **Short:** Max 4 words. Ideally 2 or 3.
+
+    **Format:** Output ONLY the name. No quotes.
     `;
 
     try {
-        // Korte API call
         const newTitle = await performApiCall(prompt);
         const cleanTitle = newTitle.replace(/['"]/g, '').trim();
 
-        // 1. Update de DOM (Zichtbaar voor gebruiker)
+        // 1. Update de DOM
         titleHeader.textContent = cleanTitle;
 
-        // 2. Update de opgeslagen Markdown (Zodat Save to History werkt)
+        // 2. Update de globale variabele voor 'Save to History'
         if (currentRecipeMarkdown) {
             currentRecipeMarkdown = currentRecipeMarkdown.replace(/^#\s*(.*)/m, `# ${cleanTitle}`);
         }
 
     } catch (error) {
         console.warn("Title generation failed:", error);
-        titleHeader.textContent = originalTitle; // Zet terug bij fout
+        titleHeader.textContent = originalTitle;
     }
 }
 
-// --- NIEUWE FUNCTIE: RENDER RECEPT OUTPUT ---
-            async function renderRecipeOutput(markdown) {
-                // 'markdown' is de parameter, vervangt 'currentRecipeMarkdown'
+// --- NIEUWE FUNCTIE: RENDER RECEPT OUTPUT (MET TITEL FIX) ---
+async function renderRecipeOutput(markdown) {
+    // 1. TITEL GARANTIE (De Fix)
+    // Als de AI vergeet een titel te geven (begint niet met #), voegen we er zelf een toe.
+    // Dit zorgt ervoor dat er altijd een <h1> is voor de titel-generator.
+    let finalMarkdown = markdown;
+    if (!finalMarkdown.trim().startsWith('# ')) {
+        finalMarkdown = `# Untitled Batch\n\n${finalMarkdown}`;
+    }
+
+    // Update de globale variabele meteen, zodat save-to-history ook werkt
+    currentRecipeMarkdown = finalMarkdown;
                 
                 currentPredictedProfile = await getPredictedFlavorProfile(markdown); 
                 
@@ -3249,7 +3257,16 @@ function buildPrompt() {
              baseNutrientRule = `1. **Nutrients (Standard):** Use standard TOSNA guidelines.`;
         }
 
-        const inventoryLogic = `${inventoryInstruction} \n **FULL STOCK LIST:** [${inventoryString}]. \n Rule: List TOTAL quantity in JSON. Tell user to buy difference.`;
+        const inventoryLogic = `
+        ${inventoryInstruction} 
+        **FULL STOCK LIST:** [${inventoryString}]. 
+        
+        **CRITICAL INVENTORY RULES:**
+        1. **JSON Block:** MUST contain the **TOTAL** ingredients required for the recipe (ignore stock here, list full amounts).
+        2. **Text/Notes:** - If (Stock >= Required): **DO NOT MENTION IT.** Keep silent. Do not write "No need to buy".
+           - If (Stock < Required): Explicitly tell the user to buy the **DIFFERENCE**.
+           - **Goal:** The text should only list the "To Buy" items. If the user has everything, simply say "You have all ingredients in stock."
+        `;
 
         // --- STAP 4: STYLE ROUTER ---
         const sourKeywords = ['sour', 'wild', 'gueuze', 'lambic', 'brett', 'funky', 'farmhouse', 'lacto', 'pedio', 'geuze'];

@@ -65,6 +65,7 @@
         color: var(--text-primary);
         transition: background-color 0.3s, color 0.3s;
         line-height: 1.6;
+        padding-bottom: env(safe-area-inset-bottom); /* Zorgt voor ruimte bij de swipe-bar */
     }
 
     /* Zorg dat placeholders leesbaar zijn in light mode */
@@ -529,15 +530,30 @@ table.fermentation-table {
         }
     }
 
-    /* --- UTILITY: HIDE SCROLLBARS BUT KEEP FUNCTIONALITY --- */
-    .no-scrollbar::-webkit-scrollbar {
-       display: none; /* Chrome, Safari, Opera */
-    }
+/* --- JUWELIERS FINISH: LIVING BREW ANIMATION --- */
+@keyframes softPulse {
+    0% { box-shadow: 0 0 0 0 rgba(143, 140, 121, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(143, 140, 121, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(143, 140, 121, 0); }
+}
 
-    .no-scrollbar {
-       -ms-overflow-style: none;  /* IE and Edge */
-       scrollbar-width: none;  /* Firefox */
-    }
+.living-node {
+    animation: softPulse 2s infinite;
+    background-color: var(--brand-color) !important;
+    border-color: var(--bg-secondary) !important;
+}
+
+    /* --- JUWELIERS FINISH: INVISIBLE SCROLL (NUCLEAR OPTION) --- */
+.no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+    background: transparent; /* Chrome, Safari, Opera */
+}
     
     /* Label Preview Styles (Behouden) */
     #label-preview { transition: all 0.3s; }
@@ -1764,14 +1780,25 @@ window.removeCustomBottleFromList = function(index) {
             backgroundColor = "linear-gradient(to right, #3b82f6, #2563eb)";
     }
     Toastify({
-        text: message.replace(/\n/g, '<br>'), // Vervang newlines met <br> voor leesbaarheid
-        duration: duration, // Gebruik de meegegeven duur
+        text: message.replace(/\n/g, '<br>'),
+        duration: duration,
         close: true,
         gravity: "top",
         position: "right",
         stopOnFocus: true,
-        escapeMarkup: false, // Sta HTML toe (voor de <br>)
-        style: { background: backgroundColor, borderRadius: "8px" }
+        escapeMarkup: false,
+        // --- CUSTOM STYLING ---
+        style: { 
+            background: backgroundColor,
+            borderRadius: "4px", // Strakker, minder rond
+            fontFamily: "'Barlow Semi Condensed', sans-serif", // Jouw font
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)", // Subtiele schaduw
+            fontWeight: "600",
+            textTransform: "uppercase",
+            fontSize: "0.85rem",
+            letterSpacing: "0.05em",
+            padding: "12px 20px"
+        }
     }).showToast();
 }
 
@@ -4295,8 +4322,14 @@ window.renderInventory = function() {
     }
     
     if (inventory.length === 0) {
-        html = `<p class="text-center text-app-secondary/80">Your inventory is empty. Add your first ingredient!</p>`;
-    }
+    html = `
+        <div class="flex flex-col items-center justify-center py-10 opacity-50">
+            <svg class="w-16 h-16 mb-4 text-app-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+            <p class="text-lg font-header font-bold">The Cupboard is Bare</p>
+            <p class="text-sm">Time to stock up on honey and yeast.</p>
+        </div>
+    `;
+}
 
     inventoryList.innerHTML = html;
 }
@@ -5637,7 +5670,7 @@ function renderActiveBrewTimeline() {
     const card = document.getElementById('current-brew-card');
     if (!card) return;
 
-    // Zoek de meest recente actieve (niet-gebottelde) brouwsel
+    // 1. Zoek de meest relevante actieve batch
     const activeBrew = brews.find(b => b.logData && b.logData.brewDate && b.logData.brewDate !== '' && !b.isBottled);
 
     if (!activeBrew) {
@@ -5645,63 +5678,96 @@ function renderActiveBrewTimeline() {
         return;
     }
 
+    // 2. Bereken de "Bio-Time"
     const now = new Date();
     const brewDate = new Date(activeBrew.logData.brewDate);
-    const daysFermenting = Math.floor((now - brewDate) / (1000 * 60 * 60 * 24));
-
-    let progressPercentage = 0;
-    let statusText = `Day ${daysFermenting}: `;
+    const daysElapsed = Math.floor((now - brewDate) / (1000 * 60 * 60 * 24));
     
-    // Check de fases
-    const checklist = activeBrew.checklist || {};
-    const completedCount = Object.keys(checklist).filter(k => checklist[k] === true).length;
+    // 3. Bepaal het "Metabolisme" (Snelheid op basis van ABV)
+    // Hydromel (<8%) gaat sneller door de fases dan een Sack Mead (>14%)
+    const targetABV = parseFloat(activeBrew.logData.targetABV) || 12;
+    let paceModifier = 1; // Standaard
+    if (targetABV < 8) paceModifier = 0.5; // Gaat 2x zo snel door de fases (visueel)
+    if (targetABV > 14) paceModifier = 1.5; // Gaat trager
 
-    if (!activeBrew.primaryComplete) {
-        statusText += "Primary Fermentation";
-        const totalPrimarySteps = (activeBrew.brewDaySteps || []).length || 1; 
-        const phaseProgress = Math.min(1, completedCount / totalPrimarySteps);
-        progressPercentage = phaseProgress * 50; 
-    } else {
-        statusText += "Secondary / Conditioning";
-        const totalSecondarySteps = (activeBrew.secondarySteps || []).length || 1;
-        const phaseProgress = Math.min(1, completedCount / totalSecondarySteps);
-        progressPercentage = 50 + (phaseProgress * 50);
-        
-        if (phaseProgress > 0.9) statusText = `Day ${daysFermenting}: Bottling Ready?`;
+    // 4. Bepaal de Biologische Fase & Smart Tip
+    let phaseName = "";
+    let smartTip = "";
+    let progressPercent = 0;
+    
+    // FASE 1: Lag Phase & Growth (Dag 0-3)
+    if (daysElapsed <= (3 * paceModifier)) {
+        phaseName = "Lag / Biomass Growth";
+        smartTip = "Yeast is multiplying. Oxygen is good now. Degas gently.";
+        progressPercent = 15;
+    } 
+    // FASE 2: Active Fermentation (Dag 4-14)
+    else if (daysElapsed <= (14 * paceModifier)) {
+        phaseName = "Vigorous Fermentation";
+        smartTip = "Sugar is converting to alcohol. Keep temperature stable.";
+        progressPercent = 40;
+    } 
+    // FASE 3: Cleanup / Conditioning (Dag 15-30)
+    else if (daysElapsed <= (30 * paceModifier)) {
+        phaseName = "Cleanup Phase";
+        smartTip = "Yeast is cleaning up off-flavors. Do not disturb.";
+        progressPercent = 70;
+    } 
+    // FASE 4: Bulk Aging (Dag 30+)
+    else {
+        phaseName = "Bulk Aging / Clearing";
+        smartTip = "Waiting for clarity. Patience is the main ingredient.";
+        progressPercent = 90;
     }
 
+    // Override als Primary handmatig is afgevinkt
+    if (activeBrew.primaryComplete) {
+        phaseName = "Secondary / Maturation";
+        smartTip = "Aging for complexity. Ensure airlock is tight.";
+        progressPercent = Math.max(progressPercent, 60); // Minimaal 60%
+    }
+
+    // 5. Render de Timeline (Met Hartslag)
     const stages = [
-        { name: 'Brew Day', active: true },
-        { name: 'Primary End', active: activeBrew.primaryComplete || progressPercentage >= 50 },
-        { name: 'Aging', active: activeBrew.primaryComplete && progressPercentage >= 75 }, 
-        { name: 'Bottling Ready', active: progressPercentage >= 95 }
+        { name: 'Lag', active: daysElapsed >= 0 },
+        { name: 'Active', active: daysElapsed > (3 * paceModifier) },
+        { name: 'Cleanup', active: daysElapsed > (14 * paceModifier) },
+        { name: 'Aging', active: daysElapsed > (30 * paceModifier) || activeBrew.primaryComplete }
     ];
 
-    let timelineItemsHtml = '';
-    stages.forEach((stage) => {
-        timelineItemsHtml += `
+    // Bepaal welke node "leeft" (de laatste actieve)
+    const activeIndex = stages.findLastIndex(s => s.active);
+
+    let timelineItemsHtml = stages.map((stage, index) => {
+        const isPulse = index === activeIndex ? 'living-node' : '';
+        const isActive = stage.active ? 'background: var(--brand-color); border-color: var(--brand-color);' : '';
+        
+        return `
             <div class="timeline-item ${stage.active ? 'active' : ''}">
-                <div class="timeline-node"></div>
+                <div class="timeline-node ${isPulse}" style="${isActive}"></div>
                 <div class="timeline-label text-[10px] uppercase tracking-wide">${stage.name}</div>
             </div>
         `;
-    });
+    }).join('');
 
-    // --- NIEUWE LAYOUT MET KNOP RECHTSBOVEN ---
     card.innerHTML = `
-        <div class="flex justify-between items-start mb-4">
+        <div class="flex justify-between items-start mb-2">
             <div class="pr-4">
-                <h3 class="text-xl font-header font-bold text-app-brand leading-tight">${activeBrew.recipeName}</h3>
-                <p class="text-app-secondary text-sm font-semibold mt-1">${statusText}</p>
+                <div class="flex items-center gap-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <h3 class="text-xl font-header font-bold text-app-brand leading-tight">${activeBrew.recipeName}</h3>
+                </div>
+                <p class="text-app-primary font-bold text-sm mt-1">Day ${daysElapsed}: ${phaseName}</p>
+                <p class="text-app-secondary text-xs italic mt-1">"${smartTip}"</p>
             </div>
             <button onclick="window.showBrewDetail('${activeBrew.id}')" class="flex-shrink-0 bg-transparent border border-app-brand text-app-brand hover:bg-app-brand hover:text-white text-xs font-bold uppercase px-3 py-2 rounded transition-colors">
-                View Details
+                View
             </button>
         </div>
         
-        <div class="timeline-container mt-6 mb-2">
+        <div class="timeline-container mt-4 mb-2">
             <div class="timeline-connector">
-                <div class="timeline-progress" style="width: ${progressPercentage}%;"></div>
+                <div class="timeline-progress" style="width: ${progressPercent}%;"></div>
             </div>
             ${timelineItemsHtml}
         </div>
@@ -5710,35 +5776,68 @@ function renderActiveBrewTimeline() {
     card.classList.remove('hidden');
 }
 
-// --- NIEUWE FUNCTIE: UPDATE DASHBOARD STATS ---
+// --- UPDATED: CALCULATE TOTAL ASSET VALUE (Inventory + Active + Cellar) ---
 function updateDashboardStats() {
     // 1. Active Batches: Alles wat een startdatum heeft maar niet gebotteld is
-    const activeCount = brews.filter(b => b.logData && b.logData.brewDate && !b.isBottled).length;
+    // We berekenen hier ook de waarde van!
+    const activeBrews = brews.filter(b => b.logData && b.logData.brewDate && !b.isBottled);
+    const activeCount = activeBrews.length;
+    
+    // Waarde van wat er nu staat te pruttelen
+    let activeValue = activeBrews.reduce((acc, brew) => acc + (parseFloat(brew.totalCost) || 0), 0);
+
     const activeEl = document.getElementById('stat-active-batches');
     if(activeEl) activeEl.textContent = activeCount;
 
-    // 2. Bottles in Cellar: Tel alle flessen in alle batches op
+    // 2. Bottles in Cellar: Aantal flessen én Totale Waarde
     let totalBottles = 0;
+    let cellarValue = 0;
+    
     if (cellar && cellar.length > 0) {
         cellar.forEach(item => {
+            // Flessen tellen
             if (item.bottles) {
                 totalBottles += item.bottles.reduce((acc, b) => acc + (parseInt(b.quantity) || 0), 0);
             }
+            // Waarde optellen (Total Batch Cost die we opsloegen bij het bottelen)
+            // Als er flessen zijn gedronken, moeten we de waarde eigenlijk pro rata verlagen,
+            // maar voor nu gebruiken we de 'restwaarde' logica als we dat zouden implementeren.
+            // Simpele aanpak: We herberekenen de waarde op basis van resterende flessen?
+            // Nee, cellar item heeft 'totalBatchCost'. Laten we die gebruiken, of slimmer:
+            
+            // SLIMME CELLAR WAARDE: (Totale kosten / Oorspronkelijk aantal flessen) * Huidig aantal flessen
+            // Dit vereist dat we weten hoeveel flessen eroorspronkelijk waren. 
+            // Voor nu nemen we simpelweg de opgeslagen 'totalBatchCost' van de batch in de kelder,
+            // Omdat de 'consumptie' logica nog geen kosten aftrekt in de huidige app.
+            // (Upgrade tip voor later: Kosten per fles berekenen en aftrekken bij consumptie).
+            
+            cellarValue += (parseFloat(item.totalBatchCost) || 0);
         });
     }
     const bottlesEl = document.getElementById('stat-bottles');
     if(bottlesEl) bottlesEl.textContent = totalBottles;
 
-    // 3. Total Spent: Totale waarde van de inventaris
-    let totalSpent = 0;
+    // 3. Inventory Value: Wat staat er nog op de plank?
+    let inventoryValue = 0;
     if (inventory && inventory.length > 0) {
-        totalSpent = inventory.reduce((acc, item) => acc + (parseFloat(item.price) || 0), 0);
+        inventoryValue = inventory.reduce((acc, item) => acc + (parseFloat(item.price) || 0), 0);
     }
+
+    // 4. DE TOTAL "SPENT" / ASSET VALUE
+    // Dit is nu de som van alles wat je bezit (Grondstof + In Productie + Eindproduct)
+    const totalAssetValue = inventoryValue + activeValue + cellarValue;
+
     const currency = userSettings.currencySymbol || '€';
     const spentEl = document.getElementById('stat-spent');
     
-    // We ronden af voor een netter getal op het dashboard
-    if(spentEl) spentEl.textContent = `${currency}${Math.round(totalSpent)}`;
+    // We tonen nu de totale waarde die in je brouwerij zit
+    if(spentEl) {
+        // Gebruik Math.round of toFixed(2) afhankelijk van voorkeur
+        spentEl.textContent = `${currency}${totalAssetValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+    
+    // Optioneel: Update het label van 'Spent' naar 'Total Value' via JS als je de HTML niet wilt aanpassen,
+    // maar 'Spent' is op zich accuraat als "Geld dat ik heb uitgegeven en dat nog in de hobby zit".
 }
 
             function updateNextActionWidget() {
@@ -5746,88 +5845,95 @@ function updateDashboardStats() {
     const list = document.getElementById('next-action-list');
     if (!widget || !list) return;
 
+    // We veranderen de titel naar iets subtielers
     const widgetTitle = widget.querySelector('h3');
-    if (widgetTitle) widgetTitle.textContent = "What's next?";
+    if (widgetTitle) widgetTitle.innerHTML = `<svg class="w-5 h-5 text-app-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Insight`;
 
-    list.innerHTML = '';
-    const suggestions = [];
+    const insights = [];
     const now = new Date();
     now.setHours(0,0,0,0);
-    const twentyFourHoursAgo = new Date(new Date().getTime() - (24 * 60 * 60 * 1000));
 
-    // Suggestion 1: Recently saved recipe
-    if (brews.length > 0) {
-        const newestBrew = brews[0];
-        if (newestBrew.createdAt.toDate() > twentyFourHoursAgo && !newestBrew.isBottled) {
-             suggestions.push(`
-                <li>
-                    You recently saved the recipe '<strong>${newestBrew.recipeName}</strong>'.
-                    <button onclick="window.generateShoppingList('${newestBrew.id}')" class="text-blue-600 hover:underline font-semibold ml-2">Create shopping list</button> or
-                    <button onclick="window.startBrewDay('${newestBrew.id}')" class="text-green-600 hover:underline font-semibold ml-1">Start brew day!</button>
-                </li>
-             `);
-        }
-    }
-
-    // Suggestion 2: Mead fermenting for a while
-    const fermentingBrews = brews.filter(b => b.logData && b.logData.brewDate && !b.isBottled && b.logData.brewDate !== '');
-    if (fermentingBrews.length > 0) {
-        fermentingBrews.forEach(brew => {
-            const brewDate = new Date(brew.logData.brewDate);
-            if (!isNaN(brewDate.getTime())) {
-                const daysFermenting = (now - brewDate) / (1000 * 60 * 60 * 24);
-                if (daysFermenting > 18 && !brew.logData.actualFG) {
-                    suggestions.push(`
-                        <li>
-                            '<strong>${brew.recipeName}</strong>' has been fermenting for ${Math.round(daysFermenting)} days. Time for an SG reading?
-                            <button onclick="window.showBrewDetail('${brew.id}')" class="text-blue-600 hover:underline font-semibold ml-2">View Log</button>
-                        </li>
-                    `);
-                }
-            }
-        });
-    }
-    
-    // Suggestion 3: Batch in cellar nearing peak
-    if (cellar.length > 0) {
-        cellar.forEach(item => {
-            if(item.peakFlavorDate) {
-                const peakDate = new Date(item.peakFlavorDate);
-                 if (!isNaN(peakDate.getTime())) {
-                    const daysUntilPeak = (peakDate - now) / (1000 * 60 * 60 * 24);
-                    if(daysUntilPeak <= 14 && daysUntilPeak > -30) {
-                         suggestions.push(`
-                            <li>
-                                The '<strong>${item.recipeName}</strong>' in your cellar is nearing its peak! Maybe it's time for a tasting?
-                            </li>
-                        `);
-                    }
-                }
-            }
-        });
-    }
-
-    // Suggestion 4: Expiring inventory
+    // 1. HIGH PRIORITY: Expiring Inventory (Binnen 30 dagen)
+    // Dit kost geld als je het mist, dus dit moet bovenaan.
     if (inventory.length > 0) {
         inventory.forEach(item => {
             if (item.expirationDate) {
                 const expDate = new Date(item.expirationDate);
                 const daysUntilExp = (expDate - now) / (1000 * 60 * 60 * 24);
                 if (daysUntilExp >= 0 && daysUntilExp <= 30) {
-                    suggestions.push(`
-                        <li>
-                            <span class="text-amber-600 dark:text-amber-400">Warning:</span> Your <strong>${item.name}</strong> is expiring in ${Math.round(daysUntilExp)} days!
-                        </li>
-                    `);
+                    insights.push({
+                        priority: 100, // Hoogste prioriteit
+                        html: `<li class="text-amber-600 dark:text-amber-400 font-bold">Use up your <strong>${item.name}</strong>! It expires in ${Math.round(daysUntilExp)} days.</li>`
+                    });
                 }
             }
         });
     }
 
-    if (suggestions.length > 0) {
-        list.innerHTML = suggestions.slice(0, 3).join('');
+    // 2. MEDIUM PRIORITY: Fermentation Check (Na 14 dagen nog geen meting?)
+    // Alleen tonen als er GEEN High Priority is.
+    const fermentingBrews = brews.filter(b => b.logData && b.logData.brewDate && !b.isBottled && b.logData.brewDate !== '');
+    if (fermentingBrews.length > 0) {
+        fermentingBrews.forEach(brew => {
+            const brewDate = new Date(brew.logData.brewDate);
+            if (!isNaN(brewDate.getTime())) {
+                const daysFermenting = (now - brewDate) / (1000 * 60 * 60 * 24);
+                // Pas na 14 dagen zeuren, en alleen als er nog geen FG is ingevuld
+                if (daysFermenting > 14 && !brew.logData.actualFG) {
+                    insights.push({
+                        priority: 50,
+                        html: `<li>'<strong>${brew.recipeName}</strong>' is quiet (Day ${Math.round(daysFermenting)}). Good time for a gravity reading? <button onclick="window.showBrewDetail('${brew.id}')" class="text-blue-600 hover:underline font-semibold ml-1">Check</button></li>`
+                    });
+                }
+            }
+        });
+    }
+
+    // 3. LOW PRIORITY: Cellar Peak (Genieten)
+    if (cellar.length > 0) {
+        cellar.forEach(item => {
+            if(item.peakFlavorDate) {
+                const peakDate = new Date(item.peakFlavorDate);
+                 if (!isNaN(peakDate.getTime())) {
+                    const daysUntilPeak = (peakDate - now) / (1000 * 60 * 60 * 24);
+                    // Klein venster: tussen -7 en +7 dagen van de piekdatum
+                    if(Math.abs(daysUntilPeak) <= 7) {
+                         insights.push({
+                            priority: 30,
+                            html: `<li>Your <strong>${item.recipeName}</strong> should be peaking right now. Tasting time?</li>`
+                        });
+                    }
+                }
+            }
+        });
+    }
+
+    // 4. LOWEST PRIORITY: New Recipe Prompt (Directe actie)
+    // AANGEPAST: Alleen tonen als het recept < 2 UUR geleden is gemaakt.
+    const twoHoursAgo = new Date(new Date().getTime() - (2 * 60 * 60 * 1000));
+    if (brews.length > 0) {
+        const newestBrew = brews[0];
+        // Alleen als het vers is én nog niet gestart
+        if (newestBrew.createdAt.toDate() > twoHoursAgo && !newestBrew.isBottled && (!newestBrew.logData.brewDate)) {
+             insights.push({
+                priority: 10,
+                html: `<li>Fresh recipe: '<strong>${newestBrew.recipeName}</strong>'. <button onclick="window.generateShoppingList('${newestBrew.id}')" class="text-blue-600 hover:underline font-semibold">Shop</button> or <button onclick="window.startBrewDay('${newestBrew.id}')" class="text-green-600 hover:underline font-semibold">Brew</button>?</li>`
+             });
+        }
+    }
+
+    // LOGICA: Toon alleen de allerbelangrijkste
+    if (insights.length > 0) {
+        // Sorteer op prioriteit (hoogste eerst)
+        insights.sort((a, b) => b.priority - a.priority);
+        
+        // Pak alleen de bovenste
+        const topInsight = insights[0];
+        
+        list.innerHTML = topInsight.html;
         widget.classList.remove('hidden');
     } else {
+        // Als er niets dringends is, verberg de widget. Rust is ook luxe.
         widget.classList.add('hidden');
     }
 }
@@ -6610,6 +6716,10 @@ function skipTimer(stepIndex) {
             }
 
 async function completeStep(stepIndex, isSkipping = false) {
+    // --- HAPTIC FEEDBACK (LUXURY FEEL) ---
+    // Geeft een korte, bevredigende trilling op mobiel
+    if (navigator.vibrate) navigator.vibrate(15);
+
     // --- Timer Cleanup (No Change) ---
     if (stepTimerInterval) {
         clearInterval(stepTimerInterval);

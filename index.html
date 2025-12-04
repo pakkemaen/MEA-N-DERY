@@ -5258,7 +5258,7 @@ function parseIngredientsAndCalculateCost(markdown, inventory, batchSize) {
                 // Als we < 15g nodig hebben en we hebben packets, reken 1 packet prijs.
                 if (requiredAmountInBase.quantity <= 15) {
                      totalCost += (inventoryItem.price / inventoryItem.qty) * 1; // Prijs van 1 packet
-                     continue; // Ga naar volgende item, we hebben kosten al toegevoegd
+                     return; // Ga naar volgende item, we hebben kosten al toegevoegd
                 }
             }
             

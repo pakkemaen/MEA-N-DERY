@@ -366,6 +366,33 @@ table.fermentation-table {
         font-size: 1.05rem; /* Iets groter voor leesbaarheid */
     }
 
+    /* --- JUWELIERS FINISH: THE GRAND TITLE --- */
+    .recipe-content h1 {
+        font-family: 'Barlow Semi Condensed', sans-serif;
+        font-size: 3rem;       /* Veel groter (was standaard) */
+        font-weight: 800;      /* Extra dik */
+        color: var(--brand-color); /* Je huisstijl kleur */
+        text-transform: uppercase;
+        letter-spacing: 0.1em; /* Breed uitgesmeerd voor luxe */
+        line-height: 1.1;
+        
+        /* De "Underline" afwerking */
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 4px double var(--border-color); /* Een dubbele, klassieke lijn */
+        
+        /* Subtiele schaduw voor diepte */
+        text-shadow: 2px 2px 0px rgba(0,0,0,0.05); 
+    }
+
+    /* Mobiele aanpassing zodat het niet van het scherm valt */
+    @media (max-width: 768px) {
+        .recipe-content h1 {
+            font-size: 2.2rem;
+            letter-spacing: 0.05em;
+        }
+    }
+
     /* Koppen (H2, H3) - Duidelijke scheiding */
     .recipe-content h2, .recipe-content h3 { 
         color: var(--brand-color); 
@@ -528,6 +555,47 @@ table.fermentation-table {
             position: sticky; top: 0; z-index: 10;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+
+        /* --- MOBILE OPTIMIZATION FOR LISTS --- */
+    
+        /* 1. Minder lucht binnen het grijze kader */
+        .recipe-content ul, .recipe-content ol {
+           padding: 1rem 1rem !important; 
+       }
+
+       /* 2. Minder inspringen voor de tekst naast het nummer */
+       .recipe-content ol li {
+           padding-left: 1.75rem !important; /* Was 2rem */
+       }
+
+       /* 3. Het nummer-bolletje iets kleiner en dichterbij */
+       .recipe-content ol li::before {
+           width: 1.25rem !important;
+           height: 1.25rem !important;
+           line-height: 1.25rem !important;
+           font-size: 0.75rem !important;
+           top: 0.2em !important;
+       }
+
+       /* 4. CRUCIAAL: Geneste lijsten (lijst in een lijst) */
+       /* Dit lost het probleem in je screenshot op */
+       .recipe-content ol ol, 
+       .recipe-content ul ul,
+       .recipe-content ol ul,
+       .recipe-content ul ol {
+           margin-top: 0.5rem !important;
+           margin-bottom: 0.5rem !important;
+        
+           /* Reset de padding van het grijze vlak voor geneste lijsten */
+           padding-left: 0.5rem !important; 
+           padding-right: 0 !important;
+           padding-top: 0 !important;
+           padding-bottom: 0 !important;
+        
+           /* Geen dubbele kaders of achtergronden voor geneste lijsten */
+           background-color: transparent !important;
+           border: none !important;
+       }
     }
 
 /* --- JUWELIERS FINISH: LIVING BREW ANIMATION --- */
@@ -3048,7 +3116,7 @@ async function renderRecipeOutput(markdown) {
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                         Water Chemistry
                     </h4>
-                    <p class="text-xs text-blue-600 dark:text-blue-300 mt-1">Don't want to mess with salts? Find a bottled water that matches.</p>
+                    <p class="text-xs text-blue-600 dark:text-blue-300 mt-1">Find a bottled water that matches.</p>
                 </div>
                 <button onclick="window.findCommercialWaterMatch()" class="bg-blue-600 text-white py-2 px-3 rounded text-sm hover:bg-blue-700 btn shadow-sm whitespace-nowrap">
                     Find Matching Brand
@@ -3264,26 +3332,26 @@ window.findCommercialWaterMatch = async function() {
     }
 }
 
-// --- NIEUW: PAS HET RECEPT AAN OP BASIS VAN GEKOZEN WATER ---
+// --- UPDATED: VUL HET VELD IN, MAAR KLIK NIET AUTOMATISCH ---
 window.applyWaterTweak = function(brandName, technicalInstruction) {
     const tweakInput = document.getElementById('tweak-unsaved-request');
-    const tweakBtn = document.getElementById('tweak-unsaved-btn');
     
     // 1. Scroll naar de tweak sectie zodat de gebruiker ziet wat er gebeurt
     document.getElementById('tweak-unsaved-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    // 2. Vul het commando in
-    // We combineren de merknaam met de technische instructie die de AI net zelf verzonnen heeft
-    tweakInput.value = `I am using **${brandName}** water. ${technicalInstruction} Please recalculate the nutrient schedule (TOSNA) and buffer additions (Potassium Carbonate) specifically for this water profile. Update the Brewer's Notes to reflect this choice.`;
+    // 2. Vul het commando in (Pre-fill)
+    // We voegen een spatie toe aan het einde zodat de gebruiker direct verder kan typen
+    tweakInput.value = `I am using **${brandName}** water. ${technicalInstruction} Please recalculate nutrients and buffers. `;
 
-    // 3. Geef visuele feedback (highlight het veld even)
-    tweakInput.classList.add('ring-2', 'ring-blue-500');
-    setTimeout(() => tweakInput.classList.remove('ring-2', 'ring-blue-500'), 1000);
+    // 3. Geef visuele feedback (Geleidelijke highlight)
+    tweakInput.classList.add('ring-4', 'ring-blue-500/50', 'transition-all', 'duration-500');
+    setTimeout(() => tweakInput.classList.remove('ring-4', 'ring-blue-500/50'), 1500);
 
-    // 4. Klik automatisch op de knop na een korte pauze (voor het "gevoel")
-    setTimeout(() => {
-        tweakBtn.click();
-    }, 800);
+    // 4. DE BELANGRIJKE WIJZIGING: Focus in plaats van Klik
+    // We zetten de cursor in het veld, zodat je meteen kunt typen.
+    tweakInput.focus();
+    
+    // (De automatische klik-timer is hier verwijderd)
 }       
 
 function buildPrompt() {

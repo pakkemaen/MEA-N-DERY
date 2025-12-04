@@ -357,44 +357,101 @@ table.fermentation-table {
         border-color: var(--brand-color);
     }
 
-    /* --- 8. RECIPE CONTENT SPECIFICS (Behouden van vorige stap) --- */
-    .recipe-content h2, .recipe-content h3 { color: var(--brand-color); margin-top: 2rem; }
-    .recipe-content h2 { border-bottom: 2px solid var(--border-color); }
-        padding-bottom: 0.5rem; /* Iets ruimte tussen tekst en de lijn */
-        margin-bottom: 1.5rem;  /* CRUCIAAL: Dit duwt het kader (de box) naar beneden */
-    .recipe-content p, .recipe-content ul, .recipe-content ol {
-        background-color: var(--bg-tertiary);
-        padding: 1rem 1.5rem;
-        border-radius: var(--radius-md);
-        border: 1px solid var(--border-color);
-        margin-bottom: 1rem;
+    /* --- 8. RECIPE CONTENT SPECIFICS (IMPROVED TYPOGRAPHY) --- */
+    
+    /* Basiscontainer voor het recept */
+    .recipe-content {
+        line-height: 1.7; /* Meer lucht tussen regels tekst */
+        font-size: 1.05rem; /* Iets groter voor leesbaarheid */
     }
-    .recipe-content ol { list-style: none; counter-reset: recipe-counter; }
-    /* --- RECIPE STEPS FIX --- */
-    .recipe-content ol li { 
-        counter-increment: recipe-counter; 
+
+    /* Koppen (H2, H3) - Duidelijke scheiding */
+    .recipe-content h2, .recipe-content h3 { 
+        color: var(--brand-color); 
+        margin-top: 2.5rem; /* Ruimte boven de kop */
+        margin-bottom: 1rem; /* Ruimte onder de kop */
+        font-family: 'Barlow Semi Condensed', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .recipe-content h2 { 
+        font-size: 1.8rem;
+        border-bottom: 2px solid var(--border-color); 
+        padding-bottom: 0.5rem; 
+    }
+
+    .recipe-content h3 {
+        font-size: 1.4rem;
+        border-bottom: 1px dashed var(--border-color); /* Subtiel lijntje onder H3 */
+        padding-bottom: 0.25rem;
+    }
+
+    /* Paragrafen - Niet meer in hokjes, maar vrijstaand met ruimte */
+    .recipe-content p {
+        margin-bottom: 1.25rem;
+        color: var(--text-primary);
+    }
+
+    /* Lijstjes (Ingrediënten, Stappen) - Dit lost het "op elkaar gepropt" probleem op */
+    .recipe-content ul, .recipe-content ol {
+        margin-bottom: 1.5rem;
+        padding-left: 1.5rem; /* Netjes inspringen */
+        background-color: var(--bg-tertiary); /* Het hele lijstje in 1 mooi vlak */
+        border-radius: var(--radius-md);
+        padding: 1.5rem 2rem; /* Ruimte binnen het vlak */
+        border: 1px solid var(--border-color);
+    }
+
+    /* De items in de lijst */
+    .recipe-content li { 
+        margin-bottom: 0.75rem; /* Ruimte TUSSEN de puntjes */
         position: relative; 
-        padding-left: 3rem; /* Iets meer ruimte rechts van het bolletje */
-        margin-bottom: 1.5rem; /* Meer ruimte ONDER elke stap */
-        min-height: 2.2rem; /* CRUCIAAL: Zorgt dat de regel nooit kleiner is dan de bol */
-        line-height: 1.6;
+    }
+
+    /* Nummertjes voor geordende lijsten (Instructions) */
+    .recipe-content ol { 
+        list-style: none; 
+        counter-reset: recipe-counter; 
+    }
+    
+    .recipe-content ol li {
+        counter-increment: recipe-counter;
+        padding-left: 2rem;
     }
 
     .recipe-content ol li::before {
         content: counter(recipe-counter);
-        position: absolute; 
-        left: 0; 
-        top: -0.2em; /* Ietsje hoger plaatsen voor optische uitlijning met tekst */
-        width: 2rem; 
-        height: 2rem;
-        background-color: var(--brand-color); 
-        color: #fff;
-        border-radius: 50%; 
-        text-align: center; 
-        line-height: 2rem; /* Zorgt dat cijfer verticaal middenin bol staat */
+        position: absolute;
+        left: 0;
+        top: 0.1em;
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: var(--brand-color);
+        color: white;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 1.5rem;
+        font-size: 0.85rem;
         font-weight: bold;
-        font-size: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Labels dikgedrukt (bijv "Target ABV:") - Meer ruimte rechts */
+    .recipe-content strong {
+        color: var(--text-primary);
+        font-weight: 700;
+        margin-right: 0.3rem; /* Ruimte tussen label en waarde */
+    }
+
+    /* Tabellen (voor ingrediënten als de AI die maakt) */
+    .recipe-content table {
+        width: 100%;
+        margin-bottom: 1.5rem;
+        border-collapse: collapse;
+    }
+    .recipe-content th, .recipe-content td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
     }
 
     /* --- 9. UTILITIES & MOBILE --- */
@@ -2175,16 +2232,45 @@ function refreshCurrentChecklistView() {
 
 // --- UI UTILITY: THE DIAMOND LOADER ---
 // Geeft de HTML string terug voor de custom loader
-window.getLoaderHtml = function(message = "Working on it...") {
+window.getLoaderHtml = function(message = "Initializing Protocol...") {
     return `
         <div class="flex flex-col items-center justify-center py-8">
             <svg class="honeycomb-loader" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
                 <polygon class="honeycomb-core" points="50 25, 72 37, 72 63, 50 75, 28 63, 28 37" />
                 <path class="honeycomb-path" d="M 50 5 L 90 27 L 90 73 L 50 95 L 10 73 L 10 27 Z" />
             </svg>
-            <p class="text-center text-app-secondary/80 font-header tracking-wide animate-pulse mt-2">${message}</p>
+            <p id="loader-text" class="text-center text-app-secondary/80 font-header tracking-wide animate-pulse mt-2 text-sm uppercase">${message}</p>
         </div>
     `;
+}
+
+// --- UI UTILITY: DYNAMIC THINKING PROCESS ---
+window.startThinkingAnimation = function(elementId) {
+    const messages = [
+        "Analyzing flavor constraints...",
+        "Consulting Scott Labs Handbook...",
+        "Calculating Target YAN & Nutrients...",
+        "Cross-referencing Inventory...",
+        "Optimizing Honey-to-Water ratio...",
+        "Balancing Acidity and Tannins...",
+        "Reviewing Fermentation Protocol...",
+        "Finalizing Recipe..."
+    ];
+    
+    const element = document.getElementById(elementId);
+    if (!element) return null;
+
+    let index = 0;
+    // Zet de eerste tekst direct
+    element.textContent = messages[0];
+
+    // Start de cyclus
+    const intervalId = setInterval(() => {
+        index = (index + 1) % messages.length;
+        element.textContent = messages[index];
+    }, 1800); // Elke 1.8 seconden een nieuwe stap
+
+    return intervalId; // We geven de ID terug zodat we hem kunnen stoppen
 }
 
             // --- Initialization ---
@@ -2752,16 +2838,19 @@ async function clearInventory() {
 }
 
 async function generateRecipe() {
-    recipeOutput.innerHTML = getLoaderHtml("Your buddy is thinking ... relax while your custom recipe is being crafted.");
+    // 1. Toon de loader
+    recipeOutput.innerHTML = getLoaderHtml("Initializing Brewing Protocol...");
     generateBtn.disabled = true;
     generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
     currentPredictedProfile = null;
+
+    // 2. START DE DENK-ANIMATIE
+    const thinkingInterval = window.startThinkingAnimation("loader-text");
 
     try {
         const prompt = buildPrompt();
         lastGeneratedPrompt = prompt;
         
-        // 1. Haal het ruwe antwoord op
         let rawResponse = await performApiCall(prompt); 
         
         // 2. SCHOONMAAK ACTIE: Verwijder Markdown code blocks (```markdown ... ```)
@@ -2772,11 +2861,14 @@ async function generateRecipe() {
             cleanedResponse = cleanedResponse.substring(3, cleanedResponse.lastIndexOf("```"));
         }
         
-        currentRecipeMarkdown = cleanedResponse.trim(); // Sla de schone versie op
+        if (thinkingInterval) clearInterval(thinkingInterval);
 
+        currentRecipeMarkdown = cleanedResponse.trim();
         await renderRecipeOutput(currentRecipeMarkdown); 
 
     } catch (error) {
+        // Stop animatie ook bij een fout
+        if (thinkingInterval) clearInterval(thinkingInterval);
         console.error("Error calling Gemini API:", error);
         recipeOutput.innerHTML = `<p class="text-center text-red-600 font-bold">Sorry, your buddy is busy. Please try again.</p><p class="text-center text-sm text-app-secondary/80">${error.message}</p>`;
     } finally {
@@ -2950,12 +3042,19 @@ async function generateAndInjectCreativeTitle(markdown) {
     if (!tweakRequest) { showToast("Please enter your tweak request.", "error"); return; }
 
     const tweakOutput = document.getElementById('tweak-unsaved-output');
-    tweakOutput.innerHTML = getLoaderHtml("Recalculating with Fort Knox protocols...");
+    
+    // 1. Zet de loader met de initiële tekst. 
+    // Dit creëert het element met id="loader-text" dat we zo gaan animeren.
+    tweakOutput.innerHTML = getLoaderHtml("Analyzing Tweak Request..."); 
+    
     const tweakBtn = document.getElementById('tweak-unsaved-btn');
     tweakBtn.disabled = true;
 
-    // 0. BEWAAR DE DATA (State Preservation)
-    // We kijken of er al een log-sectie is en halen de naam/datum op
+    // 2. START DE DENK-ANIMATIE
+    // Dit zoekt naar id="loader-text" en begint de teksten te roteren.
+    const thinkingInterval = window.startThinkingAnimation("loader-text");
+
+    // 0. BEWAAR DE DATA (State Preservation - Hypercar Feature)
     let preservedTitle = '';
     let preservedDate = '';
     const currentNameInput = document.querySelector('input[id^="recipeName-new"]');
@@ -2964,17 +3063,16 @@ async function generateAndInjectCreativeTitle(markdown) {
     if (currentNameInput) preservedTitle = currentNameInput.value;
     if (currentDateInput) preservedDate = currentDateInput.value;
 
-    // 1. Context Analyse
+    // 3. Context Analyse & Wetten (Fort Knox)
     const contextLower = (currentRecipeMarkdown + tweakRequest).toLowerCase();
     const isNoWater = contextLower.includes('no-water') || contextLower.includes('no water');
     const isBraggot = contextLower.includes('braggot');
     const isHydromel = contextLower.includes('session') || contextLower.includes('hydromel');
     const isWild = contextLower.includes('wild') || contextLower.includes('sour') || contextLower.includes('brett');
 
-    // 2. Haal Wetten op
     const laws = getFortKnoxLaws(isNoWater, isBraggot, isHydromel, false, isWild);
 
-    // 3. NIEUW: Inventory Context ophalen (Hetzelfde als in buildPrompt)
+    // 4. Inventory Context (Slimme Tweak)
     const relevantCategories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
     const fullInventoryList = inventory.filter(item => relevantCategories.includes(item.category));
     const inventoryString = fullInventoryList.map(item => `${item.name} (${item.qty} ${item.unit})`).join('; ');
@@ -2992,7 +3090,7 @@ async function generateAndInjectCreativeTitle(markdown) {
     **TASK:** Rewrite the FULL recipe to incorporate the tweak.
     
     ${laws}
-    ${inventoryContext}  <-- HIER IS HET GEHEUGEN
+    ${inventoryContext}
 
     **LOGIC CHECK:**
     - If the user changed the Batch Size -> Recalculate ALL ingredients.
@@ -3001,7 +3099,11 @@ async function generateAndInjectCreativeTitle(markdown) {
 
     try {
         const tweakedMarkdown = await performApiCall(prompt);
-        // ... (rest van je bestaande logica: cleanup, render, etc.) ...
+        
+        // 5. STOP DE ANIMATIE (Succes)
+        if (thinkingInterval) clearInterval(thinkingInterval);
+
+        // Markdown schoonmaken
         let processedMarkdown = tweakedMarkdown.trim();
         if (processedMarkdown.startsWith("```markdown")) {
              processedMarkdown = processedMarkdown.substring(11, processedMarkdown.lastIndexOf("```")).trim();
@@ -3012,8 +3114,7 @@ async function generateAndInjectCreativeTitle(markdown) {
         currentRecipeMarkdown = processedMarkdown;
         await renderRecipeOutput(processedMarkdown);
 
-        // 4. HERSTEL DE DATA (State Restoration)
-        // De render functie heeft nieuwe inputs gemaakt met 'new' suffix. Vul ze terug in.
+        // 6. HERSTEL DE DATA (State Restoration)
         if (preservedTitle) {
             const newNameInput = document.querySelector('input[id^="recipeName-new"]');
             if(newNameInput) newNameInput.value = preservedTitle;
@@ -3022,12 +3123,16 @@ async function generateAndInjectCreativeTitle(markdown) {
             const newDateInput = document.querySelector('input[id^="brewDate-new"]');
             if(newDateInput) newDateInput.value = preservedDate;
         }
-        recipeOutput.scrollTop = 0;
         
-        if(tweakBtn) tweakBtn.disabled = false;
+        // UI Reset
+        recipeOutput.scrollTop = 0;
+        tweakBtn.disabled = false;
         tweakOutput.innerHTML = '';
 
     } catch (error) {
+        // 7. STOP DE ANIMATIE (Fout)
+        if (thinkingInterval) clearInterval(thinkingInterval);
+        
         console.error("Error tweaking:", error);
         tweakOutput.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
         tweakBtn.disabled = false;

@@ -2992,9 +2992,8 @@ async function renderRecipeOutput(markdown) {
                 }
                 flavorProfileHtml += `</div>`;
                 
-                let finalMarkdown = markdown; // Gebruik de parameter
                 const jsonRegex = /(?:```json\s*([\s\S]*?)\s*```|(\[\s*\{[\s\S]*?\}\s*\]))/;
-                const jsonMatch = markdown.match(jsonRegex); // Gebruik de parameter
+                const jsonMatch = finalMarkdown.match(jsonRegex);
                 let tableMarkdown = ''; 
 
                 if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
@@ -3018,7 +3017,7 @@ async function renderRecipeOutput(markdown) {
                     } catch (e) {
                         console.error("Failed to parse ingredients JSON from AI response:", e);
                         tableMarkdown = `\n**Error:** Could not display ingredients. The AI provided invalid data.\n`;
-                        finalMarkdown = markdown.replace(jsonRegex, tableMarkdown); // Gebruik de parameter
+                        finalMarkdown = finalMarkdown.replace(jsonRegex, tableMarkdown);
                     }
                 } else {
                     console.warn("Could not find ingredients JSON block in AI response.");

@@ -482,6 +482,66 @@ table.fermentation-table {
         border-bottom: 1px solid var(--border-color);
     }
 
+    /* --- JUWELIERS FINISH: STATS BAR & QUOTE --- */
+    
+    /* 1. De Inspiratie Quote (Het zinnetje met >) */
+    .recipe-content blockquote {
+        font-style: italic;
+        color: var(--brand-color);
+        border-left: 3px solid var(--brand-color);
+        padding-left: 1rem;
+        margin: 0 0 1.5rem 0;
+        font-size: 1.1rem;
+        background: transparent; /* Geen grijs vlak */
+    }
+
+    /* 2. De Vital Stats (Het eerste lijstje in het recept) */
+    /* We selecteren specifiek de EERSTE ul na de blockquote */
+    .recipe-content blockquote + ul {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* Responsive Grid */
+        gap: 0.75rem;
+        list-style: none !important; /* Geen bolletjes */
+        padding: 0 !important;       /* Geen inspringing */
+        margin-bottom: 2rem !important;
+        background: transparent !important; /* Geen container kleur */
+        border: none !important;
+    }
+
+    /* 3. De Tegels (Badges) */
+    .recipe-content blockquote + ul li {
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 0.75rem !important;
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 0 !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* 4. Styling van de tekst in de tegels */
+    /* De AI doet "**Label:** Waarde". Wij stylen de **Label** apart. */
+    .recipe-content blockquote + ul li strong {
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+        margin-right: 0 !important;
+    }
+    
+    /* De Waarde (de tekst na de dubbele punt) */
+    .recipe-content blockquote + ul li {
+        color: var(--brand-color); /* Maak de waarde de brand kleur */
+        font-weight: 700;
+        font-size: 1.1rem;
+        font-family: 'Barlow Semi Condensed', sans-serif;
+    }
+
     /* --- 9. UTILITIES & MOBILE --- */
     .hidden { display: none !important; }
     
@@ -3098,16 +3158,21 @@ async function renderRecipeOutput(markdown) {
     
     // 4. BOUW DE HTML (Tweak knoppen, Water knop, etc.)
     const fullHtml = `
-        <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
-            <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
-                Show AI Prompt
-            </button>
-            <button onclick="window.print()" class="bg-stone-600 text-white py-2 px-4 rounded-lg hover:bg-stone-700 transition-colors btn">
-                Print Recipe
-            </button>
-        </div>
-        
-        <div class="recipe-content">${recipeHtml}</div>
+            <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
+                
+                <button onclick="window.generateRecipe()" class="bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors btn text-sm flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Retry
+                </button>
+                <button onclick="window.showLastPrompt()" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors btn text-sm">
+                    Show AI Prompt
+                </button>
+                <button onclick="window.print()" class="bg-stone-600 text-white py-2 px-4 rounded-lg hover:bg-stone-700 transition-colors btn">
+                    Print Recipe
+                </button>
+            </div>
+            
+            <div class="recipe-content">${recipeHtml}</div>
         
         <div id="water-recommendation-card" class="mt-4 p-4 border border-blue-200 bg-blue-50 dark:bg-blue-900/20 rounded-lg no-print transition-all">
             <div class="flex justify-between items-center">
@@ -3565,6 +3630,8 @@ ${hydromelRule}
              }
         }
 
+        // ... in buildPrompt ...
+
         // --- STAP 8: FINAL PROMPT ---
         return `You are "MEA(N)DERY", a master mazer. 
 
@@ -3579,10 +3646,19 @@ ${waterContext}
 2. **Sanity Check:** If the user requests impossible physics, correct them politely.
 
 **OUTPUT FORMAT (STRICT):**
-1. **Markdown** structure.
-2. **Ingredients JSON:** \`\`\`json [{"ingredient": "Name", "quantity": 0, "unit": "kg"}] \`\`\` (List ALL ingredients with calculated amounts).
-3. **Timers:** \`[TIMER:HH:MM:SS]\` for wait steps.
-4. **Brewer's Notes:** Include a dedicated section titled "## Brewer's Notes". Explain your choices, the flavor profile, and specifically discuss the water profile recommendation here.
+1. **NO CHATTY INTRO:** Do NOT start with "Okay", "Sure", or paragraphs of text.
+2. **LINE 1:** Must be the Markdown Title (e.g., "# Title").
+3. **LINE 2:** A single, short "Inspirational Hook" explaining the vibe, formatted as a blockquote (start line with >). Max 20 words.
+4. **LINE 3:** A Bulleted List of the "Vital Stats":
+   - **Target ABV:** [Value]%
+   - **Batch Size:** [Value]L
+   - **Style:** [Style Name]
+   - **Sweetness:** [Dry/Sweet/etc]
+   - **Est. OG:** [Value]
+5. **Ingredients JSON:** \`\`\`json [...] \`\`\`
+6. **Instructions:** Numbered list.
+7. **Timers:** \`[TIMER:HH:MM:SS]\`.
+8. **Brewer's Notes:** Detailed explanation at the bottom.
 
 Request:
 ---
@@ -7052,23 +7128,41 @@ window.finalizeBrewDay1 = async function() {
             }
    
             // --- Analysis Functions ---
-// --- VERVANG JE VOLLEDIGE generateShoppingList FUNCTIE MET DEZE ---
+// --- UPDATED: SHOPPING LIST MET ERROR CHECK ---
 window.generateShoppingList = function(brewId, navigate = false) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
     const listState = brew.shoppingListState || {};
 
+    // Helper voor conversie
     const convertToBaseUnit = (quantity, unit) => {
-        const u = unit.toLowerCase();
+        const u = (unit || '').toLowerCase().trim();
         if (u === 'kg') return { quantity: quantity * 1000, unit: 'g' };
-        if (u === 'l') return { quantity: quantity * 1000, unit: 'ml' };
+        if (u === 'l' || u === 'liter') return { quantity: quantity * 1000, unit: 'ml' };
+        // Gist/Pakketjes logica voor shopping list (veiligheidshalve 1 op 1)
+        if (u === 'packet' || u === 'packets') return { quantity: quantity, unit: 'packets' }; 
         return { quantity, unit: u };
     };
 
+    // 1. HAAL INGREDIËNTEN OP
     const requiredIngredients = parseIngredientsFromMarkdown(brew.recipeMarkdown);
+    const contentDiv = document.getElementById('shopping-list-content');
+    
+    // --- DE FIX: CHECK OF ER WEL INGREDIËNTEN ZIJN GEVONDEN ---
+    if (requiredIngredients.length === 0) {
+        contentDiv.innerHTML = `
+            <h4 class="text-xl font-header mb-4 text-red-600">Error Reading Recipe</h4>
+            <p class="text-app-secondary">Could not find an ingredients list in this recipe. The AI format might be incorrect.</p>
+            <button onclick="window.generateRecipe()" class="mt-4 text-sm bg-purple-600 text-white py-1 px-3 rounded btn">Regenerate Recipe</button>
+        `;
+        if (navigate) { switchMainView('brewing'); switchSubView('shopping-list', 'brewing-main-view'); }
+        return;
+    }
+
     const shoppingList = [];
 
+    // 2. VERGELIJK MET VOORRAAD
     requiredIngredients.forEach(req => {
         const invItem = inventory.find(inv => inv.name.toLowerCase() === req.name.toLowerCase());
         const requiredAmount = convertToBaseUnit(req.quantity, req.unit);
@@ -7076,26 +7170,25 @@ window.generateShoppingList = function(brewId, navigate = false) {
 
         if (invItem) {
             stockAmount = convertToBaseUnit(invItem.qty, invItem.unit);
-            if (stockAmount.unit !== requiredAmount.unit) {
-                console.warn(`Unit mismatch for ${req.name}`);
-            }
         }
 
+        // Als item niet bestaat OF voorraad is minder dan nodig
         if (!invItem || stockAmount.quantity < requiredAmount.quantity) {
             let toBuy = requiredAmount.quantity - stockAmount.quantity;
             let unitToDisplay = req.unit;
+            
+            // Mooiere weergave (g naar kg)
             if (req.unit.toLowerCase() === 'g' && toBuy >= 1000) { 
-                toBuy /= 1000;
-                unitToDisplay = 'kg';
+                toBuy /= 1000; unitToDisplay = 'kg';
             } else if (req.unit.toLowerCase() === 'ml' && toBuy >= 1000) { 
-                toBuy /= 1000;
-                unitToDisplay = 'L';
+                toBuy /= 1000; unitToDisplay = 'L';
             }
+            
             shoppingList.push({ name: req.name, quantity: toBuy, unit: unitToDisplay });
         }
     });
 
-    const contentDiv = document.getElementById('shopping-list-content');
+    // 3. RENDER DE LIJST
     let html = `<h4 class="text-xl font-header mb-4">${brew.recipeName} - Shopping List</h4>`;
     
     if (shoppingList.length > 0) {
@@ -7106,12 +7199,14 @@ window.generateShoppingList = function(brewId, navigate = false) {
                 const escapedItemName = item.name.replace(/'/g, "\\'");
 
                 return `
-                    <div class="flex items-center">
+                    <div class="flex items-center p-2 hover:bg-app-tertiary rounded transition-colors">
                         <input type="checkbox" id="shop-item-${index}" 
                                onchange="window.updateShoppingListItemStatus('${brew.id}', '${escapedItemName}', this.checked)" 
-                               class="h-5 w-5 rounded border-gray-300 text-app-brand focus:ring-app-brand flex-shrink-0"
+                               class="h-5 w-5 rounded border-gray-300 text-app-brand focus:ring-app-brand flex-shrink-0 cursor-pointer"
                                ${isChecked ? 'checked' : ''}>
-                        <label for="shop-item-${index}" class="ml-3 text-app-primary">${item.name}: ${displayQty} ${item.unit}</label>
+                        <label for="shop-item-${index}" class="ml-3 text-app-primary cursor-pointer select-none">
+                            <span class="font-bold text-app-brand">${displayQty} ${item.unit}</span> ${item.name}
+                        </label>
                     </div>
                 `;
             }).join('');
@@ -7130,8 +7225,16 @@ window.generateShoppingList = function(brewId, navigate = false) {
                     <button onclick="window.startActualBrewDay('${brew.id}')" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 btn">Let's Start Brewing!</button>
                  </div>`;
     } else {
-            html += `<p class="text-green-600 dark:text-green-400 font-semibold mb-4">You have all the ingredients you need!</p>`;
-            html += `<button onclick="window.startActualBrewDay('${brew.id}')" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 btn">Let's Start Brewing!</button>`;
+            html += `
+            <div class="text-center py-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <p class="text-lg font-bold text-green-600 dark:text-green-400 mb-4">You have all ingredients in stock!</p>
+                <button onclick="window.startActualBrewDay('${brew.id}')" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 btn shadow-lg">
+                    Let's Start Brewing!
+                </button>
+            </div>`;
     }
 
     contentDiv.innerHTML = html;
@@ -7508,12 +7611,14 @@ function populateSocialRecipeDropdown() {
     }
 }
 
-// --- VERVANG JE VOLLEDIGE parseIngredientsFromMarkdown FUNCTIE MET DEZE ---
+// --- UPDATED: ROBUUSTE INGREDIËNTEN LEZER ---
 function parseIngredientsFromMarkdown(markdown) {
     const ingredients = [];
 
-    // Poging 1: Zoek naar een JSON-blok (de nieuwe, robuuste methode)
-    const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
+    // NIEUWE REGEX: Zoekt naar een JSON array [...] die begint met een { object.
+    // Dit werkt met én zonder ```json tags.
+    // Het negeert tekst eromheen.
+    const jsonRegex = /(?:```json\s*)?(\[\s*\{[\s\S]*?\}\s*\])(?:\s*```)?/;
     const jsonMatch = markdown.match(jsonRegex);
 
     if (jsonMatch && jsonMatch[1]) {
@@ -7525,30 +7630,27 @@ function parseIngredientsFromMarkdown(markdown) {
                 unit: (item.unit || '').trim()
             }));
         } catch (e) {
-            console.error("Failed to parse JSON block, falling back to table parser.", e);
+            console.error("JSON found but failed to parse:", e);
         }
     }
 
-    // Poging 2: Fallback naar de oude tabel-parser
+    // Fallback: Oude Tabel Parser (voor oude recepten)
     const tableContentRegex = /\|-+\|.*\n([\s\S]*?)(?:\n\n|##|$)/;
     const match = markdown.match(tableContentRegex);
 
-    if (!match || !match[1]) {
-        console.warn("Definitive parser could not find ingredient table content.");
-        return ingredients; // Geef lege lijst terug als beide methodes falen
-    }
-
-    const rows = match[1].trim().split('\n').filter(row => row.trim().startsWith('|'));
-    rows.forEach(row => {
-        const columns = row.split('|').map(c => c.trim()).slice(1, 4);
-        if (columns.length === 3) {
-            const [name, quantityStr, unit] = columns;
-            const quantity = parseFloat(quantityStr);
-            if (name && !isNaN(quantity)) {
-                ingredients.push({ name: name.trim(), quantity: quantity, unit: (unit || '').trim() });
+    if (match && match[1]) {
+        const rows = match[1].trim().split('\n').filter(row => row.trim().startsWith('|'));
+        rows.forEach(row => {
+            const columns = row.split('|').map(c => c.trim()).slice(1, 4);
+            if (columns.length === 3) {
+                const [name, quantityStr, unit] = columns;
+                const quantity = parseFloat(quantityStr);
+                if (name && !isNaN(quantity)) {
+                    ingredients.push({ name: name.trim(), quantity: quantity, unit: (unit || '').trim() });
+                }
             }
-        }
-    });
+        });
+    }
 
     return ingredients;
 }

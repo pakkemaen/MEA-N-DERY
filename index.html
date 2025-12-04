@@ -416,6 +416,49 @@ table.fermentation-table {
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+    /* --- DIAMOND POLISH: CUSTOM LOADER --- */
+.honeycomb-loader {
+    width: 50px;
+    height: 50px;
+    margin: 2rem auto;
+    display: block;
+}
+
+.honeycomb-path {
+    fill: none;
+    stroke: var(--brand-color); /* Jouw Olive kleur */
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 210; /* Omtrek van de hexagon */
+    stroke-dashoffset: 210;
+    animation: drawHex 2s linear infinite, glowHex 2s ease-in-out infinite;
+    transform-origin: center;
+}
+
+.honeycomb-core {
+    fill: var(--brand-color);
+    opacity: 0;
+    animation: pulseCore 2s ease-in-out infinite;
+    transform-origin: center;
+}
+
+@keyframes drawHex {
+    0% { stroke-dashoffset: 210; }
+    50% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: -210; }
+}
+
+@keyframes pulseCore {
+    0%, 100% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(0.5); opacity: 0.3; }
+}
+
+@keyframes glowHex {
+    0%, 100% { filter: drop-shadow(0 0 2px rgba(143, 140, 121, 0)); }
+    50% { filter: drop-shadow(0 0 8px rgba(143, 140, 121, 0.6)); }
+} 
+
     @media (max-width: 768px) {
         h1 { font-size: 2rem; }
         .card { padding: 1rem !important; } /* Minder padding op mobiel */
@@ -427,6 +470,16 @@ table.fermentation-table {
             position: sticky; top: 0; z-index: 10;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+    }
+
+    /* --- UTILITY: HIDE SCROLLBARS BUT KEEP FUNCTIONALITY --- */
+    .no-scrollbar::-webkit-scrollbar {
+       display: none; /* Chrome, Safari, Opera */
+    }
+
+    .no-scrollbar {
+       -ms-overflow-style: none;  /* IE and Edge */
+       scrollbar-width: none;  /* Firefox */
     }
     
     /* Label Preview Styles (Behouden) */
@@ -580,7 +633,7 @@ table.fermentation-table {
         <div id="brewing-main-view" class="hidden">
     <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
     <div class="bg-app-secondary p-4 rounded-b-lg shadow-inner">
-        <nav class="flex space-x-2 overflow-x-auto whitespace-nowrap">
+        <nav class="flex space-x-2 overflow-x-auto whitespace-nowrap no-scrollbar"> 
             <button id="creator-sub-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold">Creator</button>
             <button id="shopping-list-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Shopping List</button>
             <button id="brew-day-1-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Brew Day 1</button>
@@ -858,7 +911,7 @@ table.fermentation-table {
         <div id="management-main-view" class="hidden">
              <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
              <div class="bg-app-secondary p-4 rounded-b-lg shadow-inner">
-                <nav class="flex space-x-2 overflow-x-auto whitespace-nowrap">
+                <nav class="flex space-x-2 overflow-x-auto whitespace-nowrap no-scrollbar">
                     <button id="inventory-sub-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold">Inventory</button>
                     <button id="equipment-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Equipment</button>
                     <button id="packaging-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Packaging</button>
@@ -1032,7 +1085,7 @@ table.fermentation-table {
         <div id="tools-main-view" class="hidden">
             <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
             <div class="bg-app-secondary p-4 rounded-b-lg shadow-inner">
-                <nav class="flex space-x-2 overflow-x-auto whitespace-nowrap">
+                <nav class="flex space-x-2 overflow-x-auto whitespace-nowrap no-scrollbar">
                     <button id="calculators-sub-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold">Calculators</button>
                     <button id="labels-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Labels</button>
                     <button id="water-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Water</button>
@@ -1539,7 +1592,7 @@ table.fermentation-table {
                             <button id="clearInventoryBtn" class="w-full bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-800 btn">Delete All Inventory</button>
                         </div>
                     </div>
-                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.0 - Fort Knox - © 2025</p>
+                    <p class="text-center text-sm text-app-secondary/60 mt-8">MEA(N)DERY - v1.1 - Fort Knox - © 2025</p>
                 </div>
             </div>
         </div>
@@ -2120,6 +2173,20 @@ function refreshCurrentChecklistView() {
     }
 }
 
+// --- UI UTILITY: THE DIAMOND LOADER ---
+// Geeft de HTML string terug voor de custom loader
+window.getLoaderHtml = function(message = "Working on it...") {
+    return `
+        <div class="flex flex-col items-center justify-center py-8">
+            <svg class="honeycomb-loader" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <polygon class="honeycomb-core" points="50 25, 72 37, 72 63, 50 75, 28 63, 28 37" />
+                <path class="honeycomb-path" d="M 50 5 L 90 27 L 90 73 L 50 95 L 10 73 L 10 27 Z" />
+            </svg>
+            <p class="text-center text-app-secondary/80 font-header tracking-wide animate-pulse mt-2">${message}</p>
+        </div>
+    `;
+}
+
             // --- Initialization ---
             function initApp() {
 
@@ -2685,7 +2752,7 @@ async function clearInventory() {
 }
 
 async function generateRecipe() {
-    recipeOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is thinking ... relax while your custom recipe is being crafted.</p>';
+    recipeOutput.innerHTML = getLoaderHtml("Your buddy is thinking ... relax while your custom recipe is being crafted.");
     generateBtn.disabled = true;
     generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
     currentPredictedProfile = null;
@@ -2883,7 +2950,7 @@ async function generateAndInjectCreativeTitle(markdown) {
     if (!tweakRequest) { showToast("Please enter your tweak request.", "error"); return; }
 
     const tweakOutput = document.getElementById('tweak-unsaved-output');
-    tweakOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Recalculating with Fort Knox protocols...</p>';
+    tweakOutput.innerHTML = getLoaderHtml("Recalculating with Fort Knox protocols...");
     const tweakBtn = document.getElementById('tweak-unsaved-btn');
     tweakBtn.disabled = true;
 
@@ -3730,7 +3797,7 @@ window.generateFlavorWheel = async function(brewId) {
     }
 
     container.style.display = 'block';
-    container.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Analyzing flavor profile...</p>';
+    container.innerHTML = getLoaderHtml("Analyzing flavor profile...");
 
     const prompt = `You are a professional mead sommelier. Analyze the following tasting notes and assign a score from 0 to 5 for each of the following categories: Sweetness, Acidity, Fruity/Floral, Spiciness, Earthy/Woody, and Body/Mouthfeel. Provide your output ONLY in a valid JSON format according to the specified schema. Tasting notes: "${tastingNotes}"`;
 
@@ -3933,7 +4000,7 @@ window.regenerateFlavorProfile = async function() {
             }
 
             button.disabled = true;
-            statusDiv.innerHTML = '<div class="loader mx-auto" style="width:20px; height:20px; border-width:2px;"></div><p>Generating...</p>';
+            statusDiv.innerHTML = getLoaderHtml("Regenerating...");
 
             try {
                 const profile = await getPredictedFlavorProfile(currentRecipeMarkdown);
@@ -5167,7 +5234,7 @@ async function bottleBatch(e) {
                 }
                 
                 const adviceOutput = document.getElementById('water-advice-output');
-                adviceOutput.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Analyzing water profile...</p>';
+                adviceOutput.innerHTML = getLoaderHtml("Analyzing water chemistry...");
                 
                 const targetProfile = document.getElementById('meadTargetProfile').selectedOptions[0].text;
                 const batchSize = document.getElementById('batchSize').value;
@@ -6865,7 +6932,7 @@ window.startActualBrewDay = async function(brewId) {
                 document.getElementById('social-output-container').classList.remove('hidden');
                 const socialContainer = document.getElementById('social-content-container');
                 const imageContainer = document.getElementById('social-image-container');
-                socialContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is writing a post for you...</p>';
+                socialContainer.innerHTML = getLoaderHtml("Drafting the perfect post...");
                 imageContainer.innerHTML = '';
                 const persona = document.getElementById('social-persona').value;
                 const platform = document.getElementById('social-platform').value;
@@ -6986,7 +7053,7 @@ function populateSocialRecipeDropdown() {
 
             async function generateSocialImage(title, description) {
     const imageContainer = document.getElementById('social-image-container');
-    imageContainer.innerHTML = '<div class="loader"></div><p class="text-center text-app-secondary/80">Your buddy is painting a masterpiece...</p>';
+    imageContainer.innerHTML = getLoaderHtml("Painting a masterpiece...");
 
     const imageApiKey = userSettings.imageApiKey;
     if (!imageApiKey) {
@@ -7263,7 +7330,7 @@ document.getElementById('total-cellar-value').textContent = `${currency}${totalC
                     return;
                 }
 
-                outputDiv.innerHTML = '<div class="loader"></div>';
+                outputDiv.innerHTML = getLoaderHtml("Diagnosing your brew issue...");
                 
                 const prompt = `You are an expert mead maker and troubleshooter. A user is having a problem with their mead. Their description of the problem is: "${description}". Provide a step-by-step guide to help them diagnose the issue. Ask clarifying questions they should answer for themselves, suggest potential causes, and offer clear, actionable solutions. Format the response in Markdown.`;
 

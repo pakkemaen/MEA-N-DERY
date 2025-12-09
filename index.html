@@ -3345,18 +3345,16 @@ window.findCommercialWaterMatch = async function() {
 
     const tweakOutput = document.getElementById('tweak-unsaved-output');
     
-    // 1. Zet de loader met de initiële tekst. 
-    // Dit creëert het element met id="loader-text" dat we zo gaan animeren.
+    // 1. Zet de loader
     tweakOutput.innerHTML = getLoaderHtml("Analyzing Tweak Request..."); 
     
     const tweakBtn = document.getElementById('tweak-unsaved-btn');
     tweakBtn.disabled = true;
 
     // 2. START DE DENK-ANIMATIE
-    // Dit zoekt naar id="loader-text" en begint de teksten te roteren.
     const thinkingInterval = window.startThinkingAnimation("loader-text");
 
-    // 0. BEWAAR DE DATA (State Preservation - Hypercar Feature)
+    // 0. BEWAAR DE DATA
     let preservedTitle = '';
     let preservedDate = '';
     const currentNameInput = document.querySelector('input[id^="recipeName-new"]');
@@ -3365,7 +3363,7 @@ window.findCommercialWaterMatch = async function() {
     if (currentNameInput) preservedTitle = currentNameInput.value;
     if (currentDateInput) preservedDate = currentDateInput.value;
 
-    // 3. Context Analyse & Wetten (Fort Knox)
+    // 3. Context Analyse & Wetten
     const contextLower = (currentRecipeMarkdown + tweakRequest).toLowerCase();
     const isNoWater = contextLower.includes('no-water') || contextLower.includes('no water');
     const isBraggot = contextLower.includes('braggot');
@@ -3374,20 +3372,20 @@ window.findCommercialWaterMatch = async function() {
 
     const laws = getFortKnoxLaws(isNoWater, isBraggot, isHydromel, false, isWild);
 
-    // 4. Inventory Context (Slimme Tweak)
+    // 4. Inventory Context
     const relevantCategories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
     const fullInventoryList = inventory.filter(item => relevantCategories.includes(item.category));
     const inventoryString = fullInventoryList.map(item => `${item.name} (${item.qty} ${item.unit})`).join('; ');
     const inventoryContext = `\n**INVENTORY CONTEXT:** The user has the following items in stock: [${inventoryString}]. If the tweak requires adding ingredients, prioritize these items if appropriate.`;
 
+    // --- HIER ZAT DE FOUT: De backtick is nu verplaatst naar het einde ---
     const prompt = `You are "MEA(N)DERY", a master mazer. A user wants to tweak a recipe.
     **STRICT OUTPUT RULE:**
     - Do NOT output raw JSON as the main response.
     - Output a Markdown Recipe.
     - Inside the Markdown, include the Ingredients JSON block.
     - Start with "# Title".
-    ...`;
-
+    
     Original Recipe:
     ---
     ${currentRecipeMarkdown}
@@ -3403,7 +3401,8 @@ window.findCommercialWaterMatch = async function() {
     **LOGIC CHECK:**
     - If the user changed the Batch Size -> Recalculate ALL ingredients.
     - If the user changed the Fruit -> Check if Honey needs adjustment for ABV targets.
-    `;
+    `; 
+    // --- EINDE STRING ---
 
     try {
         const tweakedMarkdown = await performApiCall(prompt);
@@ -3422,7 +3421,7 @@ window.findCommercialWaterMatch = async function() {
         currentRecipeMarkdown = processedMarkdown;
         await renderRecipeOutput(processedMarkdown);
 
-        // 6. HERSTEL DE DATA (State Restoration)
+        // 6. HERSTEL DE DATA
         if (preservedTitle) {
             const newNameInput = document.querySelector('input[id^="recipeName-new"]');
             if(newNameInput) newNameInput.value = preservedTitle;

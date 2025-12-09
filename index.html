@@ -3103,7 +3103,7 @@ async function generateAndInjectCreativeTitle(markdown) {
     }
 }
 
-// --- NIEUWE FUNCTIE: RENDER RECEPT OUTPUT (MET TITEL FIX) ---
+// --- NIEUWE FUNCTIE: RENDER RECEPT OUTPUT (VOLLEDIG) ---
 async function renderRecipeOutput(markdown) {
     // 1. TITEL GARANTIE
     // We voegen een titel toe aan finalMarkdown als die mist.
@@ -3112,65 +3112,95 @@ async function renderRecipeOutput(markdown) {
         finalMarkdown = `# Untitled Batch\n\n${finalMarkdown}`;
     }
 
-    // Update de globale variabele
+    // Update de globale variabele meteen, zodat save-to-history ook werkt met de juiste titel
     currentRecipeMarkdown = finalMarkdown;
                 
+    // Probeer een smaakprofiel te voorspellen
     currentPredictedProfile = await getPredictedFlavorProfile(markdown); 
     
-    // ... (Flavor Profile HTML stukje - laat dit staan) ...
-    let flavorProfileHtml = `...`; // (Ingekort voor leesbaarheid)
-    if (currentPredictedProfile) { /* ... */ } else { /* ... */ }
-    flavorProfileHtml += `</div>`;
+    // 2. BOUW DE FLAVOR PROFILE HTML (Volledig uitgeschreven)
+    let flavorProfileHtml = '<div id="flavor-profile-section" class="mt-8 pt-6 border-t border-app">';
+    flavorProfileHtml += '<h3 class="text-2xl font-header font-bold text-center mb-4">Predicted Flavor Profile</h3>';
+
+    if (currentPredictedProfile) {
+        flavorProfileHtml += `
+            <div class="card p-4 rounded-lg max-w-sm mx-auto">
+                <canvas id="generated-flavor-wheel"></canvas>
+            </div>
+        `;
+    } else {
+        flavorProfileHtml += `
+            <div class="card p-4 rounded-lg max-w-sm mx-auto text-center">
+                <p class="text-app-secondary/80 text-sm mb-4">Could not generate profile initially. Try again?</p>
+                <button id="retry-flavor-btn" onclick="window.regenerateFlavorProfile()" class="bg-purple-600 text-white py-2 px-4 rounded btn text-sm">
+                    Generate Profile
+                </button>
+                <div id="flavor-generation-status" class="mt-2 text-sm"></div>
+            </div>
+        `;
+    }
+    flavorProfileHtml += '</div>';
     
-    // 2. INGREDIËNTEN TABEL (HIER ZAT DE FOUT)
+    // 3. INGREDIËNTEN TABEL PARSEN & FORMATTEREN
     const jsonRegex = /(?:```json\s*([\s\S]*?)\s*```|(\[\s*\{[\s\S]*?\}\s*\]))/;
-    const jsonMatch = finalMarkdown.match(jsonRegex); // Gebruik finalMarkdown
+    const jsonMatch = finalMarkdown.match(jsonRegex); 
     let tableMarkdown = ''; 
 
     if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
         const jsonString = jsonMatch[1] || jsonMatch[2];
         try {
             // --- FIX: JSON SANITIZER ---
-            // Soms gebruikt de AI enkele quotes of vergeet quotes om keys. Dit fixt de meest voorkomende fouten.
+            // Repareer veelvoorkomende AI JSON fouten (komma's op het einde)
             let safeJsonString = jsonString
-                .replace(/,\s*}/g, '}') // Verwijder trailing comma's
-                .replace(/,\s*]/g, ']'); // Verwijder trailing comma's in arrays
+                .replace(/,\s*}/g, '}') 
+                .replace(/,\s*]/g, ']'); 
+            
             const ingredientsArray = JSON.parse(safeJsonString);
+            
+            // Bouw de Markdown tabel
             tableMarkdown = '| Ingredient | Quantity | Unit |\n';
             tableMarkdown += '|---|---|---|\n';
+            
             ingredientsArray.forEach(item => {
-                // ... (je eenheden logica blijft hetzelfde) ...
                 let displayQty = item.quantity;
                 let displayUnit = item.unit;
+                
+                // Slimme eenheden conversie voor weergave
                 if ((displayUnit || '').toLowerCase() === 'g' && displayQty >= 1000) {
                     displayQty /= 1000; displayUnit = 'kg';
                 } else if ((displayUnit || '').toLowerCase() === 'ml' && displayQty >= 1000) {
                     displayQty /= 1000; displayUnit = 'L';
                 }
+                
+                // Afronden indien nodig (geen decimalen als het een heel getal is)
                 if (displayQty % 1 !== 0) { displayQty = parseFloat(displayQty.toFixed(2)); }
+                
                 tableMarkdown += `| ${item.ingredient} | ${displayQty} | ${displayUnit} |\n`;
             });
             
-            // We vervangen in finalMarkdown (die de titel heeft), niet in markdown (die hem niet heeft)
+            // Vervang het JSON blok in de markdown door de tabel
             finalMarkdown = finalMarkdown.replace(jsonRegex, tableMarkdown); 
             
         } catch (e) {
-            console.error("JSON Parse Error. Raw string:", jsonString, e);
-            tableMarkdown = `\n**Error:** Could not display ingredients.\n`;
+            console.error("JSON Parse Error inside Render:", e);
+            // Toon een foutmelding in de tekst als de tabel faalt, maar laat de rest staan
+            tableMarkdown = `\n**Error:** Could not display ingredients table due to data format error.\n`;
             finalMarkdown = finalMarkdown.replace(jsonRegex, tableMarkdown);
         }
     } else {
-        console.warn("Could not find ingredients JSON block.");
+        console.warn("Could not find ingredients JSON block in AI response.");
     }
 
-    // 3. CLEANUP & RENDER
+    // 4. CLEANUP & RENDER NAAR HTML
+    // Verwijder eventuele interne timer-tags uit de tekstweergave
     finalMarkdown = finalMarkdown.replace(/\[d:[\d:]+\]/g, '');
+    
+    // Parse de markdown naar HTML
     const recipeHtml = marked.parse(finalMarkdown);
     
-    // 4. BOUW DE HTML (Tweak knoppen, Water knop, etc.)
+    // 5. BOUW DE VOLLEDIGE HTML STRUCTUUR
     const fullHtml = `
             <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
-                
                 <button onclick="window.generateRecipe()" class="bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors btn text-sm flex items-center gap-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                     Retry
@@ -3222,16 +3252,19 @@ async function renderRecipeOutput(markdown) {
         </div>
     `;
 
+    // Injecteer de HTML in de pagina
     recipeOutput.innerHTML = fullHtml;
 
+    // Render de Flavor Wheel grafiek als de data er is
     if (currentPredictedProfile) {
         renderGeneratedFlavorWheel(currentPredictedProfile);
     }
 
+    // Attach Event Listeners
     document.getElementById('saveBtn').addEventListener('click', saveBrewToHistory);
     document.getElementById('tweak-unsaved-btn').addEventListener('click', tweakUnsavedRecipe);
 
-    // 5. TRIGGER DE TITEL GENERATOR
+    // 6. TRIGGER DE TITEL GENERATOR
     // Nu staat de <h1> er zeker, dus dit zal werken.
     generateAndInjectCreativeTitle(finalMarkdown);
 }

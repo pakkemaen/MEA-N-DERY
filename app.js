@@ -638,7 +638,7 @@ ${hydromelRule}
              if (document.getElementById('specialIngredients').value) creativeBrief += `\n- Special Ingredients: ${document.getElementById('specialIngredients').value}`;
         }
 
-        / 8. Final Prompt
+        // 8. Final Prompt
         return `You are "MEA(N)DERY", a master mazer. 
 
 ${mathContext}

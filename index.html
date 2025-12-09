@@ -20,43 +20,55 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
     /* --- 1. VARIABLES & THEME SETUP --- */
+    
+    /* DEFAULT: LIGHT MODE ("The Parchment/Paper Look") */
     :root {
-        --bg-primary: #f4f1ea;       /* Iets warmer wit/grijs (Paper) */
-        --bg-secondary: #ffffff;     /* Puur wit voor panelen */
-        --bg-tertiary: #f9f9f7;      /* Zeer licht grijs voor inputs/sub-kaarten */
-        --text-primary: #2d2a26;     /* Bijna zwart (Charcoal) */
-        /* OUD: --text-secondary: #6b655d; */
-        /* NIEUW (Meer contrast): */
-        --text-secondary: #59544d;
-        --border-color: #e0dbd0;     /* Zachte rand */
+        /* Achtergronden */
+        --bg-primary: #f4f1ea;       /* Warm, "papier" wit (Luxe uitstraling) */
+        --bg-secondary: #ffffff;     /* Puur wit voor de kaarten/panelen (Diepte) */
+        --bg-tertiary: #ebe9e4;      /* Iets donkerder beige voor inputs */
+        
+        /* Tekst */
+        --text-primary: #2d2a26;     /* Zeer donker 'Charcoal' (Zachter dan zwart) */
+        --text-secondary: #6b655d;   /* Warm grijs */
+        --border-color: #d6d3c9;     /* Zachte rand, niet te hard */
         
         /* Brand Colors */
-        --brand-color: #8F8C79;      /* Jouw Olive/Grey brand kleur */
-        --brand-dark: #6e6b5c;       /* Donkere variant voor hover */
-        --action-color: #b45309;     /* Amber/Oranje voor acties */
+        --brand-color: #8F8C79;      /* Je Olijf/Goud basis */
+        --brand-dark: #666352;       /* Een donkerdere variant voor tekst-leesbaarheid op wit */
+        --action-color: #b45309;     /* Iets donkerder Amber voor goed contrast op wit */
         
-        --danger-color: #ef4444;
-        --success-color: #22c55e;
-        --info-color: #3b82f6;
+        /* Functional Colors */
+        --danger-color: #dc2626;
+        --success-color: #16a34a;
+        --info-color: #2563eb;
         
-        /* Spacing & Radius */
+        /* Spacing & Radius (Universeel) */
         --radius-md: 8px;
         --radius-lg: 12px;
         --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
+    /* OVERRIDE: DARK MODE ("The Cellar Look") */
     .dark {
+        /* Achtergronden */
         --bg-primary: #0f0f0f;       /* Diep zwart */
-        --bg-secondary: #1a1a1a;     /* Donkergrijs panel */
+        --bg-secondary: #1a1a1a;     /* Donkergrijs paneel */
         --bg-tertiary: #262626;      /* Lichter grijs inputs */
-        --text-primary: #e5e5e5;     /* Off-white */
-        --text-secondary: #a3a3a3;
-        --border-color: #333333;
         
-        --brand-color: #a3a08f;      /* Iets lichter voor contrast */
-        --brand-dark: #8F8C79;
-        --action-color: #d97706;
+        /* Tekst */
+        --text-primary: #e5e5e5;     /* Off-white */
+        --text-secondary: #a3a3a3;   /* Grijs */
+        --border-color: #333333;     /* Donkere rand */
+        
+        /* Brand Colors */
+        --brand-color: #8F8C79;      /* De originele kleur */
+        --brand-dark: #a8a593;       /* Iets lichter voor hover in het donker */
+        --action-color: #d97706;     /* De originele Amber */
+        
+        /* Schaduw mag in dark mode iets sterker zijn */
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
     }
 
     body {
@@ -6056,56 +6068,54 @@ function renderActiveBrewTimeline() {
     card.classList.remove('hidden');
 }
 
-// --- DASHBOARD STATS MET PRIMARY/AGING SPLIT ---
+// --- UPDATED: DASHBOARD STATS (CORRECTIE VOOR AGING COUNT) ---
 function updateDashboardStats() {
     const currency = userSettings.currencySymbol || '€';
 
-    // 1. Primary Batches: Gestart, niet gebotteld, nog NIET "Primary Complete"
-    // Dit zijn de batches die nog in Brew Day 1 zitten.
+    // 1. Primary Batches: Gestart (heeft datum), niet gebotteld, nog NIET "Primary Complete"
+    // Hier is de datum-check WEL belangrijk, anders tellen we concept-recepten mee.
     const primaryBrews = brews.filter(b => b.logData && b.logData.brewDate && !b.isBottled && !b.primaryComplete);
     
-    // Update de teller op het dashboard
     const primaryEl = document.getElementById('stat-primary-batches');
     if(primaryEl) primaryEl.textContent = primaryBrews.length;
 
     // 2. Aging Batches: Gestart, niet gebotteld, WEL "Primary Complete"
-    // Dit zijn de batches die in Brew Day 2 (Secondary) zitten.
-    const agingBrews = brews.filter(b => b.logData && b.logData.brewDate && !b.isBottled && b.primaryComplete);
+    // FIX: We halen de strenge datum-check (b.logData.brewDate) hier weg.
+    // Als 'primaryComplete' true is, is het per definitie een actieve batch, datum of niet.
+    const agingBrews = brews.filter(b => !b.isBottled && b.primaryComplete);
 
-    // Update de teller op het dashboard
     const agingEl = document.getElementById('stat-aging-batches');
     if(agingEl) agingEl.textContent = agingBrews.length;
 
-    // 3. Bottles in Cellar: Aantal flessen én Totale Waarde van gebottelde batches
+    // 3. Bottles in Cellar
     let totalBottles = 0;
     let cellarValue = 0;
     
     if (cellar && cellar.length > 0) {
         cellar.forEach(item => {
-            // Flessen tellen
             if (item.bottles) {
                 totalBottles += item.bottles.reduce((acc, b) => acc + (parseInt(b.quantity) || 0), 0);
             }
-            // Waarde van de batch in de kelder optellen
             cellarValue += (parseFloat(item.totalBatchCost) || 0);
         });
     }
     const bottlesEl = document.getElementById('stat-bottles');
     if(bottlesEl) bottlesEl.textContent = totalBottles;
 
-    // 4. Inventory Value: Waarde van ingrediënten die nog op de plank staan
+    // 4. Inventory Value
     let inventoryValue = 0;
     if (inventory && inventory.length > 0) {
         inventoryValue = inventory.reduce((acc, item) => acc + (parseFloat(item.price) || 0), 0);
     }
 
-    // 5. Active Brew Value: Waarde van wat er nu staat te pruttelen (Primary + Aging)
-    // We tellen hier beide fases bij elkaar op, want dit is allemaal "kapitaal in vloeistof".
+    // 5. Active Brew Value (Primary + Aging)
     const allActiveBrews = [...primaryBrews, ...agingBrews];
-    let activeValue = allActiveBrews.reduce((acc, brew) => acc + (parseFloat(brew.totalCost) || 0), 0);
+    // Gebruik een Set om dubbele te voorkomen voor het geval er overlap zou zijn (veiligheid)
+    const uniqueActiveBrews = [...new Set(allActiveBrews)];
+    
+    let activeValue = uniqueActiveBrews.reduce((acc, brew) => acc + (parseFloat(brew.totalCost) || 0), 0);
 
-    // 6. TOTAL "VALUE" (SPENT)
-    // Dit is de som van alles wat je bezit (Grondstof + In Productie + Eindproduct)
+    // 6. TOTAL VALUE
     const totalAssetValue = inventoryValue + activeValue + cellarValue;
 
     const spentEl = document.getElementById('stat-spent');
@@ -6435,7 +6445,7 @@ window.showBrewDay2Detail = function(brewId) {
         }).join('');
     }
 
-    const logHtml = getBrewLogHtml(logData, brew.id);
+    const logHtml = getBrewLogHtml(brew.logData, brew.id);
 
     view.innerHTML = `
         <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
@@ -7147,17 +7157,28 @@ async function markPrimaryAsComplete(brewId) {
 }
 
 window.finalizeBrewDay1 = async function() {
-    // Stap 1: Bouw de inhoud van de (nog verborgen) Brew Day 2 weergave opnieuw op.
+    // 1. AUTO-SAVE: Red de data voordat we het scherm verlaten!
+    if (currentBrewDay.brewId) {
+        try {
+            // We proberen de log nog snel op te slaan
+            await window.updateBrewLog(currentBrewDay.brewId, 'brew-day-content');
+            console.log("Auto-saved log before transition.");
+        } catch (e) {
+            console.warn("Could not auto-save log:", e);
+        }
+    }
+
+    // 2. Bouw de Brew Day 2 weergave op
     renderBrewDay2();
 
-    // Stap 2: Schakel nu pas over naar de weergave om deze zichtbaar te maken.
+    // 3. Schakel over
     window.switchSubView('brew-day-2', 'brewing-main-view');
 
-    // Stap 3: Reset de Brew Day 1 status
+    // 4. Reset Brew Day 1
     currentBrewDay = { brewId: null };
-    await saveUserSettings(); // Sla de lege status op in de database
+    await saveUserSettings(); 
 
-    // Stap 4: Maak de Brew Day 1 view visueel leeg voor de volgende batch
+    // 5. Maak Brew Day 1 leeg
     renderBrewDay('none');
 }
 

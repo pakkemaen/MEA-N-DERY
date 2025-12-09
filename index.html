@@ -1296,26 +1296,45 @@ table.fermentation-table {
             </div>
             <div id="financials-view" class="hidden mt-4">
     <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 70vh;">
-         <h2 class="text-3xl font-header font-bold mb-6 text-center">Financials</h2>
+         <h2 class="text-3xl font-header font-bold mb-6 text-center">Financial Overview</h2>
+         
          <div id="cost-analysis-container">
-            <h3 class="text-2xl font-header mb-4">Cost Analysis</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="card p-4 rounded-lg text-center">
-                    <h4 class="text-lg font-bold text-app-secondary">Total Inventory Value</h4>
-                    <p id="total-spend" class="text-3xl font-bold text-app-brand">€0.00</p>
+            
+            <div class="mb-8 p-6 rounded-lg bg-app-tertiary border-2 border-app-brand text-center shadow-md">
+                <h4 class="text-sm font-bold text-app-secondary uppercase tracking-widest mb-1">Total Brewery Asset Value</h4>
+                <p id="grand-total-value" class="text-5xl font-header font-bold text-app-brand">€0.00</p>
+                <p class="text-xs text-app-secondary mt-2">Combined value of Inventory, Active Batches, and Cellar</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                
+                <div class="card p-4 rounded-lg text-center border-t-4 border-blue-500">
+                    <h4 class="text-sm font-bold text-app-secondary uppercase">Inventory</h4>
+                    <p id="total-inventory-value" class="text-2xl font-bold text-app-primary mt-2">€0.00</p>
+                    <p class="text-xs text-app-secondary/60 mt-1">Unused Ingredients</p>
                 </div>
-                <div class="card p-4 rounded-lg text-center">
-                    <h4 class="text-lg font-bold text-app-secondary">Total Cellar Value</h4>
-                    <p id="total-cellar-value" class="text-3xl font-bold text-app-brand">€0.00</p>
+
+                <div class="card p-4 rounded-lg text-center border-t-4 border-purple-500">
+                    <h4 class="text-sm font-bold text-app-secondary uppercase">In Progress</h4>
+                    <p id="total-active-value" class="text-2xl font-bold text-app-primary mt-2">€0.00</p>
+                    <p class="text-xs text-app-secondary/60 mt-1">Fermenting & Aging</p>
+                </div>
+
+                <div class="card p-4 rounded-lg text-center border-t-4 border-green-600">
+                    <h4 class="text-sm font-bold text-app-secondary uppercase">Cellar</h4>
+                    <p id="total-cellar-value" class="text-2xl font-bold text-app-primary mt-2">€0.00</p>
+                    <p class="text-xs text-app-secondary/60 mt-1">Finished Bottles</p>
                 </div>
             </div>
+
             <div class="card p-4 rounded-lg mt-6">
-                <h4 class="text-lg font-bold text-app-secondary text-center mb-4">Spend by Category</h4>
-                <canvas id="cost-chart"></canvas>
+                <h4 class="text-lg font-bold text-app-secondary text-center mb-4">Spend by Category (Inventory)</h4>
+                <div class="h-64">
+                    <canvas id="cost-chart"></canvas>
+                </div>
             </div>
          </div>
     </div>
-</div>
         </div>
         <div id="tools-main-view" class="hidden">
             <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
@@ -4072,14 +4091,17 @@ window.cloneBrew = async function(brewId) {
 }
 
             window.goBackToHistoryList = function() {
-                historyDetailContainer.classList.add('hidden');
-                historyListContainer.classList.remove('hidden');
-            }
+    // Maak de detail container leeg om dubbele ID's te voorkomen
+    const detailContainer = document.getElementById('history-detail-container');
+    detailContainer.innerHTML = ''; 
+    
+    detailContainer.classList.add('hidden');
+    document.getElementById('history-list-container').classList.remove('hidden');
+}
             
             window.updateBrewLog = async function(brewId, containerId) {
     if (!userId || !brewId) return;
 
-    // Find the specific button that was clicked inside the container
     const container = document.getElementById(containerId);
     const btn = container ? container.querySelector('button[onclick*="updateBrewLog"]') : null;
     const originalText = btn ? btn.innerText : 'Save Log Changes';
@@ -4091,42 +4113,42 @@ window.cloneBrew = async function(brewId) {
 
     const logData = getLogDataFromDOM(containerId); 
 
+    // --- FIX 1: OPTIMISTIC UPDATE (Direct lokaal opslaan) ---
+    // We updaten de 'brews' array DIRECT, zodat het volgende scherm het meteen ziet.
+    // We wachten niet op Firebase.
+    const brewIndex = brews.findIndex(b => b.id === brewId);
+    if (brewIndex > -1) {
+        brews[brewIndex].logData = logData;
+    }
+
     try {
         const appId = 'meandery-aa05e';
         const brewDocRef = doc(db, 'artifacts', appId, 'users', userId, 'brews', brewId);
         await updateDoc(brewDocRef, { logData: logData });
         
-        // We don't need the toast anymore if the button gives feedback, 
-        // but keeping it doesn't hurt:
         showToast('Log updated successfully!', 'success');
 
         if (containerId === 'history-detail-container') {
-            showBrewDetail(brewId);
-        } else {
-            const brewIndex = brews.findIndex(b => b.id === brewId);
-            if (brewIndex > -1) {
-                brews[brewIndex].logData = logData;
-            }
+            // Als we in history zitten, hoeven we niet te her-renderen, data staat er al
         }
 
         if(btn) {
             btn.innerText = "Saved!";
-            btn.classList.remove('bg-app-action'); // Remove standard color
-            btn.classList.add('bg-green-600');     // Add success color
+            btn.classList.remove('bg-app-action');
+            btn.classList.add('bg-green-600');
             
             setTimeout(() => {
                 btn.disabled = false;
                 btn.innerText = originalText;
                 btn.classList.remove('bg-green-600');
-                btn.classList.add('bg-app-action'); // Restore standard color
+                btn.classList.add('bg-app-action');
             }, 2000);
         }
 
     } catch(error) {
         console.error("Error updating log:", error);
-        showToast('Failed to update log.', 'error');
+        showToast('Failed to update log in cloud (saved locally).', 'error');
         
-        // Reset button on error
         if(btn) {
             btn.disabled = false;
             btn.innerText = originalText;
@@ -7047,7 +7069,6 @@ async function completeStep(stepIndex, isSkipping = false) {
         delete brews[brewIndex].checklist[`step-${stepIndex}`];
         return; // Stop als het opslaan mislukt
     }
-    // --- EINDE AANPASSING ---
 
     // --- Update UI for CURRENT Step (No Change) ---
     const stepDiv = document.getElementById(`step-${stepIndex}`);
@@ -7059,8 +7080,6 @@ async function completeStep(stepIndex, isSkipping = false) {
             controlsDiv.innerHTML = `<span class="text-sm font-bold text-green-600">✓ Completed</span>`;
         }
     }
-
-    // --- START OF NEW LOGIC ---
 
     // 1. Find the active brew data
     const activeBrew = brews.find(b => b.id === currentBrewDay.brewId);
@@ -7112,7 +7131,6 @@ async function completeStep(stepIndex, isSkipping = false) {
         }
         // Add similar logic here if needed for the end of secondary steps
     }
-    // --- END OF NEW LOGIC ---
 }
 
 function updateUI() {
@@ -7749,133 +7767,108 @@ function parseIngredientsFromMarkdown(markdown) {
                 return calculatedCosts;
             }
 
-            function updateCostAnalysis() {
+            // --- UPDATED: COMPLETE FINANCIAL OVERVIEW ---
+function updateCostAnalysis() {
     const currency = userSettings.currencySymbol || '€';
-    // Berekening inventariswaarde blijft hetzelfde
-    const totalSpend = inventory.reduce((acc, item) => acc + (item.price || 0), 0);
-    document.getElementById('total-spend').textContent = `${currency}${totalSpend.toFixed(2)}`;
+    
+    // 1. Inventory Value (Ingrediënten op de plank)
+    const totalInventoryValue = inventory.reduce((acc, item) => acc + (item.price || 0), 0);
+    
+    // 2. Active Brews Value (Ingrediënten in het vat)
+    // We filteren op alles dat NIET gebotteld is.
+    // De waarde is de 'totalCost' die berekend is bij het aanmaken van het recept.
+    const activeBrews = brews.filter(b => !b.isBottled);
+    const totalActiveValue = activeBrews.reduce((acc, brew) => acc + (parseFloat(brew.totalCost) || 0), 0);
 
-    // NIEUW: Bereken de totale kelderwaarde
+    // 3. Cellar Value (Afgewerkt product incl. flessen)
     const packagingCostsPerUnit = getPackagingCosts();
+    const totalCellarValue = cellar.reduce((totalValue, cellarItem) => {
+        const originalBrew = brews.find(b => b.id === cellarItem.brewId);
+        
+        // Kosten van de vloeistof (ingrediënten)
+        const batchIngredientCost = cellarItem.ingredientCost || (originalBrew ? originalBrew.totalCost : 0) || 0;
+        const originalBatchSize = originalBrew ? originalBrew.batchSize : (cellarItem.bottles.reduce((a,b)=>a+(b.size*b.quantity),0)/1000) || 5;
+        const ingredientCostPerLiter = batchIngredientCost / originalBatchSize;
 
-const totalCellarValue = cellar.reduce((totalValue, cellarItem) => {
-    const originalBrew = brews.find(b => b.id === cellarItem.brewId);
-    if (!originalBrew) return totalValue; // Sla over als het originele brouwsel niet is gevonden
+        const valueOfThisCellarItem = cellarItem.bottles.reduce((itemValue, bottle) => {
+            if (bottle.quantity <= 0) return itemValue;
 
-    const ingredientCostPerLiter = (cellarItem.ingredientCost || 0) / (originalBrew.batchSize || 1);
+            const meadCostInBottle = ingredientCostPerLiter * (bottle.size / 1000);
+            
+            // Kosten van de verpakking
+            const bottleCost = packagingCostsPerUnit[bottle.size.toString()] || 0;
+            let closureCost = 0;
+            if (bottle.size >= 750) { closureCost = packagingCostsPerUnit.cork || 0; }
+            else if (bottle.size >= 500) { closureCost = packagingCostsPerUnit.crown_cap_29 || 0; }
+            else { closureCost = packagingCostsPerUnit.crown_cap_26 || 0; }
+            const labelCost = packagingCostsPerUnit.label || 0;
 
-    const valueOfThisCellarItem = cellarItem.bottles.reduce((itemValue, bottle) => {
-        if (bottle.quantity <= 0) return itemValue; // Sla flessen over die niet meer op voorraad zijn
+            const singleBottleTotalCost = meadCostInBottle + bottleCost + closureCost + labelCost;
 
-        const meadCostInBottle = ingredientCostPerLiter * (bottle.size / 1000);
+            return itemValue + (singleBottleTotalCost * bottle.quantity);
+        }, 0);
 
-        const bottleCost = packagingCostsPerUnit[bottle.size.toString()] || 0;
-        let closureCost = 0;
-        if (bottle.size >= 750) { closureCost = packagingCostsPerUnit.cork || 0; }
-        else if (bottle.size >= 500) { closureCost = packagingCostsPerUnit.crown_cap_29 || 0; }
-        else { closureCost = packagingCostsPerUnit.crown_cap_26 || 0; }
-        const labelCost = packagingCostsPerUnit.label || 0;
-
-        const singleBottleTotalCost = meadCostInBottle + bottleCost + closureCost + labelCost;
-
-        return itemValue + (singleBottleTotalCost * bottle.quantity);
+        return totalValue + valueOfThisCellarItem;
     }, 0);
 
-    return totalValue + valueOfThisCellarItem;
-}, 0);
+    // 4. Grand Total
+    const grandTotal = totalInventoryValue + totalActiveValue + totalCellarValue;
 
-document.getElementById('total-cellar-value').textContent = `${currency}${totalCellarValue.toFixed(2)}`;
-    document.getElementById('total-cellar-value').textContent = `${currency}${totalCellarValue.toFixed(2)}`;
+    // --- UPDATE DOM ---
+    // Update de teksten (met check of element bestaat)
+    const invEl = document.getElementById('total-inventory-value');
+    if(invEl) invEl.textContent = `${currency}${totalInventoryValue.toFixed(2)}`;
 
-    // De rest van de functie (grafiek) blijft hetzelfde
+    const activeEl = document.getElementById('total-active-value'); // NIEUW
+    if(activeEl) activeEl.textContent = `${currency}${totalActiveValue.toFixed(2)}`;
+
+    const cellarEl = document.getElementById('total-cellar-value');
+    if(cellarEl) cellarEl.textContent = `${currency}${totalCellarValue.toFixed(2)}`;
+
+    const grandEl = document.getElementById('grand-total-value'); // NIEUW
+    if(grandEl) grandEl.textContent = `${currency}${grandTotal.toFixed(2)}`;
+
+    // 5. Grafiek (Inventory only)
+    // De grafiek toont nog steeds waar je geld aan uitgeeft in de inventaris, dat blijft nuttig.
     const spendByCategory = inventory.reduce((acc, item) => {
         acc[item.category] = (acc[item.category] || 0) + (item.price || 0);
         return acc;
     }, {});
+    
     const ctx = document.getElementById('cost-chart').getContext('2d');
+    
+    // Check dark mode voor grafiek kleuren
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? '#e5e5e5' : '#2d2a26';
+
     const chartData = {
         labels: Object.keys(spendByCategory),
         datasets: [{
             label: 'Spend by Category',
             data: Object.values(spendByCategory),
-            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#7BC225'],
+            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#8F8C79', '#d97706'],
+            borderColor: isDarkMode ? '#1a1a1a' : '#ffffff',
+            borderWidth: 2
         }]
     };
+    
     if (costChart) { costChart.destroy(); }
-    costChart = new Chart(ctx, { type: 'doughnut', data: chartData, options: { /* ... */ } });
-}
-
-            function renderFermentationGraph(brewId) {
-                const brew = brews.find(b => b.id === brewId);
-                // Zorg ervoor dat er logdata is met geldige waarden
-                if (!brew || !brew.logData || !brew.logData.fermentationLog) return;
-
-                const logData = brew.logData.fermentationLog
-                    .filter(entry => entry.date && entry.sg) // Filter op entries die een datum en SG hebben
-                    .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sorteer op datum
-
-                if (logData.length < 2) return; // We hebben minstens 2 punten nodig voor een lijn
-
-                const labels = logData.map(entry => new Date(entry.date).toLocaleDateString());
-                const sgData = logData.map(entry => parseFloat(entry.sg));
-
-                const canvasId = `fermChart-${brewId}`;
-                const ctx = document.getElementById(canvasId);
-                if (!ctx) return; // Stop als de canvas niet gevonden kan worden
-
-                // Verwijder een eventuele oude grafiek voordat we een nieuwe tekenen
-                if (window.fermChartInstances && window.fermChartInstances[canvasId]) {
-                window.fermChartInstances[canvasId].destroy();
+    
+    costChart = new Chart(ctx, { 
+        type: 'doughnut', 
+        data: chartData, 
+        options: { 
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { color: textColor, font: { family: "'Barlow Semi Condensed', sans-serif" } }
                 }
-                if (!window.fermChartInstances) {
-                window.fermChartInstances = {};
-           }
-
-                const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary');
-                const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
-                const brandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand-color');
-
-                window.fermChartInstances[canvasId] = new Chart(ctx.getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                        label: 'Specific Gravity (SG)',
-                        data: sgData,
-                        borderColor: brandColor,
-                        backgroundColor: brandColor + '33', // Transparante vulling
-                        tension: 0.1,
-                        fill: true,
-                    }]
-                 },
-                 options: {
-                     responsive: true,
-                     plugins: {
-                         title: { display: false },
-                         legend: { display: false }
-                     },
-                     scales: {
-                         x: {
-                             ticks: { color: textColor },
-                             grid: { color: borderColor }
-                         },
-                         y: {
-                            title: {
-                                display: true,
-                                text: 'Specific Gravity',
-                                color: textColor
-                     },
-                     ticks: { 
-                         color: textColor,
-                         // Formatteer de y-as labels (bv. 1.050)
-                         callback: function(value) { return value.toFixed(3); }
-                     },
-                     grid: { color: borderColor }
-                 }
-             }
-         }
-     });
- }
+            }
+        } 
+    });
+}
 
             // --- Troubleshooter Functions ---
             async function getTroubleshootingAdvice() {

@@ -784,22 +784,29 @@ table.fermentation-table {
         <div id="dashboard-main-view">
     <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 80vh;">
         
-        <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            
             <div onclick="switchMainView('brewing'); switchSubView('brew-day-1', 'brewing-main-view')" 
-                 class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 group">
-                <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-brand">Fermenting</p>
-                <p id="stat-active-batches" class="text-2xl font-header font-bold text-app-primary">--</p>
+                 class="card p-3 text-center border-l-4 border-blue-500 bg-app-tertiary cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 group">
+                <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-blue-600">Primary</p>
+                <p id="stat-primary-batches" class="text-2xl font-header font-bold text-app-primary">--</p>
+            </div>
+
+            <div onclick="switchMainView('brewing'); switchSubView('brew-day-2', 'brewing-main-view')" 
+                 class="card p-3 text-center border-l-4 border-purple-500 bg-app-tertiary cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 group">
+                <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-purple-600">Aging</p>
+                <p id="stat-aging-batches" class="text-2xl font-header font-bold text-app-primary">--</p>
             </div>
 
             <div onclick="switchMainView('management'); switchSubView('cellar', 'management-main-view')" 
-                 class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 group">
-                <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-brand">In Cellar</p>
+                 class="card p-3 text-center border-l-4 border-green-600 bg-app-tertiary cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 group">
+                <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-green-600">In Cellar</p>
                 <p id="stat-bottles" class="text-2xl font-header font-bold text-app-primary">--</p>
             </div>
 
             <div onclick="switchMainView('management'); switchSubView('financials', 'management-main-view')" 
-                 class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 group">
-                <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-brand">Spent</p>
+                 class="card p-3 text-center border-l-4 border-amber-600 bg-app-tertiary cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 group">
+                <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-amber-600">Value</p>
                 <p id="stat-spent" class="text-xl font-header font-bold text-app-primary">--</p>
             </div>
         </div>
@@ -3123,7 +3130,12 @@ async function renderRecipeOutput(markdown) {
     if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
         const jsonString = jsonMatch[1] || jsonMatch[2];
         try {
-            const ingredientsArray = JSON.parse(jsonString);
+            // --- FIX: JSON SANITIZER ---
+            // Soms gebruikt de AI enkele quotes of vergeet quotes om keys. Dit fixt de meest voorkomende fouten.
+            let safeJsonString = jsonString
+                .replace(/,\s*}/g, '}') // Verwijder trailing comma's
+                .replace(/,\s*]/g, ']'); // Verwijder trailing comma's in arrays
+            const ingredientsArray = JSON.parse(safeJsonString);
             tableMarkdown = '| Ingredient | Quantity | Unit |\n';
             tableMarkdown += '|---|---|---|\n';
             ingredientsArray.forEach(item => {
@@ -3139,12 +3151,11 @@ async function renderRecipeOutput(markdown) {
                 tableMarkdown += `| ${item.ingredient} | ${displayQty} | ${displayUnit} |\n`;
             });
             
-            // --- DE FIX ZIT HIERONDER ---
             // We vervangen in finalMarkdown (die de titel heeft), niet in markdown (die hem niet heeft)
             finalMarkdown = finalMarkdown.replace(jsonRegex, tableMarkdown); 
             
         } catch (e) {
-            console.error("Failed to parse ingredients JSON:", e);
+            console.error("JSON Parse Error. Raw string:", jsonString, e);
             tableMarkdown = `\n**Error:** Could not display ingredients.\n`;
             finalMarkdown = finalMarkdown.replace(jsonRegex, tableMarkdown);
         }
@@ -3337,7 +3348,13 @@ window.findCommercialWaterMatch = async function() {
     const inventoryContext = `\n**INVENTORY CONTEXT:** The user has the following items in stock: [${inventoryString}]. If the tweak requires adding ingredients, prioritize these items if appropriate.`;
 
     const prompt = `You are "MEA(N)DERY", a master mazer. A user wants to tweak a recipe.
-    
+    **STRICT OUTPUT RULE:**
+    - Do NOT output raw JSON as the main response.
+    - Output a Markdown Recipe.
+    - Inside the Markdown, include the Ingredients JSON block.
+    - Start with "# Title".
+    ...`;
+
     Original Recipe:
     ---
     ${currentRecipeMarkdown}
@@ -6007,20 +6024,27 @@ function renderActiveBrewTimeline() {
     card.classList.remove('hidden');
 }
 
-// --- UPDATED: CALCULATE TOTAL ASSET VALUE (Inventory + Active + Cellar) ---
+// --- DASHBOARD STATS MET PRIMARY/AGING SPLIT ---
 function updateDashboardStats() {
-    // 1. Active Batches: Alles wat een startdatum heeft maar niet gebotteld is
-    // We berekenen hier ook de waarde van!
-    const activeBrews = brews.filter(b => b.logData && b.logData.brewDate && !b.isBottled);
-    const activeCount = activeBrews.length;
+    const currency = userSettings.currencySymbol || '€';
+
+    // 1. Primary Batches: Gestart, niet gebotteld, nog NIET "Primary Complete"
+    // Dit zijn de batches die nog in Brew Day 1 zitten.
+    const primaryBrews = brews.filter(b => b.logData && b.logData.brewDate && !b.isBottled && !b.primaryComplete);
     
-    // Waarde van wat er nu staat te pruttelen
-    let activeValue = activeBrews.reduce((acc, brew) => acc + (parseFloat(brew.totalCost) || 0), 0);
+    // Update de teller op het dashboard
+    const primaryEl = document.getElementById('stat-primary-batches');
+    if(primaryEl) primaryEl.textContent = primaryBrews.length;
 
-    const activeEl = document.getElementById('stat-active-batches');
-    if(activeEl) activeEl.textContent = activeCount;
+    // 2. Aging Batches: Gestart, niet gebotteld, WEL "Primary Complete"
+    // Dit zijn de batches die in Brew Day 2 (Secondary) zitten.
+    const agingBrews = brews.filter(b => b.logData && b.logData.brewDate && !b.isBottled && b.primaryComplete);
 
-    // 2. Bottles in Cellar: Aantal flessen én Totale Waarde
+    // Update de teller op het dashboard
+    const agingEl = document.getElementById('stat-aging-batches');
+    if(agingEl) agingEl.textContent = agingBrews.length;
+
+    // 3. Bottles in Cellar: Aantal flessen én Totale Waarde van gebottelde batches
     let totalBottles = 0;
     let cellarValue = 0;
     
@@ -6030,45 +6054,33 @@ function updateDashboardStats() {
             if (item.bottles) {
                 totalBottles += item.bottles.reduce((acc, b) => acc + (parseInt(b.quantity) || 0), 0);
             }
-            // Waarde optellen (Total Batch Cost die we opsloegen bij het bottelen)
-            // Als er flessen zijn gedronken, moeten we de waarde eigenlijk pro rata verlagen,
-            // maar voor nu gebruiken we de 'restwaarde' logica als we dat zouden implementeren.
-            // Simpele aanpak: We herberekenen de waarde op basis van resterende flessen?
-            // Nee, cellar item heeft 'totalBatchCost'. Laten we die gebruiken, of slimmer:
-            
-            // SLIMME CELLAR WAARDE: (Totale kosten / Oorspronkelijk aantal flessen) * Huidig aantal flessen
-            // Dit vereist dat we weten hoeveel flessen eroorspronkelijk waren. 
-            // Voor nu nemen we simpelweg de opgeslagen 'totalBatchCost' van de batch in de kelder,
-            // Omdat de 'consumptie' logica nog geen kosten aftrekt in de huidige app.
-            // (Upgrade tip voor later: Kosten per fles berekenen en aftrekken bij consumptie).
-            
+            // Waarde van de batch in de kelder optellen
             cellarValue += (parseFloat(item.totalBatchCost) || 0);
         });
     }
     const bottlesEl = document.getElementById('stat-bottles');
     if(bottlesEl) bottlesEl.textContent = totalBottles;
 
-    // 3. Inventory Value: Wat staat er nog op de plank?
+    // 4. Inventory Value: Waarde van ingrediënten die nog op de plank staan
     let inventoryValue = 0;
     if (inventory && inventory.length > 0) {
         inventoryValue = inventory.reduce((acc, item) => acc + (parseFloat(item.price) || 0), 0);
     }
 
-    // 4. DE TOTAL "SPENT" / ASSET VALUE
-    // Dit is nu de som van alles wat je bezit (Grondstof + In Productie + Eindproduct)
+    // 5. Active Brew Value: Waarde van wat er nu staat te pruttelen (Primary + Aging)
+    // We tellen hier beide fases bij elkaar op, want dit is allemaal "kapitaal in vloeistof".
+    const allActiveBrews = [...primaryBrews, ...agingBrews];
+    let activeValue = allActiveBrews.reduce((acc, brew) => acc + (parseFloat(brew.totalCost) || 0), 0);
+
+    // 6. TOTAL "VALUE" (SPENT)
+    // Dit is de som van alles wat je bezit (Grondstof + In Productie + Eindproduct)
     const totalAssetValue = inventoryValue + activeValue + cellarValue;
 
-    const currency = userSettings.currencySymbol || '€';
     const spentEl = document.getElementById('stat-spent');
     
-    // We tonen nu de totale waarde die in je brouwerij zit
     if(spentEl) {
-        // Gebruik Math.round of toFixed(2) afhankelijk van voorkeur
         spentEl.textContent = `${currency}${totalAssetValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     }
-    
-    // Optioneel: Update het label van 'Spent' naar 'Total Value' via JS als je de HTML niet wilt aanpassen,
-    // maar 'Spent' is op zich accuraat als "Geld dat ik heb uitgegeven en dat nog in de hobby zit".
 }
 
             function updateNextActionWidget() {
@@ -6351,6 +6363,8 @@ window.showBrewDay2Detail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
+    const logData = brew.logData || {};
+
     // --- AANGEPAST: `currentBrewDay` is nu enkel een ID-pointer. De checklist komt uit het brouwsel.
     currentBrewDay = { brewId: brewId }; 
     const checklist = brew.checklist || {};
@@ -6389,7 +6403,7 @@ window.showBrewDay2Detail = function(brewId) {
         }).join('');
     }
 
-    const logHtml = getBrewLogHtml(brew.logData, brew.id);
+    const logHtml = getBrewLogHtml(logData, brew.id);
 
     view.innerHTML = `
         <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
@@ -6407,11 +6421,10 @@ window.showBrewDay2Detail = function(brewId) {
             <hr class="my-8 border-app">
             ${logHtml}
             <div class="mt-4 no-print">
-                <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-2-view')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>    
+                <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-2-view')" ...>Save Log Changes</button>    
             </div>
-        </div>
-    `;
-}
+        `;
+    }
 
             window.deleteBrew = async function(brewId) {
                 if (!userId) return;
@@ -7611,19 +7624,21 @@ function populateSocialRecipeDropdown() {
     }
 }
 
-// --- UPDATED: ROBUUSTE INGREDIËNTEN LEZER ---
+// --- UPDATED: ROBUUSTE INGREDIËNTEN LEZER (MET SANITIZER) ---
 function parseIngredientsFromMarkdown(markdown) {
     const ingredients = [];
 
-    // NIEUWE REGEX: Zoekt naar een JSON array [...] die begint met een { object.
-    // Dit werkt met én zonder ```json tags.
-    // Het negeert tekst eromheen.
     const jsonRegex = /(?:```json\s*)?(\[\s*\{[\s\S]*?\}\s*\])(?:\s*```)?/;
     const jsonMatch = markdown.match(jsonRegex);
 
     if (jsonMatch && jsonMatch[1]) {
         try {
-            const ingredientsArray = JSON.parse(jsonMatch[1]);
+            let safeJsonString = jsonMatch[1]
+                .replace(/,\s*}/g, '}') // Verwijder trailing comma's in objecten
+                .replace(/,\s*]/g, ']'); // Verwijder trailing comma's in arrays
+            
+            const ingredientsArray = JSON.parse(safeJsonString);
+            
             return ingredientsArray.map(item => ({
                 name: (item.ingredient || '').trim(),
                 quantity: parseFloat(item.quantity) || 0,
@@ -7634,7 +7649,7 @@ function parseIngredientsFromMarkdown(markdown) {
         }
     }
 
-    // Fallback: Oude Tabel Parser (voor oude recepten)
+    // (De fallback voor oude tabellen blijft hieronder staan zoals hij was)
     const tableContentRegex = /\|-+\|.*\n([\s\S]*?)(?:\n\n|##|$)/;
     const match = markdown.match(tableContentRegex);
 

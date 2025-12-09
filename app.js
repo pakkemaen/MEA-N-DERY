@@ -158,168 +158,6 @@ async function signInWithGoogle() {
     }
 }
 
-function initApp() {
-    // UI Elements Assignments
-    const styleSelect = document.getElementById('style');
-    const fruitSection = document.getElementById('fruit-section');
-    const spiceSection = document.getElementById('spice-section');
-    const braggotSection = document.getElementById('braggot-section');
-    const inventoryForm = document.getElementById('inventory-form');
-    
-    // Firebase Init with CONFIG from secrets.js
-    try {
-        const app = initializeApp(CONFIG.firebase);
-        db = getFirestore(app);
-        auth = getAuth(app);
-
-        document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
-
-        onAuthStateChanged(auth, async (user) => {
-            const loginView = document.getElementById('login-view');
-            const appContainer = document.querySelector('.container.mx-auto'); 
-
-            if (user && !user.isAnonymous) {
-                userId = user.uid;
-                loginView.classList.add('hidden');
-                if (appContainer) appContainer.classList.remove('hidden'); 
-
-                try {
-                    await Promise.all([
-                        loadHistory(), loadInventory(), loadEquipmentProfiles(),
-                        loadCellar(), loadUserSettings(), loadPackagingCosts(), loadUserWaterProfiles()
-                    ]);
-                } catch (error) {
-                    console.error("Fout bij laden data:", error);
-                    showToast("Kon niet alle gegevens laden.", "error");
-                }
-            } else {
-                loginView.classList.remove('hidden');
-                if (appContainer) appContainer.classList.add('hidden'); 
-                if (user && user.isAnonymous) auth.signOut();
-            }
-        });
-    } catch (e) {
-        console.error("Firebase init failed:", e);
-    }
-
-    // --- GLOBAL EVENT LISTENERS ---
-    document.getElementById('history-search-input')?.addEventListener('input', renderHistoryList);
-    document.getElementById('packaging-add-form')?.addEventListener('submit', addPackagingStock);
-    document.getElementById('danger-cancel-btn')?.addEventListener('click', hideDangerModal);
-    document.getElementById('danger-confirm-btn')?.addEventListener('click', executeDangerAction);
-    document.getElementById('danger-confirm-input')?.addEventListener('input', checkDangerConfirmation);
-    document.getElementById('customDescription')?.addEventListener('input', handleDescriptionInput);
-    document.getElementById('close-prompt-modal-btn')?.addEventListener('click', hidePromptModal);
-    document.getElementById('water-profile-form')?.addEventListener('submit', saveWaterProfile);
-    document.getElementById('waterSource')?.addEventListener('change', handleWaterSourceChange);
-    document.getElementById('ai-water-search-btn')?.addEventListener('click', findWaterProfileWithAI);
-    document.getElementById('honeyVariety')?.addEventListener('change', (e) => {
-        document.getElementById('honeyVarietyOther').classList.toggle('hidden', e.target.value !== 'other');
-    });
-    
-    // Style Change Handler
-    styleSelect?.addEventListener('change', () => {
-        const style = styleSelect.value.toLowerCase();
-        fruitSection.classList.toggle('hidden', !style.includes('melomel'));
-        spiceSection.classList.toggle('hidden', !style.includes('metheglin'));
-        braggotSection.classList.toggle('hidden', !style.includes('braggot'));
-        if (!style.includes('melomel')) document.querySelectorAll('#fruit-section input:checked').forEach(cb => cb.checked = false);
-        if (!style.includes('metheglin')) document.querySelectorAll('#spice-section input:checked').forEach(cb => cb.checked = false);
-    });
-
-    document.getElementById('generateBtn')?.addEventListener('click', generateRecipe);
-    inventoryForm?.addEventListener('submit', addInventoryItem);
-    document.getElementById('equipment-profile-form')?.addEventListener('submit', addEquipmentProfile);
-    document.getElementById('equipProfileType')?.addEventListener('change', handleEquipmentTypeChange);
-    document.getElementById('bottling-form')?.addEventListener('submit', bottleBatch);
-    document.getElementById('scan-barcode-btn')?.addEventListener('click', startScanner);
-    document.getElementById('close-scanner-btn')?.addEventListener('click', stopScanner);
-    
-    // Inventory Toggles
-    document.querySelectorAll('.inventory-toggle').forEach(checkbox => {
-        checkbox.addEventListener('change', () => {
-            const anyChecked = Array.from(document.querySelectorAll('.inventory-toggle')).some(cb => cb.checked);
-            document.getElementById('budget-section').classList.toggle('hidden', !anyChecked);
-        });
-    });
-    document.getElementById('useBudget')?.addEventListener('change', (e) => {
-        document.getElementById('budget-input-container').classList.toggle('hidden', !e.target.checked);
-    });
-
-    // Calculators & Tools
-    document.getElementById('calcAbvBtn')?.addEventListener('click', calculateABV);
-    document.getElementById('correctSgBtn')?.addEventListener('click', correctHydrometer);
-    document.getElementById('calcSugarBtn')?.addEventListener('click', calculatePrimingSugar);
-    document.getElementById('calcBlendBtn')?.addEventListener('click', calculateBlend);
-    document.getElementById('calcBacksweetenBtn')?.addEventListener('click', calculateBacksweetening);
-    document.getElementById('calcDilutionBtn')?.addEventListener('click', calculateDilution);
-    document.getElementById('calcTosnaBtn')?.addEventListener('click', calculateTOSNA);
-    document.getElementById('getYeastAdviceBtn')?.addEventListener('click', getYeastAdvice);
-    document.getElementById('generate-manual-social-btn')?.addEventListener('click', runManualSocialMediaGenerator);
-    document.getElementById('generate-social-from-recipe-btn')?.addEventListener('click', runSocialMediaGenerator);
-    document.getElementById('getWaterAdviceBtn')?.addEventListener('click', getWaterAdvice);
-    document.getElementById('troubleshoot-btn')?.addEventListener('click', getTroubleshootingAdvice);
-
-    // Settings & Data
-    document.getElementById('saveSettingsBtn')?.addEventListener('click', saveUserSettings);
-    document.getElementById('theme-toggle-checkbox')?.addEventListener('change', (e) => applyTheme(e.target.checked ? 'dark' : 'light'));
-    document.getElementById('exportHistoryBtn')?.addEventListener('click', exportHistory);
-    document.getElementById('exportInventoryBtn')?.addEventListener('click', exportInventory);
-    document.getElementById('importHistoryFile')?.addEventListener('change', (e) => importData(e, 'brews'));
-    document.getElementById('importInventoryFile')?.addEventListener('change', (e) => importData(e, 'inventory'));
-    document.getElementById('clearHistoryBtn')?.addEventListener('click', clearHistory);
-    document.getElementById('clearInventoryBtn')?.addEventListener('click', clearInventory);
-
-    // Labels
-    document.getElementById('logoUpload')?.addEventListener('change', handleLogoUpload);
-    document.getElementById('removeLogoBtn')?.addEventListener('click', removeLogo);
-    document.getElementById('labelRecipeSelect')?.addEventListener('change', handleLabelRecipeSelect);
-    document.querySelectorAll('.label-style-btn').forEach(btn => btn.addEventListener('click', () => switchLabelStyle(btn.dataset.style)));
-    document.getElementById('generate-print-btn')?.addEventListener('click', generatePrintPage);
-    document.querySelectorAll('.orientation-btn').forEach(btn => btn.addEventListener('click', () => setLabelOrientation(btn.dataset.orientation)));
-    
-    // Inputs die de label preview updaten
-    ['labelStyle', 'labelAbv', 'labelVol', 'labelDate'].forEach(id => {
-        document.getElementById(id)?.addEventListener('keyup', updateLabelPreview);
-    });
-    const formatSelect = document.getElementById('labelFormatSelect');
-    if (formatSelect) {
-        formatSelect.addEventListener('change', (e) => {
-            document.getElementById('custom-format-inputs').classList.toggle('hidden', e.target.value !== 'custom');
-            updatePreviewAspectRatio();
-        });
-    }
-    ['customWidth', 'customHeight', 'customCols', 'customRows', 'customMarginTop', 'customMarginLeft'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', updatePreviewAspectRatio);
-    });
-
-    // Main Navigation
-    document.querySelectorAll('.main-nav-btn').forEach(btn => {
-        btn.addEventListener('click', () => switchMainView(btn.dataset.view));
-    });
-    document.querySelectorAll('.back-to-dashboard-btn').forEach(btn => {
-        btn.addEventListener('click', () => switchMainView('dashboard'));
-    });
-    document.querySelectorAll('.sub-tab').forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            const parentId = e.target.closest('[id$="-main-view"]').id;
-            switchSubView(e.target.id.replace('-sub-tab', ''), parentId);
-        });
-    });
-
-    // Prompt Modal close
-    document.getElementById('prompt-modal')?.addEventListener('click', function(e) {
-        if (e.target.id === 'prompt-modal') hidePromptModal();
-    });
-
-    // Start
-    setupBrewDayEventListeners();
-    // (Optioneel: handleStyleChange aanroep hier)
-}
-
-// Start de app als de DOM geladen is
-document.addEventListener('DOMContentLoaded', initApp);
-
 // --- Helpers voor UI interacties ---
 function handleDescriptionInput() {
     const descriptionInput = document.getElementById('customDescription');
@@ -638,7 +476,7 @@ ${hydromelRule}
              if (document.getElementById('specialIngredients').value) creativeBrief += `\n- Special Ingredients: ${document.getElementById('specialIngredients').value}`;
         }
 
-        // 8. Final Prompt
+        // --- STAP 8: FINAL PROMPT ---
         return `You are "MEA(N)DERY", a master mazer. 
 
 ${mathContext}
@@ -902,6 +740,7 @@ window.applyWaterTweak = function(brandName, technicalInstruction) {
     tweakInput.focus();
 }
 
+// --- FIX VOOR SYNTAX ERROR IN TWEAK ---
 async function tweakUnsavedRecipe() {
     const tweakRequest = document.getElementById('tweak-unsaved-request').value.trim();
     if (!tweakRequest) { showToast("Please enter your tweak request.", "error"); return; }
@@ -933,19 +772,19 @@ async function tweakUnsavedRecipe() {
     const inventoryString = fullInventoryList.map(item => `${item.name} (${item.qty} ${item.unit})`).join('; ');
     const inventoryContext = `\n**INVENTORY CONTEXT:** The user has the following items in stock: [${inventoryString}]. If the tweak requires adding ingredients, prioritize these items.`;
 
-    // VEILIGHEID: We ontsnappen backticks in het recept zodat de prompt niet breekt
-    const safeRecipeMarkdown = currentRecipeMarkdown.replace(/`/g, "'");
+    // --- FIX: VEILIGHEID TEGEN CRASHEN DOOR BACKTICKS ---
+    const safeMarkdown = currentRecipeMarkdown.replace(/`/g, "'"); 
 
     const prompt = `You are "MEA(N)DERY", a master mazer. A user wants to tweak a recipe.
-    
     **STRICT OUTPUT RULE:**
-    1. Start IMMEDIATELY with the Markdown Title (e.g. "# Title"). 
-    2. Do NOT write "Okay", "Here is the recipe", etc. Be silent and robotic.
-    3. Output Markdown with an Ingredients JSON block.
+    - Do NOT output raw JSON as the main response.
+    - Output a Markdown Recipe.
+    - Inside the Markdown, include the Ingredients JSON block.
+    - Start with "# Title".
     
     Original Recipe:
     ---
-    ${safeRecipeMarkdown}
+    ${safeMarkdown}
     ---
 
     User Tweak Request: "${tweakRequest}"
@@ -954,20 +793,17 @@ async function tweakUnsavedRecipe() {
     
     ${laws}
     ${inventoryContext}
-    `;
+
+    **LOGIC CHECK:**
+    - If the user changed the Batch Size -> Recalculate ALL ingredients.
+    - If the user changed the Fruit -> Check if Honey needs adjustment for ABV targets.
+    `; 
 
     try {
         const tweakedMarkdown = await performApiCall(prompt);
         if (thinkingInterval) clearInterval(thinkingInterval);
 
         let processedMarkdown = tweakedMarkdown.trim();
-        // Verwijder eventuele babbel-intro's als de AI toch eigenwijs was
-        if (!processedMarkdown.startsWith('#')) {
-             const hashIndex = processedMarkdown.indexOf('#');
-             if (hashIndex > -1) processedMarkdown = processedMarkdown.substring(hashIndex);
-        }
-        
-        // Verwijder markdown code blocks
         if (processedMarkdown.startsWith("```markdown")) {
              processedMarkdown = processedMarkdown.substring(11, processedMarkdown.lastIndexOf("```")).trim();
         } else if (processedMarkdown.startsWith("```")) {
@@ -2255,9 +2091,396 @@ async function exportInventory() {
     a.click();
 }
 
+// --- DEEL 7: THE MISSING MODULES (PACKAGING, WATER & HELPERS) ---
+
+// --- HELPER FUNCTIONS ---
+function handleStyleChange() {
+    const styleSelect = document.getElementById('style');
+    if(!styleSelect) return;
+    const style = styleSelect.value.toLowerCase();
+    const fruitSection = document.getElementById('fruit-section');
+    const spiceSection = document.getElementById('spice-section');
+    const braggotSection = document.getElementById('braggot-section');
+
+    fruitSection.classList.toggle('hidden', !style.includes('melomel'));
+    spiceSection.classList.toggle('hidden', !style.includes('metheglin'));
+    braggotSection.classList.toggle('hidden', !style.includes('braggot'));
+
+    if (!style.includes('melomel')) document.querySelectorAll('#fruit-section input:checked').forEach(cb => cb.checked = false);
+    if (!style.includes('metheglin')) document.querySelectorAll('#spice-section input:checked').forEach(cb => cb.checked = false);
+}
+
+window.showBrewPrompt = function(brewId) {
+    const brew = brews.find(b => b.id === brewId);
+    if (!brew || !brew.prompt) {
+        showToast("No prompt was saved for this recipe.", "info");
+        return;
+    }
+    const modal = document.getElementById('prompt-modal');
+    const content = document.getElementById('prompt-modal-content');
+    content.textContent = brew.prompt;
+    modal.classList.remove('hidden');
+}
+
+// --- PACKAGING MANAGEMENT ---
+
+function populatePackagingDropdown() {
+    const select = document.getElementById('packaging-item-select');
+    if (!select) return;
+    select.innerHTML = PACKAGING_ITEMS.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
+}
+
+window.renderPackagingUI = function() {
+    const listContainer = document.getElementById('packaging-list');
+    const stockContainer = document.getElementById('packaging-stock-container');
+    if (!listContainer || !stockContainer) return;
+
+    const hasStock = PACKAGING_ITEMS.some(item => packagingCosts[item.id] && packagingCosts[item.id].qty > 0);
+    stockContainer.classList.toggle('hidden', !hasStock);
+
+    if (hasStock) {
+        const currency = userSettings.currencySymbol || '€';
+        listContainer.innerHTML = PACKAGING_ITEMS
+            .filter(item => packagingCosts[item.id] && packagingCosts[item.id].qty > 0)
+            .map(item => {
+                const itemData = packagingCosts[item.id];
+                const costPerUnit = (itemData.qty > 0 && itemData.price > 0) ? (itemData.price / itemData.qty).toFixed(2) : '0.00';
+                return `
+                   <div id="pkg-item-${item.id}" class="p-3 card rounded-md">
+                       <div class="flex justify-between items-center">
+                           <div><p class="font-bold">${item.name}</p><p class="text-sm text-app-secondary/80">Cost per unit: ${currency}${costPerUnit}</p></div>
+                           <div class="flex items-center gap-4">
+                               <span class="font-semibold">${itemData.qty} items - ${currency}${itemData.price.toFixed(2)} total</span>
+                               <div class="flex gap-2">
+                                   <button onclick="window.editPackagingItem('${item.id}')" class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
+                                   <button onclick="window.clearPackagingItem('${item.id}')" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                               </div>
+                           </div>
+                       </div>
+                   </div>`;
+           }).join('');
+   } else {
+      listContainer.innerHTML = '';
+   }
+}
+
+async function addPackagingStock(e) {
+    e.preventDefault();
+    if (!userId) return;
+    const itemId = document.getElementById('packaging-item-select').value;
+    const qtyAdded = parseFloat(document.getElementById('packaging-item-qty').value) || 0;
+    const priceAdded = parseFloat(document.getElementById('packaging-item-price').value) || 0;
+
+    if (!itemId || qtyAdded <= 0) { showToast("Invalid input.", "error"); return; }
+
+    const currentQty = packagingCosts[itemId]?.qty || 0;
+    const currentPrice = packagingCosts[itemId]?.price || 0;
+    packagingCosts[itemId] = { qty: currentQty + qtyAdded, price: currentPrice + priceAdded };
+    
+    await savePackagingCosts(); 
+    document.getElementById('packaging-add-form').reset();
+}
+
+async function loadPackagingCosts() {
+    if (!userId) return;
+    try {
+        const docSnap = await getDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'settings', 'packaging'));
+        packagingCosts = docSnap.exists() ? docSnap.data() : {};
+        renderPackagingUI();
+        populatePackagingDropdown();
+    } catch (error) { console.error("Error loading packaging costs:", error); }
+}
+
+async function savePackagingCosts() {
+    if (!userId) return;
+    try {
+        await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'settings', 'packaging'), packagingCosts);
+        showToast('Packaging updated!', 'success');
+        await loadPackagingCosts();
+    } catch (error) { console.error(error); showToast('Failed to save packaging.', 'error'); }
+}
+
+window.editPackagingItem = function(itemId) {
+    const item = PACKAGING_ITEMS.find(i => i.id === itemId);
+    const itemData = packagingCosts[itemId] || {};
+    const itemDiv = document.getElementById(`pkg-item-${itemId}`);
+    const currency = userSettings.currencySymbol || '€';
+
+    itemDiv.innerHTML = `
+        <div class="w-full space-y-2 p-2 bg-app-primary rounded">
+            <p class="font-bold">${item.name}</p>
+            <div class="grid grid-cols-2 gap-2">
+                <input type="number" id="edit-qty-${itemId}" value="${itemData.qty}" placeholder="Quantity" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">
+                <input type="number" id="edit-price-${itemId}" value="${itemData.price}" step="0.01" placeholder="Total Price (${currency})" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="window.updatePackagingItem('${itemId}')" class="w-full bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm btn">Save</button>
+                <button onclick="renderPackagingUI()" class="w-full bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 text-sm btn">Cancel</button>
+           </div>
+       </div>`;
+}
+
+window.updatePackagingItem = function(itemId) {
+    const qty = parseFloat(document.getElementById(`edit-qty-${itemId}`).value) || 0;
+    const price = parseFloat(document.getElementById(`edit-price-${itemId}`).value) || 0;
+    packagingCosts[itemId] = { qty, price };
+    savePackagingCosts();
+}
+
+window.clearPackagingItem = function(itemId) {
+    if (confirm("Clear stock for this item?")) {
+       packagingCosts[itemId] = { qty: 0, price: 0 };
+       savePackagingCosts();
+    }
+}
+
+function getPackagingCosts() {
+    const costs = {};
+    PACKAGING_ITEMS.forEach(item => {
+        const d = packagingCosts[item.id];
+        let cpu = (d && d.qty > 0) ? d.price / d.qty : 0;
+        if (item.id === 'bottle_750') costs['750'] = cpu;
+        if (item.id === 'bottle_500') costs['500'] = cpu;
+        if (item.id === 'bottle_330') costs['330'] = cpu;
+        if (item.id === 'bottle_250') costs['250'] = cpu;
+        if (item.id === 'cork') costs['cork'] = cpu;
+        if (item.id === 'crown_cap_26') costs['crown_cap_26'] = cpu;
+        if (item.id === 'crown_cap_29') costs['crown_cap_29'] = cpu;
+        if (item.id === 'label') costs['label'] = cpu;
+    });
+    return costs;
+}
+
+// --- WATER PROFILE MANAGEMENT ---
+
+async function loadUserWaterProfiles() {
+    if (!userId) return;
+    onSnapshot(query(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'waterProfiles')), (snapshot) => {
+        userWaterProfiles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        populateWaterDropdown();
+        renderUserWaterProfilesList();
+    });
+}
+
+function populateWaterDropdown() {
+    const select = document.getElementById('waterSource');
+    if (!select) return;
+    select.innerHTML = `
+        <optgroup label="Built-in Profiles">${Object.entries(BUILT_IN_WATER_PROFILES).map(([id, p]) => `<option value="builtin_${id}">${p.name}</option>`).join('')}</optgroup>
+        <optgroup label="My Profiles">${userWaterProfiles.map(p => `<option value="user_${p.id}">${p.name}</option>`).join('')}</optgroup>
+    `;
+}
+
+function renderUserWaterProfilesList() {
+    const listDiv = document.getElementById('user-water-profiles-list');
+    if (!listDiv) return;
+    if (userWaterProfiles.length === 0) { listDiv.innerHTML = `<p class="text-sm text-app-secondary/80 text-center">No saved profiles.</p>`; return; }
+    listDiv.innerHTML = userWaterProfiles.map(p => `
+        <div class="flex justify-between items-center p-2 card rounded-md text-sm">
+            <span>${p.name}</span>
+            <div><button onclick="window.editWaterProfile('${p.id}')" class="text-blue-600 hover:text-blue-800">Edit</button><button onclick="window.deleteWaterProfile('${p.id}')" class="text-red-600 hover:text-red-800 ml-2">Delete</button></div>
+        </div>`).join('');
+}
+
+async function saveWaterProfile(e) {
+    e.preventDefault();
+    if (!userId) return;
+    const id = document.getElementById('water-profile-id').value;
+    const data = {
+        name: document.getElementById('water-profile-name').value,
+        ca: parseFloat(document.getElementById('manual_ca').value)||0, mg: parseFloat(document.getElementById('manual_mg').value)||0,
+        na: parseFloat(document.getElementById('manual_na').value)||0, so4: parseFloat(document.getElementById('manual_so4').value)||0,
+        cl: parseFloat(document.getElementById('manual_cl').value)||0, hco3: parseFloat(document.getElementById('manual_hco3').value)||0,
+    };
+    if (!data.name) return showToast("Name required.", "error");
+    
+    try {
+        const col = collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'waterProfiles');
+        if (id) await setDoc(doc(col, id), data); else await addDoc(col, data);
+        showToast("Profile saved!", "success");
+        document.getElementById('water-profile-form').reset();
+        document.getElementById('water-profile-id').value = '';
+    } catch (e) { console.error(e); showToast("Error saving.", "error"); }
+}
+
+window.editWaterProfile = function(id) {
+    const p = userWaterProfiles.find(p => p.id === id);
+    if (!p) return;
+    document.getElementById('water-profile-id').value = p.id;
+    document.getElementById('water-profile-name').value = p.name;
+    document.getElementById('manual_ca').value = p.ca; document.getElementById('manual_mg').value = p.mg;
+    document.getElementById('manual_na').value = p.na; document.getElementById('manual_so4').value = p.so4;
+    document.getElementById('manual_cl').value = p.cl; document.getElementById('manual_hco3').value = p.hco3;
+}
+
+window.deleteWaterProfile = async function(id) {
+    if (!userId || !confirm("Delete profile?")) return;
+    try { await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'waterProfiles', id)); showToast("Deleted.", "success"); }
+    catch (e) { showToast("Error deleting.", "error"); }
+}
+
+function initApp() {
+    // UI Elements Assignments
+    const styleSelect = document.getElementById('style');
+    const fruitSection = document.getElementById('fruit-section');
+    const spiceSection = document.getElementById('spice-section');
+    const braggotSection = document.getElementById('braggot-section');
+    const inventoryForm = document.getElementById('inventory-form');
+    
+    // Firebase Init with CONFIG from secrets.js
+    try {
+        const app = initializeApp(CONFIG.firebase);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
+
+        onAuthStateChanged(auth, async (user) => {
+            const loginView = document.getElementById('login-view');
+            const appContainer = document.querySelector('.container.mx-auto'); 
+
+            if (user && !user.isAnonymous) {
+                userId = user.uid;
+                loginView.classList.add('hidden');
+                if (appContainer) appContainer.classList.remove('hidden'); 
+
+                try {
+                    await Promise.all([
+                        loadHistory(), loadInventory(), loadEquipmentProfiles(),
+                        loadCellar(), loadUserSettings(), loadPackagingCosts(), loadUserWaterProfiles()
+                    ]);
+                } catch (error) {
+                    console.error("Fout bij laden data:", error);
+                    showToast("Kon niet alle gegevens laden.", "error");
+                }
+            } else {
+                loginView.classList.remove('hidden');
+                if (appContainer) appContainer.classList.add('hidden'); 
+                if (user && user.isAnonymous) auth.signOut();
+            }
+        });
+    } catch (e) {
+        console.error("Firebase init failed:", e);
+    }
+
+    // --- GLOBAL EVENT LISTENERS ---
+    document.getElementById('history-search-input')?.addEventListener('input', renderHistoryList);
+    document.getElementById('packaging-add-form')?.addEventListener('submit', addPackagingStock);
+    document.getElementById('danger-cancel-btn')?.addEventListener('click', hideDangerModal);
+    document.getElementById('danger-confirm-btn')?.addEventListener('click', executeDangerAction);
+    document.getElementById('danger-confirm-input')?.addEventListener('input', checkDangerConfirmation);
+    document.getElementById('customDescription')?.addEventListener('input', handleDescriptionInput);
+    document.getElementById('close-prompt-modal-btn')?.addEventListener('click', hidePromptModal);
+    document.getElementById('water-profile-form')?.addEventListener('submit', saveWaterProfile);
+    document.getElementById('waterSource')?.addEventListener('change', handleWaterSourceChange);
+    document.getElementById('ai-water-search-btn')?.addEventListener('click', findWaterProfileWithAI);
+    document.getElementById('honeyVariety')?.addEventListener('change', (e) => {
+        document.getElementById('honeyVarietyOther').classList.toggle('hidden', e.target.value !== 'other');
+    });
+    
+    // Style Change Handler
+    styleSelect?.addEventListener('change', () => {
+        const style = styleSelect.value.toLowerCase();
+        fruitSection.classList.toggle('hidden', !style.includes('melomel'));
+        spiceSection.classList.toggle('hidden', !style.includes('metheglin'));
+        braggotSection.classList.toggle('hidden', !style.includes('braggot'));
+        if (!style.includes('melomel')) document.querySelectorAll('#fruit-section input:checked').forEach(cb => cb.checked = false);
+        if (!style.includes('metheglin')) document.querySelectorAll('#spice-section input:checked').forEach(cb => cb.checked = false);
+    });
+
+    document.getElementById('generateBtn')?.addEventListener('click', generateRecipe);
+    inventoryForm?.addEventListener('submit', addInventoryItem);
+    document.getElementById('equipment-profile-form')?.addEventListener('submit', addEquipmentProfile);
+    document.getElementById('equipProfileType')?.addEventListener('change', handleEquipmentTypeChange);
+    document.getElementById('bottling-form')?.addEventListener('submit', bottleBatch);
+    document.getElementById('scan-barcode-btn')?.addEventListener('click', startScanner);
+    document.getElementById('close-scanner-btn')?.addEventListener('click', stopScanner);
+    
+    // Inventory Toggles
+    document.querySelectorAll('.inventory-toggle').forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const anyChecked = Array.from(document.querySelectorAll('.inventory-toggle')).some(cb => cb.checked);
+            document.getElementById('budget-section').classList.toggle('hidden', !anyChecked);
+        });
+    });
+    document.getElementById('useBudget')?.addEventListener('change', (e) => {
+        document.getElementById('budget-input-container').classList.toggle('hidden', !e.target.checked);
+    });
+
+    // Calculators & Tools
+    document.getElementById('calcAbvBtn')?.addEventListener('click', calculateABV);
+    document.getElementById('correctSgBtn')?.addEventListener('click', correctHydrometer);
+    document.getElementById('calcSugarBtn')?.addEventListener('click', calculatePrimingSugar);
+    document.getElementById('calcBlendBtn')?.addEventListener('click', calculateBlend);
+    document.getElementById('calcBacksweetenBtn')?.addEventListener('click', calculateBacksweetening);
+    document.getElementById('calcDilutionBtn')?.addEventListener('click', calculateDilution);
+    document.getElementById('calcTosnaBtn')?.addEventListener('click', calculateTOSNA);
+    document.getElementById('getYeastAdviceBtn')?.addEventListener('click', getYeastAdvice);
+    document.getElementById('generate-manual-social-btn')?.addEventListener('click', runManualSocialMediaGenerator);
+    document.getElementById('generate-social-from-recipe-btn')?.addEventListener('click', runSocialMediaGenerator);
+    document.getElementById('getWaterAdviceBtn')?.addEventListener('click', getWaterAdvice);
+    document.getElementById('troubleshoot-btn')?.addEventListener('click', getTroubleshootingAdvice);
+
+    // Settings & Data
+    document.getElementById('saveSettingsBtn')?.addEventListener('click', saveUserSettings);
+    document.getElementById('theme-toggle-checkbox')?.addEventListener('change', (e) => applyTheme(e.target.checked ? 'dark' : 'light'));
+    document.getElementById('exportHistoryBtn')?.addEventListener('click', exportHistory);
+    document.getElementById('exportInventoryBtn')?.addEventListener('click', exportInventory);
+    document.getElementById('importHistoryFile')?.addEventListener('change', (e) => importData(e, 'brews'));
+    document.getElementById('importInventoryFile')?.addEventListener('change', (e) => importData(e, 'inventory'));
+    document.getElementById('clearHistoryBtn')?.addEventListener('click', clearHistory);
+    document.getElementById('clearInventoryBtn')?.addEventListener('click', clearInventory);
+
+    // Labels
+    document.getElementById('logoUpload')?.addEventListener('change', handleLogoUpload);
+    document.getElementById('removeLogoBtn')?.addEventListener('click', removeLogo);
+    document.getElementById('labelRecipeSelect')?.addEventListener('change', handleLabelRecipeSelect);
+    document.querySelectorAll('.label-style-btn').forEach(btn => btn.addEventListener('click', () => switchLabelStyle(btn.dataset.style)));
+    document.getElementById('generate-print-btn')?.addEventListener('click', generatePrintPage);
+    document.querySelectorAll('.orientation-btn').forEach(btn => btn.addEventListener('click', () => setLabelOrientation(btn.dataset.orientation)));
+    
+    // Inputs die de label preview updaten
+    ['labelStyle', 'labelAbv', 'labelVol', 'labelDate'].forEach(id => {
+        document.getElementById(id)?.addEventListener('keyup', updateLabelPreview);
+    });
+    const formatSelect = document.getElementById('labelFormatSelect');
+    if (formatSelect) {
+        formatSelect.addEventListener('change', (e) => {
+            document.getElementById('custom-format-inputs').classList.toggle('hidden', e.target.value !== 'custom');
+            updatePreviewAspectRatio();
+        });
+    }
+    ['customWidth', 'customHeight', 'customCols', 'customRows', 'customMarginTop', 'customMarginLeft'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', updatePreviewAspectRatio);
+    });
+
+    // Main Navigation
+    document.querySelectorAll('.main-nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchMainView(btn.dataset.view));
+    });
+    document.querySelectorAll('.back-to-dashboard-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchMainView('dashboard'));
+    });
+    document.querySelectorAll('.sub-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            const parentId = e.target.closest('[id$="-main-view"]').id;
+            switchSubView(e.target.id.replace('-sub-tab', ''), parentId);
+        });
+    });
+
+    // Prompt Modal close
+    document.getElementById('prompt-modal')?.addEventListener('click', function(e) {
+        if (e.target.id === 'prompt-modal') hidePromptModal();
+    });
+
+    // Start
+    setupBrewDayEventListeners();
+    // (Optioneel: handleStyleChange aanroep hier)
+}
+
 // --- APP START ---
-// Dit is het laatste stukje code!
+// Dit is het enige startpunt van de applicatie
 document.addEventListener('DOMContentLoaded', () => {
-    //initApp is al aangeroepen in Deel 2, maar we zorgen dat de listeners goed staan
-    console.log("MEA(N)DERY 2.0 Loaded.");
+    console.log("🍀 MEA(N)DERY V2.0 Quadrifoglio Loaded.");
+    initApp();
 });

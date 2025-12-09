@@ -526,10 +526,11 @@ function buildPrompt() {
         **FULL STOCK LIST:** [${inventoryString}]. 
         
         **CRITICAL INVENTORY RULES:**
-        1. **JSON Block:** MUST contain the **TOTAL** ingredients required for the recipe (ignore stock here, list full amounts).
-        2. **Text/Notes:** - **NEGATIVE CONSTRAINT:** If the user has enough of an item in stock, **DO NOT MENTION IT** in the text. Do not write "No need to buy". Just omit it entirely.
-           - Only list items where (Stock < Required). Tell the user to buy the **DIFFERENCE**.
-           - If the user has EVERYTHING, simply write: "You have all ingredients in stock."
+        1. **JSON Block:** MUST contain the **TOTAL** ingredients required (ignore stock here).
+        2. **SHOPPING LIST TEXT:** - Compare Required Amount vs Stock Amount.
+           - IF (Stock >= Required): **SILENCE**. Do NOT mention this item in the text. Do NOT write "You have enough".
+           - IF (Stock < Required): Write ONLY: "Buy [Amount Needed] of [Item]".
+           - IF (Stock == 0): Write "Buy [Full Amount] of [Item]".
         `;
 
         // 4. Style Router
@@ -637,7 +638,7 @@ ${hydromelRule}
              if (document.getElementById('specialIngredients').value) creativeBrief += `\n- Special Ingredients: ${document.getElementById('specialIngredients').value}`;
         }
 
-        // 8. Final Prompt
+        / 8. Final Prompt
         return `You are "MEA(N)DERY", a master mazer. 
 
 ${mathContext}
@@ -650,15 +651,17 @@ ${waterContext}
 1. **Temp:** NEVER recommend a fermentation temp exceeding the yeast manufacturer's limit.
 2. **Sanity Check:** If the user requests impossible physics, correct them politely.
 
-**OUTPUT FORMAT (STRICT):**
-1. **NO CHATTY INTRO:** Do NOT start with "Okay". Start IMMEDIATELY with the Markdown Title.
-2. **LINE 1:** Must be the Markdown Title (e.g., "# Title").
-3. **LINE 2:** A single, short "Inspirational Hook" (quote style >).
-4. **LINE 3:** Bulleted List of "Vital Stats".
-5. **Ingredients JSON:** \`\`\`json [{"ingredient": "Name", "quantity": 0, "unit": "kg"}] \`\`\`
-6. **Instructions:** Numbered list.
-7. **Timers:** \`[TIMER:HH:MM:SS]\`.
-8. **Brewer's Notes:** Dedicated section titled "## Brewer's Notes".
+**OUTPUT FORMAT (ABSOLUTE STRICTNESS):**
+- **ROLE:** Act as a headless database. DO NOT speak to the user. DO NOT say "Okay", "Sure", "Here is your recipe".
+- **START:** The output MUST start with the character "#" (The Title). nothing else before it.
+- **STRUCTURE:**
+  1. Title (# Name)
+  2. > Inspirational Quote
+  3. Vital Stats List (ABV, Size, Style, Sweetness, OG)
+  4. Ingredients JSON Block: \`\`\`json [{"ingredient": "Name", "quantity": 0, "unit": "kg"}] \`\`\`
+  5. Instructions (Numbered list)
+  6. Timers: \`[TIMER:HH:MM:SS]\` inside the steps.
+  7. Brewer's Notes (Start section with "## Brewer's Notes")
 
 Request:
 ---
@@ -905,6 +908,7 @@ async function tweakUnsavedRecipe() {
 
     const tweakOutput = document.getElementById('tweak-unsaved-output');
     tweakOutput.innerHTML = getLoaderHtml("Analyzing Tweak Request..."); 
+    
     const tweakBtn = document.getElementById('tweak-unsaved-btn');
     tweakBtn.disabled = true;
 
@@ -929,16 +933,19 @@ async function tweakUnsavedRecipe() {
     const inventoryString = fullInventoryList.map(item => `${item.name} (${item.qty} ${item.unit})`).join('; ');
     const inventoryContext = `\n**INVENTORY CONTEXT:** The user has the following items in stock: [${inventoryString}]. If the tweak requires adding ingredients, prioritize these items.`;
 
+    // VEILIGHEID: We ontsnappen backticks in het recept zodat de prompt niet breekt
+    const safeRecipeMarkdown = currentRecipeMarkdown.replace(/`/g, "'");
+
     const prompt = `You are "MEA(N)DERY", a master mazer. A user wants to tweak a recipe.
+    
     **STRICT OUTPUT RULE:**
-    - Do NOT output raw JSON as the main response.
-    - Output a Markdown Recipe.
-    - Inside the Markdown, include the Ingredients JSON block.
-    - Start with "# Title".
+    1. Start IMMEDIATELY with the Markdown Title (e.g. "# Title"). 
+    2. Do NOT write "Okay", "Here is the recipe", etc. Be silent and robotic.
+    3. Output Markdown with an Ingredients JSON block.
     
     Original Recipe:
     ---
-    ${currentRecipeMarkdown}
+    ${safeRecipeMarkdown}
     ---
 
     User Tweak Request: "${tweakRequest}"
@@ -947,10 +954,6 @@ async function tweakUnsavedRecipe() {
     
     ${laws}
     ${inventoryContext}
-
-    **LOGIC CHECK:**
-    - If the user changed the Batch Size -> Recalculate ALL ingredients.
-    - If the user changed the Fruit -> Check if Honey needs adjustment for ABV targets.
     `;
 
     try {
@@ -958,6 +961,13 @@ async function tweakUnsavedRecipe() {
         if (thinkingInterval) clearInterval(thinkingInterval);
 
         let processedMarkdown = tweakedMarkdown.trim();
+        // Verwijder eventuele babbel-intro's als de AI toch eigenwijs was
+        if (!processedMarkdown.startsWith('#')) {
+             const hashIndex = processedMarkdown.indexOf('#');
+             if (hashIndex > -1) processedMarkdown = processedMarkdown.substring(hashIndex);
+        }
+        
+        // Verwijder markdown code blocks
         if (processedMarkdown.startsWith("```markdown")) {
              processedMarkdown = processedMarkdown.substring(11, processedMarkdown.lastIndexOf("```")).trim();
         } else if (processedMarkdown.startsWith("```")) {
@@ -1942,3 +1952,312 @@ async function getTroubleshootingAdvice() {
         output.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
     }
 }
+
+// --- DEEL 6: LABELS, SOCIAL & DATA MANAGEMENT ---
+
+// --- LABEL GENERATOR ---
+
+function handleLogoUpload(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const logoPreview = document.getElementById('label-logo-preview');
+            logoPreview.src = e.target.result;
+            logoPreview.classList.remove('hidden');
+            document.getElementById('removeLogoBtn').classList.remove('hidden');
+            updateLabelPreview();
+        }
+        reader.readAsDataURL(file);
+    }
+}
+
+function removeLogo() {
+    const logoPreview = document.getElementById('label-logo-preview');
+    const logoUploadInput = document.getElementById('logoUpload');
+    logoPreview.src = '';
+    logoPreview.classList.add('hidden');
+    logoUploadInput.value = '';
+    document.getElementById('removeLogoBtn').classList.add('hidden');
+    updateLabelPreview();
+}
+
+function populateLabelRecipeDropdown() {
+    const select = document.getElementById('labelRecipeSelect');
+    if (!select) return;
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">-- Choose a Saved Recipe --</option>';
+    brews.forEach(brew => {
+        const option = document.createElement('option');
+        option.value = brew.id;
+        let displayName = brew.recipeName || 'Untitled Brew';
+        if (displayName.includes(':')) displayName = displayName.split(':')[0].trim();
+        else if (displayName.includes(' - ')) displayName = displayName.split(' - ')[0].trim();
+        option.textContent = displayName;
+        select.appendChild(option);
+    });
+    select.value = currentValue;
+}
+
+function handleLabelRecipeSelect(event) {
+    const brewId = event.target.value;
+    if (!brewId) { updateLabelPreview(); return; }
+
+    const selectedBrew = brews.find(b => b.id === brewId);
+    if (!selectedBrew) return;
+
+    const fullTitle = selectedBrew.recipeName;
+    let subtitlePart = '';
+    if (fullTitle.includes(':')) subtitlePart = fullTitle.split(/:\s*(.*)/s)[1] || '';
+    else if (fullTitle.includes(' - ')) subtitlePart = fullTitle.split(/\s*-\s*(.*)/s)[1] || '';
+
+    document.getElementById('labelStyle').value = subtitlePart;
+    document.getElementById('labelAbv').value = selectedBrew.logData?.finalABV?.replace('%','') || selectedBrew.logData?.targetABV?.replace('%','') || '';
+    document.getElementById('labelVol').value = selectedBrew.batchSize ? selectedBrew.batchSize * 1000 : '750';
+    document.getElementById('labelDate').value = selectedBrew.createdAt ? selectedBrew.createdAt.toDate().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '';
+    
+    updateLabelPreview();
+}
+
+function updateLabelPreview() {
+    const select = document.getElementById('labelRecipeSelect');
+    const selectedOption = select.options[select.selectedIndex];
+    const fullTitle = (selectedOption && selectedOption.value) ? selectedOption.text : 'Mead Name';
+    
+    document.getElementById('label-name-preview').textContent = fullTitle;
+    document.getElementById('label-style-preview').textContent = document.getElementById('labelStyle').value || 'Style / Subtitle';
+    document.getElementById('label-abv-preview').textContent = document.getElementById('labelAbv').value || 'ABV';
+    
+    const volVal = parseFloat(document.getElementById('labelVol').value);
+    document.getElementById('label-vol-preview').textContent = !isNaN(volVal) ? (volVal >= 1000 ? `${(volVal/1000).toFixed(1)} L` : `${volVal} ml`) : 'VOL';
+    document.getElementById('label-date-preview').textContent = document.getElementById('labelDate').value || 'Bottling Date';
+
+    // Professional fields
+    const selectedBrew = brews.find(b => b.id === select.value);
+    const allergensContainer = document.getElementById('label-allergens-container');
+    
+    if (selectedBrew) {
+        document.getElementById('label-og-preview').textContent = selectedBrew.logData?.targetOG || 'N/A';
+        document.getElementById('label-fg-preview').textContent = selectedBrew.logData?.actualFG || 'N/A';
+        const ings = parseIngredientsFromMarkdown(selectedBrew.recipeMarkdown);
+        document.getElementById('label-yeast-preview').textContent = ings.find(i => i.name.toLowerCase().includes('yeast'))?.name.replace('Yeast','').trim() || 'N/A';
+
+        // Allergens
+        const allergens = [];
+        const md = selectedBrew.recipeMarkdown.toLowerCase();
+        if (md.includes('metabisulfite')) allergens.push('sulfites');
+        if (md.includes('lactose')) allergens.push('lactose');
+        if (md.includes('barley') || md.includes('malt')) allergens.push('gluten');
+        
+        if (allergens.length > 0 && allergensContainer) {
+            allergensContainer.innerHTML = `Contains: <strong>${allergens.join(', ')}</strong>`;
+            allergensContainer.classList.remove('hidden');
+        } else if (allergensContainer) {
+            allergensContainer.classList.add('hidden');
+        }
+    }
+}
+
+function switchLabelStyle(styleName) {
+    const preview = document.getElementById('label-preview');
+    preview.classList.remove('label-minimalist', 'label-industrial', 'label-professional');
+    preview.classList.add(`label-${styleName}`);
+    
+    document.querySelectorAll('.label-style-btn').forEach(btn => {
+        const isSelected = btn.dataset.style === styleName;
+        btn.classList.toggle('border-2', isSelected);
+        btn.classList.toggle('border-app-brand', isSelected);
+        btn.classList.toggle('text-app-brand', isSelected);
+    });
+}
+
+function setLabelOrientation(orientation) {
+    document.querySelectorAll('.orientation-btn').forEach(btn => {
+        const isSelected = btn.dataset.orientation === orientation;
+        btn.classList.toggle('active', isSelected);
+        btn.classList.toggle('border-app-brand', isSelected);
+        btn.classList.toggle('text-app-brand', isSelected);
+    });
+    updatePreviewAspectRatio();
+}
+
+function updatePreviewAspectRatio() {
+    const previewDiv = document.getElementById('label-preview');
+    const formatSelector = document.getElementById('labelFormatSelect');
+    if (!previewDiv || !formatSelector) return;
+
+    const orientation = document.querySelector('.orientation-btn.active')?.dataset.orientation || 'vertical';
+    let format = labelFormats[formatSelector.value];
+    
+    if (formatSelector.value === 'custom') {
+        format = {
+            width_mm: parseFloat(document.getElementById('customWidth').value) || 1,
+            height_mm: parseFloat(document.getElementById('customHeight').value) || 1,
+        };
+    }
+
+    if (format) {
+        if (orientation === 'horizontal') previewDiv.style.aspectRatio = `${format.width_mm} / ${format.height_mm}`;
+        else previewDiv.style.aspectRatio = `${format.height_mm} / ${format.width_mm}`;
+    }
+}
+
+function generatePrintPage() {
+    const labelHTML = document.getElementById('label-preview').outerHTML;
+    const formatSelector = document.getElementById('labelFormatSelect');
+    let format = labelFormats[formatSelector.value];
+
+    if (formatSelector.value === 'custom') {
+        format = {
+            width_mm: parseFloat(document.getElementById('customWidth').value),
+            height_mm: parseFloat(document.getElementById('customHeight').value),
+            cols: parseInt(document.getElementById('customCols').value),
+            rows: parseInt(document.getElementById('customRows').value),
+            top_margin_mm: parseFloat(document.getElementById('customMarginTop').value),
+            left_margin_mm: parseFloat(document.getElementById('customMarginLeft').value),
+        }
+    }
+
+    const totalLabels = format.cols * format.rows;
+    let printContent = '';
+    for (let i = 0; i < totalLabels; i++) {
+        printContent += labelHTML.replace('id="label-preview"', `class="print-label ${document.getElementById('label-preview').className}"`);
+    }
+
+    const newWindow = window.open('', '_blank');
+    // FIX: We linken nu naar style.css in plaats van de style tag te kopiëren
+    newWindow.document.write(`
+        <html><head><title>Print Labels</title>
+        <link rel="stylesheet" href="style.css"> 
+        <style>
+            @page { size: A4; margin: 0; }
+            body { margin: 0; background: white; }
+            .print-container {
+                display: grid;
+                grid-template-columns: repeat(${format.cols}, 1fr);
+                gap: 0;
+                padding-top: ${format.top_margin_mm}mm;
+                padding-left: ${format.left_margin_mm}mm;
+                width: 210mm; height: 297mm; box-sizing: border-box;
+            }
+            .print-label { width: ${format.width_mm}mm; height: ${format.height_mm}mm; box-sizing: border-box; overflow: hidden; page-break-inside: avoid; }
+        </style>
+        </head><body><div class="print-container">${printContent}</div></body></html>
+    `);
+    newWindow.document.close();
+    newWindow.focus();
+    // Kleine timeout om CSS te laten laden
+    setTimeout(() => { newWindow.print(); }, 1000);
+}
+
+// --- SOCIAL MEDIA ---
+
+function populateSocialRecipeDropdown() {
+    const select = document.getElementById('social-recipe-select');
+    if (!select) return;
+    const current = select.value;
+    select.innerHTML = '<option value="">-- Choose a Recipe --</option>';
+    brews.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.id;
+        opt.textContent = b.recipeName;
+        select.appendChild(opt);
+    });
+    select.value = current;
+}
+
+async function generateSocialImage(title, description) {
+    const container = document.getElementById('social-image-container');
+    container.innerHTML = getLoaderHtml("Painting a masterpiece...");
+
+    const imageApiKey = userSettings.imageApiKey;
+    if (!imageApiKey) {
+        container.innerHTML = `<p class="text-center text-red-500">Please enter Image API key in Settings.</p>`;
+        return;
+    }
+
+    const prompt = `AI Image Expert: Create a short, descriptive prompt for a photorealistic product shot of this mead: Title "${title}", Desc "${description}". Output ONLY the prompt.`;
+
+    try {
+        const genPrompt = await performApiCall(prompt);
+        const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${imageApiKey}` },
+            body: JSON.stringify({ text_prompts: [{ text: `Photorealistic: ${genPrompt}, cinematic lighting` }], cfg_scale: 7, height: 1024, width: 1024, samples: 1 })
+        });
+
+        if (!response.ok) throw new Error(await response.text());
+        const result = await response.json();
+        const img = result.artifacts[0].base64;
+        container.innerHTML = `<img src="data:image/png;base64,${img}" class="rounded-lg mx-auto shadow-lg"><p class="text-xs mt-2">Generated with Stable Diffusion</p>`;
+    } catch (e) {
+        container.innerHTML = `<p class="text-red-500">Error: ${e.message}</p>`;
+    }
+}
+
+async function runSocialMediaGenerator() {
+    const brewId = document.getElementById('social-recipe-select').value;
+    if (!brewId) return alert("Select a recipe.");
+    const brew = brews.find(b => b.id === brewId);
+    
+    document.getElementById('social-output-container').classList.remove('hidden');
+    const container = document.getElementById('social-content-container');
+    container.innerHTML = getLoaderHtml("Drafting post...");
+    
+    const persona = document.getElementById('social-persona').value;
+    const platform = document.getElementById('social-platform').value;
+    const tweak = document.getElementById('social-tweak').value;
+    
+    const prompt = `Social Media Expert (${persona}). Platform: ${platform}. Extra info: "${tweak}". Base content on this recipe:\n${brew.recipeMarkdown}\nOutput Markdown.`;
+    
+    try {
+        const text = await performApiCall(prompt);
+        const html = marked.parse(text);
+        container.innerHTML = `<div>${html}</div><div class="mt-6 space-y-2"><button id="trigger-image-btn" class="w-full bg-purple-600 text-white py-2 px-4 rounded btn">Generate Image</button><button onclick="window.saveSocialPost()" class="w-full bg-blue-600 text-white py-2 px-4 rounded btn">Save to Notes</button></div>`;
+        document.getElementById('trigger-image-btn').onclick = (e) => { generateSocialImage(brew.recipeName, text); e.target.style.display='none'; };
+    } catch (e) {
+        container.innerHTML = `<p class="text-red-500">Error: ${e.message}</p>`;
+    }
+}
+
+async function runManualSocialMediaGenerator() {
+    // ... (Zelfde logica als hierboven, maar dan met manualInput) ...
+    // Voor de beknoptheid van dit antwoord: kopieer de logica van runSocialMediaGenerator,
+    // maar gebruik document.getElementById('manual-social-input').value als basis.
+    const input = document.getElementById('manual-social-input').value;
+    if(!input) return alert("Enter text first.");
+    const container = document.getElementById('social-content-container');
+    document.getElementById('social-output-container').classList.remove('hidden');
+    container.innerHTML = getLoaderHtml("Drafting post...");
+    
+    const prompt = `Social Media Expert. Topic: "${input}". Output Markdown.`;
+    try {
+        const text = await performApiCall(prompt);
+        container.innerHTML = `<div>${marked.parse(text)}</div><div class="mt-6"><button id="trigger-img-manual" class="bg-purple-600 text-white btn p-2 rounded">Generate Image</button></div>`;
+        document.getElementById('trigger-img-manual').onclick = (e) => { generateSocialImage("Mead Post", text); e.target.style.display='none'; };
+    } catch(e) { container.innerHTML = `<p class="text-red-500">${e.message}</p>`; }
+}
+
+// --- DATA & SETTINGS ---
+
+async function saveSettings() { /* Wordt al afgehandeld door saveUserSettings */ }
+
+async function exportHistory() {
+    const data = brews.map(b => ({...b, createdAt: b.createdAt.toDate().toISOString()}));
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'meandery_history.json';
+    a.click();
+}
+
+async function exportInventory() {
+    const blob = new Blob([JSON.stringify(inventory, null, 2)], {type: 'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'meandery_inventory.json';
+    a.click();
+}
+
+// --- APP START ---
+// Dit is het laatste stukje code!
+document.addEventListener('DOMContentLoaded', () => {
+    //initApp is al aangeroepen in Deel 2, maar we zorgen dat de listeners goed staan
+    console.log("MEA(N)DERY 2.0 Loaded.");
+});

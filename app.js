@@ -2122,7 +2122,155 @@ window.showBrewPrompt = function(brewId) {
     modal.classList.remove('hidden');
 }
 
-// --- PACKAGING MANAGEMENT ---
+// --- EQUIPMENT PROFILE MANAGEMENT ---
+
+async function addEquipmentProfile(e) {
+    e.preventDefault();
+    if (!userId) return;
+    
+    const name = document.getElementById('equipProfileName').value;
+    const type = document.getElementById('equipProfileType').value;
+    const quantity = parseInt(document.getElementById('equipProfileQuantity').value) || 1;
+    const capacityLiters = parseFloat(document.getElementById('equipCapacityLiters').value) || null;
+    const trubLossLiters = parseFloat(document.getElementById('trubLossLiters').value) || 0;
+    const boilOffRateLitersPerHour = (type === 'Kettle') ? parseFloat(document.getElementById('boilOffRateLitersPerHour').value) || 0 : 0;
+
+    if (!name) {
+        showToast("Profile Name is required.", "error");
+        return;
+    }
+
+    const profileData = { userId, name, type, quantity, capacityLiters, trubLossLiters, boilOffRateLitersPerHour };
+
+    try {
+        const appId = 'meandery-aa05e';
+        const equipCol = collection(db, 'artifacts', appId, 'users', userId, 'equipmentProfiles');
+        await addDoc(equipCol, profileData);
+        
+        document.getElementById('equipment-profile-form').reset();
+        document.getElementById('equipProfileQuantity').value = 1;
+        // Zorg dat de UI update (bijv. boil-off veld verbergen)
+        if(window.handleEquipmentTypeChange) window.handleEquipmentTypeChange(); 
+        
+        showToast("Equipment profile added!", "success");
+    } catch (error) {
+        console.error("Error adding equipment profile:", error);
+        showToast("Could not add profile.", "error");
+    }
+}
+
+function loadEquipmentProfiles() {
+    if (!userId) return;
+    const appId = 'meandery-aa05e';
+    const equipCol = collection(db, 'artifacts', appId, 'users', userId, 'equipmentProfiles');
+    const q = query(equipCol);
+
+    onSnapshot(q, (snapshot) => {
+        equipmentProfiles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderEquipmentProfiles();
+        populateEquipmentProfilesDropdown();
+    }, (error) => {
+        console.error("Error loading equipment profiles: ", error);
+        const list = document.getElementById('equipment-profiles-list');
+        if(list) list.innerHTML = `<p class="text-red-500">Could not load equipment profiles.</p>`;
+    });
+}
+
+window.renderEquipmentProfiles = function() {
+    const listDiv = document.getElementById('equipment-profiles-list');
+    if (!listDiv) return;
+
+    if (equipmentProfiles.length === 0) {
+        listDiv.innerHTML = `<p class="text-center text-app-secondary/80">No saved profiles.</p>`;
+        return;
+    }
+    
+    listDiv.innerHTML = equipmentProfiles.map(p => `
+        <div id="equip-item-${p.id}" class="p-3 card rounded-md mb-2">
+            <div class="flex justify-between items-center">
+                 <div class="flex-grow">
+                    <p class="font-bold">${p.name} <span class="text-sm font-normal text-app-secondary/80">(${p.type})</span></p>
+                    <p class="text-sm text-app-secondary">Capacity: ${p.capacityLiters || 'N/A'}L | Trub: ${p.trubLossLiters || 0}L ${p.type === 'Kettle' ? `| Boil-off: ${p.boilOffRateLitersPerHour || 0}L/hr` : ''}</p>
+                </div>
+                <div class="flex items-center gap-4 flex-shrink-0 ml-4">
+                    <span class="font-semibold">${p.quantity || 1}x</span>
+                    <div class="flex gap-2">
+                        <button onclick="window.editEquipmentProfile('${p.id}')" class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
+                        <button onclick="window.deleteEquipmentProfile('${p.id}')" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+window.editEquipmentProfile = function(profileId) {
+    const p = equipmentProfiles.find(i => i.id === profileId);
+    if (!p) return;
+
+    const itemDiv = document.getElementById(`equip-item-${profileId}`);
+    itemDiv.innerHTML = `
+        <div class="w-full space-y-2 p-2 bg-app-primary rounded">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <input type="text" id="edit-equip-name-${p.id}" value="${p.name}" class="w-full p-1 border rounded bg-app-tertiary">
+                <input type="number" id="edit-equip-quantity-${p.id}" value="${p.quantity || 1}" min="1" class="w-full p-1 border rounded bg-app-tertiary">
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <input type="number" id="edit-equip-cap-${p.id}" value="${p.capacityLiters || ''}" placeholder="Cap (L)" class="w-full p-1 border rounded bg-app-tertiary">
+                <input type="number" id="edit-equip-trub-${p.id}" value="${p.trubLossLiters || '0'}" placeholder="Trub (L)" class="w-full p-1 border rounded bg-app-tertiary">
+                <input type="number" id="edit-equip-boiloff-${p.id}" value="${p.boilOffRateLitersPerHour || '0'}" placeholder="Boil (L/hr)" class="w-full p-1 border rounded bg-app-tertiary ${p.type !== 'Kettle' ? 'hidden' : ''}">
+                <div class="flex gap-2 col-span-2 md:col-span-1">
+                    <button onclick="window.updateEquipmentProfile('${p.id}', '${p.type}')" class="w-full bg-green-600 text-white px-3 py-1 rounded btn">Save</button>
+                    <button onclick="renderEquipmentProfiles()" class="w-full bg-gray-500 text-white px-3 py-1 rounded btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+window.updateEquipmentProfile = async function(profileId, type) {
+    if (!userId) return;
+    const updatedData = {
+        name: document.getElementById(`edit-equip-name-${profileId}`).value,
+        quantity: parseInt(document.getElementById(`edit-equip-quantity-${profileId}`).value) || 1,
+        capacityLiters: parseFloat(document.getElementById(`edit-equip-cap-${profileId}`).value) || null,
+        trubLossLiters: parseFloat(document.getElementById(`edit-equip-trub-${profileId}`).value) || 0,
+        boilOffRateLitersPerHour: (type === 'Kettle') ? parseFloat(document.getElementById(`edit-equip-boiloff-${profileId}`).value) || 0 : 0
+    };
+
+    if (!updatedData.name) { showToast("Name required.", "error"); return; }
+
+    try {
+        const appId = 'meandery-aa05e';
+        const itemDocRef = doc(db, 'artifacts', appId, 'users', userId, 'equipmentProfiles', profileId);
+        await updateDoc(itemDocRef, updatedData);
+        showToast("Profile updated!", "success");
+        // De onSnapshot listener regelt de refresh
+    } catch (error) { console.error(error); showToast("Update failed.", "error"); }
+}
+
+window.deleteEquipmentProfile = async function(profileId) {
+    if (!userId || !confirm('Delete this profile?')) return;
+    try {
+        const appId = 'meandery-aa05e';
+        await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'equipmentProfiles', profileId));
+        showToast("Deleted.", "success");
+    } catch (error) { console.error(error); showToast("Delete failed.", "error"); }
+}
+
+function populateEquipmentProfilesDropdown() {
+    const select = document.getElementById('equipmentProfileSelect');
+    if (!select) return;
+    const current = select.value;
+    select.innerHTML = '<option value="">None (Use default values)</option>';
+    equipmentProfiles.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = p.name;
+        select.appendChild(option);
+    });
+    select.value = current;
+}
 
 // --- INVENTORY MANAGEMENT FUNCTIONS ---
 

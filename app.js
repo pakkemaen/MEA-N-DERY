@@ -2319,6 +2319,22 @@ window.deleteWaterProfile = async function(id) {
     catch (e) { showToast("Error deleting.", "error"); }
 }
 
+window.showLastPrompt = function() {
+    const modal = document.getElementById('prompt-modal');
+    const content = document.getElementById('prompt-modal-content');
+    if (modal && content) {
+        content.textContent = lastGeneratedPrompt || "No prompt generated yet.";
+        modal.classList.remove('hidden');
+    }
+}
+
+window.hidePromptModal = function() {
+    const modal = document.getElementById('prompt-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
 function initApp() {
     // UI Elements Assignments
     const styleSelect = document.getElementById('style');

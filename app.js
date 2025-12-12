@@ -2124,6 +2124,160 @@ window.showBrewPrompt = function(brewId) {
 
 // --- PACKAGING MANAGEMENT ---
 
+// --- INVENTORY MANAGEMENT FUNCTIONS ---
+
+async function addInventoryItem(e) {
+    e.preventDefault();
+    if (!userId) return;
+    
+    const name = document.getElementById('itemName').value;
+    const qty = parseFloat(document.getElementById('itemQty').value);
+    const unit = document.getElementById('itemUnit').value;
+    const price = parseFloat(document.getElementById('itemPrice').value);
+    const category = document.getElementById('itemCategory').value;
+    const expirationDate = document.getElementById('itemExpirationDate').value || null;
+
+    if (!name || isNaN(qty) || isNaN(price)) {
+        showToast("Please fill in valid name, quantity and price.", "error");
+        return;
+    }
+
+    const itemData = { userId, name, qty, unit, price, category, expirationDate };
+
+    try {
+        const appId = 'meandery-aa05e';
+        const invCol = collection(db, 'artifacts', appId, 'users', userId, 'inventory');
+        await addDoc(invCol, itemData);
+        document.getElementById('inventory-form').reset();
+        showToast("Ingredient added to inventory!", "success");
+    } catch (error) {
+        console.error("Error adding inventory item:", error);
+        showToast("Could not add ingredient.", "error");
+    }
+}
+
+window.renderInventory = function() {
+    const grouped = inventory.reduce((acc, item) => {
+        (acc[item.category] = acc[item.category] || []).push(item);
+        return acc;
+    }, {});
+
+    const categories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
+    const currency = userSettings.currencySymbol || '€';
+    let html = '';
+
+    for (const category of categories) {
+        if (grouped[category]) {
+            html += `<h3 class="text-xl font-header mt-4 mb-2">${category}</h3><div class="space-y-2">`;
+            grouped[category].forEach(item => {
+                const expDateStr = item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : 'N/A';
+                let dateClass = 'text-app-secondary/80';
+                if (item.expirationDate) {
+                    const days = (new Date(item.expirationDate) - new Date()) / (1000 * 60 * 60 * 24);
+                    if (days < 0) dateClass = 'text-red-500 font-bold';
+                    else if (days <= 30) dateClass = 'text-amber-500 font-semibold';
+                }
+
+                html += `<div id="item-${item.id}" class="p-3 card rounded-md">
+                    <div class="flex justify-between items-center">
+                        <span>${item.name}</span>
+                        <div class="flex items-center gap-4">
+                            <span class="font-semibold">${item.qty} ${item.unit} - ${currency}${(item.price || 0).toFixed(2)}</span>
+                            <div class="flex gap-2">
+                                <button onclick="window.editInventoryItem('${item.id}')" class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
+                                <button onclick="window.deleteInventoryItem('${item.id}')" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs ${dateClass}">Exp: ${expDateStr}</p>
+                </div>`;
+            });
+            html += `</div>`;
+        }
+    }
+    
+    if (inventory.length === 0) {
+        html = `<div class="text-center py-10 opacity-50"><p>The Cupboard is Bare</p></div>`;
+    }
+    const list = document.getElementById('inventory-list');
+    if (list) list.innerHTML = html;
+}
+
+window.deleteInventoryItem = async function(itemId) {
+    if (!userId) return;
+    try {
+        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'inventory', itemId));
+        showToast("Item deleted.", "success");
+    } catch (error) { showToast("Error deleting item.", "error"); }
+}
+
+window.editInventoryItem = function(itemId) {
+    const item = inventory.find(i => i.id === itemId);
+    if (!item) return;
+    const itemDiv = document.getElementById(`item-${itemId}`);
+    const currency = userSettings.currencySymbol || '€';
+    
+    itemDiv.innerHTML = `
+        <div class="w-full space-y-2 p-2 bg-app-primary rounded">
+            <input type="text" id="edit-name-${itemId}" value="${item.name}" class="w-full p-1 border rounded bg-app-tertiary">
+            <div class="grid grid-cols-2 gap-2">
+                <input type="number" id="edit-qty-${itemId}" value="${item.qty}" step="0.01" class="w-full p-1 border rounded bg-app-tertiary">
+                <input type="number" id="edit-price-${itemId}" value="${item.price}" step="0.01" class="w-full p-1 border rounded bg-app-tertiary">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="window.updateInventoryItem('${itemId}')" class="w-full bg-green-600 text-white px-3 py-1 rounded btn">Save</button>
+                <button onclick="renderInventory()" class="w-full bg-gray-500 text-white px-3 py-1 rounded btn">Cancel</button>
+            </div>
+        </div>`;
+}
+
+window.updateInventoryItem = async function(itemId) {
+    if (!userId) return;
+    const data = {
+        name: document.getElementById(`edit-name-${itemId}`).value,
+        qty: parseFloat(document.getElementById(`edit-qty-${itemId}`).value),
+        price: parseFloat(document.getElementById(`edit-price-${itemId}`).value)
+    };
+    try {
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'inventory', itemId), data);
+        showToast("Item updated!", "success");
+        // Snapshot listener update de UI automatisch
+    } catch (error) { showToast("Update failed.", "error"); }
+}
+
+// --- INVENTORY DEDUCTION LOGIC ---
+window.performInventoryDeduction = async function(ingredientsArray) {
+    if (!userId || !ingredientsArray || ingredientsArray.length === 0) return;
+    const batch = writeBatch(db);
+    let updates = 0, notFound = [];
+
+    ingredientsArray.forEach(req => {
+        const item = inventory.find(inv => inv.name.toLowerCase() === req.name.toLowerCase());
+        const qty = parseFloat(req.quantity || req.actualQty);
+        if (item && !isNaN(qty)) {
+            const newQty = item.qty - qty;
+            if (newQty >= 0) {
+                batch.update(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'inventory', item.id), { qty: newQty });
+                updates++;
+            } else notFound.push(`${req.name} (low stock)`);
+        } else notFound.push(`${req.name} (not found)`);
+    });
+
+    if (updates > 0) {
+        await batch.commit();
+        showToast(`${updates} items deducted.`, 'success');
+    }
+    if (notFound.length > 0) showToast(`Issues: ${notFound.join(', ')}`, 'info');
+}
+
+window.deductActualsFromInventory = function(brewId) {
+    const logData = getLogDataFromDOM('brew-day-content');
+    if (!logData.actualIngredients || logData.actualIngredients.length === 0) return showToast("Save log first.", "error");
+    if (confirm("Deduct these amounts from inventory?")) {
+        window.performInventoryDeduction(logData.actualIngredients);
+    }
+}
+
 function populatePackagingDropdown() {
     const select = document.getElementById('packaging-item-select');
     if (!select) return;

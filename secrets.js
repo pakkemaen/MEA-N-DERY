@@ -2,8 +2,6 @@
 // DIT BESTAND BEVAT GEVOELIGE SLEUTELS. DEEL DIT NIET ONLINE.
 
 const CONFIG = {
-    // Jouw Google AI Key (voor recepten)
-    apiKey: "AIzaSyDsyQ3PblMaB4qyHuwpTNg4E45yKdlkI4Y", 
 
     // Jouw Firebase Config
     firebase: {

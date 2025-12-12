@@ -210,38 +210,33 @@ window.executeDangerAction = function() {
 // --- DEEL 3: AI CORE & CREATOR LOGIC ---
 
 async function performApiCall(prompt, schema = null) {
-    // Gebruik de key uit settings, of val terug op de config file
-    const apiKey = userSettings.apiKey || CONFIG.apiKey;
+    const functionUrl = "https://callgemini-388311971225.europe-west1.run.app/"; 
     
-    if (!apiKey) {
-        throw new Error("API Key missing. Please check Settings or secrets.js");
-    }
-    
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
-    
-    let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-    const payload = { contents: chatHistory };
+    try {
+        const response = await fetch(functionUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                prompt: prompt,
+                schema: schema,
+                model: "gemini-2.5-pro" // We vragen nu veilig om het slimste model
+            })
+        });
 
-    if (schema) {
-        payload.generationConfig = {
-            responseMimeType: "application/json",
-            responseSchema: schema
-        };
-    }
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Server error: ${response.status}`);
+        }
 
-    const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+        const data = await response.json();
+        return data.text;
 
-    if (!response.ok) {
-        const errorBody = await response.json();
-        throw new Error(errorBody?.error?.message || `API request failed: ${response.status}`);
+    } catch (error) {
+        console.error("Backend Error:", error);
+        throw new Error(error.message || "Fout bij verbinden met de AI backend.");
     }
-    
-    const result = await response.json();
-    return result.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
 function getFortKnoxLaws(isNoWater = false, isBraggot = false, isHydromel = false, isHeavy = false, isWild = false) {

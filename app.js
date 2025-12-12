@@ -2253,6 +2253,57 @@ function getPackagingCosts() {
 
 // --- WATER PROFILE MANAGEMENT ---
 
+async function findWaterProfileWithAI() {
+    const searchBtn = document.getElementById('ai-water-search-btn');
+    const searchInput = document.getElementById('ai-water-search-name');
+    const brandName = searchInput.value;
+
+    if (!brandName.trim()) {
+        showToast("Please enter a brand name to search.", "error");
+        return;
+    }
+
+    searchBtn.disabled = true;
+    searchBtn.textContent = '...';
+
+    const prompt = `Find the typical mineral water profile for a brand named "${brandName}". Provide the results for Calcium (ca), Magnesium (mg), Sodium (na), Sulfate (so4), Chloride (cl), and Bicarbonate (hco3) in mg/L. Respond ONLY with a valid JSON object matching the specified schema. If you cannot find the profile, respond with a JSON object where all values are 0.`;
+    
+    const schema = {
+        type: "OBJECT",
+        properties: {
+            "ca": { "type": "NUMBER" }, "mg": { "type": "NUMBER" },
+            "na": { "type": "NUMBER" }, "so4": { "type": "NUMBER" },
+            "cl": { "type": "NUMBER" }, "hco3": { "type": "NUMBER" }
+        },
+        required: ["ca", "mg", "na", "so4", "cl", "hco3"]
+    };
+
+    try {
+        const jsonResponse = await performApiCall(prompt, schema);
+        const profile = JSON.parse(jsonResponse);
+
+        if (profile.ca === 0 && profile.mg === 0) {
+            showToast(`Could not find a profile for "${brandName}".`, 'info');
+        } else {
+            // Vul het formulier in met de gevonden data
+            document.getElementById('water-profile-name').value = brandName;
+            document.getElementById('manual_ca').value = profile.ca;
+            document.getElementById('manual_mg').value = profile.mg;
+            document.getElementById('manual_na').value = profile.na;
+            document.getElementById('manual_so4').value = profile.so4;
+            document.getElementById('manual_cl').value = profile.cl;
+            document.getElementById('manual_hco3').value = profile.hco3;
+            showToast(`Profile for "${brandName}" found! Review and save.`, 'success');
+        }
+    } catch (error) {
+        showToast("AI search failed. Please try again.", "error");
+        console.error(error);
+    } finally {
+        searchBtn.disabled = false;
+        searchBtn.textContent = 'Find';
+    }
+}
+
 async function loadUserWaterProfiles() {
     if (!userId) return;
     onSnapshot(query(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'waterProfiles')), (snapshot) => {

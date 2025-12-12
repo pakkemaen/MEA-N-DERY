@@ -2272,6 +2272,214 @@ function populateEquipmentProfilesDropdown() {
     select.value = current;
 }
 
+// --- BOTTLING & CELLAR MANAGEMENT ---
+
+let currentBrewToBottleId = null; 
+
+window.showBottlingModal = function(brewId) {
+    customBottles = []; // Reset de lijst
+    renderCustomBottlesList(); // Maak de UI leeg
+    currentBrewToBottleId = brewId;
+    const bottlingForm = document.getElementById('bottling-form');
+    if(bottlingForm) bottlingForm.reset();
+    
+    const dateInput = document.getElementById('bottlingDate');
+    if(dateInput) dateInput.valueAsDate = new Date();
+    
+    document.getElementById('bottling-modal').classList.remove('hidden');
+}
+
+window.hideBottlingModal = function() {
+    document.getElementById('bottling-modal').classList.add('hidden');
+    currentBrewToBottleId = null;
+}
+
+// Custom Bottle List Helpers
+window.renderCustomBottlesList = function() {
+    const listDiv = document.getElementById('custom-bottles-list');
+    if (!listDiv) return;
+    if (customBottles.length === 0) { listDiv.innerHTML = ''; return; }
+
+    const currency = userSettings.currencySymbol || '€';
+    listDiv.innerHTML = customBottles.map((bottle, index) => `
+        <div class="flex justify-between items-center p-2 bg-app-primary rounded-md text-sm mb-1">
+            <span><strong>${bottle.quantity}x</strong> ${bottle.size}ml (at ${currency}${bottle.price.toFixed(2)} each)</span>
+            <button type="button" onclick="window.removeCustomBottleFromList(${index})" class="text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>
+        </div>
+    `).join('');
+}
+
+window.addCustomBottleToList = function() {
+    const size = parseInt(document.getElementById('customSize').value) || 0;
+    const quantity = parseInt(document.getElementById('customQty').value) || 0;
+    const price = parseFloat(document.getElementById('customPrice').value) || 0;
+
+    if (size <= 0 || quantity <= 0) {
+        showToast("Invalid size or quantity.", "error");
+        return;
+    }
+    customBottles.push({ size, quantity, price });
+    renderCustomBottlesList();
+    
+    // Reset inputs
+    document.getElementById('customSize').value = '';
+    document.getElementById('customQty').value = '';
+    document.getElementById('customPrice').value = '';
+    document.getElementById('customSize').focus();
+}
+
+window.removeCustomBottleFromList = function(index) {
+    customBottles.splice(index, 1);
+    renderCustomBottlesList();
+}
+
+// --- DE HOOFDFUNCTIE: BOTTLE BATCH ---
+async function bottleBatch(e) {
+    e.preventDefault();
+    if (!currentBrewToBottleId) return;
+
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.textContent = 'Processing...';
+
+    try {
+        const originalBrew = brews.find(b => b.id === currentBrewToBottleId);
+        if (!originalBrew) throw new Error("Could not find the original recipe.");
+
+        const bottlesData = [
+            { size: 750, quantity: parseInt(document.getElementById('qty750').value) || 0, price: null },
+            { size: 500, quantity: parseInt(document.getElementById('qty500').value) || 0, price: null },
+            { size: 330, quantity: parseInt(document.getElementById('qty330').value) || 0, price: null },
+            { size: 250, quantity: parseInt(document.getElementById('qty250').value) || 0, price: null },
+            ...customBottles
+        ].filter(b => b.quantity > 0 && b.size > 0);
+
+        if (bottlesData.length === 0) throw new Error("Enter quantity for at least one bottle.");
+
+        // 1. Stock Check
+        const closureType = document.getElementById('closureTypeSelect').value;
+        const outOfStockItems = [];
+        let totalBottles = 0;
+
+        bottlesData.forEach(bottle => {
+            totalBottles += bottle.quantity;
+            if (bottle.price === null) { // Alleen checken voor standaard flessen
+                const stockId = `bottle_${bottle.size}`;
+                const currentStock = packagingCosts[stockId]?.qty || 0;
+                if (bottle.quantity > currentStock) {
+                    outOfStockItems.push(`${bottle.quantity} x ${bottle.size}ml bottle(s) (only ${currentStock} in stock)`);
+                }
+            }
+        });
+
+        if (closureType === 'auto') {
+            const closuresNeeded = { cork: 0, crown_cap_26: 0, crown_cap_29: 0 };
+            bottlesData.forEach(b => {
+                if (b.size >= 750) closuresNeeded.cork += b.quantity;
+                else if (b.size >= 500) closuresNeeded.crown_cap_29 += b.quantity;
+                else closuresNeeded.crown_cap_26 += b.quantity;
+            });
+            if (closuresNeeded.cork > (packagingCosts['cork']?.qty || 0)) outOfStockItems.push(`Not enough corks`);
+            if (closuresNeeded.crown_cap_26 > (packagingCosts['crown_cap_26']?.qty || 0)) outOfStockItems.push(`Not enough 26mm caps`);
+            if (closuresNeeded.crown_cap_29 > (packagingCosts['crown_cap_29']?.qty || 0)) outOfStockItems.push(`Not enough 29mm caps`);
+        } else {
+            if (totalBottles > (packagingCosts[closureType]?.qty || 0)) outOfStockItems.push(`Not enough ${closureType}`);
+        }
+
+        if (totalBottles > (packagingCosts['label']?.qty || 0)) outOfStockItems.push(`Not enough labels`);
+
+        if (outOfStockItems.length > 0) throw new Error(`Stock missing:\n- ${outOfStockItems.join('\n- ')}`);
+
+        // 2. Calculate Costs
+        // We gebruiken getPackagingCosts() die in het vorige blok zat.
+        // Als die functie er niet is, gebruiken we een veilige fallback.
+        const packCosts = (typeof getPackagingCosts === 'function') ? getPackagingCosts() : {};
+        let totalPackagingCost = 0;
+
+        bottlesData.forEach(bottle => {
+            const bottleCost = bottle.price !== null ? bottle.price : (packCosts[bottle.size.toString()] || 0);
+            let closureCost = 0;
+            if (closureType === 'auto') {
+                if (bottle.size >= 750) closureCost = packCosts.cork || 0;
+                else if (bottle.size >= 500) closureCost = packCosts.crown_cap_29 || 0;
+                else closureCost = packCosts.crown_cap_26 || 0;
+            } else closureCost = packCosts[closureType] || 0;
+            
+            const labelCost = packCosts.label || 0;
+            totalPackagingCost += bottle.quantity * (bottleCost + closureCost + labelCost);
+        });
+
+        const finalTotalCost = (originalBrew.totalCost || 0) + totalPackagingCost;
+        const currency = userSettings.currencySymbol || '€';
+
+        if (confirm(`Packaging cost: ${currency}${totalPackagingCost.toFixed(2)}. Total batch cost: ${currency}${finalTotalCost.toFixed(2)}. Proceed?`)) {
+            
+            // 3. Deduct Stock
+            const updatedStock = JSON.parse(JSON.stringify(packagingCosts));
+            const deduct = (id, qty) => {
+                if (updatedStock[id]) {
+                    const cpu = updatedStock[id].price / updatedStock[id].qty;
+                    updatedStock[id].qty = Math.max(0, updatedStock[id].qty - qty);
+                    updatedStock[id].price = Math.max(0, updatedStock[id].price - (cpu * qty));
+                }
+            };
+
+            bottlesData.forEach(b => { if(b.price === null) deduct(`bottle_${b.size}`, b.quantity); });
+            if (closureType === 'auto') {
+                bottlesData.forEach(b => {
+                    if (b.size >= 750) deduct('cork', b.quantity);
+                    else if (b.size >= 500) deduct('crown_cap_29', b.quantity);
+                    else deduct('crown_cap_26', b.quantity);
+                });
+            } else deduct(closureType, totalBottles);
+            deduct('label', totalBottles);
+
+            // Save Packaging
+            await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'settings', 'packaging'), updatedStock);
+            packagingCosts = updatedStock;
+
+            // 4. Create Cellar Entry
+            const bottlingDate = new Date(document.getElementById('bottlingDate').value);
+            const cellarData = {
+                userId, brewId: currentBrewToBottleId,
+                recipeName: originalBrew.recipeName,
+                bottlingDate,
+                bottles: bottlesData.map(({price, ...rest}) => rest),
+                totalBatchCost: finalTotalCost,
+                ingredientCost: originalBrew.totalCost || 0,
+                peakFlavorDate: null, peakFlavorJustification: 'Generated by Mazer 2.0'
+            };
+
+            await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar'), cellarData);
+
+            // 5. Update Brew Status
+            await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId), { isBottled: true });
+
+            if (currentBrewDay.brewId === currentBrewToBottleId) {
+                currentBrewDay = { brewId: null };
+                await saveUserSettings();
+            }
+
+            hideBottlingModal();
+            showToast("Batch bottled successfully!", "success");
+            // Refresh views
+            if(typeof loadHistory === 'function') loadHistory();
+            if(typeof loadCellar === 'function') loadCellar();
+            if(typeof renderBrewDay === 'function') renderBrewDay('none');
+            
+            switchMainView('management');
+            switchSubView('cellar', 'management-main-view');
+        }
+    } catch (error) {
+        console.error(error);
+        showToast(error.message, "error");
+    } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
+    }
+}
+
 // --- INVENTORY MANAGEMENT FUNCTIONS ---
 
 async function addInventoryItem(e) {

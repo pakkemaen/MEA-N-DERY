@@ -2482,6 +2482,72 @@ async function bottleBatch(e) {
 
 // --- INVENTORY MANAGEMENT FUNCTIONS ---
 
+// --- BARCODE SCANNER FUNCTIONS ---
+
+function startScanner() {
+    const container = document.getElementById('barcode-scanner-container');
+    if (container) container.classList.remove('hidden');
+
+    // We gebruiken de globale variabele die bovenaan app.js is gedeclareerd
+    html5QrcodeScanner = new Html5Qrcode("barcode-reader");
+    
+    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+    html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess)
+         .catch(err => {
+             console.error("Unable to start scanning.", err);
+             alert("Could not start camera. Please grant camera permissions.");
+         });
+}
+
+function stopScanner() {
+    if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+        html5QrcodeScanner.stop().then(() => {
+            const container = document.getElementById('barcode-scanner-container');
+            if (container) container.classList.add('hidden');
+            html5QrcodeScanner.clear();
+        }).catch(err => console.error("Error stopping scanner:", err));
+    } else {
+         const container = document.getElementById('barcode-scanner-container');
+         if (container) container.classList.add('hidden');
+    }
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+    // Stop de scanner onmiddellijk na een succesvolle scan
+    stopScanner();
+    // Vraag de productinformatie op
+    fetchProductInfo(decodedText);
+}
+
+async function fetchProductInfo(barcode) {
+    const itemNameInput = document.getElementById('itemName');
+    const originalPlaceholder = itemNameInput.placeholder;
+    
+    itemNameInput.value = '';
+    itemNameInput.placeholder = 'Looking up barcode...';
+
+    try {
+        const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`);
+        
+        if (!response.ok) throw new Error("API Connection failed.");
+
+        const data = await response.json();
+
+        if (data.status === 1 && data.product && data.product.product_name) {
+            itemNameInput.value = data.product.product_name;
+            showToast(`Found: ${data.product.product_name}`, "success");
+        } else {
+            showToast("Product not found in database.", "error");
+        }
+   } catch (error) {
+       console.error("Barcode lookup failed:", error);
+       showToast("Could not look up barcode info.", "error");
+   } finally {
+       itemNameInput.placeholder = originalPlaceholder;
+   }
+}
+
 async function addInventoryItem(e) {
     e.preventDefault();
     if (!userId) return;

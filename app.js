@@ -1511,6 +1511,95 @@ window.saveSocialPost = async function() {
     showToast("Post saved!", "success");
 }
 
+// --- USER SETTINGS MANAGEMENT (DEZE WAS WEGGEVALLEN) ---
+
+async function loadUserSettings() {
+    if (!userId) return;
+    const appId = 'meandery-aa05e';
+    const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'main');
+    
+    try {
+        const docSnap = await getDoc(settingsDocRef);
+        if (docSnap.exists()) {
+            userSettings = docSnap.data();
+            
+            // Herstel de actieve brouwdag pointer als die bestaat
+            if (userSettings.currentBrewDay && userSettings.currentBrewDay.brewId) {
+                currentBrewDay = userSettings.currentBrewDay;
+                // Render de brouwdag als we op dat tabblad zitten
+                if (!document.getElementById('brewing-main-view').classList.contains('hidden')) {
+                     renderBrewDay(currentBrewDay.brewId);
+                }
+            }
+        } else {
+            // Standaardwaarden als er nog geen instellingen zijn
+            userSettings = { apiKey: '', imageApiKey: '', defaultBatchSize: 5, currencySymbol: '€', theme: 'light' };
+        }
+        applySettings();
+    } catch (error) {
+        console.error("Error loading user settings:", error);
+    }
+}
+
+function applySettings() {
+    // Vul de input velden met de geladen data
+    const apiKeyField = document.getElementById('apiKeyInput');
+    if (apiKeyField) apiKeyField.value = userSettings.apiKey || '';
+    
+    const imgKeyField = document.getElementById('imageApiKeyInput');
+    if (imgKeyField) imgKeyField.value = userSettings.imageApiKey || '';
+    
+    const batchInput = document.getElementById('defaultBatchSizeInput');
+    if (batchInput) batchInput.value = userSettings.defaultBatchSize || 5;
+
+    const currencyInput = document.getElementById('defaultCurrencyInput');
+    if (currencyInput) currencyInput.value = userSettings.currencySymbol || '€';
+
+    const themeToggle = document.getElementById('theme-toggle-checkbox');
+    if (themeToggle) themeToggle.checked = (userSettings.theme === 'dark');
+    
+    // Update labels in de UI waar valuta staat
+    const priceLabel = document.querySelector('label[for="itemPrice"]');
+    if(priceLabel) priceLabel.textContent = `Price (${userSettings.currencySymbol || '€'})`;
+    
+    // Pas het thema direct toe
+    applyTheme(userSettings.theme);
+}
+
+async function saveUserSettings() {
+    if (!userId) return;
+    const appId = 'meandery-aa05e';
+    const settingsDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'main');
+    
+    const newSettings = {
+        apiKey: document.getElementById('apiKeyInput').value.trim(),
+        imageApiKey: document.getElementById('imageApiKeyInput').value.trim(),
+        defaultBatchSize: parseFloat(document.getElementById('defaultBatchSizeInput').value) || 5,
+        currencySymbol: document.getElementById('defaultCurrencyInput').value.trim() || '€',
+        theme: document.getElementById('theme-toggle-checkbox').checked ? 'dark' : 'light',
+        // We slaan alleen de pointer op, niet de hele checklist data (die zit in de brew zelf)
+        currentBrewDay: { brewId: currentBrewDay.brewId }
+    };
+
+    try {
+        await setDoc(settingsDocRef, newSettings, { merge: true });
+        userSettings = newSettings;
+        applySettings();
+        showToast('Settings saved successfully!', 'success');
+    } catch (error) {
+        console.error("Error saving settings:", error);
+        showToast('Failed to save settings.', 'error');
+    }
+}
+
+function applyTheme(theme) {
+    if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+}
+
 // --- DEEL 5: TOOLS, CALCULATORS & UTILITIES ---
 
 // --- UTILITY: KOSTENBEREKENING (CRASH PROOF) ---

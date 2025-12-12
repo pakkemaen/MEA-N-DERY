@@ -1511,7 +1511,264 @@ window.saveSocialPost = async function() {
     showToast("Post saved!", "success");
 }
 
-// --- USER SETTINGS MANAGEMENT (DEZE WAS WEGGEVALLEN) ---
+// --- DEEL 8: MANAGEMENT ENGINE (INVENTORY, CELLAR, FINANCIALS) ---
+
+// --- INVENTORY MANAGEMENT ---
+
+function loadInventory() {
+    if (!userId) return;
+    const appId = 'meandery-aa05e';
+    const invCol = collection(db, 'artifacts', appId, 'users', userId, 'inventory');
+    
+    // We gebruiken onSnapshot voor realtime updates
+    onSnapshot(query(invCol), (snapshot) => {
+        inventory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderInventory();
+        // Update ook meteen de financiën als de voorraad verandert
+        if (typeof updateCostAnalysis === 'function') updateCostAnalysis();
+        if (typeof updateNextActionWidget === 'function') updateNextActionWidget();
+        if (typeof updateDashboardStats === 'function') updateDashboardStats();
+    }, (error) => {
+        console.error("Error loading inventory:", error);
+    });
+}
+
+window.renderInventory = function() {
+    const listDiv = document.getElementById('inventory-list');
+    if (!listDiv) return;
+
+    if (inventory.length === 0) {
+        listDiv.innerHTML = `<p class="text-center text-app-secondary/80 py-4">The cupboard is bare.</p>`;
+        return;
+    }
+
+    // Groepeer op categorie
+    const grouped = inventory.reduce((acc, item) => {
+        const cat = item.category || 'Other';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(item);
+        return acc;
+    }, {});
+
+    const currency = userSettings.currencySymbol || '€';
+    let html = '';
+
+    // Vaste volgorde van categorieën
+    const categories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
+    
+    categories.forEach(cat => {
+        if (grouped[cat]) {
+            html += `<h4 class="font-bold text-app-brand uppercase text-xs mt-3 mb-1 border-b border-app-brand/20">${cat}</h4>`;
+            grouped[cat].forEach(item => {
+                const expDate = item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : '';
+                html += `
+                    <div class="flex justify-between items-center p-2 bg-app-primary rounded mb-1 shadow-sm">
+                        <div>
+                            <div class="font-bold text-sm">${item.name}</div>
+                            <div class="text-xs text-app-secondary">${item.qty} ${item.unit} ${expDate ? `(Exp: ${expDate})` : ''}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-bold">${currency}${(item.price || 0).toFixed(2)}</div>
+                            <div class="flex gap-2 mt-1 justify-end">
+                                <button onclick="window.editInventoryItem('${item.id}')" class="text-blue-600 text-xs hover:underline">Edit</button>
+                                <button onclick="window.deleteInventoryItem('${item.id}')" class="text-red-600 text-xs hover:underline">Del</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    });
+    listDiv.innerHTML = html;
+}
+
+window.editInventoryItem = function(itemId) {
+    const item = inventory.find(i => i.id === itemId);
+    if(!item) return;
+    
+    document.getElementById('itemName').value = item.name;
+    document.getElementById('itemQty').value = item.qty;
+    document.getElementById('itemUnit').value = item.unit;
+    document.getElementById('itemPrice').value = item.price;
+    document.getElementById('itemCategory').value = item.category;
+    document.getElementById('itemExpirationDate').value = item.expirationDate || '';
+    
+    // Verander de knop tijdelijk in een update knop (simpele implementatie: verwijder oude en voeg nieuwe toe)
+    // Voor nu: verwijder het item zodat de gebruiker het opnieuw toevoegt als edit.
+    if(confirm("Edit mode: This item will be removed so you can re-save it. Proceed?")) {
+        window.deleteInventoryItem(itemId);
+    }
+}
+
+window.deleteInventoryItem = async function(itemId) {
+    if (!userId) return;
+    try {
+        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'inventory', itemId));
+        showToast("Item removed.", "success");
+    } catch(e) { console.error(e); showToast("Error deleting item.", "error"); }
+}
+
+// --- CELLAR MANAGEMENT ---
+
+function loadCellar() {
+    if (!userId) return;
+    const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar');
+    onSnapshot(query(cellarCol), (snapshot) => {
+        cellar = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (typeof renderCellar === 'function') renderCellar();
+        if (typeof updateCostAnalysis === 'function') updateCostAnalysis();
+        if (typeof updateDashboardStats === 'function') updateDashboardStats();
+    });
+}
+
+window.renderCellar = function() {
+    const listDiv = document.getElementById('cellar-list');
+    if (!listDiv) return;
+    if (cellar.length === 0) { listDiv.innerHTML = '<p class="text-center text-app-secondary/80">Empty cellar.</p>'; return; }
+    
+    listDiv.innerHTML = cellar.map(item => `
+        <div class="p-4 card rounded-lg mb-2">
+            <h4 class="font-bold text-lg font-header">${item.recipeName}</h4>
+            <p class="text-sm text-app-secondary">Bottled: ${item.bottlingDate ? new Date(item.bottles ? item.bottlingDate.toDate() : item.bottlingDate).toLocaleDateString() : '?'}</p>
+            <div class="mt-2 space-y-1">
+                ${(item.bottles || []).map(b => `<div class="text-sm flex justify-between"><span>${b.quantity} x ${b.size}ml</span><button onclick="window.consumeBottle('${item.id}', ${b.size})" class="text-xs bg-app-action text-white px-2 rounded">Drink</button></div>`).join('')}
+            </div>
+            <button onclick="window.deleteCellarItem('${item.id}', '${item.recipeName.replace(/'/g, "\\'")}')" class="text-red-500 text-xs mt-2 underline">Remove Batch</button>
+        </div>
+    `).join('');
+}
+
+window.consumeBottle = async function(cellarId, size) {
+    if (!userId) return;
+    const itemRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar', cellarId);
+    const item = cellar.find(c => c.id === cellarId);
+    if (!item) return;
+    
+    const updatedBottles = item.bottles.map(b => {
+        if (b.size === size && b.quantity > 0) return { ...b, quantity: b.quantity - 1 };
+        return b;
+    }).filter(b => b.quantity > 0);
+    
+    if (updatedBottles.length === 0) {
+        if(confirm("Last bottle consumed! Remove batch from cellar?")) {
+            await deleteDoc(itemRef);
+        } else {
+            await updateDoc(itemRef, { bottles: [] }); // Houdt lege entry
+        }
+    } else {
+        await updateDoc(itemRef, { bottles: updatedBottles });
+    }
+    showToast("Cheers! 🥂", "success");
+}
+
+window.deleteCellarItem = async function(id, name) {
+    if(confirm(`Delete ${name} from cellar?`)) {
+        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar', id));
+    }
+}
+
+// --- FINANCIALS & STATS ---
+
+window.updateCostAnalysis = function() {
+    const currency = userSettings.currencySymbol || '€';
+    
+    // 1. Inventory Value
+    let invValue = inventory.reduce((sum, item) => sum + (item.price || 0), 0);
+    
+    // 2. Active Brews Value (alles niet gebotteld)
+    let activeValue = brews.filter(b => !b.isBottled).reduce((sum, b) => sum + (b.totalCost || 0), 0);
+    
+    // 3. Cellar Value
+    let cellarValue = cellar.reduce((sum, c) => sum + (c.totalBatchCost || 0), 0);
+    
+    // Update DOM elements als ze bestaan
+    const elInv = document.getElementById('total-inventory-value');
+    const elActive = document.getElementById('total-active-value');
+    const elCellar = document.getElementById('total-cellar-value');
+    const elGrand = document.getElementById('grand-total-value');
+    
+    if(elInv) elInv.textContent = `${currency}${invValue.toFixed(2)}`;
+    if(elActive) elActive.textContent = `${currency}${activeValue.toFixed(2)}`;
+    if(elCellar) elCellar.textContent = `${currency}${cellarValue.toFixed(2)}`;
+    if(elGrand) elGrand.textContent = `${currency}${(invValue + activeValue + cellarValue).toFixed(2)}`;
+    
+    // Update Chart als die bestaat
+    const ctx = document.getElementById('cost-chart');
+    if (ctx && window.Chart) {
+        const spendByCategory = inventory.reduce((acc, item) => {
+            const cat = item.category || 'Other';
+            acc[cat] = (acc[cat] || 0) + (item.price || 0);
+            return acc;
+        }, {});
+        
+        if (window.costChart) window.costChart.destroy();
+        window.costChart = new Chart(ctx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(spendByCategory),
+                datasets: [{ data: Object.values(spendByCategory), backgroundColor: ['#8F8C79', '#b45309', '#2d2a26', '#16a34a', '#2563eb', '#9333ea'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+}
+
+window.updateDashboardStats = function() {
+    // Simpele tellers voor het dashboard
+    const primaryCount = brews.filter(b => b.logData?.brewDate && !b.primaryComplete).length;
+    const agingCount = brews.filter(b => b.primaryComplete && !b.isBottled).length;
+    const cellarCount = cellar.reduce((sum, c) => sum + (c.bottles || []).reduce((s, b) => s + b.quantity, 0), 0);
+    
+    const elPrim = document.getElementById('stat-primary-batches');
+    const elAge = document.getElementById('stat-aging-batches');
+    const elBot = document.getElementById('stat-bottles');
+    
+    if(elPrim) elPrim.textContent = primaryCount;
+    if(elAge) elAge.textContent = agingCount;
+    if(elBot) elBot.textContent = cellarCount;
+    
+    // Voor "Value" hergebruiken we de totaalberekening uit updateCostAnalysis of doen het hier simpel
+    // (Laten we het simpel houden en op updateCostAnalysis vertrouwen voor de 'stat-spent' update als we die koppelen, of hier apart doen)
+    const elSpent = document.getElementById('stat-spent');
+    if(elSpent && document.getElementById('grand-total-value')) {
+        elSpent.textContent = document.getElementById('grand-total-value').textContent;
+    }
+}
+
+window.updateNextActionWidget = function() {
+    // Simpele versie: check of er iets te doen is
+    const list = document.getElementById('next-action-list');
+    const widget = document.getElementById('next-action-widget');
+    if(!list || !widget) return;
+    
+    let actions = [];
+    
+    // Check inventory expiry
+    const now = new Date();
+    inventory.forEach(i => {
+        if(i.expirationDate) {
+            const days = (new Date(i.expirationDate) - now) / (1000*60*60*24);
+            if(days < 30) actions.push(`Use <strong>${i.name}</strong> soon (Expires in ${Math.ceil(days)} days)`);
+        }
+    });
+    
+    // Check active fermentation (simpel: > 14 dagen in primary)
+    brews.forEach(b => {
+        if(b.logData?.brewDate && !b.primaryComplete) {
+            const days = (now - new Date(b.logData.brewDate)) / (1000*60*60*24);
+            if(days > 14) actions.push(`Check gravity of <strong>${b.recipeName}</strong> (Day ${Math.floor(days)})`);
+        }
+    });
+
+    if(actions.length > 0) {
+        list.innerHTML = actions.slice(0, 3).map(a => `<li>${a}</li>`).join('');
+        widget.classList.remove('hidden');
+    } else {
+        widget.classList.add('hidden');
+    }
+}
+
+// --- USER SETTINGS MANAGEMENT ---
 
 async function loadUserSettings() {
     if (!userId) return;

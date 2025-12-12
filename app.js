@@ -513,7 +513,9 @@ ${creativeBrief}
 }
 
 async function generateRecipe() {
+    const recipeOutput = document.getElementById('recipe-output');
     recipeOutput.innerHTML = getLoaderHtml("Initializing Brewing Protocol...");
+    const generateBtn = document.getElementById('generateBtn');
     generateBtn.disabled = true;
     generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
     currentPredictedProfile = null;
@@ -575,6 +577,7 @@ async function parseRecipeData(markdown) {
 
 // --- RENDER RECIPE OUTPUT (VOLLEDIG & GEOPTIMALISEERD) ---
 async function renderRecipeOutput(markdown) {
+    const recipeOutput = document.getElementById('recipe-output');
     let finalMarkdown = markdown;
     if (!finalMarkdown.trim().startsWith('# ')) {
         finalMarkdown = `# Untitled Batch\n\n${finalMarkdown}`;
@@ -1733,6 +1736,116 @@ window.updateDashboardStats = function() {
     if(elSpent && document.getElementById('grand-total-value')) {
         elSpent.textContent = document.getElementById('grand-total-value').textContent;
     }
+}
+
+// --- DASHBOARD TIMELINE WIDGET ---
+
+window.renderActiveBrewTimeline = function() {
+    const card = document.getElementById('current-brew-card');
+    if (!card) return;
+
+    // 1. Zoek de meest relevante actieve batch (Wel startdatum, niet gebotteld)
+    const activeBrew = brews.find(b => b.logData && b.logData.brewDate && b.logData.brewDate !== '' && !b.isBottled);
+
+    if (!activeBrew) {
+        card.classList.add('hidden');
+        return;
+    }
+
+    // 2. Bereken de "Bio-Time"
+    const now = new Date();
+    const brewDate = new Date(activeBrew.logData.brewDate);
+    const daysElapsed = Math.floor((now - brewDate) / (1000 * 60 * 60 * 24));
+    
+    // 3. Bepaal het "Metabolisme" (Snelheid op basis van ABV)
+    const targetABV = parseFloat(activeBrew.logData.targetABV) || 12;
+    let paceModifier = 1; 
+    if (targetABV < 8) paceModifier = 0.5; // Hydromel gaat sneller
+    if (targetABV > 14) paceModifier = 1.5; // Sack mead gaat trager
+
+    // 4. Bepaal de Biologische Fase & Smart Tip
+    let phaseName = "";
+    let smartTip = "";
+    let progressPercent = 0;
+    
+    // FASE 1: Lag Phase & Growth (Dag 0-3)
+    if (daysElapsed <= (3 * paceModifier)) {
+        phaseName = "Lag / Biomass Growth";
+        smartTip = "Yeast is multiplying. Oxygen is good now. Degas gently.";
+        progressPercent = 15;
+    } 
+    // FASE 2: Active Fermentation (Dag 4-14)
+    else if (daysElapsed <= (14 * paceModifier)) {
+        phaseName = "Vigorous Fermentation";
+        smartTip = "Sugar is converting to alcohol. Keep temperature stable.";
+        progressPercent = 40;
+    } 
+    // FASE 3: Cleanup / Conditioning (Dag 15-30)
+    else if (daysElapsed <= (30 * paceModifier)) {
+        phaseName = "Cleanup Phase";
+        smartTip = "Yeast is cleaning up off-flavors. Do not disturb.";
+        progressPercent = 70;
+    } 
+    // FASE 4: Bulk Aging (Dag 30+)
+    else {
+        phaseName = "Bulk Aging / Clearing";
+        smartTip = "Waiting for clarity. Patience is the main ingredient.";
+        progressPercent = 90;
+    }
+
+    // Override als Primary handmatig is afgevinkt
+    if (activeBrew.primaryComplete) {
+        phaseName = "Secondary / Maturation";
+        smartTip = "Aging for complexity. Ensure airlock is tight.";
+        progressPercent = Math.max(progressPercent, 60); 
+    }
+
+    // 5. Render de Timeline (Met Hartslag)
+    const stages = [
+        { name: 'Lag', active: daysElapsed >= 0 },
+        { name: 'Active', active: daysElapsed > (3 * paceModifier) },
+        { name: 'Cleanup', active: daysElapsed > (14 * paceModifier) },
+        { name: 'Aging', active: daysElapsed > (30 * paceModifier) || activeBrew.primaryComplete }
+    ];
+
+    const activeIndex = stages.findLastIndex(s => s.active);
+
+    let timelineItemsHtml = stages.map((stage, index) => {
+        const isPulse = index === activeIndex ? 'living-node' : '';
+        const isActive = stage.active ? 'background: var(--brand-color); border-color: var(--brand-color);' : '';
+        
+        return `
+            <div class="timeline-item ${stage.active ? 'active' : ''}">
+                <div class="timeline-node ${isPulse}" style="${isActive}"></div>
+                <div class="timeline-label text-[10px] uppercase tracking-wide">${stage.name}</div>
+            </div>
+        `;
+    }).join('');
+
+    card.innerHTML = `
+        <div class="flex justify-between items-start mb-2">
+            <div class="pr-4">
+                <div class="flex items-center gap-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <h3 class="text-xl font-header font-bold text-app-brand leading-tight">${activeBrew.recipeName}</h3>
+                </div>
+                <p class="text-app-primary font-bold text-sm mt-1">Day ${daysElapsed}: ${phaseName}</p>
+                <p class="text-app-secondary text-xs italic mt-1">"${smartTip}"</p>
+            </div>
+            <button onclick="window.showBrewDetail('${activeBrew.id}')" class="flex-shrink-0 bg-transparent border border-app-brand text-app-brand hover:bg-app-brand hover:text-white text-xs font-bold uppercase px-3 py-2 rounded transition-colors">
+                View
+            </button>
+        </div>
+        
+        <div class="timeline-container mt-4 mb-2">
+            <div class="timeline-connector">
+                <div class="timeline-progress" style="width: ${progressPercent}%;"></div>
+            </div>
+            ${timelineItemsHtml}
+        </div>
+    `;
+
+    card.classList.remove('hidden');
 }
 
 window.updateNextActionWidget = function() {

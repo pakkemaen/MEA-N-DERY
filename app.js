@@ -2180,6 +2180,63 @@ async function exportInventory() {
     a.click();
 }
 
+// --- DATA CLEARING FUNCTIONS ---
+
+async function clearCollection(collectionName) {
+    if (!userId) return false;
+    const appId = 'meandery-aa05e';
+    const collectionRef = collection(db, 'artifacts', appId, 'users', userId, collectionName);
+    
+    try {
+        const snapshot = await getDocs(collectionRef);
+        if (snapshot.empty) return true;
+
+        const batch = writeBatch(db);
+        snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+        return true;
+    } catch(e) {
+        console.error("Clear error:", e);
+        return false;
+    }
+}
+
+window.clearHistory = async function() {
+    const action = async () => {
+        if (await clearCollection('brews')) {
+            showToast('Brew history cleared.', 'success');
+            if(typeof loadHistory === 'function') loadHistory();
+        } else {
+            showToast('Failed to clear history.', 'error');
+        }
+    };
+    // Gebruik de gevaar-modal voor bevestiging
+    if (typeof showDangerModal === 'function') {
+        showDangerModal(action, "DELETE HISTORY");
+    } else if (confirm("Are you sure you want to delete ALL history?")) {
+        action();
+    }
+}
+
+window.clearInventory = async function() {
+    const action = async () => {
+        if (await clearCollection('inventory')) {
+            showToast('Inventory cleared.', 'success');
+            if(typeof loadInventory === 'function') loadInventory();
+        } else {
+            showToast('Failed to clear inventory.', 'error');
+        }
+    };
+    
+    if (typeof showDangerModal === 'function') {
+        showDangerModal(action, "DELETE INVENTORY");
+    } else if (confirm("Are you sure you want to delete ALL inventory?")) {
+        action();
+    }
+}
+
 // --- DEEL 7: THE MISSING MODULES (PACKAGING, WATER & HELPERS) ---
 
 // --- HELPER FUNCTIONS ---

@@ -368,18 +368,277 @@
             </div>
 
             <div id="water-view" class="hidden mt-4">
-                <div class="flex flex-col lg:flex-row gap-8 lg:items-start"><aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg"><h2 class="text-2xl font-header font-bold mb-4">Water</h2><div class="mb-4"><label>Profile</label><select id="waterSource" class="w-full p-2 border rounded-md"></select></div><div id="waterProfileDisplay" class="mb-4 p-4 card rounded-lg"><ul class="space-y-1 text-sm text-app-primary"><li>Ca: <span id="val-ca">--</span></li><li>Mg: <span id="val-mg">--</span></li><li>Na: <span id="val-na">--</span></li><li>SO4: <span id="val-so4">--</span></li><li>Cl: <span id="val-cl">--</span></li><li>HCO3: <span id="val-hco3">--</span></li></ul></div><div id="ai-water-search-section"><input type="text" id="ai-water-search-name" placeholder="Brand"><button id="ai-water-search-btn" class="btn">Find</button></div></aside><main class="lg:w-2/3 bg-app-secondary p-6 rounded-lg shadow-lg"><h2 class="text-3xl font-header text-center">Advice</h2><select id="meadTargetProfile" class="w-full p-2 mb-4"><option value="balanced">Balanced</option></select><button id="getWaterAdviceBtn" class="w-full btn bg-purple-700 text-white">Get Advice</button><div id="water-advice-output"></div></main></div>
+    <div class="flex flex-col lg:flex-row gap-8 lg:items-start">
+        
+        <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app">Water Chemistry</h2>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-bold mb-2">Current Source</label>
+                <select id="waterSource" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"></select>
             </div>
+
+            <div id="waterProfileDisplay" class="mb-6 p-4 card rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <h4 class="text-sm font-bold text-blue-800 dark:text-blue-300 mb-2 uppercase tracking-wider">Active Profile (ppm)</h4>
+                <div class="grid grid-cols-3 gap-2 text-sm text-app-primary">
+                    <div class="text-center"><span class="block font-bold text-xs text-app-secondary">Ca</span><span id="val-ca">--</span></div>
+                    <div class="text-center"><span class="block font-bold text-xs text-app-secondary">Mg</span><span id="val-mg">--</span></div>
+                    <div class="text-center"><span class="block font-bold text-xs text-app-secondary">Na</span><span id="val-na">--</span></div>
+                    <div class="text-center"><span class="block font-bold text-xs text-app-secondary">SO4</span><span id="val-so4">--</span></div>
+                    <div class="text-center"><span class="block font-bold text-xs text-app-secondary">Cl</span><span id="val-cl">--</span></div>
+                    <div class="text-center"><span class="block font-bold text-xs text-app-secondary">HCO3</span><span id="val-hco3">--</span></div>
+                </div>
+            </div>
+
+            <div class="mb-6 pt-6 border-t border-app">
+                <label class="block text-sm font-bold mb-2">AI Lookup (Bottled Water)</label>
+                <div class="flex gap-2">
+                    <input type="text" id="ai-water-search-name" placeholder="e.g. Spa Reine, Evian..." class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
+                    <button id="ai-water-search-btn" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 btn font-bold">Find</button>
+                </div>
+                <p class="text-xs text-app-secondary mt-1">Found profiles will auto-fill the form below.</p>
+            </div>
+
+            <form id="water-profile-form" class="space-y-3 pt-6 border-t border-app">
+                <h4 class="font-bold text-app-primary">Add / Edit Profile</h4>
+                <input type="hidden" id="water-profile-id">
+                <div><input type="text" id="water-profile-name" placeholder="Profile Name (e.g. My Tap Water)" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
+                <div class="grid grid-cols-3 gap-2">
+                    <input type="number" id="manual_ca" placeholder="Ca" class="p-2 border rounded bg-app-tertiary border-app text-app-primary text-sm">
+                    <input type="number" id="manual_mg" placeholder="Mg" class="p-2 border rounded bg-app-tertiary border-app text-app-primary text-sm">
+                    <input type="number" id="manual_na" placeholder="Na" class="p-2 border rounded bg-app-tertiary border-app text-app-primary text-sm">
+                    <input type="number" id="manual_so4" placeholder="SO4" class="p-2 border rounded bg-app-tertiary border-app text-app-primary text-sm">
+                    <input type="number" id="manual_cl" placeholder="Cl" class="p-2 border rounded bg-app-tertiary border-app text-app-primary text-sm">
+                    <input type="number" id="manual_hco3" placeholder="HCO3" class="p-2 border rounded bg-app-tertiary border-app text-app-primary text-sm">
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 btn">Save Profile</button>
+            </form>
+            
+            <div id="user-water-profiles-list" class="mt-4 space-y-2"></div>
+        </aside>
+
+        <main class="lg:w-2/3 bg-app-secondary p-6 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-header font-bold mb-6 text-center text-app-header">Water Sommelier</h2>
+            
+            <div class="mb-6 card p-6 rounded-lg bg-app-tertiary">
+                <p class="mb-4 text-app-primary">Select your water source on the left, then choose your target mead style below. The AI will calculate the necessary salt additions.</p>
+                
+                <div class="flex gap-4 items-end">
+                    <div class="flex-grow">
+                        <label class="block text-sm font-bold mb-2">Target Profile</label>
+                        <select id="meadTargetProfile" class="w-full p-3 border rounded-md bg-app-secondary border-app text-app-primary">
+                            <option value="balanced">Balanced Mead (Standard)</option>
+                            <option value="dry_traditional">Dry Traditional (Crisp)</option>
+                            <option value="sweet_dessert">Sweet / Dessert (Soft)</option>
+                            <option value="melomel">Melomel (Fruit Enhancing)</option>
+                            <option value="metheglin">Metheglin (Spice Forward)</option>
+                        </select>
+                    </div>
+                    <button id="getWaterAdviceBtn" class="bg-app-action text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 btn shadow-lg flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                        Analyze & Adjust
+                    </button>
+                </div>
+            </div>
+
+            <div id="water-advice-output" class="prose max-w-none text-app-primary"></div>
+        </main>
+    </div>
+</div>
             <div id="troubleshoot-view" class="hidden mt-4">
                  <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg"><h2 class="text-3xl font-header text-center">Troubleshooter</h2><div class="max-w-xl mx-auto"><div class="card p-6 rounded-lg"><label>Problem:</label><textarea id="troubleshoot-description" rows="5" class="w-full p-2 border rounded-md"></textarea><button id="troubleshoot-btn" class="w-full mt-4 bg-purple-700 text-white btn">Get Advice</button></div><div id="troubleshoot-output" class="mt-6 prose"></div></div></div>
             </div>
             <div id="social-view" class="hidden mt-4">
-                <div class="bg-app-secondary p-6 rounded-lg shadow-lg"><h2 class="text-3xl font-header text-center">Social Media</h2><div class="card p-4 mb-6"><label>Recipe</label><select id="social-recipe-select" class="w-full p-2 border rounded-md"></select></div><div class="card p-4 mb-6"><div class="grid grid-cols-2 gap-4"><div><label>Persona</label><select id="social-persona" class="w-full p-2"><option value="homebrewer">Homebrewer</option></select></div><div><label>Platform</label><select id="social-platform" class="w-full p-2"><option value="instagram">Instagram</option></select></div></div><textarea id="social-tweak" class="w-full mt-4 p-2" placeholder="Extra instructions"></textarea></div><button id="generate-social-from-recipe-btn" class="w-full bg-app-action text-white btn">Generate</button><div id="social-output-container" class="hidden mt-8"><div id="social-content-container"></div><div id="social-image-container"></div></div></div>
+    <div class="flex flex-col lg:flex-row gap-8">
+        
+        <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app text-app-header">Social Studio</h2>
+            
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-app-secondary mb-2">1. Select Recipe</label>
+                    <select id="social-recipe-select" class="w-full p-3 border rounded-md bg-app-tertiary border-app text-app-primary focus:ring-2 focus:ring-app-brand">
+                        <option value="">-- Choose a Brew --</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-app-secondary mb-2">2. Vibe / Persona</label>
+                        <select id="social-persona" class="w-full p-3 border rounded-md bg-app-tertiary border-app text-app-primary">
+                            <option value="The Artisan">The Artisan (Classy)</option>
+                            <option value="The Viking">The Viking (Bold)</option>
+                            <option value="The Scientist">The Scientist (Geeky)</option>
+                            <option value="The Hipster">The Hipster (Trendy)</option>
+                            <option value="The Monk">The Monk (Mystical)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-app-secondary mb-2">3. Platform</label>
+                        <select id="social-platform" class="w-full p-3 border rounded-md bg-app-tertiary border-app text-app-primary">
+                            <option value="Instagram">Instagram</option>
+                            <option value="Twitter">X / Twitter</option>
+                            <option value="Facebook">Facebook</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-app-secondary mb-2">4. Special Focus (Optional)</label>
+                    <textarea id="social-tweak" rows="2" class="w-full p-3 border rounded-md bg-app-tertiary border-app text-app-primary" placeholder="e.g. Mention it's for a wedding, or highlight the honey source..."></textarea>
+                </div>
+
+                <div class="pt-4 border-t border-app space-y-3">
+                    <button id="generate-social-from-recipe-btn" class="w-full bg-app-action text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 btn flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                        Draft Post & Prompt
+                    </button>
+                </div>
             </div>
+        </aside>
+
+        <main class="lg:w-2/3 flex justify-center items-start">
+            
+            <div class="relative w-full max-w-sm bg-gray-900 rounded-[2.5rem] p-4 shadow-2xl border-4 border-gray-800">
+                <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-xl z-10"></div>
+                
+                <div class="bg-white dark:bg-gray-900 rounded-[2rem] overflow-hidden h-[600px] flex flex-col relative text-gray-800 dark:text-gray-100">
+                    
+                    <div class="h-14 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 mt-2">
+                         <span class="font-bold text-sm">Meandery</span>
+                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path></svg>
+                    </div>
+
+                    <div id="social-image-container" class="w-full aspect-square bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center text-gray-400 relative">
+                        <svg class="w-12 h-12 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span class="text-xs">Image Preview</span>
+                        <button id="generate-social-image-btn" class="hidden absolute bottom-4 right-4 bg-white/90 text-black text-xs font-bold py-2 px-3 rounded-full shadow-lg hover:bg-white flex items-center gap-1">
+                            ✨ AI Generate
+                        </button>
+                    </div>
+
+                    <div class="p-4 overflow-y-auto flex-grow">
+                        <div id="social-content-container" class="text-sm leading-relaxed whitespace-pre-wrap">
+                            <span class="text-gray-400 italic">Your generated caption will appear here...</span>
+                        </div>
+                    </div>
+
+                    <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-2">
+                        <button onclick="window.copySocialPost()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                            Copy Text
+                        </button>
+                        <button onclick="window.saveSocialPost()" class="flex-1 bg-app-tertiary border border-app hover:bg-app-secondary text-app-primary text-xs font-bold py-3 rounded-lg transition-colors">
+                            Save to Log
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
             <div id="library-view" class="hidden mt-4">
-                <div class="bg-app-secondary p-6 rounded-lg shadow-lg"><h2 class="text-3xl font-header text-center">Library</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="card p-4"><h4 class="font-bold">Scott Labs Handbook</h4><a href="#" class="text-blue-600">Open</a></div><div class="card p-4"><h4 class="font-bold">BOMM Protocol</h4><a href="#" class="text-blue-600">Open</a></div></div></div>
+    <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 80vh;">
+        <h2 class="text-3xl font-header font-bold mb-2 text-center text-app-header">The Great Library</h2>
+        <p class="text-center text-app-secondary mb-8 text-sm uppercase tracking-widest">Mastery through Knowledge</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            <a href="https://scottlab.com/content/files/documents/handbooks/Scott-Labs-Handbook-2024.pdf" target="_blank" class="card p-6 hover:border-app-brand transition-all group flex flex-col h-full relative overflow-hidden no-underline">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg class="w-16 h-16 text-app-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                </div>
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="p-3 rounded-full bg-app-tertiary text-app-brand group-hover:bg-app-brand group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                    </div>
+                    <h4 class="text-xl font-header font-bold text-app-primary">Scott Labs Handbook</h4>
+                </div>
+                <p class="text-sm text-app-secondary mb-4 flex-grow">The fermentation bible. Detailed data on yeast strains, nutrients (Go-Ferm/Fermaid), and enzymes. Essential for scientific brewing.</p>
+                <div class="text-xs font-bold text-app-brand uppercase tracking-wider flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    Open PDF <span>&rarr;</span>
+                </div>
+            </a>
+
+            <a href="https://denardbrewing.com/blog/post/BOMM5-acres/" target="_blank" class="card p-6 hover:border-amber-500 transition-all group flex flex-col h-full relative overflow-hidden no-underline">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg class="w-16 h-16 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <div class="flex items-center gap-3 mb-4">
+                     <div class="p-3 rounded-full bg-app-tertiary text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <h4 class="text-xl font-header font-bold text-app-primary">BOMM Protocol</h4>
+                </div>
+                <p class="text-sm text-app-secondary mb-4 flex-grow">"Bray's One Month Mead". The gold standard for fast, clean fermentation using Wyeast 1388 and specific nutrient staggering.</p>
+                <div class="text-xs font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    Read Protocol <span>&rarr;</span>
+                </div>
+            </a>
+
+            <a href="https://www.bjcp.org/style/2015/m/" target="_blank" class="card p-6 hover:border-purple-500 transition-all group flex flex-col h-full relative overflow-hidden no-underline">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg class="w-16 h-16 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+                </div>
+                <div class="flex items-center gap-3 mb-4">
+                     <div class="p-3 rounded-full bg-app-tertiary text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+                    </div>
+                    <h4 class="text-xl font-header font-bold text-app-primary">BJCP Style Guidelines</h4>
+                </div>
+                <p class="text-sm text-app-secondary mb-4 flex-grow">The official definition of every mead style (M1-M4). Use this when designing recipes for competitions to hit the right notes.</p>
+                <div class="text-xs font-bold text-purple-600 uppercase tracking-wider flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    View Guidelines <span>&rarr;</span>
+                </div>
+            </a>
+
+            <a href="https://gotmead.com/blog/the-mead-calculator/" target="_blank" class="card p-6 hover:border-green-600 transition-all group flex flex-col h-full relative overflow-hidden no-underline">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg class="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                </div>
+                 <div class="flex items-center gap-3 mb-4">
+                     <div class="p-3 rounded-full bg-app-tertiary text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h4 class="text-xl font-header font-bold text-app-primary">GotMead Calculator</h4>
+                </div>
+                <p class="text-sm text-app-secondary mb-4 flex-grow">The legendary complex calculator for estimating specific gravity when using fruit, sugar, and honey in varying stages.</p>
+                <div class="text-xs font-bold text-green-600 uppercase tracking-wider flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    Open Tool <span>&rarr;</span>
+                </div>
+            </a>
+            
+             <a href="https://www.meadmakr.com/batch-buildr/" target="_blank" class="card p-6 hover:border-blue-500 transition-all group flex flex-col h-full relative overflow-hidden no-underline">
+                 <div class="flex items-center gap-3 mb-4">
+                     <div class="p-3 rounded-full bg-app-tertiary text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    </div>
+                    <h4 class="text-xl font-header font-bold text-app-primary">BatchBuildr</h4>
+                </div>
+                <p class="text-sm text-app-secondary mb-4 flex-grow">A specialized calculator specifically for determining TOSNA nutrient schedules based on your yeast strain.</p>
+                <div class="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    Plan Nutrients <span>&rarr;</span>
+                </div>
+            </a>
+            
+        </div>
+        
+        <div class="mt-8 p-6 bg-app-tertiary rounded-lg border border-app-brand/20">
+            <h3 class="font-bold text-app-brand mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Internal BrewBuddy Tools
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button onclick="window.switchMainView('tools'); window.switchSubView('calculators', 'tools-main-view')" class="p-3 bg-app-secondary rounded hover:bg-white dark:hover:bg-gray-800 text-left text-sm font-semibold shadow-sm transition-colors text-app-primary">
+                   🔢 Built-in Calculators (ABV, Dilution)
+                </button>
+                <button onclick="window.switchMainView('tools'); window.switchSubView('troubleshoot', 'tools-main-view')" class="p-3 bg-app-secondary rounded hover:bg-white dark:hover:bg-gray-800 text-left text-sm font-semibold shadow-sm transition-colors text-app-primary">
+                   🩺 AI Troubleshooter & Diagnosis
+                </button>
             </div>
         </div>
+    </div>
+</div>
 
         <div id="settings-main-view" class="hidden">
             <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>

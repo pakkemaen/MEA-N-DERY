@@ -23,6 +23,23 @@ let customBottles = []; // Houdt de lijst met custom flessen bij
 let currentPredictedProfile = null;
 let packagingCosts = {}; 
 
+async function saveBrewToHistory(recipeText, flavorProfile) {
+    if (!auth.currentUser) return;
+    try {
+        const historyRef = collection(db, `artifacts/${CONFIG.firebase.projectId}/users/${auth.currentUser.uid}/history`);
+        await addDoc(historyRef, {
+            recipe: recipeText,
+            flavorProfile: flavorProfile || {},
+            timestamp: serverTimestamp(),
+            model: userSettings.aiModel || "gemini-1.5-flash"
+        });
+        showToast("Recipe saved to history!", "success");
+    } catch (error) {
+        console.error("Save error:", error);
+        showToast("Could not save: " + error.message, "error");
+    }
+}
+
 const PACKAGING_ITEMS = [
     { id: 'bottle_750', name: '750ml Bottle' },
     { id: 'bottle_500', name: '500ml Bottle' },
@@ -668,7 +685,9 @@ async function renderRecipeOutput(markdown) {
 
     if (currentPredictedProfile) renderGeneratedFlavorWheel(currentPredictedProfile);
 
-    document.getElementById('saveBtn').addEventListener('click', saveBrewToHistory);
+    document.getElementById('saveBtn').addEventListener('click', () => {
+    saveBrewToHistory(currentRecipeMarkdown, currentPredictedProfile);
+    });
     document.getElementById('tweak-unsaved-btn').addEventListener('click', tweakUnsavedRecipe);
 
     generateAndInjectCreativeTitle(finalMarkdown);
@@ -1031,6 +1050,59 @@ function renderBrewDay(brewId) {
     initializeBrewDayState(primarySteps);
 }
 
+// --- Brew Day 2 (Secondary/Aging) ---
+function renderBrewDay2() {
+    const container = document.getElementById('brew-day-2-view');
+    if (!container) return;
+
+    // Check of er een actieve brouwdag is
+    if (!currentBrewDay || !currentBrewDay.brewId) {
+        container.innerHTML = `
+            <div class="text-center p-8">
+                <h2 class="text-3xl font-header font-bold mb-4">Secondary & Aging</h2>
+                <p class="text-app-secondary">No active brew selected. Start a brew from the History or Creator tab first.</p>
+            </div>`;
+        return;
+    }
+
+    const brew = brews.find(b => b.id === currentBrewDay.brewId);
+    if (!brew) {
+        container.innerHTML = `<p class="text-center text-red-500">Brew data not found.</p>`;
+        return;
+    }
+
+    // Render de interface
+    container.innerHTML = `
+        <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-header font-bold mb-2 text-center text-app-brand">${brew.recipeName}</h2>
+            <p class="text-center text-sm font-bold uppercase tracking-widest text-app-secondary mb-6">Phase 2: Maturation</p>
+            
+            <div class="card p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 mb-6">
+                <h3 class="font-bold text-blue-800 dark:text-blue-200">Instructions</h3>
+                <ul class="list-disc pl-5 text-sm text-app-primary mt-2 space-y-1">
+                    <li>Ensure specific gravity is stable (measure 3 days apart).</li>
+                    <li>Rack (siphon) the mead to a new clean vessel (secondary).</li>
+                    <li>Minimize headspace to prevent oxidation.</li>
+                    <li>Add stabilizers (K-Sorb + K-Meta) if backsweetening.</li>
+                    <li>Wait for clearing (2-6 months depending on style).</li>
+                </ul>
+            </div>
+
+            <div id="brew-day-2-log-container">
+                ${getBrewLogHtml(brew.logData, brew.id + '-secondary')}
+            </div>
+
+            <div class="mt-6 space-y-3">
+                <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Notes</button>
+                <button onclick="window.showBottlingModal('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    Proceed to Bottling
+                </button>
+            </div>
+        </div>
+    `;
+}
+
 // --- STATE & TIMERS ---
 let brewDaySteps = [];
 let currentStepIndex = 0;
@@ -1268,6 +1340,10 @@ function renderHistoryList() {
 window.showBrewDetail = function(brewId) {
     switchMainView('brewing');
     switchSubView('history', 'brewing-main-view');
+
+    const historyDetailContainer = document.getElementById('history-detail-container');
+    const historyListContainer = document.getElementById('history-list-container');
+
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
@@ -1331,28 +1407,6 @@ window.goBackToHistoryList = function() {
     detailContainer.innerHTML = ''; // Fix double ID issue
     detailContainer.classList.add('hidden');
     document.getElementById('history-list-container').classList.remove('hidden');
-}
-
-// Voeg dit helemaal onderaan app.js toe:
-
-async function saveBrewToHistory(recipeText, flavorProfile) {
-    if (!auth.currentUser) return;
-
-    try {
-        const historyRef = collection(db, `artifacts/${CONFIG.firebase.projectId}/users/${auth.currentUser.uid}/history`);
-        
-        await addDoc(historyRef, {
-            recipe: recipeText,
-            flavorProfile: flavorProfile || {},
-            timestamp: serverTimestamp(),
-            model: userSettings.aiModel || "gemini-1.5-flash"
-        });
-        
-        console.log("Recept opgeslagen in geschiedenis!");
-    } catch (error) {
-        console.error("Kon geschiedenis niet opslaan:", error);
-        // We laten de app niet crashen als opslaan mislukt
-    }
 }
 
 // --- LOGGING & DATA FUNCTIONS ---
@@ -1522,18 +1576,6 @@ window.recalculateBatchCost = async function(brewId) {
         await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId), { totalCost: costResult.cost });
         showToast("Cost updated!", "success");
     }
-}
-
-window.saveSocialPost = async function() {
-    const brewId = document.getElementById('social-recipe-select').value;
-    if (!brewId) return alert("Select recipe first.");
-    const content = document.getElementById('social-content-container').innerText;
-    if(!content) return;
-    
-    await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId), {
-        socialMediaPosts: arrayUnion({ platform: document.getElementById('social-platform').value, content, createdAt: new Date().toISOString() })
-    });
-    showToast("Post saved!", "success");
 }
 
 // --- DEEL 8: MANAGEMENT ENGINE (INVENTORY, CELLAR, FINANCIALS) ---
@@ -2487,76 +2529,163 @@ function populateSocialRecipeDropdown() {
     select.value = current;
 }
 
-async function generateSocialImage(title, description) {
-    const container = document.getElementById('social-image-container');
-    container.innerHTML = getLoaderHtml("Painting a masterpiece...");
+// --- SOCIAL MEDIA STUDIO 2.0 LOGIC ---
 
+// 1. De hoofdfunctie om tekst te genereren
+async function runSocialMediaGenerator() {
+    const brewId = document.getElementById('social-recipe-select').value;
+    const persona = document.getElementById('social-persona').value;
+    const platform = document.getElementById('social-platform').value;
+    const tweak = document.getElementById('social-tweak').value; // Dit is nu je "Manual Input" als er geen recept is
+    
+    // Check: Hebben we íets om over te praten?
+    if (!brewId && !tweak) { 
+        showToast("Select a recipe OR type a topic in 'Special Focus'.", "error"); 
+        return; 
+    }
+    
+    const container = document.getElementById('social-content-container');
+    const imageBtn = document.getElementById('generate-social-image-btn');
+
+    // UI Resetten
+    container.innerHTML = getLoaderHtml("Drafting your post...");
+    imageBtn.classList.add('hidden');
+
+    // Context bouwen: Recept OF alleen Vrije Tekst
+    let context = "";
+    if (brewId) {
+        const brew = brews.find(b => b.id === brewId);
+        context = `
+        **TOPIC:** Promoting a specific Mead Recipe.
+        **RECIPE NAME:** ${brew.recipeName}
+        **RECIPE STYLE/DETAILS:** ${brew.recipeMarkdown.substring(0, 500)}...
+        **EXTRA INSTRUCTIONS:** ${tweak}
+        `;
+    } else {
+        context = `
+        **TOPIC:** General post about Mead / Brewing.
+        **USER INPUT:** "${tweak}"
+        (Ignore recipe details, focus purely on this user input).
+        `;
+    }
+
+    const prompt = `You are a Social Media Manager with the persona: "${persona}".
+    **TASK:** Write a viral post for ${platform}.
+    
+    ${context}
+    
+    **OUTPUT RULES:**
+    1. No markdown formatting (no bold/italic syntax), just plain text with Emojis.
+    2. Include 5-10 relevant hashtags at the bottom.
+    3. Keep it engaging and appropriate for ${platform}.
+    4. Also provide a separate, short AI Image Prompt at the very end, starting with "IMG_PROMPT:".
+    `;
+    
+    try {
+        const rawText = await performApiCall(prompt);
+        
+        // Splits tekst en image prompt
+        let finalPost = rawText;
+        let imgPrompt = "";
+
+        if (rawText.includes("IMG_PROMPT:")) {
+            const parts = rawText.split("IMG_PROMPT:");
+            finalPost = parts[0].trim();
+            imgPrompt = parts[1].trim();
+        }
+
+        // Render de tekst in de telefoon
+        container.innerText = finalPost; 
+        
+        // Maak de image knop klaar
+        if (imgPrompt) {
+            imageBtn.classList.remove('hidden');
+            imageBtn.onclick = () => generateSocialImage(imgPrompt);
+        }
+
+    } catch (e) {
+        container.innerHTML = `<p class="text-red-500 text-sm">Error: ${e.message}</p>`;
+    }
+}
+
+// 2. De functie om een plaatje te maken (Stable Diffusion)
+async function generateSocialImage(imagePrompt) {
+    const container = document.getElementById('social-image-container');
+    
+    // Check key
     const imageApiKey = userSettings.imageApiKey;
     if (!imageApiKey) {
-        container.innerHTML = `<p class="text-center text-red-500">Please enter Image API key in Settings.</p>`;
+        showToast("No Image API Key found in Settings!", "error");
         return;
     }
 
-    const prompt = `AI Image Expert: Create a short, descriptive prompt for a photorealistic product shot of this mead: Title "${title}", Desc "${description}". Output ONLY the prompt.`;
+    // Loader in de image container
+    container.innerHTML = `<div class="loader"></div><p class="text-xs text-center mt-2">Diffusion in progress...</p>`;
 
     try {
-        const genPrompt = await performApiCall(prompt);
         const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${imageApiKey}` },
-            body: JSON.stringify({ text_prompts: [{ text: `Photorealistic: ${genPrompt}, cinematic lighting` }], cfg_scale: 7, height: 1024, width: 1024, samples: 1 })
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${imageApiKey}` 
+            },
+            body: JSON.stringify({ 
+                text_prompts: [{ text: `Professional product photography, cinematic lighting, 8k: ${imagePrompt}` }], 
+                cfg_scale: 7, 
+                height: 1024, 
+                width: 1024, 
+                samples: 1 
+            })
         });
 
         if (!response.ok) throw new Error(await response.text());
+        
         const result = await response.json();
-        const img = result.artifacts[0].base64;
-        container.innerHTML = `<img src="data:image/png;base64,${img}" class="rounded-lg mx-auto shadow-lg"><p class="text-xs mt-2">Generated with Stable Diffusion</p>`;
+        const base64Img = result.artifacts[0].base64;
+        
+        // Render het plaatje
+        container.innerHTML = `<img src="data:image/png;base64,${base64Img}" class="w-full h-full object-cover">`;
+        
     } catch (e) {
-        container.innerHTML = `<p class="text-red-500">Error: ${e.message}</p>`;
+        console.error(e);
+        container.innerHTML = `<div class="p-4 text-center"><p class="text-red-500 text-xs">Generation Failed</p><button id="retry-img-btn" class="mt-2 text-xs underline">Retry</button></div>`;
+        document.getElementById('retry-img-btn').onclick = () => generateSocialImage(imagePrompt);
     }
 }
 
-async function runSocialMediaGenerator() {
+// 3. Functie om tekst te kopiëren
+window.copySocialPost = function() {
+    const text = document.getElementById('social-content-container').innerText;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        showToast("Caption copied to clipboard!", "success");
+    });
+}
+
+// 4. Functie om op te slaan in de log van het recept
+window.saveSocialPost = async function() {
     const brewId = document.getElementById('social-recipe-select').value;
-    if (!brewId) return alert("Select a recipe.");
-    const brew = brews.find(b => b.id === brewId);
-    
-    document.getElementById('social-output-container').classList.remove('hidden');
-    const container = document.getElementById('social-content-container');
-    container.innerHTML = getLoaderHtml("Drafting post...");
-    
-    const persona = document.getElementById('social-persona').value;
+    const content = document.getElementById('social-content-container').innerText;
     const platform = document.getElementById('social-platform').value;
-    const tweak = document.getElementById('social-tweak').value;
-    
-    const prompt = `Social Media Expert (${persona}). Platform: ${platform}. Extra info: "${tweak}". Base content on this recipe:\n${brew.recipeMarkdown}\nOutput Markdown.`;
-    
-    try {
-        const text = await performApiCall(prompt);
-        const html = marked.parse(text);
-        container.innerHTML = `<div>${html}</div><div class="mt-6 space-y-2"><button id="trigger-image-btn" class="w-full bg-purple-600 text-white py-2 px-4 rounded btn">Generate Image</button><button onclick="window.saveSocialPost()" class="w-full bg-blue-600 text-white py-2 px-4 rounded btn">Save to Notes</button></div>`;
-        document.getElementById('trigger-image-btn').onclick = (e) => { generateSocialImage(brew.recipeName, text); e.target.style.display='none'; };
-    } catch (e) {
-        container.innerHTML = `<p class="text-red-500">Error: ${e.message}</p>`;
-    }
-}
 
-async function runManualSocialMediaGenerator() {
-    // ... (Zelfde logica als hierboven, maar dan met manualInput) ...
-    // Voor de beknoptheid van dit antwoord: kopieer de logica van runSocialMediaGenerator,
-    // maar gebruik document.getElementById('manual-social-input').value als basis.
-    const input = document.getElementById('manual-social-input').value;
-    if(!input) return alert("Enter text first.");
-    const container = document.getElementById('social-content-container');
-    document.getElementById('social-output-container').classList.remove('hidden');
-    container.innerHTML = getLoaderHtml("Drafting post...");
+    if (!brewId || !content || content.includes("Your generated caption")) {
+        showToast("Nothing to save yet.", "error"); 
+        return; 
+    }
     
-    const prompt = `Social Media Expert. Topic: "${input}". Output Markdown.`;
     try {
-        const text = await performApiCall(prompt);
-        container.innerHTML = `<div>${marked.parse(text)}</div><div class="mt-6"><button id="trigger-img-manual" class="bg-purple-600 text-white btn p-2 rounded">Generate Image</button></div>`;
-        document.getElementById('trigger-img-manual').onclick = (e) => { generateSocialImage("Mead Post", text); e.target.style.display='none'; };
-    } catch(e) { container.innerHTML = `<p class="text-red-500">${e.message}</p>`; }
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId), {
+            socialMediaPosts: arrayUnion({ 
+                platform: platform, 
+                content: content, 
+                createdAt: new Date().toISOString() 
+            })
+        });
+        showToast("Post saved to recipe history!", "success");
+    } catch(e) {
+        console.error(e);
+        showToast("Save failed.", "error");
+    }
 }
 
 // --- DATA & SETTINGS ---
@@ -3601,7 +3730,6 @@ function initApp() {
     document.getElementById('calcDilutionBtn')?.addEventListener('click', calculateDilution);
     document.getElementById('calcTosnaBtn')?.addEventListener('click', calculateTOSNA);
     document.getElementById('getYeastAdviceBtn')?.addEventListener('click', getYeastAdvice);
-    document.getElementById('generate-manual-social-btn')?.addEventListener('click', runManualSocialMediaGenerator);
     document.getElementById('generate-social-from-recipe-btn')?.addEventListener('click', runSocialMediaGenerator);
     document.getElementById('getWaterAdviceBtn')?.addEventListener('click', getWaterAdvice);
     document.getElementById('troubleshoot-btn')?.addEventListener('click', getTroubleshootingAdvice);

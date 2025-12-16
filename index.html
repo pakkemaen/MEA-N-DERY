@@ -22,12 +22,26 @@
     <link rel="stylesheet" href="style.css">
 
     <script>
+        // --- NOODOPLOSSING: KILL SWITCH ---
+        // Dit script verwijdert geforceerd alle Service Workers bij het laden van de pagina.
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js').then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                }, err => {
-                    console.log('ServiceWorker registration failed: ', err);
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister()
+                            .then(() => console.log("💀 Oude Service Worker is VERWIJDERD!"))
+                            .catch(err => console.error("Kon niet verwijderen:", err));
+                    }
+                    
+                    // Optioneel: Maak ook de cache opslag leeg voor een écht schone lei
+                    if ('caches' in window) {
+                        caches.keys().then((names) => {
+                            names.forEach(name => {
+                                caches.delete(name);
+                                console.log(`🧹 Cache ${name} gewist.`);
+                            });
+                        });
+                    }
                 });
             });
         }

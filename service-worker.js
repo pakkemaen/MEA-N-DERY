@@ -1,42 +1,41 @@
-const CACHE_NAME = 'meandery-cache-v3'; // Versie omhoog naar v3!
+const CACHE_NAME = 'meandery-cache-v5'; // Versie opgehoogd naar v5
 
-// We cachen alleen de bestanden die ZEKER bestaan.
-// Als hier één bestand tussen staat dat niet bestaat, crasht de hele app-update.
+// ALLEEN bestanden die 100% zeker bestaan hierin zetten!
+// Als er één mist, crasht je hele app-update.
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
   './app.js',
-  './secrets.js' 
-  // Iconen tijdelijk weggehaald om crashes te voorkomen.
-  // Voeg ze pas toe als je zeker weet dat de bestanden in de map staan!
+  './manifest.json'
+  // './secrets.js' <--- UITGEZET VOOR DE ZEKERHEID (wordt later wel geladen door app.js)
 ];
 
-// 1. Installeren en Cachen
 self.addEventListener('install', event => {
-  // Forceer de nieuwe service worker om meteen actief te worden
-  self.skipWaiting();
-  
+  self.skipWaiting(); // Forceer directe activatie van de nieuwe versie
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
-      .catch(err => {
-          console.error("Cache addAll failed. Waarschijnlijk bestaat een bestand niet:", err);
+        console.log('Caching essential files');
+        // We gebruiken hier een trucje: als één bestand faalt, gaat de rest tenminste door
+        return Promise.all(
+          urlsToCache.map(url => {
+            return cache.add(url).catch(err => {
+              console.error('Kon bestand niet cachen (niet erg):', url, err);
+            });
+          })
+        );
       })
   );
 });
 
-// 2. Oude caches opruimen (Activeer)
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
+          // Verwijder ALLE oude caches die niet v5 zijn
+          if (cacheName !== CACHE_NAME) {
             console.log('Oude cache verwijderd:', cacheName);
             return caches.delete(cacheName);
           }
@@ -44,28 +43,29 @@ self.addEventListener('activate', event => {
       );
     })
   );
-  return self.clients.claim(); // Neem controle over alle open tabbladen
+  return self.clients.claim(); // Neem direct controle over de pagina
 });
 
-// 3. Fetch (Netwerk eerst, dan Cache - Veiliger voor updates)
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Als netwerk lukt: update de cache met de nieuwe versie
-        if (!response || response.status !== 200 || response.type !== 'basic') {
+  // Netwerk-eerst strategie voor HTML en JS (zorgt dat je updates sneller ziet)
+  if (event.request.mode === 'navigate' || event.request.destination === 'script') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          return caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, response.clone());
             return response;
-        }
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME)
-          .then(cache => {
-            cache.put(event.request, responseToCache);
           });
-        return response;
-      })
-      .catch(() => {
-        // Als netwerk faalt (offline): gebruik cache
-        return caches.match(event.request);
-      })
-  );
+        })
+        .catch(() => {
+          return caches.match(event.request);
+        })
+    );
+  } else {
+    // Cache-eerst voor afbeeldingen en fonts (sneller laden)
+    event.respondWith(
+      caches.match(event.request)
+        .then(response => response || fetch(event.request))
+    );
+  }
 });

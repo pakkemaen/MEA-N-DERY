@@ -1,0 +1,749 @@
+/* --- 1. VARIABLES & THEME SETUP --- */
+    
+    /* DEFAULT: LIGHT MODE ("The Parchment/Paper Look") */
+    :root {
+        /* Achtergronden */
+        --bg-primary: #f4f1ea;       /* Warm, "papier" wit (Luxe uitstraling) */
+        --bg-secondary: #ffffff;     /* Puur wit voor de kaarten/panelen (Diepte) */
+        --bg-tertiary: #ebe9e4;      /* Iets donkerder beige voor inputs */
+        
+        /* Tekst */
+        --text-primary: #2d2a26;     /* Zeer donker 'Charcoal' (Zachter dan zwart) */
+        --text-secondary: #6b655d;   /* Warm grijs */
+        --border-color: #d6d3c9;     /* Zachte rand, niet te hard */
+        
+        /* Brand Colors */
+        --brand-color: #8F8C79;      /* Je Olijf/Goud basis */
+        --brand-dark: #666352;       /* Een donkerdere variant voor tekst-leesbaarheid op wit */
+        --action-color: #b45309;     /* Iets donkerder Amber voor goed contrast op wit */
+        
+        /* Functional Colors */
+        --danger-color: #dc2626;
+        --success-color: #16a34a;
+        --info-color: #2563eb;
+        
+        /* Spacing & Radius (Universeel) */
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    /* OVERRIDE: DARK MODE ("The Cellar Look") */
+    .dark {
+        /* Achtergronden */
+        --bg-primary: #0f0f0f;       /* Diep zwart */
+        --bg-secondary: #1a1a1a;     /* Donkergrijs paneel */
+        --bg-tertiary: #262626;      /* Lichter grijs inputs */
+        
+        /* Tekst */
+        --text-primary: #e5e5e5;     /* Off-white */
+        --text-secondary: #a3a3a3;   /* Grijs */
+        --border-color: #333333;     /* Donkere rand */
+        
+        /* Brand Colors */
+        --brand-color: #8F8C79;      /* De originele kleur */
+        --brand-dark: #a8a593;       /* Iets lichter voor hover in het donker */
+        --action-color: #d97706;     /* De originele Amber */
+        
+        /* Schaduw mag in dark mode iets sterker zijn */
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    }
+
+    body {
+        font-family: 'Barlow Semi Condensed', sans-serif;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        transition: background-color 0.3s, color 0.3s;
+        line-height: 1.6;
+        padding-bottom: env(safe-area-inset-bottom); /* Zorgt voor ruimte bij de swipe-bar */
+    }
+
+    /* Zorg dat placeholders leesbaar zijn in light mode */
+    ::placeholder {
+        color: #a8a29e; /* Een iets donkerder grijs */
+        opacity: 1;
+    }
+
+    .dark ::placeholder {
+        color: #525252; /* Iets lichter voor dark mode */
+    }
+
+    /* --- 2. TYPOGRAPHY (UNIFIED) --- */
+    /* Alle koppen krijgen nu de 'Recipe Style' */
+    h1, h2, h3, h4, .font-header {
+        font-family: 'Barlow Semi Condensed', sans-serif;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-primary);
+    }
+
+    h1 { font-size: 2.5rem; line-height: 1.1; }
+    h2 { font-size: 1.75rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; }
+    h3 { font-size: 1.25rem; margin-bottom: 1rem; color: var(--brand-color); }
+
+    .text-app-secondary { color: var(--text-secondary) !important; }
+    .text-app-brand { color: var(--brand-color) !important; }
+
+    /* --- 3. CARDS & CONTAINERS --- */
+    /* Maak alle vlakken consistent */
+    .card, .bg-app-secondary {
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    /* Specifiek voor dashboard knoppen */
+    button.card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-color: var(--brand-color);
+    }
+
+    /* --- 4. FORMS & INPUTS (MODERN) --- */
+    input[type="text"], input[type="number"], input[type="date"], 
+    input[type="password"], select, textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        background-color: var(--bg-tertiary);
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 1rem;
+        transition: all 0.2s;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: var(--brand-color);
+        background-color: var(--bg-secondary);
+        box-shadow: 0 0 0 3px rgba(143, 140, 121, 0.15); /* Glow effect */
+    }
+
+    /* Dark mode fixes voor inputs */
+    .dark input, .dark select, .dark textarea {
+        background-color: var(--bg-tertiary) !important;
+        color: var(--text-primary) !important;
+    }
+    
+    /* Fix voor browser autofill (witte achtergrond) */
+    .dark input:-webkit-autofill {
+        -webkit-box-shadow: 0 0 0 30px var(--bg-tertiary) inset !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
+    }
+
+    /* --- 5. BUTTON SYSTEM --- */
+    
+    /* Basis Knop Stijl */
+    .btn {
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-radius: var(--radius-md);
+        padding: 10px 20px;
+        transition: all 0.2s;
+        cursor: pointer;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Subtiele schaduw voor diepte */
+    }
+    
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.15); }
+    .btn:active { transform: translateY(0); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* 1. PRIMARY ACTION (De belangrijkste knop: Generate, Save, Start) - AMBER/ORANJE */
+    .bg-app-action {
+        background-color: var(--action-color) !important; /* Amber/Oranje */
+        color: #ffffff !important;
+    }
+
+    /* 2. SECONDARY / BRAND (Neutrale acties: Navigatie, Info) - OLIVE/GREY */
+    .bg-app-brand, .bg-primary-btn {
+        background-color: var(--brand-color) !important; /* Olive */
+        color: #ffffff !important;
+    }
+
+    /* 3. FUNCTIONAL COLORS (Specifieke acties) */
+    .bg-green-600, .bg-green-700 { background-color: var(--success-color) !important; color: white !important; }
+    .bg-red-600, .bg-red-700     { background-color: var(--danger-color) !important; color: white !important; }
+    .bg-blue-600, .bg-blue-700   { background-color: var(--info-color) !important; color: white !important; }
+    .bg-purple-600, .bg-purple-700 { background-color: #9333ea !important; color: white !important; } /* AI Actions */
+
+    /* 4. TERTIARY / GHOST (Annuleren, Minder belangrijk) */
+    .bg-app-tertiary {
+        background-color: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        box-shadow: none;
+    }
+    .bg-app-tertiary:hover {
+        border-color: var(--brand-color);
+        background-color: var(--bg-secondary);
+    }
+
+    /* --- TEXTAREA FIXES --- */
+    textarea {
+        /* 1. Meer ademruimte: tekst en placeholder schuiven naar binnen */
+        padding: 16px !important; 
+        
+        /* 2. Verwijder het 'puntje' (resize handle) rechtsonder */
+        resize: none !important; 
+        
+        /* Zorg dat de tekst mooi leest */
+        line-height: 1.6 !important;
+    }
+
+    /* 5. NAVIGATION BUTTONS (Dashboard tegels) */
+    .main-nav-btn {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.2s; /* Zorg voor soepele overgang */
+    }
+    
+    /* HOVER STAAT (AANGEPAST VOOR CONTRAST) */
+    .main-nav-btn:hover {
+        border-color: var(--brand-color);
+        background-color: var(--bg-tertiary); /* Iets donkerder dan wit */
+        color: var(--brand-color); /* Tekst wordt goud/olijf */
+        transform: translateY(-2px); /* Klein hupje */
+    }
+    
+    /* Zorg dat het icoon ook meekleurd bij hover */
+    .main-nav-btn:hover svg {
+        color: var(--brand-color);
+    }
+
+    /* --- 6. TABLES (CLEAN & TRANSPARENT) --- */
+    table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin: 1rem 0;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+    }
+
+    th {
+        background-color: var(--text-primary);
+        color: var(--bg-primary);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        padding: 12px 16px;
+        text-align: left;
+        letter-spacing: 0.05em;
+    }
+
+    td {
+        padding: 0; /* Geen padding in de cel zelf, de input vult hem op */
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.95rem;
+        height: 3rem; /* Vaste hoogte voor rust */
+        position: relative;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    
+    /* Zebra striping */
+    tr:nth-child(even) { background-color: rgba(0,0,0,0.02); }
+    .dark tr:nth-child(even) { background-color: rgba(255,255,255,0.03); }
+
+    /* --- DE FIX: TRANSPARANTE INPUTS --- */
+    table input, table select {
+        background-color: transparent !important; /* Geen achtergrondkleur! */
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        
+        width: 100%;
+        height: 100%;
+        padding: 0 12px !important; /* Padding in de input zelf */
+        
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 0.95rem;
+    }
+
+    /* Zorg dat datums en nummers niet verspringen */
+    table input[type="date"], 
+    table input[type="number"] {
+        text-align: left;
+        cursor: pointer; /* Laat zien dat het klikbaar is */
+    }
+
+    /* Centreer de nummers in de middelste kolommen als je dat wilt */
+    table td:not(:first-child):not(:last-child) input {
+        text-align: center;
+    }
+
+    /* Alleen als je erop klikt/typt krijg je een highlight */
+    table input:focus {
+        background-color: var(--bg-tertiary) !important; /* Lichte highlight */
+        outline: 2px solid var(--brand-color);
+        outline-offset: -2px; /* Randje binnenin */
+    }
+
+    /* 1. De Container (Het kader om alles heen) */
+    .log-container {
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg); /* Mooie ronde hoeken */
+        overflow: hidden; /* Zorgt dat de hoeken van de tabel niet uitsteken */
+        background-color: var(--bg-secondary); /* Achtergrondkleur */
+        margin-bottom: 0.5rem; /* Ruimte onder de tabel */
+    }
+
+    /* 2. De Tabel zelf resetten */
+    table.fermentation-table {
+        border: none !important; /* Geen dubbele randen */
+        border-radius: 0 !important;
+        margin: 0 !important; /* Geen marges binnen het kader */
+    }
+
+    /* 3. De Header Balk */
+    .fermentation-table th {
+        background-color: var(--text-primary); /* Zwart/Donker */
+        color: var(--bg-primary); /* Wit/Licht tekst */
+        border: none;
+    }
+
+    /* 4. De Rijen */
+    .fermentation-table td {
+        border-bottom: 1px solid var(--border-color);
+        /* Zorg dat de inputs transparant zijn zodat de rij-kleur zichtbaar blijft */
+    }
+
+    /* De allerlaatste rij mag geen lijntje onderaan hebben, anders ziet het er dubbel uit met het kader */
+    .fermentation-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* --- 7. NAVIGATION TABS --- */
+    .sub-tab {
+        padding: 8px 16px;
+        border-radius: 20px; /* Pill shape */
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-secondary); /* Dit is #6b655d in light mode - kan te licht zijn */
+    }
+
+    /* FIX: Maak de tekst donkerder bij hover in light mode */
+    .sub-tab:hover {
+        background-color: var(--bg-tertiary);
+        color: var(--brand-dark); /* Gebruik de donkere brand kleur (#6e6b5c) */
+    }
+
+    /* FIX: Zorg voor hard contrast bij actieve tab */
+    .sub-tab.active {
+        background-color: var(--text-primary); /* Donkergrijs in light mode */
+        color: #ffffff; /* Geforceerd wit voor leesbaarheid */
+        border-color: var(--text-primary);
+    }
+    
+    .dark .sub-tab.active {
+        background-color: var(--brand-color);
+        color: #000;
+        border-color: var(--brand-color);
+    }
+
+    /* --- 8. RECIPE CONTENT SPECIFICS (IMPROVED TYPOGRAPHY) --- */
+    
+    /* Basiscontainer voor het recept */
+    .recipe-content {
+        line-height: 1.7; /* Meer lucht tussen regels tekst */
+        font-size: 1.05rem; /* Iets groter voor leesbaarheid */
+    }
+
+    /* --- JUWELIERS FINISH: THE GRAND TITLE --- */
+    .recipe-content h1 {
+        font-family: 'Barlow Semi Condensed', sans-serif;
+        font-size: 3rem;       /* Veel groter (was standaard) */
+        font-weight: 800;      /* Extra dik */
+        color: var(--brand-color); /* Je huisstijl kleur */
+        text-transform: uppercase;
+        letter-spacing: 0.1em; /* Breed uitgesmeerd voor luxe */
+        line-height: 1.1;
+        
+        /* De "Underline" afwerking */
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 4px double var(--border-color); /* Een dubbele, klassieke lijn */
+        
+        /* Subtiele schaduw voor diepte */
+        text-shadow: 2px 2px 0px rgba(0,0,0,0.05); 
+    }
+
+    /* Mobiele aanpassing zodat het niet van het scherm valt */
+    @media (max-width: 768px) {
+        .recipe-content h1 {
+            font-size: 2.2rem;
+            letter-spacing: 0.05em;
+        }
+    }
+
+    /* Koppen (H2, H3) - Duidelijke scheiding */
+    .recipe-content h2, .recipe-content h3 { 
+        color: var(--brand-color); 
+        margin-top: 2.5rem; /* Ruimte boven de kop */
+        margin-bottom: 1rem; /* Ruimte onder de kop */
+        font-family: 'Barlow Semi Condensed', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .recipe-content h2 { 
+        font-size: 1.8rem;
+        border-bottom: 2px solid var(--border-color); 
+        padding-bottom: 0.5rem; 
+    }
+
+    .recipe-content h3 {
+        font-size: 1.4rem;
+        border-bottom: 1px dashed var(--border-color); /* Subtiel lijntje onder H3 */
+        padding-bottom: 0.25rem;
+    }
+
+    /* Paragrafen - Niet meer in hokjes, maar vrijstaand met ruimte */
+    .recipe-content p {
+        margin-bottom: 1.25rem;
+        color: var(--text-primary);
+    }
+
+    /* Lijstjes (Ingrediënten, Stappen) - Dit lost het "op elkaar gepropt" probleem op */
+    .recipe-content ul, .recipe-content ol {
+        margin-bottom: 1.5rem;
+        padding-left: 1.5rem; /* Netjes inspringen */
+        background-color: var(--bg-tertiary); /* Het hele lijstje in 1 mooi vlak */
+        border-radius: var(--radius-md);
+        padding: 1.5rem 2rem; /* Ruimte binnen het vlak */
+        border: 1px solid var(--border-color);
+    }
+
+    /* De items in de lijst */
+    .recipe-content li { 
+        margin-bottom: 0.75rem; /* Ruimte TUSSEN de puntjes */
+        position: relative; 
+    }
+
+    /* Nummertjes voor geordende lijsten (Instructions) */
+    .recipe-content ol { 
+        list-style: none; 
+        counter-reset: recipe-counter; 
+    }
+    
+    .recipe-content ol li {
+        counter-increment: recipe-counter;
+        padding-left: 2rem;
+    }
+
+    .recipe-content ol li::before {
+        content: counter(recipe-counter);
+        position: absolute;
+        left: 0;
+        top: 0.1em;
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: var(--brand-color);
+        color: white;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 1.5rem;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
+
+    /* Labels dikgedrukt (bijv "Target ABV:") - Meer ruimte rechts */
+    .recipe-content strong {
+        color: var(--text-primary);
+        font-weight: 700;
+        margin-right: 0.3rem; /* Ruimte tussen label en waarde */
+    }
+
+    /* Tabellen (voor ingrediënten als de AI die maakt) */
+    .recipe-content table {
+        width: 100%;
+        margin-bottom: 1.5rem;
+        border-collapse: collapse;
+    }
+    .recipe-content th, .recipe-content td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    /* --- JUWELIERS FINISH: STATS BAR & QUOTE --- */
+    
+    /* 1. De Inspiratie Quote (Het zinnetje met >) */
+    .recipe-content blockquote {
+        font-style: italic;
+        color: var(--brand-color);
+        border-left: 3px solid var(--brand-color);
+        padding-left: 1rem;
+        margin: 0 0 1.5rem 0;
+        font-size: 1.1rem;
+        background: transparent; /* Geen grijs vlak */
+    }
+
+    /* 2. De Vital Stats (Het eerste lijstje in het recept) */
+    /* We selecteren specifiek de EERSTE ul na de blockquote */
+    .recipe-content blockquote + ul {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* Responsive Grid */
+        gap: 0.75rem;
+        list-style: none !important; /* Geen bolletjes */
+        padding: 0 !important;       /* Geen inspringing */
+        margin-bottom: 2rem !important;
+        background: transparent !important; /* Geen container kleur */
+        border: none !important;
+    }
+
+    /* 3. De Tegels (Badges) */
+    .recipe-content blockquote + ul li {
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 0.75rem !important;
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 0 !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* 4. Styling van de tekst in de tegels */
+    /* De AI doet "**Label:** Waarde". Wij stylen de **Label** apart. */
+    .recipe-content blockquote + ul li strong {
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+        margin-right: 0 !important;
+    }
+    
+    /* De Waarde (de tekst na de dubbele punt) */
+    .recipe-content blockquote + ul li {
+        color: var(--brand-color); /* Maak de waarde de brand kleur */
+        font-weight: 700;
+        font-size: 1.1rem;
+        font-family: 'Barlow Semi Condensed', sans-serif;
+    }
+
+    /* --- 9. UTILITIES & MOBILE --- */
+    .hidden { display: none !important; }
+    
+    /* --- JUWELIERS FINISH: INVISIBLE SCROLL (NUCLEAR OPTION V2) --- */
+    .no-scrollbar {
+        -ms-overflow-style: none !important;  /* IE and Edge */
+        scrollbar-width: none !important;  /* Firefox */
+    }
+    
+    /* Verberg de scrollbar zelf */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        background: transparent !important;
+        -webkit-appearance: none !important;
+    }
+
+    /* Verberg de 'track' (de achtergrondbalk) */
+    .no-scrollbar::-webkit-scrollbar-track {
+        display: none !important;
+        background: transparent !important;
+    }
+
+    /* Verberg de 'thumb' (het schuifblokje) */
+    .no-scrollbar::-webkit-scrollbar-thumb {
+        display: none !important;
+        background: transparent !important;
+    }
+    
+    .loader {
+        border: 3px solid var(--bg-tertiary);
+        border-top: 3px solid var(--brand-color);
+        border-radius: 50%;
+        width: 30px; height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 2rem auto;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* --- DIAMOND POLISH: CUSTOM LOADER --- */
+    .honeycomb-loader {
+        width: 50px;
+        height: 50px;
+        margin: 2rem auto;
+        display: block;
+    }
+
+    .honeycomb-path {
+        fill: none;
+        stroke: var(--brand-color); /* Jouw Olive kleur */
+        stroke-width: 4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 210; /* Omtrek van de hexagon */
+        stroke-dashoffset: 210;
+        animation: drawHex 2s linear infinite, glowHex 2s ease-in-out infinite;
+        transform-origin: center;
+    }
+
+    .honeycomb-core {
+        fill: var(--brand-color);
+        opacity: 0;
+        animation: pulseCore 2s ease-in-out infinite;
+        transform-origin: center;
+    }
+
+    @keyframes drawHex {
+        0% { stroke-dashoffset: 210; }
+        50% { stroke-dashoffset: 0; }
+        100% { stroke-dashoffset: -210; }
+    }
+
+    @keyframes pulseCore {
+        0%, 100% { transform: scale(0); opacity: 0; }
+        50% { transform: scale(0.5); opacity: 0.3; }
+    }
+
+    @keyframes glowHex {
+        0%, 100% { filter: drop-shadow(0 0 2px rgba(143, 140, 121, 0)); }
+        50% { filter: drop-shadow(0 0 8px rgba(143, 140, 121, 0.6)); }
+    } 
+
+    @media (max-width: 768px) {
+        h1 { font-size: 2rem; }
+        .card { padding: 1rem !important; } /* Minder padding op mobiel */
+        input, select, textarea { font-size: 16px !important; } /* Zoom fix */
+        th, td { padding: 8px 10px; font-size: 0.85rem; } /* Compactere tabellen */
+        
+        /* Sticky headers voor lange lijsten */
+        .inventory-panel th, .fermentation-table th {
+            position: sticky; top: 0; z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* --- MOBILE OPTIMIZATION FOR LISTS --- */
+    
+        /* 1. Minder lucht binnen het grijze kader */
+        .recipe-content ul, .recipe-content ol {
+           padding: 1rem 1rem !important; 
+       }
+
+       /* 2. Minder inspringen voor de tekst naast het nummer */
+       .recipe-content ol li {
+           padding-left: 1.75rem !important; /* Was 2rem */
+       }
+
+       /* 3. Het nummer-bolletje iets kleiner en dichterbij */
+       .recipe-content ol li::before {
+           width: 1.25rem !important;
+           height: 1.25rem !important;
+           line-height: 1.25rem !important;
+           font-size: 0.75rem !important;
+           top: 0.2em !important;
+       }
+
+       /* 4. CRUCIAAL: Geneste lijsten (lijst in een lijst) */
+       /* Dit lost het probleem in je screenshot op */
+       .recipe-content ol ol, 
+       .recipe-content ul ul,
+       .recipe-content ol ul,
+       .recipe-content ul ol {
+           margin-top: 0.5rem !important;
+           margin-bottom: 0.5rem !important;
+        
+           /* Reset de padding van het grijze vlak voor geneste lijsten */
+           padding-left: 0.5rem !important; 
+           padding-right: 0 !important;
+           padding-top: 0 !important;
+           padding-bottom: 0 !important;
+        
+           /* Geen dubbele kaders of achtergronden voor geneste lijsten */
+           background-color: transparent !important;
+           border: none !important;
+       }
+    }
+
+    /* --- JUWELIERS FINISH: LIVING BREW ANIMATION --- */
+    @keyframes softPulse {
+        0% { box-shadow: 0 0 0 0 rgba(143, 140, 121, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(143, 140, 121, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(143, 140, 121, 0); }
+    }
+
+    .living-node {
+        animation: softPulse 2s infinite;
+        background-color: var(--brand-color) !important;
+        border-color: var(--bg-secondary) !important;
+    }
+    
+    /* Label Preview Styles (Behouden) */
+    #label-preview { transition: all 0.3s; }
+    .label-minimalist { background: #fff; color: #000; border: 1px solid #ccc; font-family: sans-serif; }
+    .label-industrial { background: #fff; color: #000; border: 2px solid #000; font-family: monospace; }
+    .label-professional { background: #fff; color: #2b2118; border: 4px double #2b2118; font-family: serif; }
+    
+    /* Timeline Styles (Behouden) */
+    .timeline-container { position: relative; display: flex; justify-content: space-between; padding: 1rem 0; }
+    /* Standaard connector stijl */
+    .timeline-connector { 
+        position: absolute; top: 50%; left: 0; right: 0; height: 4px; 
+        background: #d1cec4; /* Standaard donkerder voor light mode */
+        transform: translateY(-50%); z-index: 1; 
+    }
+    /* Dark mode override */
+    .dark .timeline-connector {
+        background-color: var(--border-color);
+    }
+
+    .timeline-progress { position: absolute; top: 0; left: 0; height: 100%; background: var(--brand-color); transition: width 0.5s; }
+    .timeline-item { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; width: 25%; }
+    .timeline-node { width: 20px; height: 20px; background: var(--bg-tertiary); border: 4px solid var(--border-color); border-radius: 50%; }
+    .timeline-item.active .timeline-node { background: var(--brand-color); border-color: var(--brand-color); }
+    .timeline-label { margin-top: 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
+    .timeline-item.active .timeline-label { color: var(--text-primary); }
+    
+    /* Progress Bar Styles */
+    .progress-bar-bg {
+        background-color: var(--border-color); /* Lichtgrijs in light, donkergrijs in dark */
+        overflow: hidden; /* Zorgt dat de vulling niet buiten de ronding komt */
+    }
+    
+    .progress-bar-fg {
+        background-color: var(--brand-color);
+        transition: width 0.5s ease-in-out;
+    }
+
+    /* Toggle Switch */
+    .theme-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+    .theme-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: var(--brand-color); }
+    input:checked + .slider:before { transform: translateX(24px); }
+    
+    /* Styling voor de checkbuttons in de shopping list */
+    input[type="checkbox"]:checked {
+        background-color: var(--brand-color) !important;
+        border-color: var(--brand-color) !important;
+        color: white !important;
+    }
+
+    input[type="checkbox"]:focus {
+        ring-color: var(--brand-color) !important;
+    }

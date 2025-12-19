@@ -23,14 +23,28 @@ let customBottles = []; // Houdt de lijst met custom flessen bij
 let currentPredictedProfile = null;
 let packagingCosts = {}; 
 
+// --- LABEL CONFIG (BUILT-IN & CUSTOM) ---
+const builtInLabelFormats = {
+    'avery_l7165': { name: 'Avery L7165 (99.1x67.7mm)', width: 99.1, height: 67.7, cols: 2, rows: 4, marginTop: 13, marginLeft: 4.6, gapX: 2.5, gapY: 0 },
+    'herma_4453': { name: 'Herma 4453 (105x148mm)', width: 105, height: 148, cols: 2, rows: 2, marginTop: 0, marginLeft: 0, gapX: 0, gapY: 0 },
+    'avery_l7163': { name: 'Avery L7163 (99.1x38.1mm)', width: 99.1, height: 38.1, cols: 2, rows: 7, marginTop: 15, marginLeft: 4.6, gapX: 2.5, gapY: 0 }
+};
+let userLabelFormats = {}; // Wordt geladen uit Firestore
+
 async function saveBrewToHistory(recipeText, flavorProfile) {
     if (!auth.currentUser) return;
     try {
-        const historyRef = collection(db, `artifacts/${CONFIG.firebase.projectId}/users/${auth.currentUser.uid}/history`);
+        // AANPASSING: We gebruiken nu hardcoded 'meandery-aa05e' en 'brews' 
+        // zodat het matcht met de rest van de app (loadHistory).
+        const historyRef = collection(db, 'artifacts', 'meandery-aa05e', 'users', auth.currentUser.uid, 'brews');
+        
         await addDoc(historyRef, {
-            recipe: recipeText,
+            recipeName: extractTitle(recipeText) || "Untitled Brew", // Extra helper om titel te pakken
+            recipeMarkdown: recipeText, // We noemen het nu recipeMarkdown voor consistentie
             flavorProfile: flavorProfile || {},
-            timestamp: serverTimestamp(),
+            createdAt: serverTimestamp(), // Belangrijk voor het sorteren
+            logData: {}, // Leeg logboek initialiseren
+            checklist: {}, // Lege checklist initialiseren
             model: userSettings.aiModel || "gemini-1.5-flash-001"
         });
         showToast("Recipe saved to history!", "success");
@@ -40,6 +54,11 @@ async function saveBrewToHistory(recipeText, flavorProfile) {
     }
 }
 
+// Klein hulpfunctie'tje om de titel uit de markdown te vissen (voor de lijstweergave)
+function extractTitle(markdown) {
+    const match = markdown.match(/^#\s*(.*)/m);
+    return match ? match[1].trim() : null;
+}
 const PACKAGING_ITEMS = [
     { id: 'bottle_750', name: '750ml Bottle' },
     { id: 'bottle_500', name: '500ml Bottle' },
@@ -748,11 +767,32 @@ window.findCommercialWaterMatch = async function() {
     const resultsDiv = document.getElementById('water-brand-results');
     if (!resultsDiv || !currentRecipeMarkdown) return;
     resultsDiv.classList.remove('hidden');
-    resultsDiv.innerHTML = getLoaderHtml("Sommelier is searching...");
+    resultsDiv.innerHTML = getLoaderHtml("Scanning Belgian inventory...");
 
-    const prompt = `You are a Water Sommelier. Analyze this mead recipe's target water profile. Recommend 3 real-world commercial water brands (EU/US). 
+    const lowerRecipe = currentRecipeMarkdown.toLowerCase();
+    const styleHint = lowerRecipe.includes('melomel') || lowerRecipe.includes('fruit') 
+        ? "Fruit Mead (Prefers soft/low mineral water)" 
+        : "Traditional (Prefers some mineral structure)";
+
+    const prompt = `You are a Water Sommelier for a Mead Brewer in BELGIUM. 
+    
+    **CONTEXT:** ${styleHint}
+    **USER TOOL:** The user uses a **Refractometer (Brix)**. Carbonation bubbles are NOT an issue for measuring.
+    
+    **TASK:** Recommend 3 real-world bottled water brands found in **BELGIAN SUPERMARKETS**.
+    
+    **SEARCH SCOPE:** - Do NOT stick to a pre-defined list. Search your knowledge base for widely available Belgian/European brands.
+    - **CRITICAL:** Do NOT recommend American brands (Dasani, Poland Spring). Only brands sold in Belgium.
+
+    **GUIDELINES:** 1. **STILL vs SPARKLING:** - Standard recommendation: "Plat/Still" (safest baseline).
+       - Exception: If the style benefits from it, you MAY recommend a Sparkling variant.
+       - Requirement: If Sparkling is chosen, add note: "Degas sample before measuring final gravity".
+    2. **NO SALT ADDITIONS:** The user uses the water "as is". Find the perfect natural profile.
+    3. **SOURCE CHECK:** If recommending a brand with multiple sources (like Cristaline or generic supermarket brands), you **MUST** specify which specific source/catchment area on the label is required (e.g. "Source Eleanor").
+    
     RECIPE: ${currentRecipeMarkdown}
-    OUTPUT: JSON Array: [{"brand": "Name", "reason": "Why", "tweak_instruction": "Specific tweak instruction"}]`;
+    
+    OUTPUT: JSON Array: [{"brand": "Name", "reason": "Why this specific mineral profile fits", "tweak_instruction": "Specific usage advice"}]`;
 
     const schema = {
         type: "ARRAY",
@@ -766,9 +806,16 @@ window.findCommercialWaterMatch = async function() {
     try {
         const response = await performApiCall(prompt, schema);
         const brands = JSON.parse(response);
-        let html = `<h5 class="font-bold mb-3 text-app-brand text-sm uppercase">Recommended Brands:</h5><div class="space-y-3">`;
+        let html = `<h5 class="font-bold mb-3 text-app-brand text-sm uppercase">Recommended Belgian Waters:</h5><div class="space-y-3">`;
         brands.forEach(b => {
-            html += `<div class="p-3 card rounded border border-app-brand/30 shadow-sm flex flex-col gap-2"><div class="flex justify-between items-start"><span class="font-bold text-app-primary">${b.brand}</span><button onclick="window.applyWaterTweak('${b.brand}', '${b.tweak_instruction.replace(/'/g, "\\'")}')" class="text-xs bg-app-tertiary hover:bg-app-secondary text-app-brand border border-app-brand py-1 px-2 rounded transition-colors font-bold uppercase tracking-wider">Select & Recalculate</button></div><p class="text-xs text-app-secondary">${b.reason}</p></div>`;
+            html += `<div class="p-3 card rounded border border-app-brand/30 shadow-sm flex flex-col gap-2">
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-app-primary">${b.brand}</span>
+                            <button onclick="window.applyWaterTweak('${b.brand}', 'Using ${b.brand}.')" class="text-xs bg-app-tertiary hover:bg-app-secondary text-app-brand border border-app-brand py-1 px-2 rounded transition-colors font-bold uppercase tracking-wider">Select</button>
+                        </div>
+                        <p class="text-xs text-app-secondary">${b.reason}</p>
+                        <p class="text-[10px] text-green-600 font-mono mt-1">✓ ${b.tweak_instruction}</p>
+                     </div>`;
         });
         html += `</div>`;
         resultsDiv.innerHTML = html;
@@ -1340,7 +1387,11 @@ function loadHistory() {
     const q = query(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews'));
     onSnapshot(q, (snapshot) => {
         brews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        brews.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
+        brews.sort((a, b) => {
+            const dateA = a.createdAt ? a.createdAt.toDate() : new Date();
+            const dateB = b.createdAt ? b.createdAt.toDate() : new Date();
+            return dateB - dateA;
+        });
         renderHistoryList();
         populateSocialRecipeDropdown();
         updateCostAnalysis();
@@ -2322,19 +2373,30 @@ function updateWaterProfileDisplay(profile) {
     });
 }
 
+// --- AANGEPASTE VERSIE: ALLEEN ADVIES, GEEN CHEMIE ---
 async function getWaterAdvice() {
     if (!currentWaterProfile) {
         document.getElementById('water-advice-output').innerHTML = `<p class="text-red-500">Select a water profile first.</p>`;
         return;
     }
     const output = document.getElementById('water-advice-output');
-    output.innerHTML = getLoaderHtml("Analyzing water chemistry...");
+    output.innerHTML = getLoaderHtml("Tasting water profile...");
     
     const target = document.getElementById('meadTargetProfile').selectedOptions[0].text;
     const batch = document.getElementById('batchSize').value || 5;
     const profileStr = `Ca:${currentWaterProfile.ca}, Mg:${currentWaterProfile.mg}, Na:${currentWaterProfile.na}, SO4:${currentWaterProfile.so4}, Cl:${currentWaterProfile.cl}, HCO3:${currentWaterProfile.hco3}`;
     
-    const prompt = `Brew Chemist: User has water (${profileStr}). Goal: ${batch}L ${target} mead. Analyze fitness. Recommend specific salt additions (Gypsum, CaCl2, Epsom) in grams. Explain why. Format: Markdown.`;
+    // PROMPT AANGEPAST: VERBIED ZOUT TOEVOEGINGEN
+    const prompt = `Brew Chemist: User has water profile (${profileStr}). Goal: ${batch}L ${target} mead. 
+    
+    **USER CONSTRAINT:** The user does NOT perform water chemistry adjustments (No salts/acids added).
+    
+    **TASK:** 1. Analyze if this water is suitable "as is".
+    2. Give a simple verdict: "Excellent", "Good", "Okay", or "Risky".
+    3. Explain mainly based on Chlorine (off-flavors) and Calcium (yeast health).
+    4. DO NOT recommend adding Gypsum, Epsom, or acids. Just say if it will work.
+    
+    Format: Markdown. Keep it brief.`;
 
     try {
         const text = await performApiCall(prompt);
@@ -2445,199 +2507,529 @@ window.fetchAvailableModels = async function() {
 
 // --- DEEL 6: LABELS, SOCIAL & DATA MANAGEMENT ---
 
-// --- LABEL GENERATOR ---
+// --- LABEL GENERATOR ENGINE V2.1 (Full Suite) ---
 
-function handleLogoUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const logoPreview = document.getElementById('label-logo-preview');
-            logoPreview.src = e.target.result;
-            logoPreview.classList.remove('hidden');
-            document.getElementById('removeLogoBtn').classList.remove('hidden');
-            updateLabelPreview();
-        }
-        reader.readAsDataURL(file);
-    }
+// 1. CONFIGURATIE (Built-in + User)
+const builtInLabelFormats = {
+    'avery_l7165': { name: 'Avery L7165 (99.1x67.7mm)', width: 99.1, height: 67.7, cols: 2, rows: 4, marginTop: 13, marginLeft: 4.6, gapX: 2.5, gapY: 0 },
+    'herma_4453': { name: 'Herma 4453 (105x148mm)', width: 105, height: 148, cols: 2, rows: 2, marginTop: 0, marginLeft: 0, gapX: 0, gapY: 0 },
+    'avery_l7163': { name: 'Avery L7163 (99.1x38.1mm)', width: 99.1, height: 38.1, cols: 2, rows: 7, marginTop: 15, marginLeft: 4.6, gapX: 2.5, gapY: 0 }
+};
+let userLabelFormats = {}; // Wordt gevuld vanuit Firestore
+
+// 2. INITIALISATIE
+function initLabelForge() {
+    // Data laden
+    populateLabelRecipeDropdown();
+    loadUserLabelFormats(); 
+
+    // Live Preview Listeners (Tekst)
+    ['labelTitle', 'labelSubtitle', 'labelAbv', 'labelVol', 'labelDate', 'labelDescription', 'labelDetails'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', updateLabelPreviewText);
+    });
+    document.getElementById('labelWarning')?.addEventListener('change', updateLabelPreviewText);
+    
+    // Recept laden
+    document.getElementById('labelRecipeSelect')?.addEventListener('change', loadLabelFromBrew);
+    
+    // Thema Knoppen
+    document.querySelectorAll('.label-theme-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => setLabelTheme(e.target.dataset.theme));
+    });
+
+    // AI Knoppen
+    document.getElementById('ai-label-art-btn')?.addEventListener('click', generateLabelArt);
+    document.getElementById('ai-label-desc-btn')?.addEventListener('click', generateLabelDescription);
+    
+    // Label Manager Listeners
+    document.getElementById('labelPaper')?.addEventListener('change', updateLabelPreviewDimensions); // Als formaat wijzigt
+    document.getElementById('printLabelsBtn')?.addEventListener('click', printLabelsSheet); // Print
+    
+    // Custom Label Modal Listeners
+    document.getElementById('lf-lookup-btn')?.addEventListener('click', autoDetectLabelFormat);
+    document.getElementById('label-format-form')?.addEventListener('submit', saveCustomLabelFormat);
+    
+    // Logo Upload
+    document.getElementById('logoUpload')?.addEventListener('change', handleLogoUpload);
 }
 
-function removeLogo() {
-    const logoPreview = document.getElementById('label-logo-preview');
-    const logoUploadInput = document.getElementById('logoUpload');
-    logoPreview.src = '';
-    logoPreview.classList.add('hidden');
-    logoUploadInput.value = '';
-    document.getElementById('removeLogoBtn').classList.add('hidden');
-    updateLabelPreview();
-}
+// 3. DATAMANAGEMENT (Laden & Dropdowns)
 
+// A. Receptenlijst vullen
 function populateLabelRecipeDropdown() {
     const select = document.getElementById('labelRecipeSelect');
     if (!select) return;
     const currentValue = select.value;
-    select.innerHTML = '<option value="">-- Choose a Saved Recipe --</option>';
-    brews.forEach(brew => {
+    select.innerHTML = '<option value="">-- Load from History --</option>';
+    
+    const sortedBrews = [...brews].sort((a, b) => {
+        const dateA = a.createdAt ? a.createdAt.toDate() : new Date(0);
+        const dateB = b.createdAt ? b.createdAt.toDate() : new Date(0);
+        return dateB - dateA;
+    });
+
+    sortedBrews.forEach(brew => {
         const option = document.createElement('option');
         option.value = brew.id;
         let displayName = brew.recipeName || 'Untitled Brew';
         if (displayName.includes(':')) displayName = displayName.split(':')[0].trim();
-        else if (displayName.includes(' - ')) displayName = displayName.split(' - ')[0].trim();
         option.textContent = displayName;
         select.appendChild(option);
     });
     select.value = currentValue;
 }
 
-function handleLabelRecipeSelect(event) {
-    const brewId = event.target.value;
-    if (!brewId) { updateLabelPreview(); return; }
-
-    const selectedBrew = brews.find(b => b.id === brewId);
-    if (!selectedBrew) return;
-
-    const fullTitle = selectedBrew.recipeName;
-    let subtitlePart = '';
-    if (fullTitle.includes(':')) subtitlePart = fullTitle.split(/:\s*(.*)/s)[1] || '';
-    else if (fullTitle.includes(' - ')) subtitlePart = fullTitle.split(/\s*-\s*(.*)/s)[1] || '';
-
-    document.getElementById('labelStyle').value = subtitlePart;
-    document.getElementById('labelAbv').value = selectedBrew.logData?.finalABV?.replace('%','') || selectedBrew.logData?.targetABV?.replace('%','') || '';
-    document.getElementById('labelVol').value = selectedBrew.batchSize ? selectedBrew.batchSize * 1000 : '750';
-    document.getElementById('labelDate').value = selectedBrew.createdAt ? selectedBrew.createdAt.toDate().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '';
-    
-    updateLabelPreview();
+// B. Label Formaten Laden (Firestore)
+async function loadUserLabelFormats() {
+    if (!userId) return;
+    try {
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'settings', 'labelFormats');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            userLabelFormats = docSnap.data();
+        }
+        populateLabelPaperDropdown(); // Refresh de lijst na laden
+    } catch (e) {
+        console.error("Error loading label formats:", e);
+    }
 }
 
-function updateLabelPreview() {
-    const select = document.getElementById('labelRecipeSelect');
-    const selectedOption = select.options[select.selectedIndex];
-    const fullTitle = (selectedOption && selectedOption.value) ? selectedOption.text : 'Mead Name';
+// C. Papier Dropdown Vullen (Built-in + Custom)
+function populateLabelPaperDropdown() {
+    const select = document.getElementById('labelPaper');
+    if (!select) return;
+    select.innerHTML = '';
     
-    document.getElementById('label-name-preview').textContent = fullTitle;
-    document.getElementById('label-style-preview').textContent = document.getElementById('labelStyle').value || 'Style / Subtitle';
-    document.getElementById('label-abv-preview').textContent = document.getElementById('labelAbv').value || 'ABV';
-    
-    const volVal = parseFloat(document.getElementById('labelVol').value);
-    document.getElementById('label-vol-preview').textContent = !isNaN(volVal) ? (volVal >= 1000 ? `${(volVal/1000).toFixed(1)} L` : `${volVal} ml`) : 'VOL';
-    document.getElementById('label-date-preview').textContent = document.getElementById('labelDate').value || 'Bottling Date';
+    // 1. Standaard Formaten
+    const groupBuiltIn = document.createElement('optgroup');
+    groupBuiltIn.label = "Standard Formats";
+    Object.keys(builtInLabelFormats).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key; opt.text = builtInLabelFormats[key].name;
+        groupBuiltIn.appendChild(opt);
+    });
+    select.appendChild(groupBuiltIn);
 
-    // Professional fields
-    const selectedBrew = brews.find(b => b.id === select.value);
-    const allergensContainer = document.getElementById('label-allergens-container');
-    
-    if (selectedBrew) {
-        document.getElementById('label-og-preview').textContent = selectedBrew.logData?.targetOG || 'N/A';
-        document.getElementById('label-fg-preview').textContent = selectedBrew.logData?.actualFG || 'N/A';
-        const ings = parseIngredientsFromMarkdown(selectedBrew.recipeMarkdown);
-        document.getElementById('label-yeast-preview').textContent = ings.find(i => i.name.toLowerCase().includes('yeast'))?.name.replace('Yeast','').trim() || 'N/A';
+    // 2. Eigen Formaten
+    if (Object.keys(userLabelFormats).length > 0) {
+        const groupUser = document.createElement('optgroup');
+        groupUser.label = "My Custom Formats";
+        Object.keys(userLabelFormats).forEach(key => {
+            const opt = document.createElement('option');
+            opt.value = key; opt.text = userLabelFormats[key].name;
+            groupUser.appendChild(opt);
+        });
+        select.appendChild(groupUser);
+    }
 
-        // Allergens
-        const allergens = [];
-        const md = selectedBrew.recipeMarkdown.toLowerCase();
-        if (md.includes('metabisulfite')) allergens.push('sulfites');
-        if (md.includes('lactose')) allergens.push('lactose');
-        if (md.includes('barley') || md.includes('malt')) allergens.push('gluten');
+    // Toggle delete knopje
+    select.addEventListener('change', () => {
+        const isCustom = userLabelFormats.hasOwnProperty(select.value);
+        document.getElementById('deleteLabelFormatBtn').classList.toggle('hidden', !isCustom);
+        updateLabelPreviewDimensions();
+    });
+
+    // Default selectie
+    if(!select.value) select.value = 'avery_l7165';
+    updateLabelPreviewDimensions();
+}
+
+// 4. PREVIEW & UI LOGICA
+
+// Update de afmetingen van het voorbeeldvakje (mm)
+function updateLabelPreviewDimensions() {
+    const key = document.getElementById('labelPaper').value;
+    const fmt = builtInLabelFormats[key] || userLabelFormats[key];
+    const container = document.getElementById('label-preview-container');
+    
+    if (fmt && container) {
+        container.style.width = `${fmt.width}mm`;
+        container.style.height = `${fmt.height}mm`;
+    }
+}
+
+// Update de tekst in het voorbeeld
+function updateLabelPreviewText() {
+    document.getElementById('prev-title').textContent = document.getElementById('labelTitle').value || 'Name';
+    document.getElementById('prev-subtitle').textContent = document.getElementById('labelSubtitle').value || 'STYLE';
+    document.getElementById('prev-abv').textContent = document.getElementById('labelAbv').value;
+    document.getElementById('prev-vol').textContent = document.getElementById('labelVol').value;
+    document.getElementById('prev-date').textContent = document.getElementById('labelDate').value;
+    document.getElementById('prev-desc').textContent = document.getElementById('labelDescription').value || 'Description...';
+    document.getElementById('prev-details').textContent = document.getElementById('labelDetails').value;
+    
+    const warn = document.getElementById('labelWarning').checked;
+    document.getElementById('prev-warning').classList.toggle('hidden', !warn);
+}
+
+// Data uit recept laden
+function loadLabelFromBrew(e) {
+    const brewId = e.target.value;
+    if (!brewId) return;
+    const brew = brews.find(b => b.id === brewId);
+    if (!brew) return;
+
+    document.getElementById('labelTitle').value = brew.recipeName;
+    
+    let style = "Traditional Mead";
+    if (brew.recipeMarkdown.toLowerCase().includes('melomel')) style = "Melomel (Fruit Mead)";
+    if (brew.recipeMarkdown.toLowerCase().includes('bochet')) style = "Bochet (Caramelized)";
+    document.getElementById('labelSubtitle').value = style;
+
+    document.getElementById('labelAbv').value = brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '12';
+    document.getElementById('labelVol').value = (brew.batchSize * 1000) || '750';
+    document.getElementById('labelDate').value = brew.logData?.brewDate || new Date().toLocaleDateString();
+
+    const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
+    const yeast = ings.find(i => i.name.toLowerCase().includes('yeast'))?.name || 'Yeast';
+    const honey = ings.find(i => i.name.toLowerCase().includes('honey'))?.name || 'Honey';
+    document.getElementById('labelDetails').value = `${yeast} • ${honey}`;
+
+    const needsWarning = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta');
+    document.getElementById('labelWarning').checked = needsWarning;
+
+    updateLabelPreviewText();
+}
+
+// Thema Switcher (Signature / Artisan / Batch)
+function setLabelTheme(theme) {
+    const container = document.getElementById('label-content');
+    const imgDiv = container.querySelector('div:first-child');
+    const textDiv = container.querySelector('div:last-child');
+    
+    document.querySelectorAll('.label-theme-btn').forEach(b => b.classList.remove('active', 'border-app-brand', 'text-app-brand'));
+    document.querySelector(`[data-theme="${theme}"]`).classList.add('active', 'border-app-brand', 'text-app-brand');
+
+    // Reset styles
+    container.className = `h-full w-full flex flex-row gap-4 p-4 transition-all duration-300`;
+    container.style = "";
+    imgDiv.className = "hidden"; // Image even verbergen voor reset
+    textDiv.className = "flex-grow flex flex-col justify-between h-full";
+
+    const title = document.getElementById('prev-title');
+    const subtitle = document.getElementById('prev-subtitle');
+    const desc = document.getElementById('prev-desc');
+    const stats = textDiv.querySelector('.border-t-2') || textDiv.querySelector('.border-t') || textDiv.lastElementChild;
+
+    // --- THEMA 1: SIGNATURE (Dark Mode / Premium) ---
+    if (theme === 'signature') {
+        container.style.backgroundColor = "#1a1a1a";
+        container.style.color = "#ffffff";
+        container.style.fontFamily = "'Barlow Semi Condensed', sans-serif";
+        container.style.border = "1px solid #d97706";
+
+        imgDiv.className = "w-1/3 h-full bg-gray-800 rounded-lg overflow-hidden relative border border-gray-700 shadow-inner";
+        imgDiv.style.filter = "contrast(1.1) saturate(0.9)";
+
+        title.className = "text-4xl font-black text-amber-500 leading-none mb-2 uppercase tracking-tight";
+        subtitle.className = "text-xs font-bold text-gray-400 uppercase tracking-[0.3em] mb-4 border-b border-gray-700 pb-2";
+        desc.className = "text-[10px] text-gray-300 leading-relaxed font-light italic";
+        stats.className = "border-t border-amber-500/30 pt-2 flex justify-between items-end mt-auto text-gray-300";
+    } 
+    // --- THEMA 2: ARTISAN (Clean / Modern Craft) ---
+    else if (theme === 'artisan') {
+        container.style.backgroundColor = "#ffffff";
+        container.style.color = "#000000";
+        container.style.fontFamily = "'Helvetica Neue', 'Arial', sans-serif";
         
-        if (allergens.length > 0 && allergensContainer) {
-            allergensContainer.innerHTML = `Contains: <strong>${allergens.join(', ')}</strong>`;
-            allergensContainer.classList.remove('hidden');
-        } else if (allergensContainer) {
-            allergensContainer.classList.add('hidden');
-        }
+        imgDiv.className = "w-1/2 h-full bg-gray-100 overflow-hidden relative rounded-none";
+        textDiv.className = "w-1/2 flex flex-col justify-center h-full pl-2";
+        
+        title.className = "text-3xl font-extrabold text-black leading-tight mb-2 tracking-tighter";
+        subtitle.className = "text-[10px] font-bold text-black bg-black text-white px-2 py-1 inline-block mb-3 uppercase tracking-widest w-max";
+        desc.className = "text-[9px] text-gray-500 leading-snug mb-4";
+        stats.className = "border-t-4 border-black pt-2 flex flex-col items-start gap-1 mt-auto";
+    }
+    // --- THEMA 3: BATCH (Industrial / Kraft / Technical) ---
+    else if (theme === 'batch') {
+        container.style.backgroundColor = "#e8e0d5";
+        container.style.color = "#2d2a26";
+        container.style.fontFamily = "'Courier New', monospace";
+        container.style.border = "2px dashed #2d2a26";
+        
+        imgDiv.className = "w-24 h-24 border-2 border-black bg-white/50 absolute top-4 right-4 rotate-3 shadow-sm z-10 p-1";
+        textDiv.className = "w-full h-full flex flex-col relative z-0";
+
+        title.className = "text-2xl font-bold uppercase border-b-2 border-black pb-1 mb-2 inline-block";
+        subtitle.className = "text-xs font-bold uppercase mb-1";
+        desc.className = "text-[10px] font-mono leading-tight mb-4 max-w-[65%]";
+        stats.className = "grid grid-cols-3 gap-2 border-t border-black pt-2 mt-auto text-[9px]";
     }
 }
 
-function switchLabelStyle(styleName) {
-    const preview = document.getElementById('label-preview');
-    preview.classList.remove('label-minimalist', 'label-industrial', 'label-professional');
-    preview.classList.add(`label-${styleName}`);
+// 5. LABEL MANAGER (ADD / DELETE / AUTO-DETECT)
+
+// Open Modal
+window.openLabelFormatModal = function() {
+    document.getElementById('label-format-form').reset();
+    document.getElementById('label-format-modal').classList.remove('hidden');
+}
+
+// AI Auto-Detect
+async function autoDetectLabelFormat() {
+    const code = document.getElementById('lf-lookup-code').value.trim();
+    const btn = document.getElementById('lf-lookup-btn');
     
-    document.querySelectorAll('.label-style-btn').forEach(btn => {
-        const isSelected = btn.dataset.style === styleName;
-        btn.classList.toggle('border-2', isSelected);
-        btn.classList.toggle('border-app-brand', isSelected);
-        btn.classList.toggle('text-app-brand', isSelected);
-    });
-}
+    if (!code) { showToast("Enter a brand/code first.", "error"); return; }
 
-function setLabelOrientation(orientation) {
-    document.querySelectorAll('.orientation-btn').forEach(btn => {
-        const isSelected = btn.dataset.orientation === orientation;
-        btn.classList.toggle('active', isSelected);
-        btn.classList.toggle('border-app-brand', isSelected);
-        btn.classList.toggle('text-app-brand', isSelected);
-    });
-    updatePreviewAspectRatio();
-}
+    const originalText = btn.innerText;
+    btn.innerText = "Searching...";
+    btn.disabled = true;
 
-function updatePreviewAspectRatio() {
-    const previewDiv = document.getElementById('label-preview');
-    const formatSelector = document.getElementById('labelFormatSelect');
-    if (!previewDiv || !formatSelector) return;
-
-    const orientation = document.querySelector('.orientation-btn.active')?.dataset.orientation || 'vertical';
-    let format = labelFormats[formatSelector.value];
+    const prompt = `You are a Label Database Expert. 
+    Find the technical specifications for label sheet: "${code}" (A4 sheet).
+    Return a JSON object with these EXACT keys (values in mm number):
+    - width (width of one sticker)
+    - height (height of one sticker)
+    - cols (number of stickers horizontally)
+    - rows (number of stickers vertically)
+    - marginTop (distance from top edge of A4 to first sticker)
+    - marginLeft (distance from left edge of A4 to first sticker)
+    - gapX (horizontal space between stickers)
+    - gapY (vertical space between stickers)
     
-    if (formatSelector.value === 'custom') {
-        format = {
-            width_mm: parseFloat(document.getElementById('customWidth').value) || 1,
-            height_mm: parseFloat(document.getElementById('customHeight').value) || 1,
-        };
-    }
+    Return ONLY valid JSON.`;
 
-    if (format) {
-        if (orientation === 'horizontal') previewDiv.style.aspectRatio = `${format.width_mm} / ${format.height_mm}`;
-        else previewDiv.style.aspectRatio = `${format.height_mm} / ${format.width_mm}`;
+    const schema = {
+        type: "OBJECT",
+        properties: {
+            "width": { "type": "NUMBER" }, "height": { "type": "NUMBER" },
+            "cols": { "type": "NUMBER" }, "rows": { "type": "NUMBER" },
+            "marginTop": { "type": "NUMBER" }, "marginLeft": { "type": "NUMBER" },
+            "gapX": { "type": "NUMBER" }, "gapY": { "type": "NUMBER" }
+        },
+        required: ["width", "height", "cols", "rows"]
+    };
+
+    try {
+        const jsonResponse = await performApiCall(prompt, schema);
+        const data = JSON.parse(jsonResponse);
+
+        document.getElementById('lf-name').value = code;
+        document.getElementById('lf-width').value = data.width;
+        document.getElementById('lf-height').value = data.height;
+        document.getElementById('lf-cols').value = data.cols;
+        document.getElementById('lf-rows').value = data.rows;
+        document.getElementById('lf-marginTop').value = data.marginTop || 0;
+        document.getElementById('lf-marginLeft').value = data.marginLeft || 0;
+        document.getElementById('lf-gapX').value = data.gapX || 0;
+        document.getElementById('lf-gapY').value = data.gapY || 0;
+
+        showToast("Specs found! Verify & Save.", "success");
+    } catch (error) {
+        console.error("AI Lookup Error:", error);
+        showToast("Could not find specs automatically.", "error");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
     }
 }
 
-function generatePrintPage() {
-    const labelHTML = document.getElementById('label-preview').outerHTML;
-    const formatSelector = document.getElementById('labelFormatSelect');
-    let format = labelFormats[formatSelector.value];
+// Opslaan Nieuw Formaat
+window.saveCustomLabelFormat = async function(e) {
+    e.preventDefault();
+    if (!userId) return;
+    
+    const name = document.getElementById('lf-name').value;
+    const id = 'custom_' + Date.now();
 
-    if (formatSelector.value === 'custom') {
-        format = {
-            width_mm: parseFloat(document.getElementById('customWidth').value),
-            height_mm: parseFloat(document.getElementById('customHeight').value),
-            cols: parseInt(document.getElementById('customCols').value),
-            rows: parseInt(document.getElementById('customRows').value),
-            top_margin_mm: parseFloat(document.getElementById('customMarginTop').value),
-            left_margin_mm: parseFloat(document.getElementById('customMarginLeft').value),
+    const newFormat = {
+        name: name,
+        width: parseFloat(document.getElementById('lf-width').value),
+        height: parseFloat(document.getElementById('lf-height').value),
+        cols: parseInt(document.getElementById('lf-cols').value),
+        rows: parseInt(document.getElementById('lf-rows').value),
+        marginTop: parseFloat(document.getElementById('lf-marginTop').value) || 0,
+        marginLeft: parseFloat(document.getElementById('lf-marginLeft').value) || 0,
+        gapX: parseFloat(document.getElementById('lf-gapX').value) || 0,
+        gapY: parseFloat(document.getElementById('lf-gapY').value) || 0,
+    };
+
+    userLabelFormats[id] = newFormat;
+
+    try {
+        await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'settings', 'labelFormats'), userLabelFormats);
+        populateLabelPaperDropdown();
+        document.getElementById('labelPaper').value = id;
+        updateLabelPreviewDimensions();
+        document.getElementById('label-format-modal').classList.add('hidden');
+        showToast("Format saved!", "success");
+    } catch (e) { showToast("Save error.", "error"); }
+}
+
+// Verwijderen Formaat
+window.deleteCustomLabelFormat = async function() {
+    const id = document.getElementById('labelPaper').value;
+    if (!userLabelFormats[id] || !confirm(`Delete "${userLabelFormats[id].name}"?`)) return;
+
+    delete userLabelFormats[id];
+    
+    try {
+        await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'settings', 'labelFormats'), userLabelFormats);
+        populateLabelPaperDropdown();
+        showToast("Deleted.", "success");
+    } catch (e) { console.error(e); }
+}
+
+// 6. AI CONTENT & ART GENERATORS
+
+function handleLogoUpload(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const imgDisplay = document.getElementById('label-img-display');
+            const placeholder = document.getElementById('label-img-placeholder');
+            imgDisplay.src = e.target.result;
+            imgDisplay.classList.remove('hidden');
+            if(placeholder) placeholder.classList.add('hidden');
         }
+        reader.readAsDataURL(file);
     }
+}
 
-    const totalLabels = format.cols * format.rows;
-    let printContent = '';
-    for (let i = 0; i < totalLabels; i++) {
-        printContent += labelHTML.replace('id="label-preview"', `class="print-label ${document.getElementById('label-preview').className}"`);
+async function generateLabelArt() {
+    const title = document.getElementById('labelTitle').value;
+    const style = document.getElementById('labelSubtitle').value;
+    const theme = document.querySelector('.label-theme-btn.active').dataset.theme;
+    
+    if (!title) return showToast("Enter a title first.", "error");
+
+    const btn = document.getElementById('ai-label-art-btn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "🎨 Painting...";
+    btn.disabled = true;
+
+    let artPrompt = `Label design for mead called "${title}".`;
+    if (theme === 'signature') artPrompt += " Dark, premium, gold accents, mystical, minimal, high contrast.";
+    if (theme === 'artisan') artPrompt += " Clean, modern vector art, white background, bold typography, geometric fruit.";
+    if (theme === 'batch') artPrompt += " Technical drawing style, vintage stamp, kraft paper aesthetic, black ink.";
+    
+    artPrompt += ` Subject: ${style}. High quality, centered composition.`;
+
+    try {
+        let apiKey = userSettings.imageApiKey; 
+        let isGoogle = false;
+        
+        if (!apiKey && userSettings.imageModel && userSettings.imageModel.includes('imagen')) {
+             apiKey = userSettings.apiKey; 
+             isGoogle = true;
+        }
+
+        if (!apiKey) throw new Error("No Image API Key found in settings.");
+
+        let base64Img = null;
+
+        if (isGoogle) {
+             throw new Error("Google Imagen not configured for labels yet.");
+        } else {
+             const response = await fetch("https://api.stability.ai/v1/generation/stable-diffusion-xl-beta-v2-2-2/text-to-image", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                body: JSON.stringify({ text_prompts: [{ text: artPrompt, weight: 1 }], height: 512, width: 512, samples: 1, steps: 30 })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || "AI Error");
+            base64Img = data.artifacts[0].base64;
+        }
+
+        const imgDisplay = document.getElementById('label-img-display');
+        imgDisplay.src = `data:image/png;base64,${base64Img}`;
+        imgDisplay.classList.remove('hidden');
+        document.getElementById('label-img-placeholder').classList.add('hidden');
+
+    } catch (error) {
+        console.error(error);
+        showToast(error.message, "error");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
+}
 
-    const newWindow = window.open('', '_blank');
-    // FIX: We linken nu naar style.css in plaats van de style tag te kopiëren
-    newWindow.document.write(`
+async function generateLabelDescription() {
+    const title = document.getElementById('labelTitle').value;
+    const style = document.getElementById('labelSubtitle').value;
+    
+    if (!title) return showToast("Enter a title first.", "error");
+    
+    const btn = document.getElementById('ai-label-desc-btn');
+    btn.textContent = "Writing...";
+    
+    const prompt = `Write a short, poetic "back-of-bottle" description (max 25 words) for a Mead called "${title}". Style: ${style}. Make it sound enticing and handcrafted.`;
+    
+    try {
+        const text = await performApiCall(prompt);
+        document.getElementById('labelDescription').value = text.replace(/"/g, '').trim();
+        updateLabelPreviewText();
+    } catch (e) {
+        showToast("AI Writer failed.", "error");
+    } finally {
+        btn.textContent = "✨ Write for me";
+    }
+}
+
+// 7. PRINT ENGINE (Dynamic Grid)
+function printLabelsSheet() {
+    const key = document.getElementById('labelPaper').value;
+    const fmt = builtInLabelFormats[key] || userLabelFormats[key];
+    if(!fmt) return;
+
+    const labelContent = document.getElementById('label-content').outerHTML;
+    const totalLabels = fmt.cols * fmt.rows;
+    
+    const gridCSS = `
+        display: grid;
+        grid-template-columns: repeat(${fmt.cols}, ${fmt.width}mm);
+        grid-template-rows: repeat(${fmt.rows}, ${fmt.height}mm);
+        column-gap: ${fmt.gapX}mm;
+        row-gap: ${fmt.gapY}mm;
+        padding-top: ${fmt.marginTop}mm;
+        padding-left: ${fmt.marginLeft}mm;
+        width: 210mm;
+        height: 297mm;
+        box-sizing: border-box;
+    `;
+
+    const win = window.open('', '_blank');
+    win.document.write(`
         <html><head><title>Print Labels</title>
-        <link rel="stylesheet" href="style.css"> 
+        <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            @page { size: A4; margin: 0; }
+            @import url('https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+            
             body { margin: 0; background: white; }
-            .print-container {
-                display: grid;
-                grid-template-columns: repeat(${format.cols}, 1fr);
-                gap: 0;
-                padding-top: ${format.top_margin_mm}mm;
-                padding-left: ${format.left_margin_mm}mm;
-                width: 210mm; height: 297mm; box-sizing: border-box;
+            .sheet { ${gridCSS} }
+            .label-cell { width: ${fmt.width}mm; height: ${fmt.height}mm; overflow: hidden; border: 1px dashed #eee; }
+            @media print { 
+                @page { size: A4; margin: 0; }
+                body { -webkit-print-color-adjust: exact; }
+                .label-cell { border: none; }
             }
-            .print-label { width: ${format.width_mm}mm; height: ${format.height_mm}mm; box-sizing: border-box; overflow: hidden; page-break-inside: avoid; }
         </style>
-        </head><body><div class="print-container">${printContent}</div></body></html>
+        </head><body>
+        <div class="sheet">
+            ${Array(totalLabels).fill(`<div class="label-cell">${labelContent}</div>`).join('')}
+        </div>
+        <script>
+            const src = window.opener.document.getElementById('label-img-display').src;
+            const isHidden = window.opener.document.getElementById('label-img-display').classList.contains('hidden');
+            
+            document.querySelectorAll('.label-cell').forEach(c => {
+               const img = c.querySelector('img'); 
+               const sp = c.querySelector('span');
+               if(src && !isHidden) { 
+                   img.src = src; 
+                   img.classList.remove('hidden'); 
+                   if(sp) sp.style.display='none'; 
+               }
+            });
+            setTimeout(()=>window.print(), 800);
+        </script>
+        </body></html>
     `);
-    newWindow.document.close();
-    newWindow.focus();
-    // Kleine timeout om CSS te laten laden
-    setTimeout(() => { newWindow.print(); }, 1000);
+    win.document.close();
 }
 
 // --- SOCIAL MEDIA ---
@@ -2659,59 +3051,99 @@ function populateSocialRecipeDropdown() {
 // --- SOCIAL MEDIA STUDIO 2.0 LOGIC ---
 
 // 1. De hoofdfunctie om tekst te genereren
+// --- SOCIAL MEDIA STUDIO: RYAN REYNOLDS & UNTAPPD UPDATE ---
+
 async function runSocialMediaGenerator() {
     const brewId = document.getElementById('social-recipe-select').value;
     const persona = document.getElementById('social-persona').value;
     const platform = document.getElementById('social-platform').value;
-    const tweak = document.getElementById('social-tweak').value; // Dit is nu je "Manual Input" als er geen recept is
+    const tweak = document.getElementById('social-tweak').value;
     
-    // Check: Hebben we íets om over te praten?
     if (!brewId && !tweak) { 
-        showToast("Select a recipe OR type a topic in 'Special Focus'.", "error"); 
+        showToast("Select a recipe OR type a topic.", "error"); 
         return; 
     }
     
     const container = document.getElementById('social-content-container');
     const imageBtn = document.getElementById('generate-social-image-btn');
 
-    // UI Resetten
-    container.innerHTML = getLoaderHtml("Drafting your post...");
+    container.innerHTML = getLoaderHtml(`Channeling ${persona}...`);
     imageBtn.classList.add('hidden');
 
-    // Context bouwen: Recept OF alleen Vrije Tekst
+    // Context ophalen
     let context = "";
     if (brewId) {
         const brew = brews.find(b => b.id === brewId);
         context = `
-        **TOPIC:** Promoting a specific Mead Recipe.
-        **RECIPE NAME:** ${brew.recipeName}
-        **RECIPE STYLE/DETAILS:** ${brew.recipeMarkdown.substring(0, 500)}...
-        **EXTRA INSTRUCTIONS:** ${tweak}
+        **PRODUCT:** Mead (Honey Wine).
+        **NAME:** ${brew.recipeName}
+        **DETAILS:** ${brew.recipeMarkdown.substring(0, 600)}...
+        **USER NOTES:** ${tweak}
         `;
     } else {
-        context = `
-        **TOPIC:** General post about Mead / Brewing.
-        **USER INPUT:** "${tweak}"
-        (Ignore recipe details, focus purely on this user input).
+        context = `**TOPIC:** ${tweak}`;
+    }
+
+    // --- PERSONA DEFINITIES ---
+    let toneInstruction = "";
+    if (persona === 'Ryan Reynolds') {
+        toneInstruction = `
+        **TONE: RYAN REYNOLDS / DEADPOOL MARKETING.** - High energy, extremely witty, heavy sarcasm, self-deprecating.
+        - Break the "fourth wall" (acknowledge it's an ad or a post).
+        - Short, punchy sentences. 
+        - Make fun of the brewing process or how much effort went into it.
+        `;
+    } else if (persona === 'Dry British') {
+        toneInstruction = `
+        **TONE: DRY BRITISH HUMOR.**
+        - Understated, deadpan, slightly cynical but charming.
+        - Think Monty Python or Ricky Gervais.
+        - Use words like "splendid", "dreadfully good", "rather nice".
+        - Avoid exclamation marks. Be ironically modest.
+        `;
+    } else if (persona === 'The Sommelier') {
+        toneInstruction = `**TONE: PROFESSIONAL.** Elegant, descriptive, focus on sensory details (aroma, mouthfeel).`;
+    } else {
+        toneInstruction = `**TONE:** Bold, loud, enthusiastic like a Viking feast.`;
+    }
+
+    // --- PLATFORM DEFINITIES ---
+    let platformInstruction = "";
+    if (platform === 'Untappd') {
+        platformInstruction = `
+        **FORMAT: UNTAPPD BREWERY DESCRIPTION.**
+        - This is NOT a social media post. This is the official description on the bottle/app.
+        - Focus: Flavor notes, ingredients, ABV, and the "story" of the drink.
+        - Length: Concise paragraph (max 150 words).
+        - NO hashtags. NO emojis. NO "Link in bio".
+        - Even if the persona is funny, keep the core description useful for the drinker.
+        `;
+    } else {
+        // Instagram defaults
+        platformInstruction = `
+        **FORMAT: INSTAGRAM CAPTION.**
+        - Engaging hook.
+        - Use line breaks for readability.
+        - Use relevant Emojis.
+        - End with a block of 10-15 relevant hashtags (e.g. #mead #homebrewing #mazer).
         `;
     }
 
-    const prompt = `You are a Social Media Manager with the persona: "${persona}".
-    **TASK:** Write a viral post for ${platform}.
+    const prompt = `You are a Social Media Manager.
     
     ${context}
     
-    **OUTPUT RULES:**
-    1. No markdown formatting (no bold/italic syntax), just plain text with Emojis.
-    2. Include 5-10 relevant hashtags at the bottom.
-    3. Keep it engaging and appropriate for ${platform}.
-    4. Also provide a separate, short AI Image Prompt at the very end, starting with "IMG_PROMPT:".
+    ${toneInstruction}
+    
+    ${platformInstruction}
+    
+    **TASK:** Write the content for ${platform}.
+    **EXTRA:** At the very end, provide a separate AI Image Prompt for this specific mead, starting with "IMG_PROMPT:".
     `;
     
     try {
         const rawText = await performApiCall(prompt);
         
-        // Splits tekst en image prompt
         let finalPost = rawText;
         let imgPrompt = "";
 
@@ -2721,12 +3153,14 @@ async function runSocialMediaGenerator() {
             imgPrompt = parts[1].trim();
         }
 
-        // Render de tekst in de telefoon
         container.innerText = finalPost; 
         
-        // Maak de image knop klaar
         if (imgPrompt) {
             imageBtn.classList.remove('hidden');
+            // We gebruiken hier de "Dual Engine" logica die al in je app zit
+            // Als imageModel in settings "imagen" is (standaard), probeert hij Google.
+            // Als dat faalt (404), geeft hij de melding. 
+            // Als je later Imagen toegang krijgt, werkt dit knopje dus ineens!
             imageBtn.onclick = () => generateSocialImage(imgPrompt);
         }
 
@@ -3913,6 +4347,8 @@ function initApp() {
     document.getElementById('generate-print-btn')?.addEventListener('click', generatePrintPage);
     document.querySelectorAll('.orientation-btn').forEach(btn => btn.addEventListener('click', () => setLabelOrientation(btn.dataset.orientation)));
     
+    initLabelForge();
+
     // Inputs die de label preview updaten
     ['labelStyle', 'labelAbv', 'labelVol', 'labelDate'].forEach(id => {
         document.getElementById(id)?.addEventListener('keyup', updateLabelPreview);

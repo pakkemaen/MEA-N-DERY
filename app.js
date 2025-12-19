@@ -227,52 +227,62 @@ window.executeDangerAction = function() {
 // --- DEEL 3: AI CORE & CREATOR LOGIC ---
 
 async function performApiCall(prompt, schema = null) {
-    // Je Cloud Function URL
-    const functionUrl = "https://callgemini-388311971225.europe-west1.run.app"; 
+    // 1. VEILIGHEID EERST: We kijken in de telefoon-instellingen
+    let apiKey = userSettings.apiKey;
     
-    // VERBETERING: We gebruiken de 'Pinned Version' (001). 
-    // Dit lost de 404 errors op omdat deze naam altijd bestaat.
-    let modelToUse = "gemini-1.5-flash-001";
-    
-    // Als de gebruiker iets in settings heeft staan, proberen we dat.
-    // Maar we vangen lege waardes af.
-    if (userSettings.aiModel && userSettings.aiModel.trim() !== "") {
-        modelToUse = userSettings.aiModel;
+    // Alleen als fallback kijken we in de (onveilige) code
+    if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.firebase && CONFIG.firebase.apiKey) {
+        // Dit is eigenlijk de Firebase key, die werkt vaak NIET voor Gemini, 
+        // dus de gebruiker MOET eigenlijk wel iets invullen in Settings.
+        console.warn("Gebruik Firebase key als fallback (mogelijk werkt dit niet voor AI)");
+        apiKey = CONFIG.firebase.apiKey;
     }
 
-    console.log("🤖 Asking Gemini Model:", modelToUse); // Zie in je console welk model hij pakt
+    if (!apiKey) {
+        throw new Error("⛔ Geen API Key! Ga naar Settings -> vul 'Google AI Key' in.");
+    }
+
+    // 2. Kies het model (Stabiele versie hardcoded als default)
+    const model = (userSettings.aiModel && userSettings.aiModel.trim() !== "") 
+        ? userSettings.aiModel 
+        : "gemini-1.5-flash";
+
+    // 3. Directe lijn naar Google (zonder tussen-server)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const requestBody = {
+        contents: [{ parts: [{ text: prompt }] }]
+    };
+
+    if (schema) {
+        requestBody.generationConfig = {
+            responseMimeType: "application/json",
+            responseSchema: schema
+        };
+    }
 
     try {
-        const response = await fetch(functionUrl, {
+        const response = await fetch(url, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                prompt: prompt,
-                schema: schema,
-                model: modelToUse 
-            })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            // Als de specifieke flash-001 ook faalt, is er iets anders mis (bijv. API key rechten)
-            throw new Error(errorData.error || `Server error: ${response.status}`);
+            throw new Error(errorData.error?.message || `Google Error: ${response.status}`);
         }
 
         const data = await response.json();
-        return data.text;
+        if (data.candidates && data.candidates.length > 0) {
+            return data.candidates[0].content.parts[0].text;
+        } else {
+            throw new Error("Google gaf geen antwoord.");
+        }
 
     } catch (error) {
-        console.error("Backend Error:", error);
-        
-        // NOODOPLOSSING: Als de luxe modellen falen, probeer de "Oude Getrouwe"
-        if (error.message.includes("404") || error.message.includes("not found")) {
-             throw new Error(`Model ${modelToUse} niet gevonden. Probeer in Settings 'gemini-pro' te typen.`);
-        }
-        
-        throw new Error(error.message || "Fout bij verbinden met de AI backend.");
+        console.error("AI Fout:", error);
+        throw new Error(`AI Fout: ${error.message}`);
     }
 }
 

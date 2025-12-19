@@ -1,27 +1,32 @@
-const CACHE_NAME = 'meandery-cache-v5'; // Versie opgehoogd naar v5
+const CACHE_NAME = 'meandery-cache-v6'; // VERSNELD NAAR V6 🚀
 
-// ALLEEN bestanden die 100% zeker bestaan hierin zetten!
-// Als er één mist, crasht je hele app-update.
+// Lijst met bestanden die we willen bewaren voor offline gebruik
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './secrets.js',   // Belangrijk voor offline toegang
   './manifest.json'
-  // './secrets.js' <--- UITGEZET VOOR DE ZEKERHEID (wordt later wel geladen door app.js)
+  './icon-192x192.png',
+  './icon-512x512.png'
 ];
 
+// 1. INSTALLATIE: Downloaden en Cachen
 self.addEventListener('install', event => {
-  self.skipWaiting(); // Forceer directe activatie van de nieuwe versie
+  // Zorg dat de nieuwe versie direct actief wordt en niet wacht
+  self.skipWaiting();
+  
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Caching essential files');
-        // We gebruiken hier een trucje: als één bestand faalt, gaat de rest tenminste door
+        console.log('Opened cache v6');
+        // We gebruiken een "veilige" methode:
+        // Als 1 bestand faalt (404), crasht NIET de hele installatie.
         return Promise.all(
           urlsToCache.map(url => {
             return cache.add(url).catch(err => {
-              console.error('Kon bestand niet cachen (niet erg):', url, err);
+              console.warn('Kon bestand niet cachen (niet erg, we gaan door):', url);
             });
           })
         );
@@ -29,12 +34,13 @@ self.addEventListener('install', event => {
   );
 });
 
+// 2. ACTIVATIE: Oude rommel opruimen
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          // Verwijder ALLE oude caches die niet v5 zijn
+          // Verwijder alles wat niet v6 is
           if (cacheName !== CACHE_NAME) {
             console.log('Oude cache verwijderd:', cacheName);
             return caches.delete(cacheName);
@@ -43,26 +49,36 @@ self.addEventListener('activate', event => {
       );
     })
   );
-  return self.clients.claim(); // Neem direct controle over de pagina
+  return self.clients.claim(); // Neem direct de controle over
 });
 
+// 3. FETCH: Hoe halen we data op?
 self.addEventListener('fetch', event => {
-  // Netwerk-eerst strategie voor HTML en JS (zorgt dat je updates sneller ziet)
-  if (event.request.mode === 'navigate' || event.request.destination === 'script') {
+  // Voor HTML, JS en CSS: Probeer EERST het netwerk (altijd de nieuwste versie),
+  // als dat faalt (offline), pak dan de cache.
+  if (event.request.destination === 'document' || 
+      event.request.destination === 'script' || 
+      event.request.destination === 'style') {
+      
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          return caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, response.clone());
-            return response;
-          });
+          // Als we online zijn: update de cache direct met de nieuwste versie
+          if (response && response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
         })
         .catch(() => {
+          // Als we offline zijn: geef de cache
           return caches.match(event.request);
         })
     );
   } else {
-    // Cache-eerst voor afbeeldingen en fonts (sneller laden)
+    // Voor plaatjes en fonts: Eerst cache (sneller), dan netwerk
     event.respondWith(
       caches.match(event.request)
         .then(response => response || fetch(event.request))

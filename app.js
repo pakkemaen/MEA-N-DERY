@@ -2017,10 +2017,20 @@ function applySettings() {
         }
         aiModelField.value = userSettings.aiModel;
     }
-    
-    const imgKeyField = document.getElementById('imageApiKeyInput');
-    if (imgKeyField) imgKeyField.value = userSettings.imageApiKey || '';
-    
+
+    const imgModelField = document.getElementById('imageModelInput');
+    if (imgModelField && userSettings.imageModel) {
+        // Check of hij erin staat, zo niet, voeg toe (zodat saved value werkt zonder scan)
+        let exists = Array.from(imgModelField.options).some(o => o.value === userSettings.imageModel);
+        if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = userSettings.imageModel;
+            opt.text = userSettings.imageModel + " (Saved)";
+            imgModelField.add(opt, 0);
+        }
+        imgModelField.value = userSettings.imageModel;
+    }
+        
     const batchInput = document.getElementById('defaultBatchSizeInput');
     if (batchInput) batchInput.value = userSettings.defaultBatchSize || 5;
 
@@ -2045,8 +2055,8 @@ async function saveUserSettings() {
     
     const newSettings = {
         apiKey: document.getElementById('apiKeyInput').value.trim(),
-        imageApiKey: document.getElementById('imageApiKeyInput').value.trim(),
-        aiModel: document.getElementById('aiModelInput').value.trim(),
+        aiModel: document.getElementById('aiModelInput').value,
+        imageModel: document.getElementById('imageModelInput').value,
         defaultBatchSize: parseFloat(document.getElementById('defaultBatchSizeInput').value) || 5,
         currencySymbol: document.getElementById('defaultCurrencyInput').value.trim() || '€',
         theme: document.getElementById('theme-toggle-checkbox').checked ? 'dark' : 'light',
@@ -2351,62 +2361,82 @@ async function getTroubleshootingAdvice() {
     }
 }
 
-// --- NIEUWE FUNCTIE: HAAL MODELLEN OP ---
+// --- FUNCTIE: HAAL MODELLEN OP & VERDEEL ZE (DUAL ENGINE) ---
 window.fetchAvailableModels = async function() {
     const apiKey = document.getElementById('apiKeyInput').value.trim();
-    const select = document.getElementById('aiModelInput');
+    const textSelect = document.getElementById('aiModelInput');
+    const imageSelect = document.getElementById('imageModelInput');
     const btn = document.getElementById('fetchModelsBtn');
 
-    if (!apiKey) {
-        showToast("Vul eerst je Google API Key in.", "error");
-        return;
-    }
+    if (!apiKey) { showToast("Vul eerst je Google API Key in.", "error"); return; }
 
-    // UI Feedback: Laat zien dat we bezig zijn
     const originalBtnText = btn.innerText;
     btn.innerText = "Scanning...";
     btn.disabled = true;
 
     try {
-        // Vraag Google om de lijst met modellen
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-        
-        if (!response.ok) throw new Error("Kon modellen niet laden. Check je API Key.");
+        if (!response.ok) throw new Error("API Error");
         
         const data = await response.json();
         
-        // Filter de lijst: We willen alleen modellen die 'generateContent' kunnen (tekst maken)
-        // We willen geen 'embedding' of 'vision-only' modellen in de lijst.
+        // 1. FILTER VOOR TEKST (Gemini)
         const textModels = data.models.filter(m => 
-            m.supportedGenerationMethods.includes("generateContent")
+            m.supportedGenerationMethods.includes("generateContent") &&
+            m.name.toLowerCase().includes("gemini")
         );
-
-        // Sorteer ze zodat de nieuwste (vaak de langste versie-nummers) bovenaan staan, of alfabetisch
         textModels.sort((a, b) => b.name.localeCompare(a.name));
 
-        // Leeg de dropdown en vul opnieuw
-        select.innerHTML = '';
-        
-        textModels.forEach(model => {
-            // Google geeft namen terug als "models/gemini-1.5-pro".
-            // Wij hebben alleen het stukje achter de slash nodig.
-            const cleanName = model.name.replace('models/', '');
-            const option = document.createElement('option');
-            option.value = cleanName;
-            option.text = `${cleanName} (${model.version || 'v?'})`;
-            select.appendChild(option);
-        });
+        // 2. FILTER VOOR BEELD (Imagen)
+        // We zoeken naar modellen met 'image' of 'imagen' in de naam.
+        // Google is soms vaag over 'supportedMethods' voor plaatjes, dus we doen het op naam.
+        const imageModels = data.models.filter(m => 
+            m.name.toLowerCase().includes("imagen") || 
+            (m.name.toLowerCase().includes("image") && !m.name.toLowerCase().includes("embedding"))
+        );
+        imageModels.sort((a, b) => b.name.localeCompare(a.name));
 
-        // Probeer het huidige opgeslagen model weer te selecteren als het in de lijst staat
-        if (userSettings.aiModel) {
-            select.value = userSettings.aiModel;
+        // --- VUL DROPDOWN 1: TEXT ---
+        textSelect.innerHTML = '';
+        textModels.forEach(model => {
+            const cleanName = model.name.replace('models/', '');
+            const opt = document.createElement('option');
+            opt.value = cleanName;
+            opt.text = cleanName;
+            textSelect.appendChild(opt);
+        });
+        // Herstel saved value
+        if (userSettings.aiModel && Array.from(textSelect.options).some(o => o.value === userSettings.aiModel)) {
+            textSelect.value = userSettings.aiModel;
         }
 
-        showToast(`Succes! ${textModels.length} modellen gevonden.`, "success");
+        // --- VUL DROPDOWN 2: IMAGE ---
+        imageSelect.innerHTML = '';
+        if (imageModels.length === 0) {
+            // Fallback als de scan geen image models vindt (soms verbergt Google ze)
+            const fallback = document.createElement('option');
+            fallback.value = "imagen-3.0-generate-001";
+            fallback.text = "imagen-3.0-generate-001 (Default)";
+            imageSelect.appendChild(fallback);
+        } else {
+            imageModels.forEach(model => {
+                const cleanName = model.name.replace('models/', '');
+                const opt = document.createElement('option');
+                opt.value = cleanName;
+                opt.text = cleanName;
+                imageSelect.appendChild(opt);
+            });
+        }
+        // Herstel saved value
+        if (userSettings.imageModel && Array.from(imageSelect.options).some(o => o.value === userSettings.imageModel)) {
+            imageSelect.value = userSettings.imageModel;
+        }
+
+        showToast(`Scan compleet! Tekst: ${textModels.length}, Beeld: ${imageModels.length}`, "success");
 
     } catch (error) {
         console.error(error);
-        showToast("Fout bij ophalen modellen: " + error.message, "error");
+        showToast("Scan mislukt. " + error.message, "error");
     } finally {
         btn.innerText = originalBtnText;
         btn.disabled = false;
@@ -2705,48 +2735,81 @@ async function runSocialMediaGenerator() {
     }
 }
 
-// 2. De functie om een plaatje te maken (Stable Diffusion)
+// 2. De functie om een plaatje te maken
+
 async function generateSocialImage(imagePrompt) {
     const container = document.getElementById('social-image-container');
     
-    // Check key
-    const imageApiKey = userSettings.imageApiKey;
-    if (!imageApiKey) {
-        showToast("No Image API Key found in Settings!", "error");
+    // We hergebruiken nu de Google AI Key uit settings! 
+    // Dus je hebt geen aparte Image Key meer nodig.
+    let apiKey = userSettings.apiKey;
+    
+    // Fallback voor als settings leeg is
+    if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.firebase) {
+         apiKey = CONFIG.firebase.apiKey;
+    }
+
+    if (!apiKey) {
+        showToast("Geen Google API Key gevonden.", "error");
         return;
     }
 
-    // Loader in de image container
-    container.innerHTML = `<div class="loader"></div><p class="text-xs text-center mt-2">Diffusion in progress...</p>`;
+    // UI: Laat zien dat we bezig zijn
+    container.innerHTML = `<div class="loader"></div><p class="text-xs text-center mt-2">Google Imagen is painting...</p>`;
+
+    // 1. Haal het gekozen model op uit settings (of gebruik fallback)
+    const model = userSettings.imageModel || "imagen-3.0-generate-001";
+
+    // 2. Bouw de URL dynamisch
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
+
+    const requestBody = {
+        instances: [
+            { prompt: `Professional product photography, cinematic lighting, 8k resolution, highly detailed: ${imagePrompt}` }
+        ],
+        parameters: {
+            sampleCount: 1,
+            aspectRatio: "1:1"
+        }
+    };
 
     try {
-        const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
+        const response = await fetch(url, {
             method: 'POST',
             headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${imageApiKey}` 
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ 
-                text_prompts: [{ text: `Professional product photography, cinematic lighting, 8k: ${imagePrompt}` }], 
-                cfg_scale: 7, 
-                height: 1024, 
-                width: 1024, 
-                samples: 1 
-            })
+            body: JSON.stringify(requestBody)
         });
 
-        if (!response.ok) throw new Error(await response.text());
+        if (!response.ok) {
+            const errorData = await response.json();
+            // Vaak voorkomende fout: 400 of 403 als je key geen toegang heeft tot plaatjes
+            throw new Error(errorData.error?.message || "Google Image Error");
+        }
         
-        const result = await response.json();
-        const base64Img = result.artifacts[0].base64;
+        const data = await response.json();
         
-        // Render het plaatje
-        container.innerHTML = `<img src="data:image/png;base64,${base64Img}" class="w-full h-full object-cover">`;
+        // Google geeft het plaatje terug als Base64 string in 'bytes'
+        if (data.predictions && data.predictions.length > 0 && data.predictions[0].bytesBase64Encoded) {
+            const base64Img = data.predictions[0].bytesBase64Encoded;
+            // Render het plaatje
+            container.innerHTML = `<img src="data:image/png;base64,${base64Img}" class="w-full h-full object-cover rounded-xl shadow-inner">`;
+            
+            // Verberg de knop als het gelukt is
+            document.getElementById('generate-social-image-btn').classList.add('hidden');
+        } else {
+            throw new Error("Geen plaatje ontvangen van Google.");
+        }
         
     } catch (e) {
-        console.error(e);
-        container.innerHTML = `<div class="p-4 text-center"><p class="text-red-500 text-xs">Generation Failed</p><button id="retry-img-btn" class="mt-2 text-xs underline">Retry</button></div>`;
-        document.getElementById('retry-img-btn').onclick = () => generateSocialImage(imagePrompt);
+        console.error("Imagen Fout:", e);
+        // Nette foutmelding voor de gebruiker
+        let msg = "Generation Failed";
+        if (e.message.includes("403") || e.message.includes("permission")) {
+            msg = "Jouw API Key mag (nog) geen plaatjes maken van Google.";
+        }
+        container.innerHTML = `<div class="p-4 text-center"><p class="text-red-500 text-xs">${msg}</p><p class="text-[10px] text-gray-400 mt-1">${e.message}</p></div>`;
     }
 }
 

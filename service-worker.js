@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meandery-cache-v6'; // VERSNELD NAAR V6 🚀
+const CACHE_NAME = 'meandery-cache-v7'; // VERSNELD NAAR V7 (Fix voor syntax error) 🚀
 
 // Lijst met bestanden die we willen bewaren voor offline gebruik
 const urlsToCache = [
@@ -6,22 +6,22 @@ const urlsToCache = [
   './index.html',
   './style.css',
   './app.js',
-  './secrets.js',   // Belangrijk voor offline toegang
-  './manifest.json'
-  './icon-192x192.png',
-  './icon-512x512.png'
+  './secrets.js',
+  './manifest.json',      // <--- HIER MISTE DE KOMMA!
+  './icon-192x192.png',   // Let op: Zorg dat dit plaatje ook echt in je map staat!
+  './icon-512x512.png'    // Let op: Zorg dat dit plaatje ook echt in je map staat!
 ];
 
 // 1. INSTALLATIE: Downloaden en Cachen
 self.addEventListener('install', event => {
-  // Zorg dat de nieuwe versie direct actief wordt en niet wacht
+  // Zorg dat de nieuwe versie direct actief wordt
   self.skipWaiting();
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache v6');
-        // We gebruiken een "veilige" methode:
+        console.log('Opened cache v7');
+        // We gebruiken de "veilige" methode:
         // Als 1 bestand faalt (404), crasht NIET de hele installatie.
         return Promise.all(
           urlsToCache.map(url => {
@@ -40,7 +40,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          // Verwijder alles wat niet v6 is
+          // Verwijder alles wat niet v7 is
           if (cacheName !== CACHE_NAME) {
             console.log('Oude cache verwijderd:', cacheName);
             return caches.delete(cacheName);

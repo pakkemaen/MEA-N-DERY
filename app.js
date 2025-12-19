@@ -23,14 +23,6 @@ let customBottles = []; // Houdt de lijst met custom flessen bij
 let currentPredictedProfile = null;
 let packagingCosts = {}; 
 
-// --- LABEL CONFIG (BUILT-IN & CUSTOM) ---
-const builtInLabelFormats = {
-    'avery_l7165': { name: 'Avery L7165 (99.1x67.7mm)', width: 99.1, height: 67.7, cols: 2, rows: 4, marginTop: 13, marginLeft: 4.6, gapX: 2.5, gapY: 0 },
-    'herma_4453': { name: 'Herma 4453 (105x148mm)', width: 105, height: 148, cols: 2, rows: 2, marginTop: 0, marginLeft: 0, gapX: 0, gapY: 0 },
-    'avery_l7163': { name: 'Avery L7163 (99.1x38.1mm)', width: 99.1, height: 38.1, cols: 2, rows: 7, marginTop: 15, marginLeft: 4.6, gapX: 2.5, gapY: 0 }
-};
-let userLabelFormats = {}; // Wordt geladen uit Firestore
-
 async function saveBrewToHistory(recipeText, flavorProfile) {
     if (!auth.currentUser) return;
     try {

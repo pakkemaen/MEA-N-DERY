@@ -2005,8 +2005,18 @@ function applySettings() {
     const apiKeyField = document.getElementById('apiKeyInput');
     if (apiKeyField) apiKeyField.value = userSettings.apiKey || '';
 
-    const aiModelField = document.getElementById('aiModelInput');
-    if (aiModelField) aiModelField.value = userSettings.aiModel || 'gemini-1.5-flash-001';
+   const aiModelField = document.getElementById('aiModelInput');
+    if (aiModelField && userSettings.aiModel) {
+        // Check of het model al in de dropdown staat. Zo niet, voeg hem toe (voor offline gebruik).
+        let exists = Array.from(aiModelField.options).some(o => o.value === userSettings.aiModel);
+        if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = userSettings.aiModel;
+            opt.text = userSettings.aiModel + " (Saved)";
+            aiModelField.add(opt, 0); // Voeg toe bovenaan
+        }
+        aiModelField.value = userSettings.aiModel;
+    }
     
     const imgKeyField = document.getElementById('imageApiKeyInput');
     if (imgKeyField) imgKeyField.value = userSettings.imageApiKey || '';
@@ -2338,6 +2348,68 @@ async function getTroubleshootingAdvice() {
         output.innerHTML = marked.parse(text);
     } catch (error) {
         output.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+    }
+}
+
+// --- NIEUWE FUNCTIE: HAAL MODELLEN OP ---
+window.fetchAvailableModels = async function() {
+    const apiKey = document.getElementById('apiKeyInput').value.trim();
+    const select = document.getElementById('aiModelInput');
+    const btn = document.getElementById('fetchModelsBtn');
+
+    if (!apiKey) {
+        showToast("Vul eerst je Google API Key in.", "error");
+        return;
+    }
+
+    // UI Feedback: Laat zien dat we bezig zijn
+    const originalBtnText = btn.innerText;
+    btn.innerText = "Scanning...";
+    btn.disabled = true;
+
+    try {
+        // Vraag Google om de lijst met modellen
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        
+        if (!response.ok) throw new Error("Kon modellen niet laden. Check je API Key.");
+        
+        const data = await response.json();
+        
+        // Filter de lijst: We willen alleen modellen die 'generateContent' kunnen (tekst maken)
+        // We willen geen 'embedding' of 'vision-only' modellen in de lijst.
+        const textModels = data.models.filter(m => 
+            m.supportedGenerationMethods.includes("generateContent")
+        );
+
+        // Sorteer ze zodat de nieuwste (vaak de langste versie-nummers) bovenaan staan, of alfabetisch
+        textModels.sort((a, b) => b.name.localeCompare(a.name));
+
+        // Leeg de dropdown en vul opnieuw
+        select.innerHTML = '';
+        
+        textModels.forEach(model => {
+            // Google geeft namen terug als "models/gemini-1.5-pro".
+            // Wij hebben alleen het stukje achter de slash nodig.
+            const cleanName = model.name.replace('models/', '');
+            const option = document.createElement('option');
+            option.value = cleanName;
+            option.text = `${cleanName} (${model.version || 'v?'})`;
+            select.appendChild(option);
+        });
+
+        // Probeer het huidige opgeslagen model weer te selecteren als het in de lijst staat
+        if (userSettings.aiModel) {
+            select.value = userSettings.aiModel;
+        }
+
+        showToast(`Succes! ${textModels.length} modellen gevonden.`, "success");
+
+    } catch (error) {
+        console.error(error);
+        showToast("Fout bij ophalen modellen: " + error.message, "error");
+    } finally {
+        btn.innerText = originalBtnText;
+        btn.disabled = false;
     }
 }
 
@@ -3761,6 +3833,7 @@ function initApp() {
 
     // Settings & Data
     document.getElementById('saveSettingsBtn')?.addEventListener('click', saveUserSettings);
+    document.getElementById('fetchModelsBtn')?.addEventListener('click', window.fetchAvailableModels);
     document.getElementById('theme-toggle-checkbox')?.addEventListener('change', (e) => applyTheme(e.target.checked ? 'dark' : 'light'));
     document.getElementById('exportHistoryBtn')?.addEventListener('click', exportHistory);
     document.getElementById('exportInventoryBtn')?.addEventListener('click', exportInventory);

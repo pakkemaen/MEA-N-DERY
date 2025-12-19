@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MEA(N)DERY - AI Mead Recipe Creator</title>
-    
     <meta name="theme-color" content="#a89a87"/>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192x192.png">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,35 +16,20 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
     <link rel="stylesheet" href="style.css">
 
     <script>
-        // --- NOODOPLOSSING: KILL SWITCH ---
-        // Dit script verwijdert geforceerd alle Service Workers bij het laden van de pagina.
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                    for(let registration of registrations) {
-                        registration.unregister()
-                            .then(() => console.log("💀 Oude Service Worker is VERWIJDERD!"))
-                            .catch(err => console.error("Kon niet verwijderen:", err));
-                    }
-                    
-                    // Optioneel: Maak ook de cache opslag leeg voor een écht schone lei
-                    if ('caches' in window) {
-                        caches.keys().then((names) => {
-                            names.forEach(name => {
-                                caches.delete(name);
-                                console.log(`🧹 Cache ${name} gewist.`);
-                            });
-                        });
-                    }
-                });
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('Service Worker Registered! 🚀', reg.scope))
+                    .catch(err => console.error('SW Fail:', err));
             });
         }
     </script>
+
 </head>
+
 <body class="bg-app-primary text-app-primary">
 
     <div id="login-view" class="fixed inset-0 bg-app-primary flex items-center justify-center z-50">

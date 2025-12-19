@@ -31,7 +31,7 @@ async function saveBrewToHistory(recipeText, flavorProfile) {
             recipe: recipeText,
             flavorProfile: flavorProfile || {},
             timestamp: serverTimestamp(),
-            model: userSettings.aiModel || "gemini-1.5-flash"
+            model: userSettings.aiModel || "gemini-1.5-flash-001"
         });
         showToast("Recipe saved to history!", "success");
     } catch (error) {
@@ -230,9 +230,17 @@ async function performApiCall(prompt, schema = null) {
     // Je Cloud Function URL
     const functionUrl = "https://callgemini-388311971225.europe-west1.run.app"; 
     
-    // HIER HALEN WE HET MODEL UIT JE SETTINGS
-    // Als er niets in settings staat, vallen we terug op 'gemini-2.5-pro'
-    const modelToUse = userSettings.aiModel || "gemini-2.5-pro";
+    // VERBETERING: We gebruiken de 'Pinned Version' (001). 
+    // Dit lost de 404 errors op omdat deze naam altijd bestaat.
+    let modelToUse = "gemini-1.5-flash-001";
+    
+    // Als de gebruiker iets in settings heeft staan, proberen we dat.
+    // Maar we vangen lege waardes af.
+    if (userSettings.aiModel && userSettings.aiModel.trim() !== "") {
+        modelToUse = userSettings.aiModel;
+    }
+
+    console.log("🤖 Asking Gemini Model:", modelToUse); // Zie in je console welk model hij pakt
 
     try {
         const response = await fetch(functionUrl, {
@@ -243,12 +251,13 @@ async function performApiCall(prompt, schema = null) {
             body: JSON.stringify({
                 prompt: prompt,
                 schema: schema,
-                model: userSettings.aiModel || "gemini-1.5-flash"
+                model: modelToUse 
             })
         });
 
         if (!response.ok) {
             const errorData = await response.json();
+            // Als de specifieke flash-001 ook faalt, is er iets anders mis (bijv. API key rechten)
             throw new Error(errorData.error || `Server error: ${response.status}`);
         }
 
@@ -257,6 +266,12 @@ async function performApiCall(prompt, schema = null) {
 
     } catch (error) {
         console.error("Backend Error:", error);
+        
+        // NOODOPLOSSING: Als de luxe modellen falen, probeer de "Oude Getrouwe"
+        if (error.message.includes("404") || error.message.includes("not found")) {
+             throw new Error(`Model ${modelToUse} niet gevonden. Probeer in Settings 'gemini-pro' te typen.`);
+        }
+        
         throw new Error(error.message || "Fout bij verbinden met de AI backend.");
     }
 }
@@ -1981,7 +1996,7 @@ function applySettings() {
     if (apiKeyField) apiKeyField.value = userSettings.apiKey || '';
 
     const aiModelField = document.getElementById('aiModelInput');
-    if (aiModelField) aiModelField.value = userSettings.aiModel || 'gemini-2.5-pro';
+    if (aiModelField) aiModelField.value = userSettings.aiModel || 'gemini-1.5-flash-001';
     
     const imgKeyField = document.getElementById('imageApiKeyInput');
     if (imgKeyField) imgKeyField.value = userSettings.imageApiKey || '';

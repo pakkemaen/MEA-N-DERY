@@ -165,7 +165,7 @@ window.switchSubView = function(viewName, parentViewId) {
     if (viewName === 'brew-day-2') renderBrewDay2();
     if (viewName === 'creator') populateEquipmentProfilesDropdown(); 
     if (viewName === 'social') populateSocialRecipeDropdown();
-    if (viewName === 'labels') { populateLabelRecipeDropdown(); updatePreviewAspectRatio(); }
+    if (viewName === 'labels') { populateLabelRecipeDropdown(); updateLabelPreviewDimensions(); }
 }
 
 // --- Initialization & Auth ---
@@ -2748,6 +2748,48 @@ function calculateTOSNA() {
     `;
 }
 
+// --- REFRACTOMETER CORRECTIE (Brix -> SG) ---
+function calculateRefractometerCorrection() {
+    const ob = parseFloat(document.getElementById('refract_ob').value); // Original Brix
+    const cb = parseFloat(document.getElementById('refract_cb').value); // Current Brix
+    const resultDiv = document.getElementById('refractResult');
+
+    if (isNaN(ob) || isNaN(cb)) {
+        showToast("Please enter both Brix values.", "error");
+        return;
+    }
+
+    // Wort Correction Factor (standaard is vaak 1.04, maar voor honing/fruit is 1.0 vaak prima, we gebruiken 1.0 voor de eenvoud of de Sean Terrill formule die geen WCF nodig heeft)
+    // We gebruiken hier de Petr Novotny formule (standaard in veel homebrew apps):
+    
+    // Stap 1: Bereken SG
+    const sg = 1.001843 
+             - 0.002318474 * ob 
+             - 0.000007775 * (ob * ob) 
+             - 0.0340054 * cb 
+             + 0.00564 * (cb * cb) 
+             + 0.000283 * (ob * cb);
+
+    // Stap 2: Bereken ABV (Standaard formule op basis van SG)
+    // We moeten eerst de Original Gravity weten vanuit de Original Brix
+    const originalSG = 1 + (ob / (258.6 - ((ob / 258.2) * 227.1)));
+    const abv = (originalSG - sg) * 131.25;
+
+    resultDiv.innerHTML = `
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <p class="text-xs text-app-secondary uppercase">True Gravity</p>
+                <p class="text-2xl font-bold text-purple-700 dark:text-purple-300">${sg.toFixed(3)}</p>
+            </div>
+            <div>
+                <p class="text-xs text-app-secondary uppercase">Current ABV</p>
+                <p class="text-2xl font-bold text-purple-700 dark:text-purple-300">${abv.toFixed(1)}%</p>
+            </div>
+        </div>
+    `;
+    resultDiv.classList.remove('hidden');
+}
+
 // Helpers om vanuit een recept naar een calculator te springen
 window.linkToBacksweetenCalc = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
@@ -4810,6 +4852,7 @@ function initApp() {
     });
 
     // Calculators & Tools
+    document.getElementById('calcRefractBtn')?.addEventListener('click', calculateRefractometerCorrection);
     document.getElementById('calcAbvBtn')?.addEventListener('click', calculateABV);
     document.getElementById('correctSgBtn')?.addEventListener('click', correctHydrometer);
     document.getElementById('calcSugarBtn')?.addEventListener('click', calculatePrimingSugar);

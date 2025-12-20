@@ -3882,24 +3882,39 @@ window.renderEquipmentProfiles = function() {
     if (!listDiv) return;
 
     if (equipmentProfiles.length === 0) {
-        listDiv.innerHTML = `<p class="text-center text-app-secondary/80">No saved profiles.</p>`;
+        listDiv.innerHTML = `<p class="text-center text-app-secondary/80 py-8">No equipment profiles yet.</p>`;
         return;
     }
     
     listDiv.innerHTML = equipmentProfiles.map(p => `
-        <div id="equip-item-${p.id}" class="p-3 card rounded-md mb-2">
-            <div class="flex justify-between items-center">
-                 <div class="flex-grow">
-                    <p class="font-bold">${p.name} <span class="text-sm font-normal text-app-secondary/80">(${p.type})</span></p>
-                    <p class="text-sm text-app-secondary">Capacity: ${p.capacityLiters || 'N/A'}L | Trub: ${p.trubLossLiters || 0}L ${p.type === 'Kettle' ? `| Boil-off: ${p.boilOffRateLitersPerHour || 0}L/hr` : ''}</p>
-                </div>
-                <div class="flex items-center gap-4 flex-shrink-0 ml-4">
-                    <span class="font-semibold">${p.quantity || 1}x</span>
-                    <div class="flex gap-2">
-                        <button onclick="window.editEquipmentProfile('${p.id}')" class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
-                        <button onclick="window.deleteEquipmentProfile('${p.id}')" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+        <div id="equip-item-${p.id}" class="p-4 card rounded-xl border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-all bg-app-secondary mb-3">
+            <div class="flex justify-between items-start">
+                 
+                 <div class="pr-4">
+                    <div class="font-bold text-xl text-app-primary leading-tight">${p.name}</div>
+                    <div class="text-xs font-bold uppercase tracking-wider text-blue-500 mt-1">${p.type}</div>
+                    <div class="text-xs text-app-secondary mt-2">
+                        Capacity: <strong>${p.capacityLiters || 'N/A'}L</strong> 
+                        <span class="mx-1">•</span> 
+                        Loss: <strong>${p.trubLossLiters || 0}L</strong>
+                        ${p.type === 'Kettle' ? `<span class="mx-1">•</span> Boil-off: <strong>${p.boilOffRateLitersPerHour || 0}L/hr</strong>` : ''}
                     </div>
                 </div>
+
+                <div class="text-right">
+                    <div class="inline-block bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-lg border border-blue-100 dark:border-blue-800">
+                        <span class="font-bold text-xl text-blue-700 dark:text-blue-300">${p.quantity || 1}x</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-4 mt-3 pt-2 border-t border-app-brand/5">
+                <button onclick="window.editEquipmentProfile('${p.id}')" class="text-xs font-bold text-app-secondary hover:text-blue-600 uppercase tracking-wider flex items-center gap-1 transition-colors">
+                    Edit
+                </button>
+                <button onclick="window.deleteEquipmentProfile('${p.id}')" class="text-xs font-bold text-app-secondary hover:text-red-600 uppercase tracking-wider flex items-center gap-1 transition-colors">
+                    Delete
+                </button>
             </div>
         </div>
     `).join('');
@@ -4295,15 +4310,12 @@ window.renderInventory = function() {
     const currency = userSettings.currencySymbol || '€';
     let html = '';
 
-    // Loop door de categorieën
     categories.forEach(category => {
         if (grouped[category]) {
-            // Categorie header
-            html += `<h3 class="text-xl font-header mt-6 mb-3 uppercase tracking-wide text-app-brand border-b border-app-brand/20 pb-1">${category}</h3>`;
-            html += `<div class="grid grid-cols-1 gap-2">`; // Start container
+            html += `<h3 class="text-lg font-header mt-6 mb-3 uppercase tracking-wider text-app-brand opacity-80 border-b border-app-brand/10 pb-1">${category}</h3>`;
+            html += `<div class="grid grid-cols-1 gap-3">`; 
             
             grouped[category].forEach(item => {
-                // Bereken verloopdatum status
                 const expDateStr = item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : 'N/A';
                 let dateClass = 'text-app-secondary/60';
                 if (item.expirationDate) {
@@ -4312,7 +4324,6 @@ window.renderInventory = function() {
                     else if (days <= 30) dateClass = 'text-amber-500 font-semibold';
                 }
 
-                // Bepaal kleur voor de rand (links)
                 let catClass = 'cat-yeast'; 
                 const c = item.category.toLowerCase();
                 if(c.includes('honey')) catClass = 'cat-honey';
@@ -4321,50 +4332,44 @@ window.renderInventory = function() {
                 if(c.includes('nutrient')) catClass = 'cat-nutrient';
                 if(c.includes('chemical') || c.includes('clean')) catClass = 'cat-chemical';
 
-                // --- HET ITEM KAARTJE (ZONDER BADGE, MET RAND) ---
                 html += `
-                <div id="item-${item.id}" class="p-3 card rounded-lg border-l-4 ${catClass.replace('cat-', 'border-')} shadow-sm hover:shadow-md transition-all bg-app-secondary">
-                    <div class="flex justify-between items-center">
+                <div id="item-${item.id}" class="p-4 card rounded-xl border-l-4 ${catClass.replace('cat-', 'border-')} shadow-sm hover:shadow-md transition-all bg-app-secondary group relative">
+                    <div class="flex justify-between items-start">
                         
-                        <div>
-                            <div class="font-bold text-lg text-app-primary leading-tight">${item.name}</div>
+                        <div class="pr-4">
+                            <div class="font-bold text-xl text-app-primary leading-tight">${item.name}</div>
                             <div class="text-xs ${dateClass} mt-1 flex items-center gap-1">
                                 <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 Exp: ${expDateStr}
                             </div>
                         </div>
 
-                        <div class="text-right flex flex-col items-end gap-1">
-                            <div class="font-mono font-bold text-app-primary text-sm">
-                                ${item.qty} ${item.unit}
+                        <div class="text-right">
+                            <div class="inline-block bg-app-tertiary px-2 py-1 rounded-lg border border-app-brand/10 mb-2">
+                                <div class="font-mono font-bold text-app-primary text-sm">${item.qty} <span class="text-xs font-normal text-app-secondary">${item.unit}</span></div>
                             </div>
-                            <div class="text-xs text-app-secondary mb-1">
+                            <div class="text-xs text-app-secondary font-mono mb-3">
                                 ${currency}${(item.price || 0).toFixed(2)}
                             </div>
-                            
-                            <div class="flex gap-3 text-[10px] font-bold uppercase tracking-wider">
-                                <button onclick="window.editInventoryItem('${item.id}')" class="text-blue-500 hover:text-blue-700 hover:underline">Edit</button>
-                                <button onclick="window.deleteInventoryItem('${item.id}')" class="text-red-500 hover:text-red-700 hover:underline">Del</button>
-                            </div>
                         </div>
+                    </div>
 
+                    <div class="flex justify-end gap-4 mt-2 pt-2 border-t border-app-brand/5">
+                        <button onclick="window.editInventoryItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-blue-600 uppercase tracking-wider flex items-center gap-1 transition-colors">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg> Edit
+                        </button>
+                        <button onclick="window.deleteInventoryItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-red-600 uppercase tracking-wider flex items-center gap-1 transition-colors">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Delete
+                        </button>
                     </div>
                 </div>`; 
             });
-            
-            html += `</div>`; // Sluit container
+            html += `</div>`;
         }
     });
     
-    // Lege staat
-    if (inventory.length === 0) {
-        html = `<div class="text-center py-12 opacity-50 flex flex-col items-center">
-            <svg class="w-12 h-12 mb-2 text-app-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-            <p>The Cupboard is Bare</p>
-        </div>`;
-    }
-    
-    listDiv.innerHTML = html;
+    if (inventory.length === 0) listDiv.innerHTML = `<div class="text-center py-12 opacity-50"><p>The Cupboard is Bare</p></div>`;
+    else listDiv.innerHTML = html;
 }
 
 window.deleteInventoryItem = async function(itemId) {
@@ -4463,17 +4468,29 @@ window.renderPackagingUI = function() {
             .map(item => {
                 const itemData = packagingCosts[item.id];
                 const costPerUnit = (itemData.qty > 0 && itemData.price > 0) ? (itemData.price / itemData.qty).toFixed(2) : '0.00';
+                
                 return `
-                   <div id="pkg-item-${item.id}" class="p-3 card rounded-md">
-                       <div class="flex justify-between items-center">
-                           <div><p class="font-bold">${item.name}</p><p class="text-sm text-app-secondary/80">Cost per unit: ${currency}${costPerUnit}</p></div>
-                           <div class="flex items-center gap-4">
-                               <span class="font-semibold">${itemData.qty} items - ${currency}${itemData.price.toFixed(2)} total</span>
-                               <div class="flex gap-2">
-                                   <button onclick="window.editPackagingItem('${item.id}')" class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
-                                   <button onclick="window.clearPackagingItem('${item.id}')" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                   <div id="pkg-item-${item.id}" class="p-4 card rounded-xl border-l-4 border-amber-600 shadow-sm hover:shadow-md transition-all bg-app-secondary mb-3">
+                       <div class="flex justify-between items-start">
+                           
+                           <div>
+                               <div class="font-bold text-xl text-app-primary">${item.name}</div>
+                               <div class="text-xs text-app-secondary mt-1">Cost/Unit: <strong>${currency}${costPerUnit}</strong></div>
+                           </div>
+
+                           <div class="text-right">
+                               <div class="inline-block bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg border border-amber-100 dark:border-amber-800 mb-1">
+                                   <div class="font-mono font-bold text-amber-800 dark:text-amber-200 text-sm">${itemData.qty} <span class="text-xs font-normal">items</span></div>
+                               </div>
+                               <div class="text-xs text-app-secondary font-mono block">
+                                   Total: ${currency}${itemData.price.toFixed(2)}
                                </div>
                            </div>
+                       </div>
+
+                       <div class="flex justify-end gap-4 mt-3 pt-2 border-t border-app-brand/5">
+                           <button onclick="window.editPackagingItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-blue-600 uppercase tracking-wider flex items-center gap-1 transition-colors">Edit</button>
+                           <button onclick="window.clearPackagingItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-red-600 uppercase tracking-wider flex items-center gap-1 transition-colors">Delete</button>
                        </div>
                    </div>`;
            }).join('');

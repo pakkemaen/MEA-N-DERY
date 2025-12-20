@@ -4331,14 +4331,7 @@ function initApp() {
     document.getElementById('clearHistoryBtn')?.addEventListener('click', clearHistory);
     document.getElementById('clearInventoryBtn')?.addEventListener('click', clearInventory);
 
-    // Labels
-    document.getElementById('logoUpload')?.addEventListener('change', handleLogoUpload);
-    document.getElementById('removeLogoBtn')?.addEventListener('click', removeLogo);
-    document.getElementById('labelRecipeSelect')?.addEventListener('change', handleLabelRecipeSelect);
-    document.querySelectorAll('.label-style-btn').forEach(btn => btn.addEventListener('click', () => switchLabelStyle(btn.dataset.style)));
-    document.getElementById('generate-print-btn')?.addEventListener('click', generatePrintPage);
-    document.querySelectorAll('.orientation-btn').forEach(btn => btn.addEventListener('click', () => setLabelOrientation(btn.dataset.orientation)));
-    
+    // Labels (V2.0)
     initLabelForge();
 
     // Inputs die de label preview updaten

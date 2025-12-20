@@ -1658,6 +1658,94 @@ window.showBrewDetail = function(brewId) {
     }
 }
 
+// --- GRAFIEKEN VOOR HISTORIE ---
+
+window.renderFermentationGraph = function(brewId) {
+    const brew = brews.find(b => b.id === brewId);
+    if (!brew || !brew.logData || !brew.logData.fermentationLog) return;
+
+    const ctx = document.getElementById(`fermChart-${brewId}`);
+    if (!ctx) return;
+
+    // Filter lege regels eruit en sorteer op datum
+    const log = brew.logData.fermentationLog.filter(l => l.date && l.sg);
+    log.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (log.length === 0) {
+        ctx.parentElement.classList.add('hidden'); // Verberg als er geen data is
+        return;
+    }
+
+    const labels = log.map(l => l.date);
+    const dataSG = log.map(l => parseFloat(l.sg));
+
+    if (window[`fermChartInstance_${brewId}`]) {
+        window[`fermChartInstance_${brewId}`].destroy();
+    }
+
+    window[`fermChartInstance_${brewId}`] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Specific Gravity (S.G.)',
+                data: dataSG,
+                borderColor: '#d97706',
+                backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                borderWidth: 2,
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: { y: { beginAtZero: false, title: { display: true, text: 'Gravity' } } }
+        }
+    });
+}
+
+window.renderFlavorWheel = function(brewId, labels, data) {
+    const container = document.getElementById(`flavor-wheel-container-${brewId}`);
+    if (!container) return;
+
+    container.innerHTML = `<canvas id="flavorChart-${brewId}"></canvas>`;
+    const ctx = document.getElementById(`flavorChart-${brewId}`);
+
+    const brandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand-color').trim() || '#d97706';
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? '#e0e0e0' : '#4a3c2c';
+    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+
+    new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Flavor Profile',
+                data: data,
+                backgroundColor: brandColor + '4D',
+                borderColor: brandColor,
+                borderWidth: 2,
+                pointBackgroundColor: brandColor
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                r: {
+                    angleLines: { color: gridColor },
+                    grid: { color: gridColor },
+                    pointLabels: { color: textColor, font: { size: 11 } },
+                    ticks: { display: false, max: 5 },
+                    suggestedMin: 0,
+                    suggestedMax: 5
+                }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
 // --- GRAFIEKEN VOOR HISTORIE (ONTBREKENDE FUNCTIES) ---
 
 function renderFermentationGraph(brewId) {
@@ -3401,6 +3489,8 @@ function populateSocialRecipeDropdown() {
 // 1. De hoofdfunctie om tekst te genereren
 // --- SOCIAL MEDIA STUDIO: RYAN REYNOLDS & UNTAPPD UPDATE ---
 
+// --- SOCIAL MEDIA STUDIO: SOMMELIER & UNTAPPD FIX ---
+
 async function runSocialMediaGenerator() {
     const brewId = document.getElementById('social-recipe-select').value;
     const persona = document.getElementById('social-persona').value;
@@ -3418,14 +3508,18 @@ async function runSocialMediaGenerator() {
     container.innerHTML = getLoaderHtml(`Channeling ${persona}...`);
     imageBtn.classList.add('hidden');
 
-    // Context ophalen
+    // Context ophalen (NU MET MEER DETAILS)
     let context = "";
     if (brewId) {
         const brew = brews.find(b => b.id === brewId);
+        // Probeer ABV te vinden (Final -> Target -> Unknown)
+        const abv = brew.logData?.finalABV || brew.logData?.targetABV || "approx 12%";
+        
         context = `
         **PRODUCT:** Mead (Honey Wine).
         **NAME:** ${brew.recipeName}
-        **DETAILS:** ${brew.recipeMarkdown.substring(0, 600)}...
+        **STATS:** ABV: ${abv}.
+        **RECIPE DATA:** ${brew.recipeMarkdown.substring(0, 1000)}...
         **USER NOTES:** ${tweak}
         `;
     } else {
@@ -3435,49 +3529,38 @@ async function runSocialMediaGenerator() {
     // --- PERSONA DEFINITIES ---
     let toneInstruction = "";
     if (persona === 'Ryan Reynolds') {
-        toneInstruction = `
-        **TONE: RYAN REYNOLDS / DEADPOOL MARKETING.** - High energy, extremely witty, heavy sarcasm, self-deprecating.
-        - Break the "fourth wall" (acknowledge it's an ad or a post).
-        - Short, punchy sentences. 
-        - Make fun of the brewing process or how much effort went into it.
-        `;
+        toneInstruction = `**TONE: RYAN REYNOLDS.** High energy, witty, sarcastic, break the fourth wall. Make fun of the effort.`;
     } else if (persona === 'Dry British') {
-        toneInstruction = `
-        **TONE: DRY BRITISH HUMOR.**
-        - Understated, deadpan, slightly cynical but charming.
-        - Think Monty Python or Ricky Gervais.
-        - Use words like "splendid", "dreadfully good", "rather nice".
-        - Avoid exclamation marks. Be ironically modest.
-        `;
+        toneInstruction = `**TONE: DRY BRITISH.** Understated, deadpan, cynical but charming. Use words like "splendid", "rather nice".`;
     } else if (persona === 'The Sommelier') {
-        toneInstruction = `**TONE: PROFESSIONAL.** Elegant, descriptive, focus on sensory details (aroma, mouthfeel).`;
+        toneInstruction = `**TONE: THE SOMMELIER.** Elegant, sophisticated, sensory-focused. Use vocabulary like "bouquet", "finish", "notes of", "structure". No slang.`;
     } else {
         toneInstruction = `**TONE:** Bold, loud, enthusiastic like a Viking feast.`;
     }
 
-    // --- PLATFORM DEFINITIES ---
+    // --- PLATFORM DEFINITIES (AANGEPAST VOOR UNTAPPD) ---
     let platformInstruction = "";
     if (platform === 'Untappd') {
         platformInstruction = `
-        **FORMAT: UNTAPPD BREWERY DESCRIPTION.**
-        - This is NOT a social media post. This is the official description on the bottle/app.
-        - Focus: Flavor notes, ingredients, ABV, and the "story" of the drink.
-        - Length: Concise paragraph (max 150 words).
-        - NO hashtags. NO emojis. NO "Link in bio".
-        - Even if the persona is funny, keep the core description useful for the drinker.
+        **FORMAT: UNTAPPD DESCRIPTION (STRICT RULES):**
+        1. **NO MARKDOWN:** Do NOT use bold (**), italics (*), or bullet points. Plain text only.
+        2. **NO LISTS:** Do NOT list "Style: X" or "ABV: Y". Weave these facts naturally into the sentences (e.g., "This 12% Melomel features...").
+        3. **CONTENT:** A single, flowing, seductive paragraph about the flavor profile, mouthfeel, and ingredients.
+        4. **LENGTH:** Concise (max 100 words).
+        5. **FORBIDDEN:** No hashtags, no emojis, no links.
         `;
     } else {
         // Instagram defaults
         platformInstruction = `
         **FORMAT: INSTAGRAM CAPTION.**
         - Engaging hook.
-        - Use line breaks for readability.
+        - Use line breaks.
         - Use relevant Emojis.
-        - End with a block of 10-15 relevant hashtags (e.g. #mead #homebrewing #mazer).
+        - End with 10-15 hashtags.
         `;
     }
 
-    const prompt = `You are a Social Media Manager.
+    const prompt = `You are a Marketing Expert.
     
     ${context}
     
@@ -3486,7 +3569,7 @@ async function runSocialMediaGenerator() {
     ${platformInstruction}
     
     **TASK:** Write the content for ${platform}.
-    **EXTRA:** At the very end, provide a separate AI Image Prompt for this specific mead, starting with "IMG_PROMPT:".
+    **EXTRA:** At the very end, provide a separate AI Image Prompt starting with "IMG_PROMPT:".
     `;
     
     try {
@@ -3501,14 +3584,19 @@ async function runSocialMediaGenerator() {
             imgPrompt = parts[1].trim();
         }
 
+        // --- SCHOONMAAK ACTIE ---
+        // Verwijder alle markdown sterretjes die de AI toch per ongeluk heeft toegevoegd
+        finalPost = finalPost.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+
+        // Als Untappd: verwijder ook eventuele "Title:" prefixes die de AI soms verzint
+        if (platform === 'Untappd') {
+            finalPost = finalPost.replace(/^Title:\s*/i, '').replace(/^Description:\s*/i, '');
+        }
+
         container.innerText = finalPost; 
         
         if (imgPrompt) {
             imageBtn.classList.remove('hidden');
-            // We gebruiken hier de "Dual Engine" logica die al in je app zit
-            // Als imageModel in settings "imagen" is (standaard), probeert hij Google.
-            // Als dat faalt (404), geeft hij de melding. 
-            // Als je later Imagen toegang krijgt, werkt dit knopje dus ineens!
             imageBtn.onclick = () => generateSocialImage(imgPrompt);
         }
 
@@ -4213,7 +4301,19 @@ window.renderInventory = function() {
                     else if (days <= 30) dateClass = 'text-amber-500 font-semibold';
                 }
 
-                html += `<div id="item-${item.id}" class="p-3 card rounded-md">
+                let catClass = 'cat-yeast'; // Default
+                const c = item.category.toLowerCase();
+                if(c.includes('honey')) catClass = 'cat-honey';
+                if(c.includes('fruit')) catClass = 'cat-fruit';
+                if(c.includes('spice')) catClass = 'cat-spice';
+                if(c.includes('nutrient')) catClass = 'cat-nutrient';
+                if(c.includes('chemical') || c.includes('clean')) catClass = 'cat-chemical';
+
+                html += `<div id="item-${item.id}" class="p-3 card rounded-md border-l-4 ${catClass.replace('cat-', 'border-')} shadow-sm hover:shadow-md transition-shadow">
+                    <span class="category-badge ${catClass}">${item.category}</span>
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="font-bold text-lg">${item.name}</span>
+                        ```
                     <div class="flex justify-between items-center">
                         <span>${item.name}</span>
                         <div class="flex items-center gap-4">

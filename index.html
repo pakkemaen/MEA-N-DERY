@@ -133,68 +133,76 @@
                             <p id="description-priority-warning" class="hidden text-xs text-center text-amber-600 dark:text-amber-400 mt-2">U gebruikt de vrije beschrijving. De onderstaande opties worden genegeerd.</p>
                         </div>
 
-                        <div id="structured-options-container" class="space-y-6 pt-6 border-t border-app">
-                            <div><label for="batchSize" class="block text-sm font-bold mb-2">Batch Size (Liters)</label><input type="number" id="batchSize" placeholder="5" min="1" max="100" step="0.5" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                            <div><label for="equipmentProfileSelect" class="block text-sm font-bold mb-2">Equipment Profile</label><select id="equipmentProfileSelect" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"><option value="">None</option></select></div>
-                            <div><label for="abv" class="block text-sm font-bold mb-2">Target ABV (%)</label><input type="number" id="abv" placeholder="12" min="5" max="18" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                            <div><label for="sweetness" class="block text-sm font-bold mb-2">Final Sweetness</label><select id="sweetness" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"><option value="" disabled selected>-- Select --</option><option value="dry">Dry</option><option value="semi-sweet">Semi-Sweet</option><option value="sweet">Sweet</option></select></div> 
-                            <div><label for="style" class="block text-sm font-bold mb-2">Base Style</label><select id="style" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary">
-                                   <option value="" disabled selected>-- Select a Style --</option>
-                                   <optgroup label="Mead Styles">
-                                       <option value="Traditional">Traditional Mead</option>
-                                       <option value="Melomel">Melomel (Fruit)</option>
-                                       <option value="Metheglin">Metheglin (Spice)</option>
-                                       <option value="Bochet">Bochet</option>
-                                       <option value="Cyser">Cyser (Apple)</option>
-                                       <option value="Pyment">Pyment (Grape)</option>
-                                       <option value="Braggot">Braggot</option>
-                                       <option value="Hydromel">Hydromel (Session)</option>
-                                       <option value="Sack Mead">Sack Mead (Dessert)</option>
-                                    </optgroup>
-                                </select>
-                            </div>
-                            <div><label for="honeyVariety" class="block text-sm font-bold mb-2">Honey Variety</label><select id="honeyVariety" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"><option value="" disabled selected>-- Select --</option><option value="Acacia">Acacia</option><option value="Wildflower">Wildflower</option><option value="other">Other...</option></select><input type="text" id="honeyVarietyOther" class="hidden w-full mt-2 p-2 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
+                        <div id="structured-options-container" class="space-y-4 pt-4 border-t border-app">
+    
+    <details class="group bg-app-tertiary rounded-lg open:ring-2 open:ring-app-brand/20 transition-all" open>
+        <summary class="font-bold text-sm cursor-pointer p-3 flex justify-between items-center select-none text-app-primary">
+            <span>🧪 Base Stats</span>
+            <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </summary>
+        <div class="p-3 pt-0 space-y-3 border-t border-app-brand/10">
+            <div><label class="text-xs font-bold uppercase text-app-secondary">Batch Size (L)</label><input type="number" id="batchSize" placeholder="5" class="mt-1 w-full p-2 border rounded-md"></div>
+            <div><label class="text-xs font-bold uppercase text-app-secondary">Target ABV (%)</label><input type="number" id="abv" placeholder="12" class="mt-1 w-full p-2 border rounded-md"></div>
+            <div><label class="text-xs font-bold uppercase text-app-secondary">Style</label><select id="style" class="mt-1 w-full p-2 border rounded-md"><option>Traditional</option><option>Melomel</option><option>Metheglin</option><option>Bochet</option><option>Cyser</option><option>Pyment</option><option>Braggot</option><option>Hydromel</option></select></div>
+            <div><label class="text-xs font-bold uppercase text-app-secondary">Sweetness</label><select id="sweetness" class="mt-1 w-full p-2 border rounded-md"><option value="dry">Dry</option><option value="semi-sweet">Semi-Sweet</option><option value="sweet">Sweet</option></select></div>
+        </div>
+    </details>
 
-                            <div id="fruit-section" class="hidden space-y-2">
-                                <label class="block text-sm font-bold">Choose Fruits</label>
-                                <div class="grid grid-cols-2 gap-2 text-sm">
-                                    <div class="p-2 rounded hover:bg-app-primary"><input type="checkbox" id="fruit_apples" class="mr-2"><label for="fruit_apples">Apples</label></div>
-                                    <div class="p-2 rounded hover:bg-app-primary"><input type="checkbox" id="fruit_cherries" class="mr-2"><label for="fruit_cherries">Cherries</label></div>
-                                    </div>
-                                <div class="pt-2"><input type="text" id="fruitOther" placeholder="Other Fruits" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                                <div class="mt-2 pt-2 border-t border-app-brand/30"><div class="flex items-center"><input type="checkbox" id="isNoWaterCheckbox" class="h-4 w-4 text-app-brand focus:ring-app-brand"><label for="isNoWaterCheckbox" class="ml-2 block text-sm font-bold text-app-brand">No-Water Method</label></div></div>  
-                            </div>
+    <details class="group bg-app-tertiary rounded-lg open:ring-2 open:ring-app-brand/20 transition-all">
+        <summary class="font-bold text-sm cursor-pointer p-3 flex justify-between items-center select-none text-app-primary">
+            <span>🍯 Ingredients</span>
+            <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </summary>
+        <div class="p-3 pt-0 space-y-3 border-t border-app-brand/10">
+            <div><label class="text-xs font-bold uppercase text-app-secondary">Honey</label><select id="honeyVariety" class="mt-1 w-full p-2 border rounded-md"><option>Wildflower</option><option>Acacia</option><option>Orange Blossom</option><option value="other">Other</option></select></div>
+            
+            <div id="fruit-section" class="hidden p-2 bg-app-secondary rounded border border-app-brand/20">
+                <label class="block text-xs font-bold mb-2">Fruits</label>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <label class="flex items-center"><input type="checkbox" id="fruit_apples" class="mr-2"> Apples</label>
+                    <label class="flex items-center"><input type="checkbox" id="fruit_cherries" class="mr-2"> Cherries</label>
+                    <label class="flex items-center"><input type="checkbox" id="fruit_berries" class="mr-2"> Berries</label>
+                </div>
+                <input type="text" id="fruitOther" placeholder="Other fruits..." class="mt-2 w-full p-1 text-sm border rounded">
+                <label class="flex items-center mt-2 text-xs font-bold text-app-brand"><input type="checkbox" id="isNoWaterCheckbox" class="mr-2"> No-Water Method</label>
+            </div>
 
-                             <div id="spice-section" class="hidden space-y-2">
-                                <label class="block text-sm font-bold">Choose Spices</label>
-                                <div class="grid grid-cols-2 gap-2"><div class="p-2 rounded hover:bg-app-primary"><input type="checkbox" id="spice_cinnamon" class="mr-2"><label for="spice_cinnamon">Cinnamon</label></div></div>
-                                <div class="pt-2"><input type="text" id="spiceOther" placeholder="Other Spices" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                            </div>
-                            <div id="braggot-section" class="hidden">
-                                <label for="braggotStyle" class="block text-sm font-bold mb-2">Braggot Base Style</label>
-                                <select id="braggotStyle" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"><option value="belgian_blond">Belgian Blond</option><option value="stout">Stout</option></select>
-                            </div>
-                            <div class="space-y-4 pt-4 border-t border-app">
-                                <div class="flex items-center"><input type="checkbox" id="addOak" class="h-4 w-4 text-app-brand"><label for="addOak" class="ml-3 block text-sm font-bold">Include Oak Aging?</label></div>
-                                <div><label for="specialIngredients" class="block text-sm font-bold mb-2">Special Ingredients</label><input type="text" id="specialIngredients" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="space-y-4 pt-4 border-t-2 border-app-brand mt-6">
-                            <label class="block text-sm font-bold text-app-brand">Use inventory for:</label>
-                            <div id="inventory-options-container" class="grid grid-cols-2 gap-x-4 gap-y-2 pl-3">
-                                <div class="flex items-center"><input type="checkbox" id="useInventory_Yeast" data-category="Yeast" class="inventory-toggle h-4 w-4 text-app-brand"><label for="useInventory_Yeast" class="ml-2 block text-sm font-medium">Yeast</label></div>
-                                <div class="flex items-center"><input type="checkbox" id="useInventory_Nutrients" data-category="Nutrient" class="inventory-toggle h-4 w-4 text-app-brand"><label for="useInventory_Nutrients" class="ml-2 block text-sm font-medium">Nutrients</label></div>
-                                <div class="flex items-center"><input type="checkbox" id="useInventory_Honey" data-category="Honey" class="inventory-toggle h-4 w-4 text-app-brand"><label for="useInventory_Honey" class="ml-2 block text-sm font-medium">Honey</label></div>
-                                <div class="flex items-center"><input type="checkbox" id="useInventory_Fruits" data-category="Fruit" class="inventory-toggle h-4 w-4 text-app-brand"><label for="useInventory_Fruits" class="ml-2 block text-sm font-medium">Fruit</label></div>
-                                <div class="flex items-center"><input type="checkbox" id="useInventory_Spices" data-category="Spice" class="inventory-toggle h-4 w-4 text-app-brand"><label for="useInventory_Spices" class="ml-2 block text-sm font-medium">Spices</label></div>
-                                <div class="flex items-center"><input type="checkbox" id="useInventory_Other" data-category="Other" class="inventory-toggle h-4 w-4 text-app-brand"><label for="useInventory_Other" class="ml-2 block text-sm font-medium">Other</label></div>
-                            </div>
-                            <div id="budget-section" class="hidden pl-3 space-y-2 pt-2 border-t border-app">
-                                <div class="flex items-center"><input type="checkbox" id="useBudget" class="h-4 w-4 text-app-brand"><label for="useBudget" class="ml-3 block text-sm font-bold">Genereer binnen budget?</label></div>
-                                <div id="budget-input-container" class="hidden"><label for="maxBudget" class="block text-sm font-bold mb-1">Max Budget</label><input type="number" id="maxBudget" placeholder="20" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary"></div>
-                            </div>
-                        </div>
+            <div id="spice-section" class="hidden p-2 bg-app-secondary rounded border border-app-brand/20">
+                <label class="block text-xs font-bold mb-2">Spices</label>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <label class="flex items-center"><input type="checkbox" id="spice_cinnamon" class="mr-2"> Cinnamon</label>
+                    <label class="flex items-center"><input type="checkbox" id="spice_vanilla" class="mr-2"> Vanilla</label>
+                </div>
+                <input type="text" id="spiceOther" placeholder="Other spices..." class="mt-2 w-full p-1 text-sm border rounded">
+            </div>
+            
+            <div class="flex items-center mt-2"><input type="checkbox" id="addOak" class="h-4 w-4 text-app-brand"><label for="addOak" class="ml-2 text-sm">Oak Aging</label></div>
+        </div>
+    </details>
+
+    <details class="group bg-app-tertiary rounded-lg open:ring-2 open:ring-app-brand/20 transition-all">
+        <summary class="font-bold text-sm cursor-pointer p-3 flex justify-between items-center select-none text-app-primary">
+            <span>📦 Stock & Budget</span>
+            <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </summary>
+        <div class="p-3 pt-0 space-y-3 border-t border-app-brand/10">
+            <p class="text-xs text-app-secondary mb-2">Check to use from inventory:</p>
+            <div id="inventory-options-container" class="grid grid-cols-2 gap-2 text-xs">
+                <label class="flex items-center"><input type="checkbox" id="useInventory_Honey" class="mr-2 inventory-toggle"> Honey</label>
+                <label class="flex items-center"><input type="checkbox" id="useInventory_Yeast" class="mr-2 inventory-toggle"> Yeast</label>
+                <label class="flex items-center"><input type="checkbox" id="useInventory_Nutrients" class="mr-2 inventory-toggle"> Nutrients</label>
+                <label class="flex items-center"><input type="checkbox" id="useInventory_Fruits" class="mr-2 inventory-toggle"> Fruit</label>
+            </div>
+            
+            <div id="budget-section" class="hidden mt-2 pt-2 border-t border-gray-300 dark:border-gray-600">
+                <label class="flex items-center text-xs font-bold mb-2"><input type="checkbox" id="useBudget" class="mr-2"> Set Budget Limit</label>
+                <div id="budget-input-container" class="hidden">
+                    <input type="number" id="maxBudget" placeholder="€20.00" class="w-full p-2 border rounded-md">
+                </div>
+            </div>
+        </div>
+    </details>
+</div>
 
                         <div class="mt-8"><button id="generateBtn" class="w-full bg-app-action text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 btn">GENERATE RECIPE</button></div>
                     </aside>

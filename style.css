@@ -747,3 +747,80 @@
     input[type="checkbox"]:focus {
         ring-color: var(--brand-color) !important;
     }
+
+/* --- V2.0 BADGES & TAGS --- */
+.category-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+/* Specifieke kleuren voor ingrediënten */
+.cat-honey { background-color: #fef3c7; color: #d97706; border: 1px solid #fcd34d; } /* Goud */
+.cat-yeast { background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; } /* Grijs */
+.cat-fruit { background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; } /* Rood */
+.cat-spice { background-color: #ffedd5; color: #c2410c; border: 1px solid #fdba74; } /* Oranje */
+.cat-nutrient { background-color: #ecfccb; color: #4d7c0f; border: 1px solid #bef264; } /* Groen */
+.cat-chemical { background-color: #e0e7ff; color: #4338ca; border: 1px solid #a5b4fc; } /* Blauw */
+
+/* Dark mode overrides voor badges */
+.dark .cat-honey { background-color: #451a03; color: #fbbf24; border-color: #92400e; }
+.dark .cat-yeast { background-color: #374151; color: #e5e7eb; border-color: #4b5563; }
+.dark .cat-fruit { background-color: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
+.dark .cat-nutrient { background-color: #1a2e05; color: #bef264; border-color: #365314; }
+
+/* --- V2.0 MODERN UI POLISH --- */
+
+/* 1. Zachtere Kaarten (Cards & Panelen) */
+/* Dit zorgt dat de witte vlakken niet meer zo 'hard' en blokkerig zijn */
+.card, .bg-app-secondary {
+    border: 1px solid var(--border-color);
+    /* Een subtiele dubbele schaduw voor diepte */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border-radius: 16px; /* Veel ronder (was vaak 8px of 0) */
+}
+
+/* 2. Moderne Inputs (Invulvelden) */
+/* Dit maakt typen fijner, vooral op mobiel */
+input[type="text"], input[type="number"], input[type="date"], 
+input[type="password"], select, textarea {
+    border-radius: 10px;       /* Rondere hoeken */
+    border: 1px solid var(--border-color);
+    padding: 12px 14px;        /* Meer 'ademruimte' binnen het vakje */
+    transition: all 0.2s ease; /* Zorgt voor een soepele animatie bij klikken */
+    background-color: var(--bg-tertiary);
+    font-size: 1rem;           /* Voorkomt dat iPhones inzoomen bij typen */
+}
+
+/* De 'Glow' als je op een veld klikt */
+input:focus, select:focus, textarea:focus {
+    outline: none;             /* Weg met de standaard blauwe rand */
+    transform: translateY(-1px); /* Het veldje komt ietsje omhoog */
+    border-color: var(--brand-color);
+    box-shadow: 0 4px 12px rgba(143, 140, 121, 0.25); /* Een gloed in jouw brand-color */
+}
+
+/* 3. Pill-Shape Buttons (Knoppen) */
+/* Maakt de knoppen ovaal/pilvormig voor een modernere uitstraling */
+.btn {
+    border-radius: 9999px;     /* Zorgt altijd voor perfecte ronde uiteinden */
+    padding: 10px 24px;        /* Iets breder voor makkelijker klikken */
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Hover effect voor knoppen */
+.btn:hover {
+    transform: translateY(-2px); /* Knop 'zweeft' omhoog */
+    box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+    opacity: 1; /* Voorkom de standaard opacity verandering */
+    filter: brightness(1.1); /* Maak hem iets lichter/feller */
+}

@@ -62,12 +62,6 @@ const PACKAGING_ITEMS = [
     { id: 'label', name: 'Label' }
 ]; 
 
-const labelFormats = {
-    'herma_4453': { name: 'Herma 4453', width_mm: 99.1, height_mm: 139, cols: 2, rows: 2, top_margin_mm: 10, left_margin_mm: 5.45 },
-    'avery_l7165': { name: 'Avery L7165', width_mm: 99.1, height_mm: 67.7, cols: 2, rows: 4, top_margin_mm: 11.1, left_margin_mm: 5.45 },
-    'herma_10730': { name: 'Herma 10730', width_mm: 99.1, height_mm: 33.8, cols: 2, rows: 8, top_margin_mm: 10, left_margin_mm: 5.45 },
-};
-
 let userWaterProfiles = []; 
 const BUILT_IN_WATER_PROFILES = { 
     spa: { name: 'Spa Reine', ca: 5, mg: 2, na: 3, so4: 4, cl: 5, hco3: 17 },

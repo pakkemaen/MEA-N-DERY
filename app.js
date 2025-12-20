@@ -4313,7 +4313,7 @@ window.renderInventory = function() {
                     <span class="category-badge ${catClass}">${item.category}</span>
                     <div class="flex justify-between items-center mt-1">
                         <span class="font-bold text-lg">${item.name}</span>
-                        ```
+
                     <div class="flex justify-between items-center">
                         <span>${item.name}</span>
                         <div class="flex items-center gap-4">

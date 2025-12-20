@@ -628,6 +628,51 @@ async function parseRecipeData(markdown) {
     return data;
 }
 
+// --- HELPER: MAAK VAN RUWE DATA EEN MOOIE TABEL ---
+function formatRecipeMarkdown(markdown) {
+    if (!markdown) return "";
+    let finalMarkdown = markdown;
+
+    // Zoek naar het JSON blok (tussen haakjes [] of ```json ... ```)
+    const jsonRegex = /(?:```json\s*([\s\S]*?)\s*```|(\[\s*\{[\s\S]*?\}\s*\]))/;
+    const jsonMatch = finalMarkdown.match(jsonRegex); 
+
+    if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
+        const jsonString = jsonMatch[1] || jsonMatch[2];
+        try {
+            // Maak JSON veilig (verwijder trailing commas)
+            let safeJsonString = jsonString.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']'); 
+            const ingredientsArray = JSON.parse(safeJsonString);
+            
+            // Bouw de Markdown Tabel
+            let tableMarkdown = '\n| Ingredient | Quantity | Unit |\n|---|---|---|\n';
+            ingredientsArray.forEach(item => {
+                let displayQty = parseFloat(item.quantity);
+                let displayUnit = item.unit;
+                
+                // Slimme eenheden (g -> kg als > 1000)
+                if ((displayUnit || '').toLowerCase() === 'g' && displayQty >= 1000) { 
+                    displayQty /= 1000; displayUnit = 'kg'; 
+                } 
+                else if ((displayUnit || '').toLowerCase() === 'ml' && displayQty >= 1000) { 
+                    displayQty /= 1000; displayUnit = 'L'; 
+                }
+                
+                // Rond af als het decimalen zijn
+                if (displayQty % 1 !== 0) { displayQty = parseFloat(displayQty.toFixed(2)); }
+                
+                tableMarkdown += `| ${item.ingredient} | ${displayQty} | ${displayUnit} |\n`;
+            });
+            
+            // Vervang de lelijke code door de mooie tabel
+            finalMarkdown = finalMarkdown.replace(jsonRegex, tableMarkdown); 
+        } catch (e) {
+            console.error("Table format error:", e);
+        }
+    }
+    return finalMarkdown;
+}
+
 // --- RENDER RECIPE OUTPUT (VOLLEDIG & GEOPTIMALISEERD) ---
 async function renderRecipeOutput(markdown) {
     const recipeOutput = document.getElementById('recipe-output');
@@ -1053,6 +1098,52 @@ window.startActualBrewDay = async function(brewId) {
     renderBrewDay(brewId);
 }
 
+// --- SMART PARSER: Haalt stappen uit oude tekst recepten ---
+function extractStepsFromMarkdown(markdown) {
+    if (!markdown) return { day1: [], day2: [] };
+
+    const lines = markdown.split('\n');
+    const day1 = [];
+    const day2 = [];
+    
+    // Regex zoekt naar regels die beginnen met een cijfer (bv: "1. Mix honey...")
+    const stepRegex = /^(\d+)\.\s+(.*)/;
+
+    lines.forEach(line => {
+        const match = line.trim().match(stepRegex);
+        if (match) {
+            const text = match[2];
+            const lower = text.toLowerCase();
+
+            // KEYWORDS: Wat hoort bij Fase 2 (Rijping)?
+            const isSecondary = lower.includes('rack') || 
+                                lower.includes('siphon') || 
+                                lower.includes('secondary') || 
+                                lower.includes('stabiliz') || 
+                                lower.includes('backsweeten') || 
+                                lower.includes('bottle') || 
+                                lower.includes('bottling') || 
+                                lower.includes('aging') || 
+                                lower.includes('wait for clear');
+
+            const stepObj = { title: `Step ${match[1]}`, description: text, duration: 0 };
+
+            if (isSecondary) {
+                day2.push(stepObj);
+            } else {
+                day1.push(stepObj);
+            }
+        }
+    });
+
+    // FALLBACK: Als de AI geen genummerde lijst heeft gemaakt, of alles in Day 1 zet
+    if (day2.length === 0 && day1.length === 0) {
+        return { day1: [], day2: [] }; // Geef leeg terug, zodat de defaults inschakelen
+    }
+
+    return { day1, day2 };
+}
+
 function renderBrewDay(brewId) {
     if (brewId === 'none') {
         document.getElementById('brew-day-content').innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">Brew Day 1</h2><p class="text-center text-app-secondary/80">Select a new recipe to start.</p>`;
@@ -1063,14 +1154,20 @@ function renderBrewDay(brewId) {
     const brewDayContent = document.getElementById('brew-day-content');
     if (!brew) return;
 
-    const primarySteps = brew.brewDaySteps || [];
-    if (primarySteps.length === 0) {
-         brewDayContent.innerHTML = `<p class="text-center text-app-secondary/80">No steps found.</p>`;
-         return;
+    // --- LOGICA UPDATE: Gebruik opgeslagen stappen OF de Smart Parser ---
+    let primarySteps = brew.brewDaySteps || [];
+    
+    // Als er geen stappen zijn opgeslagen (Oud recept), probeer ze te lezen uit de tekst
+    if (primarySteps.length === 0 && brew.recipeMarkdown) {
+        const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
+        primarySteps = extracted.day1;
+        // Als parser faalt, toon een melding
+        if (primarySteps.length === 0) {
+             primarySteps = [{ title: "Check Recipe Text", description: "Could not parse steps automatically. Please check the full recipe text below." }];
+        }
     }
 
-    let stepsHtml = primarySteps.map((step, index) => {
-        // Slimme detectie van ingrediënten in de stap tekst (voor "Actual Added" input)
+    let stepsHtml = primarySteps.map((step, index) => {        // Slimme detectie van ingrediënten in de stap tekst (voor "Actual Added" input)
         const amountMatch = (step.title + " " + step.description).match(/(\d+[.,]?\d*)\s*(kg|g|l|ml|oz|lbs)/i);
         let inputHtml = '';
         let detectedAmount = '';
@@ -1114,57 +1211,108 @@ function renderBrewDay(brewId) {
     initializeBrewDayState(primarySteps);
 }
 
-// --- Brew Day 2 (Secondary/Aging) ---
-function renderBrewDay2() {
+// --- BREW DAY 2 (SMART & INTERACTIVE) ---
+window.renderBrewDay2 = async function() {
     const container = document.getElementById('brew-day-2-view');
     if (!container) return;
 
-    // Check of er een actieve brouwdag is
     if (!currentBrewDay || !currentBrewDay.brewId) {
-        container.innerHTML = `
-            <div class="text-center p-8">
-                <h2 class="text-3xl font-header font-bold mb-4">Secondary & Aging</h2>
-                <p class="text-app-secondary">No active brew selected. Start a brew from the History or Creator tab first.</p>
-            </div>`;
+        container.innerHTML = `<div class="text-center p-8"><p class="text-app-secondary">No active brew selected.</p></div>`;
         return;
     }
 
     const brew = brews.find(b => b.id === currentBrewDay.brewId);
-    if (!brew) {
-        container.innerHTML = `<p class="text-center text-red-500">Brew data not found.</p>`;
-        return;
+    if (!brew) return;
+
+    // 1. PROBEER STAPPEN TE VINDEN
+    let steps = brew.secondarySteps || [];
+    let source = "Custom Recipe Steps";
+
+    // Als er geen stappen zijn opgeslagen, gebruik de Smart Parser
+    if (steps.length === 0 && brew.recipeMarkdown) {
+        const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
+        if (extracted.day2.length > 0) {
+            steps = extracted.day2;
+            source = "Extracted from Recipe";
+        }
     }
 
-    // Render de interface
+    // FALLBACK: Als er écht niets in het recept staat over rijping, gebruik de veilige standaard
+    if (steps.length === 0) {
+        steps = [
+            { title: "Stability Check", desc: "Ensure SG is stable (measure 3 days apart)." },
+            { title: "Racking", desc: "Siphon mead to a clean vessel." },
+            { title: "Stabilization", desc: "Add K-Meta & K-Sorbate if backsweetening." },
+            { title: "Backsweetening / Flavoring", desc: "Add honey, fruit or spices now if recipe calls for it." },
+            { title: "Clarification", desc: "Wait for clearing." },
+            { title: "Bottling", desc: "Bottle when crystal clear." }
+        ];
+        source = "Standard Protocol (Default)";
+    }
+
+    const checklist = brew.checklist || {};
+
+    // 2. RENDER DE CHECKLIST
+    const stepsHtml = steps.map((step, idx) => {
+        const key = `sec-step-${idx}`;
+        const isChecked = checklist[key] === true;
+        
+        return `
+        <div class="flex items-start gap-4 p-4 mb-3 card rounded-lg cursor-pointer hover:bg-app-primary transition-colors" onclick="window.toggleSecondaryStep('${brew.id}', '${key}')">
+            <div class="pt-1">
+                <div class="w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${isChecked ? 'bg-green-600 border-green-600' : 'border-gray-400 bg-app-tertiary'}">
+                    ${isChecked ? '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+                </div>
+            </div>
+            <div>
+                <h4 class="font-bold text-lg ${isChecked ? 'text-green-600 line-through' : 'text-app-primary'}">${step.title}</h4>
+                <p class="text-sm text-app-secondary ${isChecked ? 'line-through opacity-50' : ''}">${step.desc || step.description}</p>
+            </div>
+        </div>`;
+    }).join('');
+
     container.innerHTML = `
         <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
             <h2 class="text-3xl font-header font-bold mb-2 text-center text-app-brand">${brew.recipeName}</h2>
-            <p class="text-center text-sm font-bold uppercase tracking-widest text-app-secondary mb-6">Phase 2: Maturation</p>
+            <p class="text-center text-xs font-bold uppercase tracking-widest text-app-secondary mb-6">Phase 2 Source: ${source}</p>
             
-            <div class="card p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 mb-6">
-                <h3 class="font-bold text-blue-800 dark:text-blue-200">Instructions</h3>
-                <ul class="list-disc pl-5 text-sm text-app-primary mt-2 space-y-1">
-                    <li>Ensure specific gravity is stable (measure 3 days apart).</li>
-                    <li>Rack (siphon) the mead to a new clean vessel (secondary).</li>
-                    <li>Minimize headspace to prevent oxidation.</li>
-                    <li>Add stabilizers (K-Sorb + K-Meta) if backsweetening.</li>
-                    <li>Wait for clearing (2-6 months depending on style).</li>
-                </ul>
-            </div>
+            <div class="mb-8">${stepsHtml}</div>
 
-            <div id="brew-day-2-log-container">
-                ${getBrewLogHtml(brew.logData, brew.id + '-secondary')}
-            </div>
+            <div id="brew-day-2-log-container">${getBrewLogHtml(brew.logData, brew.id + '-secondary')}</div>
 
             <div class="mt-6 space-y-3">
                 <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Notes</button>
-                <button onclick="window.showBottlingModal('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn flex items-center justify-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                    Proceed to Bottling
-                </button>
+                <button onclick="window.showBottlingModal('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn flex items-center justify-center gap-2">Proceed to Bottling</button>
             </div>
         </div>
     `;
+}
+
+// --- FUNCTIE: SAVE SECONDARY CHECKLIST ---
+window.toggleSecondaryStep = async function(brewId, stepKey) {
+    const brewIndex = brews.findIndex(b => b.id === brewId);
+    if (brewIndex === -1) return;
+
+    // Initialiseer checklist als die niet bestaat
+    if (!brews[brewIndex].checklist) brews[brewIndex].checklist = {};
+
+    // Toggle de status (true -> false, false -> true)
+    const currentStatus = brews[brewIndex].checklist[stepKey] === true;
+    brews[brewIndex].checklist[stepKey] = !currentStatus;
+
+    // UI Update (Optimistic - direct herrenderen voor snelheid)
+    renderBrewDay2();
+
+    // Opslaan in Cloud
+    try {
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId), {
+            checklist: brews[brewIndex].checklist
+        });
+        if(navigator.vibrate) navigator.vibrate(10); // Klein trillertje voor feedback
+    } catch (e) {
+        console.error("Checklist save failed:", e);
+        showToast("Saving failed", "error");
+    }
 }
 
 // --- STATE & TIMERS ---
@@ -1372,18 +1520,45 @@ window.finalizeBrewDay1 = async function() {
     renderBrewDay('none');
 }
 
-// --- HISTORY & DETAIL MANAGEMENT ---
+// --- HISTORY & DETAIL MANAGEMENT (MET V1->V2 MIGRATIE FIX) ---
 
 function loadHistory() {
     if (!userId) return;
     const q = query(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews'));
+    
     onSnapshot(q, (snapshot) => {
-        brews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        brews = snapshot.docs.map(doc => {
+            let b = { id: doc.id, ...doc.data() };
+            
+            // --- V1.0 NAAR V2.0 DATA MIGRATIE ---
+            // Dit repareert oude recepten zodat je logs weer zichtbaar zijn
+            if (!b.logData) b.logData = {};
+            
+            // Lijst van velden die vroeger 'los' stonden en nu in logData horen
+            const legacyFields = [
+                'actualOG', 'actualFG', 'targetOG', 'targetFG', 
+                'targetABV', 'finalABV', 'brewDate', 
+                'agingNotes', 'tastingNotes', 'bottlingNotes'
+            ];
+            
+            legacyFields.forEach(field => {
+                // Als het veld bestaat in de root (V1) maar niet in logData (V2)...
+                if (b[field] && !b.logData[field]) {
+                    b.logData[field] = b[field]; // ...kopieer het naar de juiste plek!
+                }
+            });
+            // -------------------------------------
+
+            return b;
+        });
+
+        // Sorteren: Nieuwste eerst
         brews.sort((a, b) => {
             const dateA = a.createdAt ? a.createdAt.toDate() : new Date();
             const dateB = b.createdAt ? b.createdAt.toDate() : new Date();
             return dateB - dateA;
         });
+
         renderHistoryList();
         populateSocialRecipeDropdown();
         updateCostAnalysis();
@@ -1415,8 +1590,14 @@ window.showBrewDetail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    let finalMarkdown = brew.recipeMarkdown.replace(/\[d:[\d:]+\]/g, '');
-    const recipeHtml = marked.parse(finalMarkdown.replace(/^#\s.*$/m, ''));
+    // --- HIER IS DE FIX: GEBRUIK DE FORMATTER ---
+    let processedMarkdown = formatRecipeMarkdown(brew.recipeMarkdown);
+    
+    // Verwijder timers uit tekst ([d:00:00]) en de titel (# Title) omdat die al groot bovenaan staat
+    const cleanMarkdown = processedMarkdown.replace(/\[d:[\d:]+\]/g, '').replace(/^#\s.*$/m, '');
+    const recipeHtml = marked.parse(cleanMarkdown);
+    // ---------------------------------------------
+
     const logHtml = getBrewLogHtml(brew.logData, brew.id);
     const currency = userSettings.currencySymbol || '€';
 
@@ -1432,24 +1613,28 @@ window.showBrewDetail = function(brewId) {
             <div id="title-display-${brew.id}"><h2 class="text-3xl font-header font-bold w-full">${brew.recipeName}</h2><div class="text-right w-full mt-1"><button onclick="window.showTitleEditor('${brew.id}')" class="text-blue-600 text-sm no-print">Edit Title</button></div></div>
             <div id="title-editor-${brew.id}" class="hidden"><input type="text" id="title-input-${brew.id}" value="${brew.recipeName}" class="w-full text-2xl font-bold p-2 border rounded-md"><div class="flex gap-2 mt-2"><button onclick="window.saveNewTitle('${brew.id}')" class="bg-green-600 text-white px-3 py-1 rounded btn">Save</button><button onclick="window.hideTitleEditor('${brew.id}')" class="bg-gray-500 text-white px-3 py-1 rounded btn">Cancel</button></div></div>
         </div>
-       <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
+        
+        <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
             <button onclick="window.resumeBrew('${brew.id}')" class="bg-green-600 text-white py-2 px-4 rounded btn font-bold shadow-md hover:bg-green-700 flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 Resume Batch
             </button>
-            
             <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-600 text-white py-2 px-4 rounded btn font-bold shadow-md hover:bg-blue-700 flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 Brew Again
             </button>
-            
             <button onclick="window.recalculateBatchCost('${brew.id}')" class="bg-purple-700 text-white py-2 px-4 rounded btn text-xs">Recalc Cost</button>
             <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded btn text-xs">Delete</button>
         </div>
+
         <div class="recipe-content">${recipeHtml}</div>${costHtml}
+        
         <div class="mt-6 card p-4 rounded-lg"><h3 class="font-header text-lg text-center">Fermentation</h3><canvas id="fermChart-${brew.id}"></canvas></div>
+        
         ${logHtml}
+        
         <div class="mt-4 no-print"><button onclick="window.updateBrewLog('${brew.id}', 'history-detail-container')" class="w-full bg-app-action text-white py-3 px-4 rounded btn">Save Log</button></div>
+        
         <div class="mt-6 pt-4 border-t-2 border-app-brand no-print">
             <h3 class="text-2xl font-header font-bold text-center mb-4">Flavor Profile</h3>
             <div class="card p-4 rounded-lg text-center">
@@ -1457,6 +1642,7 @@ window.showBrewDetail = function(brewId) {
                 <div id="flavor-wheel-container-${brew.id}" class="mt-4" style="max-width: 400px; margin: auto;"></div>
             </div>
         </div>
+        
         <div class="mt-6 pt-4 border-t-2 border-app no-print">
              <h3 class="text-2xl font-header font-bold text-center mb-4">Tweak Recipe</h3>
              <div class="card p-4 rounded-lg">
@@ -1476,6 +1662,108 @@ window.showBrewDetail = function(brewId) {
         container.style.display = 'block';
         renderFlavorWheel(brew.id, ['Sweetness', 'Acidity', 'Fruity/Floral', 'Spiciness', 'Earthy/Woody', 'Body'], Object.values(brew.predictedFlavorProfile));
     }
+}
+
+// --- GRAFIEKEN VOOR HISTORIE (ONTBREKENDE FUNCTIES) ---
+
+function renderFermentationGraph(brewId) {
+    const brew = brews.find(b => b.id === brewId);
+    // Check of er log data is, anders stoppen we
+    if (!brew || !brew.logData || !brew.logData.fermentationLog) return;
+
+    const ctx = document.getElementById(`fermChart-${brewId}`);
+    if (!ctx) return;
+
+    // Filter lege regels eruit en sorteer op datum
+    const log = brew.logData.fermentationLog.filter(l => l.date && l.sg);
+    log.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (log.length === 0) {
+        // Geen metingen? Verberg de grafiek container
+        ctx.parentElement.classList.add('hidden');
+        return;
+    }
+
+    const labels = log.map(l => l.date);
+    const dataSG = log.map(l => parseFloat(l.sg));
+
+    // Vernietig oude grafiek indien aanwezig (voorkomt glitches bij heropenen)
+    if (window[`fermChartInstance_${brewId}`]) {
+        window[`fermChartInstance_${brewId}`].destroy();
+    }
+
+    // Maak nieuwe grafiek
+    window[`fermChartInstance_${brewId}`] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Specific Gravity (S.G.)',
+                data: dataSG,
+                borderColor: '#d97706', // Amber kleur
+                backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                borderWidth: 2,
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    title: { display: true, text: 'Gravity' }
+                }
+            }
+        }
+    });
+}
+
+function renderFlavorWheel(brewId, labels, data) {
+    const container = document.getElementById(`flavor-wheel-container-${brewId}`);
+    if (!container) return;
+
+    // Maak canvas vers aan
+    container.innerHTML = `<canvas id="flavorChart-${brewId}"></canvas>`;
+    const ctx = document.getElementById(`flavorChart-${brewId}`);
+
+    // Bepaal kleuren op basis van Dark/Light mode
+    const brandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand-color').trim() || '#d97706';
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDarkMode ? '#e0e0e0' : '#4a3c2c';
+
+    new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Flavor Profile',
+                data: data,
+                backgroundColor: brandColor + '4D', // 30% opacity hex
+                borderColor: brandColor,
+                borderWidth: 2,
+                pointBackgroundColor: brandColor
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                r: {
+                    angleLines: { color: gridColor },
+                    grid: { color: gridColor },
+                    pointLabels: { color: textColor, font: { size: 11, family: "'Barlow Semi Condensed', sans-serif" } },
+                    ticks: { display: false, max: 5 },
+                    suggestedMin: 0,
+                    suggestedMax: 5
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
 }
 
 // --- HERVAT OUDE BROUWSSELS ---

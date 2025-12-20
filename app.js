@@ -4279,9 +4279,16 @@ async function addInventoryItem(e) {
     }
 }
 
+// --- VERVANG DE HELE renderInventory FUNCTIE HIERMEE ---
 window.renderInventory = function() {
+    const listDiv = document.getElementById('inventory-list');
+    if (!listDiv) return;
+
+    // Groepeer items op categorie
     const grouped = inventory.reduce((acc, item) => {
-        (acc[item.category] = acc[item.category] || []).push(item);
+        const cat = item.category || 'Other';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(item);
         return acc;
     }, {});
 
@@ -4289,10 +4296,15 @@ window.renderInventory = function() {
     const currency = userSettings.currencySymbol || '€';
     let html = '';
 
-    for (const category of categories) {
+    // Loop door de categorieën
+    categories.forEach(category => {
         if (grouped[category]) {
-            html += `<h3 class="text-xl font-header mt-4 mb-2">${category}</h3><div class="space-y-2">`;
+            // Categorie header
+            html += `<h3 class="text-xl font-header mt-4 mb-2 uppercase tracking-wide text-app-brand">${category}</h3>`;
+            html += `<div class="space-y-2">`; // Start container voor deze categorie
+            
             grouped[category].forEach(item => {
+                // Bereken verloopdatum status
                 const expDateStr = item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : 'N/A';
                 let dateClass = 'text-app-secondary/80';
                 if (item.expirationDate) {
@@ -4301,7 +4313,8 @@ window.renderInventory = function() {
                     else if (days <= 30) dateClass = 'text-amber-500 font-semibold';
                 }
 
-                let catClass = 'cat-yeast'; // Default
+                // Bepaal kleur badge
+                let catClass = 'cat-yeast'; 
                 const c = item.category.toLowerCase();
                 if(c.includes('honey')) catClass = 'cat-honey';
                 if(c.includes('fruit')) catClass = 'cat-fruit';
@@ -4309,33 +4322,45 @@ window.renderInventory = function() {
                 if(c.includes('nutrient')) catClass = 'cat-nutrient';
                 if(c.includes('chemical') || c.includes('clean')) catClass = 'cat-chemical';
 
-                html += `<div id="item-${item.id}" class="p-3 card rounded-md border-l-4 ${catClass.replace('cat-', 'border-')} shadow-sm hover:shadow-md transition-shadow">
-                    <span class="category-badge ${catClass}">${item.category}</span>
-                    <div class="flex justify-between items-center mt-1">
-                        <span class="font-bold text-lg">${item.name}</span>
+                // --- HET ITEM KAARTJE (CORRECTE HTML) ---
+                html += `
+                <div id="item-${item.id}" class="p-3 card rounded-md border-l-4 ${catClass.replace('cat-', 'border-')} shadow-sm hover:shadow-md transition-shadow bg-app-secondary">
+                    <div class="flex justify-between items-start">
+                        
+                        <div>
+                            <span class="category-badge ${catClass} mb-1">${item.category}</span>
+                            <div class="font-bold text-lg text-app-primary leading-tight">${item.name}</div>
+                            <div class="text-xs ${dateClass} mt-1">Exp: ${expDateStr}</div>
+                        </div>
 
-                    <div class="flex justify-between items-center">
-                        <span>${item.name}</span>
-                        <div class="flex items-center gap-4">
-                            <span class="font-semibold">${item.qty} ${item.unit} - ${currency}${(item.price || 0).toFixed(2)}</span>
-                            <div class="flex gap-2">
-                                <button onclick="window.editInventoryItem('${item.id}')" class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
-                                <button onclick="window.deleteInventoryItem('${item.id}')" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                        <div class="text-right">
+                            <div class="font-mono font-semibold text-app-primary">
+                                ${item.qty} ${item.unit}
+                            </div>
+                            <div class="text-xs text-app-secondary mb-2">
+                                ${currency}${(item.price || 0).toFixed(2)}
+                            </div>
+                            
+                            <div class="flex gap-2 justify-end">
+                                <button onclick="window.editInventoryItem('${item.id}')" class="text-blue-600 hover:text-blue-800 text-xs font-bold uppercase tracking-wider px-2 py-1 rounded hover:bg-blue-50 transition-colors">Edit</button>
+                                <button onclick="window.deleteInventoryItem('${item.id}')" class="text-red-600 hover:text-red-800 text-xs font-bold uppercase tracking-wider px-2 py-1 rounded hover:bg-red-50 transition-colors">Del</button>
                             </div>
                         </div>
+
                     </div>
-                    <p class="text-xs ${dateClass}">Exp: ${expDateStr}</p>
-                </div>`;
+                </div>`; 
             });
-            html += `</div>`;
+            
+            html += `</div>`; // Sluit container categorie
         }
-    }
+    });
     
+    // Lege staat
     if (inventory.length === 0) {
         html = `<div class="text-center py-10 opacity-50"><p>The Cupboard is Bare</p></div>`;
     }
-    const list = document.getElementById('inventory-list');
-    if (list) list.innerHTML = html;
+    
+    listDiv.innerHTML = html;
 }
 
 window.deleteInventoryItem = async function(itemId) {

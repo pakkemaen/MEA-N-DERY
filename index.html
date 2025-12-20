@@ -299,21 +299,45 @@
             <div id="financials-view" class="hidden mt-4">
                 <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 70vh;">
                      <h2 class="text-3xl font-header font-bold mb-6 text-center">Financial Overview</h2>
+                     
                      <div id="cost-analysis-container">
                         <div class="mb-8 p-6 rounded-lg bg-app-tertiary border-2 border-app-brand text-center shadow-md">
                             <h4 class="text-sm font-bold text-app-secondary uppercase tracking-widest mb-1">Total Brewery Asset Value</h4>
                             <p id="grand-total-value" class="text-5xl font-header font-bold text-app-brand">€0.00</p>
                         </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                            <div class="card p-4 rounded-lg text-center border-t-4 border-blue-500"><h4 class="text-sm font-bold text-app-secondary uppercase">Inventory</h4><p id="total-inventory-value" class="text-2xl font-bold text-app-primary mt-2">€0.00</p></div>
-                            <div class="card p-4 rounded-lg text-center border-t-4 border-purple-500"><h4 class="text-sm font-bold text-app-secondary uppercase">In Progress</h4><p id="total-active-value" class="text-2xl font-bold text-app-primary mt-2">€0.00</p></div>
-                            <div class="card p-4 rounded-lg text-center border-t-4 border-green-600"><h4 class="text-sm font-bold text-app-secondary uppercase">Cellar</h4><p id="total-cellar-value" class="text-2xl font-bold text-app-primary mt-2">€0.00</p></div>
+                            
+                            <div onclick="switchMainView('management'); switchSubView('inventory', 'management-main-view')" 
+                                 class="card p-4 rounded-lg text-center border-t-4 border-blue-500 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200">
+                                <h4 class="text-sm font-bold text-app-secondary uppercase">Inventory</h4>
+                                <p id="total-inventory-value" class="text-2xl font-bold text-app-primary mt-2">€0.00</p>
+                                <p class="text-[10px] text-blue-500 mt-1 uppercase font-bold">Go to Stock &rarr;</p>
+                            </div>
+
+                            <div onclick="switchMainView('brewing'); switchSubView('history', 'brewing-main-view')" 
+                                 class="card p-4 rounded-lg text-center border-t-4 border-purple-500 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200">
+                                <h4 class="text-sm font-bold text-app-secondary uppercase">In Progress</h4>
+                                <p id="total-active-value" class="text-2xl font-bold text-app-primary mt-2">€0.00</p>
+                                <p class="text-[10px] text-purple-500 mt-1 uppercase font-bold">View Active Batches &rarr;</p>
+                            </div>
+
+                            <div onclick="switchMainView('management'); switchSubView('cellar', 'management-main-view')" 
+                                 class="card p-4 rounded-lg text-center border-t-4 border-green-600 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200">
+                                <h4 class="text-sm font-bold text-app-secondary uppercase">Cellar</h4>
+                                <p id="total-cellar-value" class="text-2xl font-bold text-app-primary mt-2">€0.00</p>
+                                <p class="text-[10px] text-green-600 mt-1 uppercase font-bold">Open Wine Cellar &rarr;</p>
+                            </div>
+
                         </div>
-                        <div class="card p-4 rounded-lg mt-6"><h4 class="text-lg font-bold text-app-secondary text-center mb-4">Spend by Category</h4><div class="h-64"><canvas id="cost-chart"></canvas></div></div>
+
+                        <div class="card p-4 rounded-lg mt-6">
+                            <h4 class="text-lg font-bold text-app-secondary text-center mb-4">Spend by Category</h4>
+                            <div class="h-64"><canvas id="cost-chart"></canvas></div>
+                        </div>
                      </div>
                 </div>
             </div>
-        </div>
 
         <div id="tools-main-view" class="hidden">
             <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>

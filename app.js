@@ -4334,21 +4334,6 @@ function initApp() {
     // Labels (V2.0)
     initLabelForge();
 
-    // Inputs die de label preview updaten
-    ['labelStyle', 'labelAbv', 'labelVol', 'labelDate'].forEach(id => {
-        document.getElementById(id)?.addEventListener('keyup', updateLabelPreview);
-    });
-    const formatSelect = document.getElementById('labelFormatSelect');
-    if (formatSelect) {
-        formatSelect.addEventListener('change', (e) => {
-            document.getElementById('custom-format-inputs').classList.toggle('hidden', e.target.value !== 'custom');
-            updatePreviewAspectRatio();
-        });
-    }
-    ['customWidth', 'customHeight', 'customCols', 'customRows', 'customMarginTop', 'customMarginLeft'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', updatePreviewAspectRatio);
-    });
-
     // Main Navigation
     document.querySelectorAll('.main-nav-btn').forEach(btn => {
         btn.addEventListener('click', () => switchMainView(btn.dataset.view));

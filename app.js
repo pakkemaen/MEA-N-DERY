@@ -1432,11 +1432,19 @@ window.showBrewDetail = function(brewId) {
             <div id="title-display-${brew.id}"><h2 class="text-3xl font-header font-bold w-full">${brew.recipeName}</h2><div class="text-right w-full mt-1"><button onclick="window.showTitleEditor('${brew.id}')" class="text-blue-600 text-sm no-print">Edit Title</button></div></div>
             <div id="title-editor-${brew.id}" class="hidden"><input type="text" id="title-input-${brew.id}" value="${brew.recipeName}" class="w-full text-2xl font-bold p-2 border rounded-md"><div class="flex gap-2 mt-2"><button onclick="window.saveNewTitle('${brew.id}')" class="bg-green-600 text-white px-3 py-1 rounded btn">Save</button><button onclick="window.hideTitleEditor('${brew.id}')" class="bg-gray-500 text-white px-3 py-1 rounded btn">Cancel</button></div></div>
         </div>
-        <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
-            <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-700 text-white py-2 px-4 rounded btn">Clone</button>
-            <button onclick="window.startBrewDay('${brew.id}')" class="bg-app-action text-white py-2 px-4 rounded btn">Start Batch</button>
-            <button onclick="window.recalculateBatchCost('${brew.id}')" class="bg-purple-700 text-white py-2 px-4 rounded btn">Recalculate Cost</button>
-            <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded btn">Delete</button>
+       <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
+            <button onclick="window.resumeBrew('${brew.id}')" class="bg-green-600 text-white py-2 px-4 rounded btn font-bold shadow-md hover:bg-green-700 flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Resume Batch
+            </button>
+            
+            <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-600 text-white py-2 px-4 rounded btn font-bold shadow-md hover:bg-blue-700 flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Brew Again
+            </button>
+            
+            <button onclick="window.recalculateBatchCost('${brew.id}')" class="bg-purple-700 text-white py-2 px-4 rounded btn text-xs">Recalc Cost</button>
+            <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-700 text-white py-2 px-4 rounded btn text-xs">Delete</button>
         </div>
         <div class="recipe-content">${recipeHtml}</div>${costHtml}
         <div class="mt-6 card p-4 rounded-lg"><h3 class="font-header text-lg text-center">Fermentation</h3><canvas id="fermChart-${brew.id}"></canvas></div>
@@ -1467,6 +1475,72 @@ window.showBrewDetail = function(brewId) {
         const container = document.getElementById(`flavor-wheel-container-${brew.id}`);
         container.style.display = 'block';
         renderFlavorWheel(brew.id, ['Sweetness', 'Acidity', 'Fruity/Floral', 'Spiciness', 'Earthy/Woody', 'Body'], Object.values(brew.predictedFlavorProfile));
+    }
+}
+
+// --- HERVAT OUDE BROUWSSELS ---
+window.resumeBrew = async function(brewId) {
+    const brew = brews.find(b => b.id === brewId);
+    if (!brew) return;
+
+    // 1. Zet de globale pointer
+    currentBrewDay = { brewId: brewId };
+    
+    // 2. Sla op in database zodat de app het onthoudt bij herladen
+    await saveUserSettings(); 
+
+    // 3. Bepaal waar we heen moeten (Day 1 of Day 2?)
+    switchMainView('brewing');
+    
+    if (brew.primaryComplete || brew.logData?.primaryComplete) {
+        // Als Primary al klaar was, ga direct naar Day 2 (Aging)
+        switchSubView('brew-day-2', 'brewing-main-view');
+        renderBrewDay2();
+        showToast(`Resumed aging for "${brew.recipeName}"`, "success");
+    } else {
+        // Anders terug naar Day 1
+        switchSubView('brew-day-1', 'brewing-main-view');
+        renderBrewDay(brewId);
+        showToast(`Resumed brewing "${brew.recipeName}"`, "success");
+    }
+}
+
+// --- FUNCTIE: RECEPT KOPIËREN VOOR NIEUWE BATCH ---
+window.cloneBrew = async function(brewId) {
+    const original = brews.find(b => b.id === brewId);
+    if (!original) return;
+
+    if (!confirm(`Start a fresh new batch based on "${original.recipeName}"?`)) return;
+
+    try {
+        // Maak een kopie, maar WIST de logboeken en datums
+        const newBrew = {
+            recipeName: `${original.recipeName} (Batch 2)`, // Of (Clone)
+            recipeMarkdown: original.recipeMarkdown,
+            flavorProfile: original.flavorProfile || {},
+            createdAt: serverTimestamp(),
+            model: original.model || userSettings.aiModel,
+            
+            // SCHONE LEI:
+            logData: {},         // Geen oude metingen
+            checklist: {},       // Geen afgevinkte stappen
+            brewDaySteps: original.brewDaySteps || [], // Stappenplan behouden we wel!
+            secondarySteps: original.secondarySteps || [],
+            totalCost: 0,        // Kosten opnieuw berekenen (prijzen kunnen veranderd zijn)
+            isBottled: false,
+            primaryComplete: false
+        };
+
+        const docRef = await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews'), newBrew);
+        
+        showToast("Recipe cloned! Starting new brew day...", "success");
+        
+        // Ga direct naar de nieuwe batch
+        window.startActualBrewDay(docRef.id);
+
+    } catch (e) {
+        console.error(e);
+        showToast("Error cloning recipe.", "error");
     }
 }
 

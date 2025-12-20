@@ -1,11 +1,12 @@
 {
-  "name": "MEA(N)DERY - AI Mead Recipe Creator",
-  "short_name": "MEA(N)DERY",
-  "start_url": ".",
+  "name": "MEA(N)DERY V2.0",
+  "short_name": "Meandery",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f3f0e9",
   "theme_color": "#a89a87",
-  "description": "Your AI Brewbuddy for creating mead recipes.",
+  "description": "AI-Powered Brewbuddy, Recipe Creator & Cellar Manager.",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192x192.png",

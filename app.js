@@ -363,13 +363,13 @@ function buildPrompt() {
             mathContext += `\n- **JUICE WARNING:** If replacing water with Fruit Juice, reduce honey to prevent overshooting ABV.`;
         }
 
-        // 3. Inventory Analyse (Silence Protocol)
-        const inventoryToggles = {
+        // 3. Inventory Analyse 
+            const inventoryToggles = {
             Yeast: document.getElementById('useInventory_Yeast')?.checked || false,
             Nutrient: document.getElementById('useInventory_Nutrients')?.checked || false,
             Honey: document.getElementById('useInventory_Honey')?.checked || false,
             Fruit: document.getElementById('useInventory_Fruits')?.checked || false,
-            Spice: document.getElementById('useInventory_Spices')?.checked || false, 
+            Spice: document.getElementById('useInventory_Spices')?.checked || false,
             Other: document.getElementById('useInventory_Other')?.checked || false
         };
         
@@ -2121,12 +2121,7 @@ window.renderInventory = function() {
     const listDiv = document.getElementById('inventory-list');
     if (!listDiv) return;
 
-    if (inventory.length === 0) {
-        listDiv.innerHTML = `<p class="text-center text-app-secondary/80 py-4">The cupboard is bare.</p>`;
-        return;
-    }
-
-    // Groepeer op categorie
+    // Groepeer items op categorie
     const grouped = inventory.reduce((acc, item) => {
         const cat = item.category || 'Other';
         if (!acc[cat]) acc[cat] = [];
@@ -2134,36 +2129,62 @@ window.renderInventory = function() {
         return acc;
     }, {});
 
+    const categories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
     const currency = userSettings.currencySymbol || '€';
     let html = '';
 
-    // Vaste volgorde van categorieën
-    const categories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
-    
-    categories.forEach(cat => {
-        if (grouped[cat]) {
-            html += `<h4 class="font-bold text-app-brand uppercase text-xs mt-3 mb-1 border-b border-app-brand/20">${cat}</h4>`;
-            grouped[cat].forEach(item => {
-                const expDate = item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : '';
+    categories.forEach(category => {
+        if (grouped[category]) {
+            html += `<h3 class="text-lg font-header mt-6 mb-3 uppercase tracking-wider text-app-brand opacity-80 border-b border-app-brand/10 pb-1">${category}</h3>`;
+            html += `<div class="grid grid-cols-1 gap-3">`; 
+            
+            grouped[category].forEach(item => {
+                const expDateStr = item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : 'N/A';
+                let dateClass = 'text-app-secondary/60';
+                if (item.expirationDate) {
+                    const days = (new Date(item.expirationDate) - new Date()) / (1000 * 60 * 60 * 24);
+                    if (days < 0) dateClass = 'text-red-500 font-bold';
+                    else if (days <= 30) dateClass = 'text-amber-500 font-semibold';
+                }
+
+                let catClass = 'cat-yeast'; 
+                const c = item.category.toLowerCase();
+                if(c.includes('honey')) catClass = 'cat-honey';
+                if(c.includes('fruit')) catClass = 'cat-fruit';
+                if(c.includes('spice')) catClass = 'cat-spice';
+                if(c.includes('nutrient')) catClass = 'cat-nutrient';
+                if(c.includes('chemical') || c.includes('clean')) catClass = 'cat-chemical';
+
                 html += `
-                    <div class="flex justify-between items-center p-2 bg-app-primary rounded mb-1 shadow-sm">
-                        <div>
-                            <div class="font-bold text-sm">${item.name}</div>
-                            <div class="text-xs text-app-secondary">${item.qty} ${item.unit} ${expDate ? `(Exp: ${expDate})` : ''}</div>
+                <div id="item-${item.id}" class="p-4 card rounded-xl border-l-4 ${catClass.replace('cat-', 'border-')} shadow-sm hover:shadow-md transition-all bg-app-secondary group relative">
+                    <div class="flex justify-between items-start">
+                        <div class="pr-4">
+                            <div class="font-bold text-xl text-app-primary leading-tight">${item.name}</div>
+                            <div class="text-xs ${dateClass} mt-1 flex items-center gap-1">
+                                Exp: ${expDateStr}
+                            </div>
                         </div>
                         <div class="text-right">
-                            <div class="text-sm font-bold">${currency}${(item.price || 0).toFixed(2)}</div>
-                            <div class="flex gap-2 mt-1 justify-end">
-                                <button onclick="window.editInventoryItem('${item.id}')" class="text-blue-600 text-xs hover:underline">Edit</button>
-                                <button onclick="window.deleteInventoryItem('${item.id}')" class="text-red-600 text-xs hover:underline">Del</button>
+                            <div class="inline-block bg-app-tertiary px-2 py-1 rounded-lg border border-app-brand/10 mb-2">
+                                <div class="font-mono font-bold text-app-primary text-sm">${item.qty} <span class="text-xs font-normal text-app-secondary">${item.unit}</span></div>
+                            </div>
+                            <div class="text-xs text-app-secondary font-mono mb-3">
+                                ${currency}${(item.price || 0).toFixed(2)}
                             </div>
                         </div>
                     </div>
-                `;
+                    <div class="flex justify-end gap-4 mt-2 pt-2 border-t border-app-brand/5">
+                        <button onclick="window.editInventoryItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-blue-600 uppercase tracking-wider">Edit</button>
+                        <button onclick="window.deleteInventoryItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-red-600 uppercase tracking-wider">Delete</button>
+                    </div>
+                </div>`; 
             });
+            html += `</div>`;
         }
     });
-    listDiv.innerHTML = html;
+    
+    if (inventory.length === 0) listDiv.innerHTML = `<div class="text-center py-12 opacity-50"><p>The Cupboard is Bare</p></div>`;
+    else listDiv.innerHTML = html;
 }
 
 window.editInventoryItem = function(itemId) {

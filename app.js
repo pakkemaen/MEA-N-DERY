@@ -1173,20 +1173,17 @@ function renderBrewDay(brewId) {
     const brewDayContent = document.getElementById('brew-day-content');
     if (!brew) return;
 
-    // --- LOGICA UPDATE: Gebruik opgeslagen stappen OF de Smart Parser ---
     let primarySteps = brew.brewDaySteps || [];
     
-    // Als er geen stappen zijn opgeslagen (Oud recept), probeer ze te lezen uit de tekst
     if (primarySteps.length === 0 && brew.recipeMarkdown) {
         const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
         primarySteps = extracted.day1;
-        // Als parser faalt, toon een melding
         if (primarySteps.length === 0) {
              primarySteps = [{ title: "Check Recipe Text", description: "Could not parse steps automatically. Please check the full recipe text below." }];
         }
     }
 
-    let stepsHtml = primarySteps.map((step, index) => {        // Slimme detectie van ingrediënten in de stap tekst (voor "Actual Added" input)
+    let stepsHtml = primarySteps.map((step, index) => {
         const amountMatch = (step.title + " " + step.description).match(/(\d+[.,]?\d*)\s*(kg|g|l|ml|oz|lbs)/i);
         let inputHtml = '';
         let detectedAmount = '';
@@ -1196,34 +1193,60 @@ function renderBrewDay(brewId) {
         const isCompleted = stepState === true || (stepState && stepState.completed);
         const savedAmount = (stepState && stepState.actualAmount) ? stepState.actualAmount : '';
 
+        // Compactere Input Veld
         if (amountMatch && !isCompleted) {
             detectedAmount = amountMatch[1];
             detectedUnit = amountMatch[2].toLowerCase();
-            inputHtml = `<div class="mt-2 flex items-center gap-2 bg-app-tertiary p-2 rounded"><label class="text-xs font-bold text-app-secondary uppercase">Actual:</label><input type="number" step="0.01" id="step-input-${index}" class="w-24 p-1 text-sm border rounded bg-app-primary border-app text-app-primary" placeholder="${detectedAmount}" value="${detectedAmount}"><span class="text-sm font-bold">${detectedUnit}</span></div>`;
+            inputHtml = `<div class="mt-1 flex items-center gap-2 bg-app-tertiary/50 p-1 rounded border border-app-brand/10"><label class="text-[10px] font-bold text-app-secondary uppercase">Actual:</label><input type="number" step="0.01" id="step-input-${index}" class="w-20 p-0.5 text-xs border rounded bg-app-primary border-app text-app-primary text-center" placeholder="${detectedAmount}" value="${detectedAmount}"><span class="text-xs font-bold text-app-secondary">${detectedUnit}</span></div>`;
         } else if (isCompleted && savedAmount) {
-             inputHtml = `<div class="mt-2 text-xs text-green-600 font-mono">Recorded: ${savedAmount} ${detectedUnit || ''}</div>`;
+             inputHtml = `<div class="mt-1 text-[10px] text-green-600 font-mono">✓ Added: ${savedAmount} ${detectedUnit || ''}</div>`;
         }
 
-        const timerHtml = step.duration > 0 ? `<p class="timer-display my-2" id="timer-${index}">${formatTime(step.duration)}</p>` : '';
-        const buttonsHtml = step.duration > 0 ? `<button data-action="startTimer" data-step="${index}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Start Timer</button>` : `<button data-action="completeStep" data-step="${index}" data-unit="${detectedUnit}" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 btn">Mark Complete</button>`;
+        const timerHtml = step.duration > 0 ? `<div class="timer-display my-1 text-sm font-mono font-bold text-app-brand" id="timer-${index}">${formatTime(step.duration)}</div>` : '';
+        
+        // Compactere Knoppen
+        const buttonsHtml = step.duration > 0 
+            ? `<button data-action="startTimer" data-step="${index}" class="text-xs bg-green-600 text-white py-1 px-3 rounded shadow hover:bg-green-700 btn uppercase tracking-wide">Start Timer</button>` 
+            : `<button data-action="completeStep" data-step="${index}" data-unit="${detectedUnit}" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase tracking-wide">Check</button>`;
 
-        return `<div id="step-${index}" class="step-item p-4 rounded-r-lg mb-3 ${isCompleted ? 'completed' : ''}"><div><p class="step-title">${index + 1}. ${step.title}</p><p class="text-sm text-app-secondary">${step.description}</p>${inputHtml}<div class="mt-4">${timerHtml}<div class="space-x-2" id="controls-${index}">${isCompleted ? '<span class="text-sm font-bold text-green-600">✓ Completed</span>' : buttonsHtml}</div></div></div></div>`;
+        // Compactere Layout (Minder padding, strakkere teksten)
+        return `
+        <div id="step-${index}" class="step-item p-3 border-b border-app-brand/10 last:border-0 ${isCompleted ? 'opacity-60 grayscale' : ''}">
+            <div class="flex justify-between items-start gap-3">
+                <div class="flex-grow">
+                    <p class="step-title font-bold text-sm text-app-primary leading-tight">${index + 1}. ${step.title}</p>
+                    <p class="text-xs text-app-secondary mt-1 leading-snug">${step.description}</p>
+                    ${inputHtml}
+                    ${timerHtml}
+                </div>
+                <div class="flex-shrink-0 pt-1" id="controls-${index}">
+                    ${isCompleted ? '<span class="text-xs font-bold text-green-600 border border-green-600 px-2 py-0.5 rounded">DONE</span>' : buttonsHtml}
+                </div>
+            </div>
+        </div>`;
     }).join('');
 
     const parsedTargets = parseRecipeData(brew.recipeMarkdown);
-    const combinedLogData = { ...brew.logData, ...parsedTargets };
-    const logHtml = getBrewLogHtml(combinedLogData, brew.id); // Geeft ID mee!
+    const combinedLogData = { ...parsedTargets, ...brew.logData };
+    const logHtml = getBrewLogHtml(combinedLogData, brew.id); 
 
     brewDayContent.innerHTML = `
-        <h2 class="text-3xl font-header font-bold mb-4 text-center">${brew.recipeName}</h2>
-        <div class="mb-4"><div class="progress-bar-bg w-full h-2 rounded-full"><div id="brew-day-progress" class="progress-bar-fg h-2 rounded-full" style="width: 0%;"></div></div></div>
-        <div id="brew-day-steps-container">${stepsHtml}</div>
-        <div class="text-center mt-6"><button data-action="resetBrewDay" class="text-sm bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 btn">Reset</button></div>
-        <hr class="my-8 border-app">
+        <div class="flex justify-between items-end mb-4">
+            <h2 class="text-2xl font-header font-bold text-app-brand">${brew.recipeName}</h2>
+            <button data-action="resetBrewDay" class="text-[10px] text-red-500 hover:underline">Reset</button>
+        </div>
+        
+        <div class="mb-4 bg-app-tertiary rounded-full h-1.5"><div id="brew-day-progress" class="bg-app-brand h-1.5 rounded-full transition-all duration-500" style="width: 0%;"></div></div>
+        
+        <div id="brew-day-steps-container" class="bg-app-secondary rounded-lg shadow-sm border border-app-brand/10 divide-y divide-app-brand/10">
+            ${stepsHtml}
+        </div>
+        
+        <hr class="my-6 border-app-brand/10">
         ${logHtml}
-        <div class="mt-4 no-print space-y-3">
-            <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Changes</button>
-            <button onclick="window.deductActualsFromInventory('${brew.id}')" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 btn text-sm">Deduct Actuals from Inventory</button>
+        <div class="mt-4 no-print space-y-2">
+            <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn text-sm font-bold shadow-md">Save Log Changes</button>
+            <button onclick="window.deductActualsFromInventory('${brew.id}')" class="w-full bg-app-tertiary text-app-secondary border border-app-brand/20 py-2 px-4 rounded-lg hover:bg-app-secondary btn text-xs">Deduct from Inventory</button>
         </div>
     `;
 
@@ -1243,65 +1266,64 @@ window.renderBrewDay2 = async function() {
     const brew = brews.find(b => b.id === currentBrewDay.brewId);
     if (!brew) return;
 
-    // 1. PROBEER STAPPEN TE VINDEN
     let steps = brew.secondarySteps || [];
     let source = "Custom Recipe Steps";
 
-    // Als er geen stappen zijn opgeslagen, gebruik de Smart Parser
     if (steps.length === 0 && brew.recipeMarkdown) {
         const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
-        if (extracted.day2.length > 0) {
-            steps = extracted.day2;
-            source = "Extracted from Recipe";
-        }
+        if (extracted.day2.length > 0) { steps = extracted.day2; source = "Extracted from Recipe"; }
     }
 
-    // FALLBACK: Als er écht niets in het recept staat over rijping, gebruik de veilige standaard
     if (steps.length === 0) {
         steps = [
             { title: "Stability Check", desc: "Ensure SG is stable (measure 3 days apart)." },
             { title: "Racking", desc: "Siphon mead to a clean vessel." },
             { title: "Stabilization", desc: "Add K-Meta & K-Sorbate if backsweetening." },
-            { title: "Backsweetening / Flavoring", desc: "Add honey, fruit or spices now if recipe calls for it." },
+            { title: "Backsweetening", desc: "Add honey/fruit/spices now." },
             { title: "Clarification", desc: "Wait for clearing." },
             { title: "Bottling", desc: "Bottle when crystal clear." }
         ];
-        source = "Standard Protocol (Default)";
+        source = "Standard Protocol";
     }
 
     const checklist = brew.checklist || {};
 
-    // 2. RENDER DE CHECKLIST
+    // Compactere Lijst voor Day 2
     const stepsHtml = steps.map((step, idx) => {
         const key = `sec-step-${idx}`;
         const isChecked = checklist[key] === true;
         
         return `
-        <div class="flex items-start gap-4 p-4 mb-3 card rounded-lg cursor-pointer hover:bg-app-primary transition-colors" onclick="window.toggleSecondaryStep('${brew.id}', '${key}')">
-            <div class="pt-1">
-                <div class="w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${isChecked ? 'bg-green-600 border-green-600' : 'border-gray-400 bg-app-tertiary'}">
-                    ${isChecked ? '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+        <div class="flex items-start gap-3 p-3 cursor-pointer hover:bg-app-tertiary/30 transition-colors group" onclick="window.toggleSecondaryStep('${brew.id}', '${key}')">
+            <div class="pt-0.5">
+                <div class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked ? 'bg-green-600 border-green-600' : 'border-app-brand/40 bg-app-tertiary group-hover:border-app-brand'}">
+                    ${isChecked ? '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
                 </div>
             </div>
             <div>
-                <h4 class="font-bold text-lg ${isChecked ? 'text-green-600 line-through' : 'text-app-primary'}">${step.title}</h4>
-                <p class="text-sm text-app-secondary ${isChecked ? 'line-through opacity-50' : ''}">${step.desc || step.description}</p>
+                <h4 class="font-bold text-sm leading-tight ${isChecked ? 'text-green-600 line-through decoration-2 opacity-70' : 'text-app-primary'}">${step.title}</h4>
+                <p class="text-xs text-app-secondary mt-0.5 leading-snug ${isChecked ? 'line-through opacity-50' : ''}">${step.desc || step.description}</p>
             </div>
         </div>`;
     }).join('');
 
     container.innerHTML = `
-        <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
-            <h2 class="text-3xl font-header font-bold mb-2 text-center text-app-brand">${brew.recipeName}</h2>
-            <p class="text-center text-xs font-bold uppercase tracking-widest text-app-secondary mb-6">Phase 2 Source: ${source}</p>
+        <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-header font-bold mb-1 text-center text-app-brand">${brew.recipeName}</h2>
+            <p class="text-center text-[10px] font-bold uppercase tracking-widest text-app-secondary mb-6 opacity-60">Phase 2: Aging & Packaging</p>
             
-            <div class="mb-8">${stepsHtml}</div>
+            <div class="mb-6 bg-app-primary/30 rounded-lg border border-app-brand/10 divide-y divide-app-brand/5">
+                ${stepsHtml}
+            </div>
 
             <div id="brew-day-2-log-container">${getBrewLogHtml(brew.logData, brew.id + '-secondary')}</div>
 
             <div class="mt-6 space-y-3">
-                <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Save Log Notes</button>
-                <button onclick="window.showBottlingModal('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn flex items-center justify-center gap-2">Proceed to Bottling</button>
+                <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn font-bold text-sm shadow-md">Save Log Notes</button>
+                <button onclick="window.showBottlingModal('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn flex items-center justify-center gap-2 font-bold text-sm shadow-md">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    Proceed to Bottling
+                </button>
             </div>
         </div>
     `;

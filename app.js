@@ -2061,24 +2061,74 @@ function getActualIngredientsHtml(brew) {
     return `<div class="log-item"><label>Actual Ingredients Log</label><table class="fermentation-table w-full" id="actualsTable-${idSuffix}"><thead><tr><th>Ingredient</th><th>Planned</th><th>Actual</th><th>Unit</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
+// --- VEILIGE VERSIE: VOORKOMT DATAVERLIES ---
 window.updateBrewLog = async function(brewId, containerId) {
     if (!userId || !brewId) return;
+    
+    // UI Feedback (Knop veranderen)
     const container = document.getElementById(containerId);
     const btn = container ? container.querySelector('button[onclick*="updateBrewLog"]') : null;
     const originalText = btn ? btn.innerText : 'Save';
-    if(btn) { btn.disabled = true; btn.innerText = "Saving..."; }
-
-    const logData = getLogDataFromDOM(containerId);
-    const brewIndex = brews.findIndex(b => b.id === brewId);
-    // Optimistic Update
-    if (brewIndex > -1) brews[brewIndex].logData = logData;
+    if(btn) { btn.disabled = true; btn.innerText = "Securing Data..."; }
 
     try {
-        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId), { logData: logData });
-        showToast('Log updated!', 'success');
-        if(btn) { btn.innerText = "Saved!"; btn.classList.add('bg-green-600'); setTimeout(() => { btn.disabled = false; btn.innerText = originalText; btn.classList.remove('bg-green-600'); }, 2000); }
+        // 1. Haal de nieuwe waarden van het scherm
+        const formValues = getLogDataFromDOM(containerId);
+
+        // 2. DATABASE CHECK: Haal eerst de allerlaatste versie uit de cloud
+        // Dit is de "Safety Lock": we kijken wat er al is voordat we schrijven.
+        const brewRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
+        const docSnap = await getDoc(brewRef);
+        
+        if (!docSnap.exists()) throw new Error("Batch not found in DB");
+        
+        const currentDBData = docSnap.data();
+        const currentLogData = currentDBData.logData || {};
+
+        // 3. INTELLIGENT MERGEN (Deep Merge)
+        // We nemen de oude data als basis (currentLogData)
+        // En plakken de nieuwe input (formValues) eroverheen.
+        // Hierdoor blijven velden die per ongeluk niet op het scherm stonden, TOCH bewaard.
+        
+        // Speciale check voor de Fermentatie Log (Lijsten zijn gevoelig voor overschrijven)
+        let safeFermentationLog = formValues.fermentationLog;
+        
+        // Als de nieuwe lijst leeg lijkt (bv. render fout), maar de database heeft wel data...
+        // ...dan behouden we de data uit de database!
+        const isNewLogEmpty = !formValues.fermentationLog || formValues.fermentationLog.every(r => !r.date && !r.sg);
+        if (isNewLogEmpty && currentLogData.fermentationLog && currentLogData.fermentationLog.length > 0) {
+            console.warn("⚠️ Empty log detected from UI. Preserving DB data.");
+            safeFermentationLog = currentLogData.fermentationLog;
+        }
+
+        const finalLogData = {
+            ...currentLogData,  // 1. Basis = Wat we al hadden
+            ...formValues,      // 2. Update = Wat we nu invullen
+            fermentationLog: safeFermentationLog // 3. Veilige lijst
+        };
+
+        // 4. Update ook de lokale cache direct (zodat de grafieken updaten zonder refresh)
+        const brewIndex = brews.findIndex(b => b.id === brewId);
+        if (brewIndex > -1) brews[brewIndex].logData = finalLogData;
+
+        // 5. Schrijven naar Cloud
+        await updateDoc(brewRef, { logData: finalLogData });
+
+        // Succes melding
+        showToast('Log safely secured!', 'success');
+        if(btn) { 
+            btn.innerText = "Saved!"; 
+            btn.classList.add('bg-green-600'); 
+            setTimeout(() => { 
+                btn.disabled = false; 
+                btn.innerText = originalText; 
+                btn.classList.remove('bg-green-600'); 
+            }, 2000); 
+        }
+
     } catch(e) {
-        console.error(e); showToast('Failed to save to cloud.', 'error');
+        console.error("Save Error:", e);
+        showToast('Save failed. Old data protected.', 'error'); // Geruststellende error
         if(btn) { btn.disabled = false; btn.innerText = originalText; }
     }
 }

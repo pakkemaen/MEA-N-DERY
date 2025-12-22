@@ -668,7 +668,7 @@ function formatRecipeMarkdown(markdown) {
 }
 
 // --- RENDER RECIPE OUTPUT (VOLLEDIG & GEOPTIMALISEERD) ---
-async function renderRecipeOutput(markdown) {
+async function renderRecipeOutput(markdown, isTweak = false) {
     const recipeOutput = document.getElementById('recipe-output');
     let finalMarkdown = markdown;
     if (!finalMarkdown.trim().startsWith('# ')) {
@@ -761,12 +761,12 @@ async function renderRecipeOutput(markdown) {
     if (currentPredictedProfile) renderGeneratedFlavorWheel(currentPredictedProfile);
 
     document.getElementById('saveBtn').addEventListener('click', () => {
-    saveBrewToHistory(currentRecipeMarkdown, currentPredictedProfile);
+        saveBrewToHistory(currentRecipeMarkdown, currentPredictedProfile);
     });
     document.getElementById('tweak-unsaved-btn').addEventListener('click', tweakUnsavedRecipe);
 
-    generateAndInjectCreativeTitle(finalMarkdown);
-}
+    if (!isTweak) {
+        generateAndInjectCreativeTitle(finalMarkdown);
 
 // --- CREATIVE TITLE GENERATOR ---
 async function generateAndInjectCreativeTitle(markdown) {
@@ -842,7 +842,7 @@ window.findCommercialWaterMatch = async function() {
             html += `<div class="p-3 card rounded border border-app-brand/30 shadow-sm flex flex-col gap-2">
                         <div class="flex justify-between items-start">
                             <span class="font-bold text-app-primary">${b.brand}</span>
-                            <button onclick="window.applyWaterTweak('${b.brand}', 'Using ${b.brand}.')" class="text-xs bg-app-tertiary hover:bg-app-secondary text-app-brand border border-app-brand py-1 px-2 rounded transition-colors font-bold uppercase tracking-wider">Select</button>
+                            <button onclick="window.applyWaterTweak('${b.brand}', '${b.tweak_instruction.replace(/'/g, "\\'")}')" class="text-xs bg-app-tertiary hover:bg-app-secondary text-app-brand border border-app-brand py-1 px-2 rounded transition-colors font-bold uppercase tracking-wider">Select</button>
                         </div>
                         <p class="text-xs text-app-secondary">${b.reason}</p>
                         <p class="text-[10px] text-green-600 font-mono mt-1">✓ ${b.tweak_instruction}</p>
@@ -859,13 +859,14 @@ window.findCommercialWaterMatch = async function() {
 window.applyWaterTweak = function(brandName, technicalInstruction) {
     const tweakInput = document.getElementById('tweak-unsaved-request');
     document.getElementById('tweak-unsaved-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    tweakInput.value = `I am using **${brandName}** water. ${technicalInstruction} Please recalculate nutrients and buffers. `;
+
+    tweakInput.value = `Update recipe for **${brandName}** water profile. \nNote: ${technicalInstruction} \nPlease recalculate nutrients and acidity buffering based on this specific mineral content.`;
+    
     tweakInput.classList.add('ring-4', 'ring-blue-500/50', 'transition-all', 'duration-500');
     setTimeout(() => tweakInput.classList.remove('ring-4', 'ring-blue-500/50'), 1500);
     tweakInput.focus();
 }
 
-// --- FIX VOOR SYNTAX ERROR IN TWEAK ---
 async function tweakUnsavedRecipe() {
     const tweakRequest = document.getElementById('tweak-unsaved-request').value.trim();
     if (!tweakRequest) { showToast("Please enter your tweak request.", "error"); return; }
@@ -897,15 +898,14 @@ async function tweakUnsavedRecipe() {
     const inventoryString = fullInventoryList.map(item => `${item.name} (${item.qty} ${item.unit})`).join('; ');
     const inventoryContext = `\n**INVENTORY CONTEXT:** The user has the following items in stock: [${inventoryString}]. If the tweak requires adding ingredients, prioritize these items.`;
 
-    // --- FIX: VEILIGHEID TEGEN CRASHEN DOOR BACKTICKS ---
     const safeMarkdown = currentRecipeMarkdown.replace(/`/g, "'"); 
 
-    const prompt = `You are "MEA(N)DERY", a master mazer. A user wants to tweak a recipe.
+    const prompt = `You are "MEA(N)DERY", a master mazer with a witty, slightly cynical, modern brand voice. A user wants to tweak a recipe.
+    
     **STRICT OUTPUT RULE:**
-    - Do NOT output raw JSON as the main response.
+    - Do NOT output raw JSON.
     - Output a Markdown Recipe.
-    - Inside the Markdown, include the Ingredients JSON block.
-    - Start with "# Title".
+    - Start immediately with "# [NEW TITLE]".
     
     Original Recipe:
     ---
@@ -916,12 +916,20 @@ async function tweakUnsavedRecipe() {
 
     **TASK:** Rewrite the FULL recipe to incorporate the tweak.
     
+    **BRAND VOICE & CONTINUITY (CRITICAL):**
+    1. **Analyze the Original Title:** "${preservedTitle || 'Untitled'}".
+    2. **Identify the Vibe:** Is it cynical? A pun? Dark humor? Minimalist?
+    3. **Invent a NEW Title:** Create a new name that fits the **new ingredients** but keeps the **original vibe**.
+       - *Example:* If original was "Unpaid Overtime" (Work/Stress theme) and user adds mineral water -> New Title: "Liquid Assets" or "Hard Water, Harder Life".
+       - *Example:* If original was "Bee's Knees" (Cute/Pun) -> New Title: "Minerally In Love".
+    4. **Prohibition:** Do NOT just append "(Chaudfontaine Edition)". Make it unique.
+    
     ${laws}
     ${inventoryContext}
 
     **LOGIC CHECK:**
-    - If the user changed the Batch Size -> Recalculate ALL ingredients.
-    - If the user changed the Fruit -> Check if Honey needs adjustment for ABV targets.
+    - If Batch Size changed -> Recalculate ALL ingredients.
+    - If Water changed -> Adjust Nutrients & Buffer (High Bicarbonate water needs LESS Potassium Carbonate).
     `; 
 
     try {
@@ -929,14 +937,21 @@ async function tweakUnsavedRecipe() {
         if (thinkingInterval) clearInterval(thinkingInterval);
 
         let processedMarkdown = tweakedMarkdown.trim();
+        
         if (processedMarkdown.startsWith("```markdown")) {
              processedMarkdown = processedMarkdown.substring(11, processedMarkdown.lastIndexOf("```")).trim();
         } else if (processedMarkdown.startsWith("```")) {
              processedMarkdown = processedMarkdown.substring(3, processedMarkdown.lastIndexOf("```")).trim();
         }
 
+        const firstTitleIndex = processedMarkdown.indexOf('#');
+        if (firstTitleIndex > -1) {
+            processedMarkdown = processedMarkdown.substring(firstTitleIndex);
+        }
+
         currentRecipeMarkdown = processedMarkdown;
-        await renderRecipeOutput(processedMarkdown);
+        
+        await renderRecipeOutput(processedMarkdown, true);
 
         if (preservedTitle) {
             const newNameInput = document.querySelector('input[id^="recipeName-new"]');

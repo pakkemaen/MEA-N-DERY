@@ -824,3 +824,48 @@ input:focus, select:focus, textarea:focus {
     opacity: 1; /* Voorkom de standaard opacity verandering */
     filter: brightness(1.1); /* Maak hem iets lichter/feller */
 }
+
+/* --- MEANDERY ORIGINAL LABEL STYLE --- */
+
+/* De container voor verticale tekst */
+.vertical-text-group {
+    writing-mode: vertical-rl; /* Tekst loopt van boven naar beneden */
+    transform: rotate(180deg); /* Draai om zodat het van beneden naar boven leest */
+    text-align: left;
+    display: flex;
+    gap: 12px; /* Ruimte tussen Titel en Subtitel */
+    align-items: center;
+}
+
+/* Het Meandery Logo Cirkeltje */
+.meandery-circle {
+    width: 80px;
+    height: 80px;
+    border: 2px solid currentColor; /* Neemt de tekstkleur over */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    text-transform: uppercase;
+    font-weight: 400; /* Iets dunner zoals op je voorbeeld */
+    letter-spacing: 0.05em;
+    font-size: 11px;
+}
+
+/* Zorgt dat de achtergrondafbeelding de hele label vult */
+.label-bg-image {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+/* Zorgt dat tekst bovenop de afbeelding ligt */
+.label-overlay {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    height: 100%;
+}

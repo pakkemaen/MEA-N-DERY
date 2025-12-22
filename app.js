@@ -365,12 +365,12 @@ function buildPrompt() {
 
         // 3. Inventory Analyse (Silence Protocol)
         const inventoryToggles = {
-            Yeast: document.getElementById('useInventory_Yeast').checked,
-            Nutrient: document.getElementById('useInventory_Nutrients').checked,
-            Honey: document.getElementById('useInventory_Honey').checked,
-            Fruit: document.getElementById('useInventory_Fruits').checked,
-            Spice: document.getElementById('useInventory_Spices').checked,
-            Other: document.getElementById('useInventory_Other').checked
+            Yeast: document.getElementById('useInventory_Yeast')?.checked || false,
+            Nutrient: document.getElementById('useInventory_Nutrients')?.checked || false,
+            Honey: document.getElementById('useInventory_Honey')?.checked || false,
+            Fruit: document.getElementById('useInventory_Fruits')?.checked || false,
+            Spice: document.getElementById('useInventory_Spices')?.checked || false, 
+            Other: document.getElementById('useInventory_Other')?.checked || false
         };
         
         const relevantCategories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
@@ -1524,24 +1524,14 @@ function loadHistory() {
         brews = snapshot.docs.map(doc => {
             let b = { id: doc.id, ...doc.data() };
             
-            // --- V1.0 NAAR V2.0 DATA MIGRATIE ---
-            // Dit repareert oude recepten zodat je logs weer zichtbaar zijn
             if (!b.logData) b.logData = {};
             
-            // Lijst van velden die vroeger 'los' stonden en nu in logData horen
-            const legacyFields = [
-                'actualOG', 'actualFG', 'targetOG', 'targetFG', 
-                'targetABV', 'finalABV', 'brewDate', 
-                'agingNotes', 'tastingNotes', 'bottlingNotes'
-            ];
-            
-            legacyFields.forEach(field => {
-                // Als het veld bestaat in de root (V1) maar niet in logData (V2)...
-                if (b[field] && !b.logData[field]) {
-                    b.logData[field] = b[field]; // ...kopieer het naar de juiste plek!
+            // Kopieer oude velden naar logData als ze daar nog niet staan
+            ['actualOG', 'actualFG', 'targetOG', 'targetFG', 'targetABV', 'finalABV', 'brewDate', 'agingNotes', 'tastingNotes'].forEach(field => {
+                if (b[field] !== undefined && b.logData[field] === undefined) {
+                    b.logData[field] = b[field];
                 }
             });
-            // -------------------------------------
 
             return b;
         });
@@ -3170,68 +3160,70 @@ function loadLabelFromBrew(e) {
 }
 
 // Thema Switcher (Signature / Artisan / Batch)
+// --- VERVANG DE HELE setLabelTheme FUNCTIE HIERMEE ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
-    const imgDiv = container.querySelector('div:first-child');
-    const textDiv = container.querySelector('div:last-child');
-    
-    document.querySelectorAll('.label-theme-btn').forEach(b => b.classList.remove('active', 'border-app-brand', 'text-app-brand'));
-    document.querySelector(`[data-theme="${theme}"]`).classList.add('active', 'border-app-brand', 'text-app-brand');
+    const imgElement = document.getElementById('label-img-display');
+    const imgSrc = imgElement.src;
+    const hasImage = imgSrc && !imgElement.classList.contains('hidden') && imgSrc !== window.location.href;
 
-    // Reset styles
-    container.className = `h-full w-full flex flex-row gap-4 p-4 transition-all duration-300`;
-    container.style = "";
-    imgDiv.className = "hidden"; // Image even verbergen voor reset
-    textDiv.className = "flex-grow flex flex-col justify-between h-full";
+    // Haal de waardes op
+    const title = document.getElementById('labelTitle').value || 'TITEL';
+    const sub = document.getElementById('labelSubtitle').value || 'STYLE';
+    const abv = document.getElementById('labelAbv').value || '0';
+    const vol = document.getElementById('labelVol').value || '750';
+    const fg = document.getElementById('fg')?.value || '1.000'; // Probeer FG te vinden, anders default
 
-    const title = document.getElementById('prev-title');
-    const subtitle = document.getElementById('prev-subtitle');
-    const desc = document.getElementById('prev-desc');
-    const stats = textDiv.querySelector('.border-t-2') || textDiv.querySelector('.border-t') || textDiv.lastElementChild;
+    // Reset Classes & Active State
+    document.querySelectorAll('.label-theme-btn').forEach(b => {
+        b.classList.remove('active', 'border-app-brand', 'text-app-brand');
+        if(b.dataset.theme === theme) b.classList.add('active', 'border-app-brand', 'text-app-brand');
+    });
 
-    // --- THEMA 1: SIGNATURE (Dark Mode / Premium) ---
-    if (theme === 'signature') {
-        container.style.backgroundColor = "#1a1a1a";
-        container.style.color = "#ffffff";
-        container.style.fontFamily = "'Barlow Semi Condensed', sans-serif";
-        container.style.border = "1px solid #d97706";
+    // --- MEANDERY ORIGINAL STYLE ---
+    if (theme === 'signature') { // We gebruiken de knop "Signature" voor jouw "Original" stijl
+        
+        // Bepaal tekstkleur (Wit als er een foto is, anders Goud/Bruin)
+        const textColor = hasImage ? 'text-white' : 'text-[#8F8C79]'; 
+        const bgColor = hasImage ? 'bg-black' : 'bg-white';
 
-        imgDiv.className = "w-1/3 h-full bg-gray-800 rounded-lg overflow-hidden relative border border-gray-700 shadow-inner";
-        imgDiv.style.filter = "contrast(1.1) saturate(0.9)";
+        container.className = `relative w-full h-full overflow-hidden ${bgColor} ${textColor} font-sans p-6`;
+        container.style = ""; // Reset inline styles
 
-        title.className = "text-4xl font-black text-amber-500 leading-none mb-2 uppercase tracking-tight";
-        subtitle.className = "text-xs font-bold text-gray-400 uppercase tracking-[0.3em] mb-4 border-b border-gray-700 pb-2";
-        desc.className = "text-[10px] text-gray-300 leading-relaxed font-light italic";
-        stats.className = "border-t border-amber-500/30 pt-2 flex justify-between items-end mt-auto text-gray-300";
+        // HTML Opbouw
+        let bgImageHtml = '';
+        if (hasImage) {
+            bgImageHtml = `<img src="${imgSrc}" class="label-bg-image opacity-90">`;
+        }
+
+        container.innerHTML = `
+            ${bgImageHtml}
+            <div class="label-overlay flex justify-between h-full">
+                
+                <div class="vertical-text-group h-full flex justify-center">
+                    <h1 id="prev-title" class="text-6xl font-header font-bold uppercase tracking-wider whitespace-nowrap leading-none">${title}</h1>
+                    <h2 id="prev-subtitle" class="text-sm font-bold uppercase tracking-[0.2em] text-opacity-80 whitespace-nowrap">${sub}</h2>
+                </div>
+
+                <div class="flex flex-col justify-between items-end h-full py-2">
+                    
+                    <div class="meandery-circle">
+                        <span>MEA(N)DERY</span>
+                    </div>
+
+                    <div class="text-right leading-tight">
+                        <p class="text-lg font-normal opacity-80">FG ${fg}</p>
+                        <p class="text-2xl font-bold">${abv}% ABV</p>
+                        <p class="text-xs opacity-60 mt-1">${vol} ML</p>
+                    </div>
+                </div>
+            </div>
+        `;
     } 
-    // --- THEMA 2: ARTISAN (Clean / Modern Craft) ---
-    else if (theme === 'artisan') {
-        container.style.backgroundColor = "#ffffff";
-        container.style.color = "#000000";
-        container.style.fontFamily = "'Helvetica Neue', 'Arial', sans-serif";
-        
-        imgDiv.className = "w-1/2 h-full bg-gray-100 overflow-hidden relative rounded-none";
-        textDiv.className = "w-1/2 flex flex-col justify-center h-full pl-2";
-        
-        title.className = "text-3xl font-extrabold text-black leading-tight mb-2 tracking-tighter";
-        subtitle.className = "text-[10px] font-bold text-black bg-black text-white px-2 py-1 inline-block mb-3 uppercase tracking-widest w-max";
-        desc.className = "text-[9px] text-gray-500 leading-snug mb-4";
-        stats.className = "border-t-4 border-black pt-2 flex flex-col items-start gap-1 mt-auto";
-    }
-    // --- THEMA 3: BATCH (Industrial / Kraft / Technical) ---
-    else if (theme === 'batch') {
-        container.style.backgroundColor = "#e8e0d5";
-        container.style.color = "#2d2a26";
-        container.style.fontFamily = "'Courier New', monospace";
-        container.style.border = "2px dashed #2d2a26";
-        
-        imgDiv.className = "w-24 h-24 border-2 border-black bg-white/50 absolute top-4 right-4 rotate-3 shadow-sm z-10 p-1";
-        textDiv.className = "w-full h-full flex flex-col relative z-0";
-
-        title.className = "text-2xl font-bold uppercase border-b-2 border-black pb-1 mb-2 inline-block";
-        subtitle.className = "text-xs font-bold uppercase mb-1";
-        desc.className = "text-[10px] font-mono leading-tight mb-4 max-w-[65%]";
-        stats.className = "grid grid-cols-3 gap-2 border-t border-black pt-2 mt-auto text-[9px]";
+    
+    else {
+        // Fallback
+        container.innerHTML = `<div class="p-4">Select a theme</div>`;
     }
 }
 

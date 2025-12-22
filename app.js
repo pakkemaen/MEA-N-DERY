@@ -1551,13 +1551,6 @@ function loadHistory() {
     onSnapshot(q, (snapshot) => {
         brews = snapshot.docs.map(doc => {
             let b = { id: doc.id, ...doc.data() };
-
-            // --- VOEG DEZE REGEL TOE OM TE TESTEN ---
-            if (b.recipeName && b.recipeName.includes("Grandma")) { // Zoeken naar je "Grandma's Jam" recept
-                 console.log("📋 VELDNAMEN GEVONDEN:", Object.keys(b));
-                 console.log("🔍 INHOUD:", b);
-            }
-            // ---------------------------------------
             
             // --- MIGRATIE FIX (CRUCIAAL VOOR OUDE DATA) ---
             // Als logData nog niet bestaat, maak het aan

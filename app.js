@@ -598,22 +598,29 @@ async function generateRecipe() {
     }
 }
 
-async function parseRecipeData(markdown) {
+function parseRecipeData(markdown) {
     const data = {};
+    if (!markdown) return data; // Veiligheid
+
     try {
+        // Titel zoeken
         const titleMatch = markdown.match(/^#\s*(.*)/m);
         if (titleMatch && titleMatch[1]) { data.recipeName = titleMatch[1].trim(); }
 
+        // Regex helpers
         const createRegex = (key) => new RegExp(`(?:${key}|${key.replace('.', '\\.')})[\\s\\*:]*~?([\\d.,]+)`, 'i');
-        const ogRegex = createRegex('Target OG|Original Gravity|Start SG|O\\.G\\.|OG');
-        const fgRegex = createRegex('Target FG|Final Gravity|Eind SG|F\\.G\\.|FG');
         
+        // OG Zoeken
+        const ogRegex = createRegex('Target OG|Original Gravity|Start SG|O\\.G\\.|OG');
         const ogMatch = markdown.match(ogRegex);
         if (ogMatch && ogMatch[1]) { data.targetOG = ogMatch[1]; }
 
+        // FG Zoeken
+        const fgRegex = createRegex('Target FG|Final Gravity|Eind SG|F\\.G\\.|FG');
         const fgMatch = markdown.match(fgRegex);
         if (fgMatch && fgMatch[1]) { data.targetFG = fgMatch[1]; }
 
+        // ABV Zoeken
         const abvMatchGlobal = markdown.match(new RegExp(`(?:Target ABV|ABV|Alcoholpercentage)[\\s\\*:]*~?([\\d.,]+)\\s*%?`, 'i'));
         if (abvMatchGlobal && abvMatchGlobal[1]) { data.targetABV = abvMatchGlobal[1]; }
 
@@ -1602,17 +1609,24 @@ window.showBrewDetail = function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    // --- HIER IS DE FIX: GEBRUIK DE FORMATTER ---
+    // 1. Markdown formatteren (Tabellen maken)
     let processedMarkdown = formatRecipeMarkdown(brew.recipeMarkdown);
-    
-    // Verwijder timers uit tekst ([d:00:00]) en de titel (# Title) omdat die al groot bovenaan staat
     const cleanMarkdown = processedMarkdown.replace(/\[d:[\d:]+\]/g, '').replace(/^#\s.*$/m, '');
     const recipeHtml = marked.parse(cleanMarkdown);
-    // ---------------------------------------------
 
-    const logHtml = getBrewLogHtml(brew.logData, brew.id);
+    // 2. DATA EXTRACTIE: Haal OG/FG/ABV uit de tekst
+    const parsedTargets = parseRecipeData(brew.recipeMarkdown);
+    
+    // 3. Samenvoegen: Database data wint, anders gebruiken we de tekst-data
+    const combinedLogData = { 
+        ...parsedTargets, // Eerst de data uit de tekst
+        ...brew.logData   // Dan de data uit de database (overschrijft tekst indien aanwezig)
+    };
+
+    // 4. Render het logboek met de gecombineerde data
+    const logHtml = getBrewLogHtml(combinedLogData, brew.id);
+    
     const currency = userSettings.currencySymbol || '€';
-
     let costHtml = '';
     if (brew.totalCost > 0) {
         const perL = brew.batchSize > 0 ? brew.totalCost / brew.batchSize : 0;

@@ -1551,6 +1551,12 @@ function loadHistory() {
     onSnapshot(q, (snapshot) => {
         brews = snapshot.docs.map(doc => {
             let b = { id: doc.id, ...doc.data() };
+
+            // --- VOEG DEZE REGEL TOE OM TE TESTEN ---
+            if (b.recipeName.includes("Emotional")) { // Vervang "Emotional" door een woord uit je titel
+                 console.log("🔍 RUWE DATA UIT FIREBASE:", b);
+            }
+            // ---------------------------------------
             
             // --- MIGRATIE FIX (CRUCIAAL VOOR OUDE DATA) ---
             // Als logData nog niet bestaat, maak het aan

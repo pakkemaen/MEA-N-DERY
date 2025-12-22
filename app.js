@@ -1553,7 +1553,7 @@ function loadHistory() {
             let b = { id: doc.id, ...doc.data() };
 
             // --- VOEG DEZE REGEL TOE OM TE TESTEN ---
-            if (b.recipeName.includes("Emotional")) { // Vervang "Emotional" door een woord uit je titel
+            if (b.recipeName.includes("Grandma's")) { // Vervang "Emotional" door een woord uit je titel
                  console.log("🔍 RUWE DATA UIT FIREBASE:", b);
             }
             // ---------------------------------------

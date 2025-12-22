@@ -1553,8 +1553,9 @@ function loadHistory() {
             let b = { id: doc.id, ...doc.data() };
 
             // --- VOEG DEZE REGEL TOE OM TE TESTEN ---
-            if (b.recipeName.includes("Grandma's")) { // Vervang "Emotional" door een woord uit je titel
-                 console.log("🔍 RUWE DATA UIT FIREBASE:", b);
+            if (b.recipeName && b.recipeName.includes("Grandma")) { // Zoeken naar je "Grandma's Jam" recept
+                 console.log("📋 VELDNAMEN GEVONDEN:", Object.keys(b));
+                 console.log("🔍 INHOUD:", b);
             }
             // ---------------------------------------
             

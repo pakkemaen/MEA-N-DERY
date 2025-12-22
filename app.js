@@ -349,12 +349,13 @@ function buildPrompt() {
         const estimatedYAN = Math.round(targetABV * 10); 
         
         let mathContext = `
-**CALCULATED TARGETS:**
-- **Batch:** ${batchSize}L | **Target ABV:** ${targetABV}%
-- **Honey Baseline:** ~${totalHoneyKg.toFixed(2)} kg (Assuming honey provides 100% of alcohol).
-- **SHOPPING LIST RULE:** If target is **SWEET**, add ~15% extra honey to the JSON for backsweetening.
-- **Nitrogen Target:** ~${estimatedYAN} PPM YAN.${budgetContext}
-`;
+        **CALCULATED TARGETS:**
+        - **Batch:** ${batchSize}L | **Target ABV:** ${targetABV}%
+        - **Honey Baseline:** ~${totalHoneyKg.toFixed(2)} kg (Assuming honey provides 100% of alcohol).
+        - **SHOPPING LIST RULE:** If target is **SWEET**, add ~15% extra honey to the JSON for backsweetening.
+        - **Nitrogen Target:** ~${estimatedYAN} PPM YAN.${budgetContext}
+        `;
+
         if (isNoWater) {
             mathContext += `\n- **PROTOCOL: NO-WATER MELOMEL.** 1. No added water. 2. Need ~1.8kg fruit/Liter. 3. **SUGAR ALERT:** Fruit adds sugar. REDUCE Honey Baseline significantly.`;
         } else if (isBraggot) {
@@ -446,23 +447,23 @@ function buildPrompt() {
             }
 
             specificLaws = `
-**WILD LAWS:**
-${wildNutrientRule}
-2.  **Yeast:** Recommend Philly Sour, Lambic Blend, or Brett. Warn about plastic.
-3.  **Acidity:** NO Carbonate buffers.
-4.  ${timeRule}
-5.  **Hops:** Aged Hops for Gueuze.
-`;
+            **WILD LAWS:**
+            ${wildNutrientRule}
+            2.  **Yeast:** Recommend Philly Sour, Lambic Blend, or Brett. Warn about plastic.
+            3.  **Acidity:** NO Carbonate buffers.
+            4.  ${timeRule}
+            5.  **Hops:** Aged Hops for Gueuze.
+            `;
         } else if (isBelgianMode) {
             protocolContext = `**PROTOCOL: MONASTIC/COMPLEX.** Focus on Esters/Phenols.`;
             specificLaws = `
-**MONASTIC LAWS:**
-${baseNutrientRule}
-2.  **Yeast:** Ale Yeasts (M47, BE-256, WLP500).
-3.  **Temp:** Warmer (20-25°C) permitted *IF* yeast strain allows.
-4.  **Ingredients:** Consider Dark Candi Syrup.
-5.  **Carbonation:** Recommend bottle conditioning.
-`;
+            **MONASTIC LAWS:**
+            ${baseNutrientRule}
+            2.  **Yeast:** Ale Yeasts (M47, BE-256, WLP500).
+            3.  **Temp:** Warmer (20-25°C) permitted *IF* yeast strain allows.
+            4.  **Ingredients:** Consider Dark Candi Syrup.
+            5.  **Carbonation:** Recommend bottle conditioning.
+            `;
         } else {
             protocolContext = `**PROTOCOL: STANDARD SCIENTIFIC (BOMM).**`;
             let timeAndAgingRule = "";
@@ -478,14 +479,14 @@ ${baseNutrientRule}
             }
 
             specificLaws = `
-**SCIENTIFIC LAWS:**
-${baseNutrientRule}
-2.  **Yeast:** Reliable strains (71B, EC-1118, D47, US-05).
-3.  **Buffer:** Traditionals MUST have Potassium Carbonate.
-4.  **Stability:** Ferment DRY -> Stabilize -> Backsweeten.
-${timeAndAgingRule}
-${hydromelRule}
-`;
+            **SCIENTIFIC LAWS:**
+            ${baseNutrientRule}
+            2.  **Yeast:** Reliable strains (71B, EC-1118, D47, US-05).
+            3.  **Buffer:** Traditionals MUST have Potassium Carbonate.
+            4.  **Stability:** Ferment DRY -> Stabilize -> Backsweeten.
+            ${timeAndAgingRule}
+            ${hydromelRule}
+            `;
         }
 
         // 6. Water

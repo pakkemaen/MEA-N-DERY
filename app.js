@@ -1534,39 +1534,49 @@ window.finalizeBrewDay1 = async function() {
 
 // --- HISTORY & DETAIL MANAGEMENT (MET V1->V2 MIGRATIE FIX) ---
 
+// --- VERVANG DE HELE FUNCTIE loadHistory DOOR DIT ---
 function loadHistory() {
     if (!userId) return;
+    
+    // Gebruik de vaste collectie referentie
     const q = query(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews'));
     
     onSnapshot(q, (snapshot) => {
         brews = snapshot.docs.map(doc => {
             let b = { id: doc.id, ...doc.data() };
             
+            // --- MIGRATIE FIX (CRUCIAAL VOOR OUDE DATA) ---
+            // Als logData nog niet bestaat, maak het aan
             if (!b.logData) b.logData = {};
             
-            // Kopieer oude velden naar logData als ze daar nog niet staan
-            ['actualOG', 'actualFG', 'targetOG', 'targetFG', 'targetABV', 'finalABV', 'brewDate', 'agingNotes', 'tastingNotes'].forEach(field => {
+            // Lijst met velden die vroeger "los" stonden en nu in "logData" horen
+            const oldFields = ['actualOG', 'actualFG', 'targetOG', 'targetFG', 'targetABV', 'finalABV', 'brewDate', 'agingNotes', 'tastingNotes', 'recipeName'];
+            
+            oldFields.forEach(field => {
+                // Als het veld bestaat in de oude data, maar niet in de nieuwe logData...
                 if (b[field] !== undefined && b.logData[field] === undefined) {
-                    b.logData[field] = b[field];
+                    b.logData[field] = b[field]; // ...kopieer het dan!
                 }
             });
+            // ---------------------------------------------
 
             return b;
         });
 
         // Sorteren: Nieuwste eerst
         brews.sort((a, b) => {
-            const dateA = a.createdAt ? a.createdAt.toDate() : new Date();
-            const dateB = b.createdAt ? b.createdAt.toDate() : new Date();
+            const dateA = a.createdAt ? a.createdAt.toDate() : new Date(0);
+            const dateB = b.createdAt ? b.createdAt.toDate() : new Date(0);
             return dateB - dateA;
         });
 
+        // Update de UI
         renderHistoryList();
         populateSocialRecipeDropdown();
-        updateCostAnalysis();
-        renderActiveBrewTimeline();
-        updateNextActionWidget();
-        updateDashboardStats();
+        if(typeof updateCostAnalysis === 'function') updateCostAnalysis();
+        if(typeof renderActiveBrewTimeline === 'function') renderActiveBrewTimeline();
+        if(typeof updateNextActionWidget === 'function') updateNextActionWidget();
+        if(typeof updateDashboardStats === 'function') updateDashboardStats();
     });
 }
 

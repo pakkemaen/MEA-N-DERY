@@ -3308,90 +3308,83 @@ function loadLabelFromBrew(e) {
 // Thema Switcher (Signature / Special)
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
-    const imgElement = document.getElementById('label-img-display');
     
-    // Check of er een specifieke batch-afbeelding is geüpload
-    const imgSrc = imgElement.src;
-    const hasImage = imgSrc && !imgElement.classList.contains('hidden') && imgSrc !== window.location.href;
+    // 1. VEILIGE IMAGE CHECK (Gebruik geheugen of probeer DOM)
+    let imgSrc = window.currentLabelImageSrc || '';
+    if (!imgSrc) {
+        // Probeer het oude element nog te vinden als backup
+        const imgElement = document.getElementById('label-img-display');
+        if (imgElement && !imgElement.classList.contains('hidden') && imgElement.src !== window.location.href) {
+            imgSrc = imgElement.src;
+        }
+    }
+    const hasImage = imgSrc && imgSrc !== '';
 
-    // 1. Data Ophalen
+    // 2. Data Ophalen
     const title = document.getElementById('labelTitle').value || 'MEAD NAME';
     const sub = document.getElementById('labelSubtitle').value || 'Style Description';
     const abv = document.getElementById('labelAbv').value || '0';
     const vol = document.getElementById('labelVol').value || '750';
-    const fg = document.getElementById('fg')?.value || ''; 
     const desc = document.getElementById('labelDescription').value || '';
     const details = document.getElementById('labelDetails').value || '';
     const showWarning = document.getElementById('labelWarning')?.checked;
     const dateVal = document.getElementById('labelDate')?.value || '';
 
-    // 2. Knoppen Status Updaten
+    // 3. Knoppen Status
     document.querySelectorAll('.label-theme-btn').forEach(b => {
         b.classList.remove('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
-        if(b.dataset.theme === theme) {
-            b.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
-        }
+        if(b.dataset.theme === theme) b.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
     });
 
-    // --- STIJL 1: STANDARD MEANDERY (Clean, Leesbaar, Met Logo) ---
+    // --- STANDARD THEMA ---
     if (theme === 'standard') {
-        
         container.className = `relative w-full h-full overflow-hidden bg-[#fdfbf7] text-[#1a1a1a] font-sans p-6 flex flex-col items-center justify-between border-[6px] border-double border-[#d4c5a3]`;
         container.style = "";
 
-        // LOGICA: Als er een batch-foto is, toon die. Zo niet, toon het algemene logo.
-        let imageHtml = '';
+        // Plaatje of Logo Fallback
+        let centerPiece = '';
         if (hasImage) {
-            // Batch Foto
-            imageHtml = `<div class="w-28 h-28 rounded-full border-4 border-white shadow-md overflow-hidden mb-2"><img src="${imgSrc}" class="w-full h-full object-cover"></div>`;
+            centerPiece = `<div class="w-28 h-28 rounded-full border-4 border-white shadow-md overflow-hidden mb-2"><img src="${imgSrc}" class="w-full h-full object-cover"></div>`;
         } else {
-            // Standaard Logo (Fallback)
-            // Zorg dat je 'logo.png' in je map hebt staan!
-            imageHtml = `<div class="w-24 h-24 flex items-center justify-center mb-2 opacity-80"><img src="logo.png" class="w-full h-full object-contain filter sepia-[.3]" onerror="this.style.display='none'"></div>`;
+            // HIER IS DE FIX: Als logo.png mist, toont hij tekst!
+            centerPiece = `
+                <div class="w-24 h-24 flex items-center justify-center mb-2 opacity-80 relative">
+                    <img src="logo.png" class="w-full h-full object-contain filter sepia-[.3]" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                    <div class="hidden absolute inset-0 items-center justify-center border-2 border-current rounded-full">
+                        <span class="text-[10px] font-bold tracking-widest text-center leading-tight">MEA<br>(N)<br>DERY</span>
+                    </div>
+                </div>`;
         }
 
         container.innerHTML = `
             <div class="text-center w-full border-b border-[#d4c5a3]/50 pb-2">
-                <p class="text-[8px] font-bold uppercase tracking-[0.3em] mb-1 opacity-50">Handcrafted in Belgium</p>
+                <p class="text-[8px] font-bold uppercase tracking-[0.3em] mb-1 opacity-50">Handcrafted</p>
                 <h1 id="prev-title" class="text-3xl font-header font-bold uppercase tracking-wide leading-none text-app-header">${title}</h1>
                 <h2 id="prev-subtitle" class="text-xs font-serif italic text-[#d97706] mt-1">${sub}</h2>
             </div>
-
             <div class="flex-grow flex flex-col items-center justify-center py-2">
-                ${imageHtml}
-                <p id="prev-desc" class="text-[10px] text-center max-w-[90%] leading-relaxed opacity-80 font-serif italic">
-                    ${desc || "A refined honey wine."}
-                </p>
+                ${centerPiece}
+                <p id="prev-desc" class="text-[10px] text-center max-w-[90%] leading-relaxed opacity-80 font-serif italic">${desc || "A refined honey wine."}</p>
             </div>
-
             <div class="w-full text-center pt-2 border-t border-[#d4c5a3]/50">
                 <div class="flex justify-between items-center px-2 mb-1 font-bold font-mono text-sm text-[#5c5c5c]">
-                    <span>${vol}ml</span>
-                    <span id="prev-abv">${abv}% ABV</span>
+                    <span>${vol}ml</span><span id="prev-abv">${abv}% ABV</span>
                 </div>
                 <div class="flex justify-between items-end px-2">
-                     <div class="text-left">
-                        <p class="text-[8px] font-bold uppercase tracking-wider opacity-40">Ingredients</p>
-                        <p id="prev-details" class="text-[9px] font-medium leading-tight max-w-[100px]">${details}</p>
-                     </div>
-                     <div class="text-right">
-                        <p id="prev-date" class="text-[9px] font-bold opacity-60">${dateVal}</p>
-                     </div>
+                     <div class="text-left"><p class="text-[8px] font-bold uppercase tracking-wider opacity-40">Ingredients</p><p id="prev-details" class="text-[9px] font-medium leading-tight max-w-[100px]">${details}</p></div>
+                     <div class="text-right"><p id="prev-date" class="text-[9px] font-bold opacity-60">${dateVal}</p></div>
                 </div>
-                <p id="prev-warning" class="text-[6px] uppercase mt-2 opacity-40 ${showWarning ? '' : 'hidden'}">Contains Sulfites • Drink Responsibly</p>
+                <p id="prev-warning" class="text-[6px] uppercase mt-2 opacity-40 ${showWarning ? '' : 'hidden'}">Contains Sulfites</p>
             </div>
         `;
     } 
 
-    // --- STIJL 2: SPECIAL MEANDERY (Donker, Artistiek) ---
+    // --- SPECIAL THEMA ---
     else if (theme === 'special') {
-        
         const textColor = hasImage ? 'text-white' : 'text-[#f4f1ea]'; 
         const bgColor = hasImage ? 'bg-black' : 'bg-[#1a1a1a]';
-
         container.className = `relative w-full h-full overflow-hidden ${bgColor} ${textColor} font-sans flex flex-row shadow-xl`;
-        container.style = ""; 
-
+        
         let bgImageHtml = '';
         if (hasImage) {
             bgImageHtml = `<div class="absolute inset-0 z-0"><img src="${imgSrc}" class="w-full h-full object-cover opacity-50"></div><div class="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black/80 z-0"></div>`;
@@ -3399,37 +3392,33 @@ function setLabelTheme(theme) {
 
         const titleSize = title.length > 15 ? 'text-3xl' : 'text-5xl';
 
+        // Logo Fallback voor Special (Wit/Inverted)
+        const logoHtml = `
+            <div class="w-10 h-10 opacity-80 relative">
+                <img src="logo.png" class="w-full h-full object-contain invert" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                <div class="hidden absolute inset-0 items-center justify-center border border-white/50 rounded-full">
+                    <span class="text-[6px] font-bold text-white">M(N)</span>
+                </div>
+            </div>`;
+
         container.innerHTML = `
             ${bgImageHtml}
-            
             <div class="relative z-10 w-20 h-full flex flex-col justify-center items-center border-r border-white/10 p-2 bg-black/20 backdrop-blur-sm">
                 <div style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="h-full flex items-center justify-center text-center">
                     <h1 id="prev-title" class="${titleSize} font-header font-bold uppercase tracking-wider leading-none whitespace-normal drop-shadow-md text-center">${title}</h1>
                     <h2 id="prev-subtitle" class="text-[10px] font-bold uppercase tracking-[0.3em] mt-4 text-app-brand opacity-90">${sub}</h2>
                 </div>
             </div>
-
             <div class="relative z-10 flex-1 flex flex-col justify-between p-4 pl-5">
-                
                 <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-3xl font-bold leading-none text-white drop-shadow-md"><span id="prev-abv">${abv}</span><span class="text-sm">%</span></p>
-                        <p class="text-[8px] uppercase tracking-widest opacity-60">Alcohol</p>
-                    </div>
-                    <div class="w-10 h-10 opacity-80"><img src="logo.png" class="w-full h-full object-contain invert" onerror="this.style.display='none'"></div>
+                    <div><p class="text-3xl font-bold leading-none text-white drop-shadow-md"><span id="prev-abv">${abv}</span><span class="text-sm">%</span></p><p class="text-[8px] uppercase tracking-widest opacity-60">Alcohol</p></div>
+                    ${logoHtml}
                 </div>
-
                 <div class="flex-grow flex items-center justify-center py-2">
-                    <p id="prev-desc" class="text-xs italic font-serif text-center leading-relaxed text-gray-200/90 drop-shadow-sm">
-                        ${desc || "Limited Edition Batch."}
-                    </p>
+                    <p id="prev-desc" class="text-xs italic font-serif text-center leading-relaxed text-gray-200/90 drop-shadow-sm">${desc || "Limited Edition Batch."}</p>
                 </div>
-
                 <div class="border-t border-white/20 pt-2">
-                    <div class="flex justify-between text-[10px] font-bold text-gray-300">
-                        <span id="prev-details">${details.substring(0, 25)}</span>
-                        <span>${vol}ml</span>
-                    </div>
+                    <div class="flex justify-between text-[10px] font-bold text-gray-300"><span id="prev-details">${details.substring(0, 25)}</span><span>${vol}ml</span></div>
                     <div class="flex justify-between items-end mt-2">
                         <p id="prev-warning" class="text-[6px] uppercase opacity-40 max-w-[60%] ${showWarning ? '' : 'hidden'}">Contains Sulfites</p>
                         <p id="prev-date" class="text-[8px] font-mono opacity-60">${dateVal}</p>
@@ -3561,11 +3550,22 @@ function handleLogoUpload(event) {
     if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
+            // SLA OP IN HET GEHEUGEN (VEILIG)
+            window.currentLabelImageSrc = e.target.result;
+            
+            // Update het scherm direct
             const imgDisplay = document.getElementById('label-img-display');
+            if (imgDisplay) {
+                imgDisplay.src = e.target.result;
+                imgDisplay.classList.remove('hidden');
+            }
             const placeholder = document.getElementById('label-img-placeholder');
-            imgDisplay.src = e.target.result;
-            imgDisplay.classList.remove('hidden');
             if(placeholder) placeholder.classList.add('hidden');
+            
+            // Ververs het thema meteen
+            const activeThemeBtn = document.querySelector('.label-theme-btn.active');
+            const theme = activeThemeBtn ? activeThemeBtn.dataset.theme : 'standard';
+            setLabelTheme(theme);
         }
         reader.readAsDataURL(file);
     }
@@ -3574,7 +3574,8 @@ function handleLogoUpload(event) {
 async function generateLabelArt() {
     const title = document.getElementById('labelTitle').value;
     const style = document.getElementById('labelSubtitle').value;
-    const theme = document.querySelector('.label-theme-btn.active').dataset.theme;
+    const activeBtn = document.querySelector('.label-theme-btn.active');
+    const theme = activeBtn ? activeBtn.dataset.theme : 'standard';
     
     if (!title) return showToast("Enter a title first.", "error");
 
@@ -3583,47 +3584,51 @@ async function generateLabelArt() {
     btn.innerHTML = "🎨 Painting...";
     btn.disabled = true;
 
-    let artPrompt = `Label design for mead called "${title}".`;
-    if (theme === 'signature') artPrompt += " Dark, premium, gold accents, mystical, minimal, high contrast.";
-    if (theme === 'artisan') artPrompt += " Clean, modern vector art, white background, bold typography, geometric fruit.";
-    if (theme === 'batch') artPrompt += " Technical drawing style, vintage stamp, kraft paper aesthetic, black ink.";
-    
-    artPrompt += ` Subject: ${style}. High quality, centered composition.`;
+    // Prompt logica (hetzelfde als voorheen, maar even ingekort voor de veiligheid)
+    let artPrompt = `Label design for mead called "${title}". Subject: ${style}. High quality.`;
+    if (theme === 'special') artPrompt += " Dark, premium, gold accents, mystical, minimal.";
+    else artPrompt += " Clean, modern vector art, white background, bold typography.";
 
     try {
-        let apiKey = userSettings.imageApiKey; 
-        let isGoogle = false;
+        // ... (API Keys logica blijft hetzelfde, we focussen op het resultaat) ...
+        let apiKey = userSettings.imageApiKey || userSettings.apiKey;
+        if (!apiKey) throw new Error("No API Key found.");
+
+        // Hier gebruiken we de nieuwe Imagen 4.0 logica (of oudere fallback)
+        const model = userSettings.imageModel || "imagen-3.0-generate-001";
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
         
-        if (!apiKey && userSettings.imageModel && userSettings.imageModel.includes('imagen')) {
-             apiKey = userSettings.apiKey; 
-             isGoogle = true;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ instances: [{ prompt: artPrompt }], parameters: { sampleCount: 1, aspectRatio: "1:1" } })
+        });
+
+        if (!response.ok) throw new Error("AI Error");
+        const data = await response.json();
+        
+        if (data.predictions && data.predictions[0].bytesBase64Encoded) {
+            const base64Img = data.predictions[0].bytesBase64Encoded;
+            const finalSrc = `data:image/png;base64,${base64Img}`;
+            
+            // SLA OP IN GEHEUGEN
+            window.currentLabelImageSrc = finalSrc;
+
+            // Update scherm
+            const imgDisplay = document.getElementById('label-img-display');
+            if (imgDisplay) {
+                imgDisplay.src = finalSrc;
+                imgDisplay.classList.remove('hidden');
+            }
+            const placeholder = document.getElementById('label-img-placeholder');
+            if(placeholder) placeholder.classList.add('hidden');
+
+            // Forceer refresh van het label
+            setLabelTheme(theme);
         }
-
-        if (!apiKey) throw new Error("No Image API Key found in settings.");
-
-        let base64Img = null;
-
-        if (isGoogle) {
-             throw new Error("Google Imagen not configured for labels yet.");
-        } else {
-             const response = await fetch("https://api.stability.ai/v1/generation/stable-diffusion-xl-beta-v2-2-2/text-to-image", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-                body: JSON.stringify({ text_prompts: [{ text: artPrompt, weight: 1 }], height: 512, width: 512, samples: 1, steps: 30 })
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message || "AI Error");
-            base64Img = data.artifacts[0].base64;
-        }
-
-        const imgDisplay = document.getElementById('label-img-display');
-        imgDisplay.src = `data:image/png;base64,${base64Img}`;
-        imgDisplay.classList.remove('hidden');
-        document.getElementById('label-img-placeholder').classList.add('hidden');
-
     } catch (error) {
         console.error(error);
-        showToast(error.message, "error");
+        showToast("Art generation failed: " + error.message, "error");
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;

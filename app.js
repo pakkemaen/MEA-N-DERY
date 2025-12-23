@@ -3305,10 +3305,12 @@ function loadLabelFromBrew(e) {
     updateLabelPreviewText();
 }
 
-// Thema Switcher (Signature / Artisan / Batch)
+// Thema Switcher (Signature / Special)
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     const imgElement = document.getElementById('label-img-display');
+    
+    // Check of er een specifieke batch-afbeelding is geüpload
     const imgSrc = imgElement.src;
     const hasImage = imgSrc && !imgElement.classList.contains('hidden') && imgSrc !== window.location.href;
 
@@ -3321,56 +3323,67 @@ function setLabelTheme(theme) {
     const desc = document.getElementById('labelDescription').value || '';
     const details = document.getElementById('labelDetails').value || '';
     const showWarning = document.getElementById('labelWarning')?.checked;
+    const dateVal = document.getElementById('labelDate')?.value || '';
 
     // 2. Knoppen Status Updaten
     document.querySelectorAll('.label-theme-btn').forEach(b => {
-        // Reset stijl
         b.classList.remove('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
-        // Activeer de gekozen knop
         if(b.dataset.theme === theme) {
             b.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
         }
     });
 
-    // --- STIJL 1: STANDARD MEANDERY (Clean, Leesbaar, Klassiek) ---
+    // --- STIJL 1: STANDARD MEANDERY (Clean, Leesbaar, Met Logo) ---
     if (theme === 'standard') {
         
-        container.className = `relative w-full h-full overflow-hidden bg-[#fdfbf7] text-[#1a1a1a] font-sans p-8 flex flex-col items-center justify-between border-[6px] border-double border-[#d4c5a3]`;
+        container.className = `relative w-full h-full overflow-hidden bg-[#fdfbf7] text-[#1a1a1a] font-sans p-6 flex flex-col items-center justify-between border-[6px] border-double border-[#d4c5a3]`;
         container.style = "";
 
-        // Afbeelding als rond logo (indien aanwezig)
-        let imageHtml = `<div class="w-24 h-24 rounded-full border border-current flex items-center justify-center mb-2"><span class="text-xs font-bold tracking-widest">MEA(N)DERY</span></div>`;
+        // LOGICA: Als er een batch-foto is, toon die. Zo niet, toon het algemene logo.
+        let imageHtml = '';
         if (hasImage) {
-            imageHtml = `<div class="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden mb-4"><img src="${imgSrc}" class="w-full h-full object-cover"></div>`;
+            // Batch Foto
+            imageHtml = `<div class="w-28 h-28 rounded-full border-4 border-white shadow-md overflow-hidden mb-2"><img src="${imgSrc}" class="w-full h-full object-cover"></div>`;
+        } else {
+            // Standaard Logo (Fallback)
+            // Zorg dat je 'logo.png' in je map hebt staan!
+            imageHtml = `<div class="w-24 h-24 flex items-center justify-center mb-2 opacity-80"><img src="logo.png" class="w-full h-full object-contain filter sepia-[.3]" onerror="this.style.display='none'"></div>`;
         }
 
         container.innerHTML = `
-            <div class="text-center w-full border-b border-current/20 pb-4">
-                <p class="text-[10px] font-bold uppercase tracking-[0.4em] mb-2 opacity-60">Handcrafted in Belgium</p>
-                <h1 id="prev-title" class="text-4xl font-header font-bold uppercase tracking-wide leading-none">${title}</h1>
-                <h2 id="prev-subtitle" class="text-sm font-serif italic text-[#d97706] mt-1">${sub}</h2>
+            <div class="text-center w-full border-b border-[#d4c5a3]/50 pb-2">
+                <p class="text-[8px] font-bold uppercase tracking-[0.3em] mb-1 opacity-50">Handcrafted in Belgium</p>
+                <h1 id="prev-title" class="text-3xl font-header font-bold uppercase tracking-wide leading-none text-app-header">${title}</h1>
+                <h2 id="prev-subtitle" class="text-xs font-serif italic text-[#d97706] mt-1">${sub}</h2>
             </div>
 
-            <div class="flex-grow flex flex-col items-center justify-center">
+            <div class="flex-grow flex flex-col items-center justify-center py-2">
                 ${imageHtml}
-                <p id="prev-desc" class="text-xs text-center max-w-[80%] leading-relaxed opacity-80 font-serif">
+                <p id="prev-desc" class="text-[10px] text-center max-w-[90%] leading-relaxed opacity-80 font-serif italic">
                     ${desc || "A refined honey wine."}
                 </p>
             </div>
 
-            <div class="w-full text-center pt-4 border-t border-current/20">
-                <div class="flex justify-between items-center px-4 mb-2 font-bold font-mono text-lg">
+            <div class="w-full text-center pt-2 border-t border-[#d4c5a3]/50">
+                <div class="flex justify-between items-center px-2 mb-1 font-bold font-mono text-sm text-[#5c5c5c]">
                     <span>${vol}ml</span>
                     <span id="prev-abv">${abv}% ABV</span>
                 </div>
-                <p id="prev-details" class="text-[9px] uppercase tracking-widest opacity-50 mb-1">${details}</p>
-                <p id="prev-date" class="text-[9px] font-bold">${document.getElementById('labelDate').value}</p>
+                <div class="flex justify-between items-end px-2">
+                     <div class="text-left">
+                        <p class="text-[8px] font-bold uppercase tracking-wider opacity-40">Ingredients</p>
+                        <p id="prev-details" class="text-[9px] font-medium leading-tight max-w-[100px]">${details}</p>
+                     </div>
+                     <div class="text-right">
+                        <p id="prev-date" class="text-[9px] font-bold opacity-60">${dateVal}</p>
+                     </div>
+                </div>
                 <p id="prev-warning" class="text-[6px] uppercase mt-2 opacity-40 ${showWarning ? '' : 'hidden'}">Contains Sulfites • Drink Responsibly</p>
             </div>
         `;
     } 
 
-    // --- STIJL 2: SPECIAL MEANDERY (Donker, Artistiek, Foto-achtergrond) ---
+    // --- STIJL 2: SPECIAL MEANDERY (Donker, Artistiek) ---
     else if (theme === 'special') {
         
         const textColor = hasImage ? 'text-white' : 'text-[#f4f1ea]'; 
@@ -3384,65 +3397,46 @@ function setLabelTheme(theme) {
             bgImageHtml = `<div class="absolute inset-0 z-0"><img src="${imgSrc}" class="w-full h-full object-cover opacity-50"></div><div class="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black/80 z-0"></div>`;
         }
 
-        const titleSize = title.length > 15 ? 'text-4xl' : 'text-6xl';
+        const titleSize = title.length > 15 ? 'text-3xl' : 'text-5xl';
 
         container.innerHTML = `
             ${bgImageHtml}
             
-            <div class="relative z-10 w-24 h-full flex flex-col justify-center items-center border-r border-white/10 p-2 bg-black/20 backdrop-blur-sm">
+            <div class="relative z-10 w-20 h-full flex flex-col justify-center items-center border-r border-white/10 p-2 bg-black/20 backdrop-blur-sm">
                 <div style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="h-full flex items-center justify-center text-center">
-                    <h1 id="prev-title" class="${titleSize} font-header font-bold uppercase tracking-wider leading-none whitespace-normal drop-shadow-md">${title}</h1>
-                    <h2 id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] mt-4 text-app-brand opacity-90">${sub}</h2>
+                    <h1 id="prev-title" class="${titleSize} font-header font-bold uppercase tracking-wider leading-none whitespace-normal drop-shadow-md text-center">${title}</h1>
+                    <h2 id="prev-subtitle" class="text-[10px] font-bold uppercase tracking-[0.3em] mt-4 text-app-brand opacity-90">${sub}</h2>
                 </div>
             </div>
 
-            <div class="relative z-10 flex-1 flex flex-col justify-between p-6">
+            <div class="relative z-10 flex-1 flex flex-col justify-between p-4 pl-5">
+                
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="text-4xl font-bold leading-none text-white drop-shadow-md"><span id="prev-abv">${abv}</span><span class="text-lg">%</span></p>
-                        <p class="text-[9px] uppercase tracking-widest opacity-60">Alcohol</p>
+                        <p class="text-3xl font-bold leading-none text-white drop-shadow-md"><span id="prev-abv">${abv}</span><span class="text-sm">%</span></p>
+                        <p class="text-[8px] uppercase tracking-widest opacity-60">Alcohol</p>
                     </div>
-                    <div class="text-right">
-                        <div class="w-12 h-12 border border-white/30 rounded-full flex items-center justify-center mb-1">
-                            <span class="text-[8px] font-bold">M(N)</span>
-                        </div>
-                    </div>
+                    <div class="w-10 h-10 opacity-80"><img src="logo.png" class="w-full h-full object-contain invert" onerror="this.style.display='none'"></div>
                 </div>
 
-                <div class="flex-grow flex items-center justify-center py-4">
-                    <p id="prev-desc" class="text-sm italic font-serif text-center leading-relaxed text-gray-200/90 drop-shadow-sm">
+                <div class="flex-grow flex items-center justify-center py-2">
+                    <p id="prev-desc" class="text-xs italic font-serif text-center leading-relaxed text-gray-200/90 drop-shadow-sm">
                         ${desc || "Limited Edition Batch."}
                     </p>
                 </div>
 
-                <div class="border-t border-white/20 pt-3">
-                    <div class="flex justify-between text-xs font-bold text-gray-300">
+                <div class="border-t border-white/20 pt-2">
+                    <div class="flex justify-between text-[10px] font-bold text-gray-300">
                         <span id="prev-details">${details.substring(0, 25)}</span>
                         <span>${vol}ml</span>
                     </div>
                     <div class="flex justify-between items-end mt-2">
                         <p id="prev-warning" class="text-[6px] uppercase opacity-40 max-w-[60%] ${showWarning ? '' : 'hidden'}">Contains Sulfites</p>
-                        <p id="prev-date" class="text-[9px] font-mono opacity-60">${document.getElementById('labelDate').value}</p>
+                        <p id="prev-date" class="text-[8px] font-mono opacity-60">${dateVal}</p>
                     </div>
                 </div>
             </div>
         `;
-    }
-} 
-    
-    // --- ANDERE THEMA'S (Placeholder voor nu, om crashes te voorkomen) ---
-    else {
-        container.innerHTML = `<div class="p-8 flex items-center justify-center h-full text-center text-gray-500">
-            <div>
-                <p class="font-bold text-xl mb-2">Theme: ${theme}</p>
-                <p class="text-xs">Layout not fully implemented yet.</p>
-                <div class="hidden">
-                    <span id="prev-title"></span><span id="prev-subtitle"></span><span id="prev-abv"></span>
-                    <span id="prev-vol"></span><span id="prev-desc"></span><span id="prev-details"></span>
-                    <span id="prev-date"></span><span id="prev-warning"></span>
-                </div>
-            </div>
-        </div>`;
     }
 }
 

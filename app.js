@@ -3776,11 +3776,12 @@ async function runSocialMediaGenerator() {
 
 // 2. De functie om een plaatje te maken
 
+// --- FIX VOOR IMAGEN 4.0 & UI CRASH ---
 async function generateSocialImage(imagePrompt) {
     const container = document.getElementById('social-image-container');
+    const btn = document.getElementById('generate-social-image-btn'); // Zoek de knop
     
-    // We hergebruiken nu de Google AI Key uit settings! 
-    // Dus je hebt geen aparte Image Key meer nodig.
+    // We hergebruiken de Google AI Key uit settings
     let apiKey = userSettings.apiKey;
     
     // Fallback voor als settings leeg is
@@ -3794,9 +3795,12 @@ async function generateSocialImage(imagePrompt) {
     }
 
     // UI: Laat zien dat we bezig zijn
-    container.innerHTML = `<div class="loader"></div><p class="text-xs text-center mt-2">Google Imagen is painting...</p>`;
+    if (container) {
+        container.innerHTML = `<div class="loader"></div><p class="text-xs text-center mt-2 text-app-secondary animate-pulse">Google Imagen is painting...</p>`;
+    }
 
     // 1. Haal het gekozen model op uit settings (of gebruik fallback)
+    // LET OP: Hier stond hardcoded 3.0, we pakken nu slim wat jij hebt ingesteld (4.0!)
     const model = userSettings.imageModel || "imagen-3.0-generate-001";
 
     // 2. Bouw de URL dynamisch
@@ -3823,8 +3827,7 @@ async function generateSocialImage(imagePrompt) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            // Vaak voorkomende fout: 400 of 403 als je key geen toegang heeft tot plaatjes
-            throw new Error(errorData.error?.message || "Google Image Error");
+            throw new Error(errorData.error?.message || `Google Image Error (${response.status})`);
         }
         
         const data = await response.json();
@@ -3832,23 +3835,41 @@ async function generateSocialImage(imagePrompt) {
         // Google geeft het plaatje terug als Base64 string in 'bytes'
         if (data.predictions && data.predictions.length > 0 && data.predictions[0].bytesBase64Encoded) {
             const base64Img = data.predictions[0].bytesBase64Encoded;
-            // Render het plaatje
-            container.innerHTML = `<img src="data:image/png;base64,${base64Img}" class="w-full h-full object-cover rounded-xl shadow-inner">`;
             
-            // Verberg de knop als het gelukt is
-            document.getElementById('generate-social-image-btn').classList.add('hidden');
+            // Render het plaatje
+            if (container) {
+                container.innerHTML = `<img src="data:image/png;base64,${base64Img}" class="w-full h-full object-cover rounded-xl shadow-inner animate-fade-in">`;
+            }
+            
+            // Verberg de knop als het gelukt is (VEILIGE MANIER)
+            if (btn) {
+                btn.classList.add('hidden');
+            }
         } else {
             throw new Error("Geen plaatje ontvangen van Google.");
         }
         
     } catch (e) {
         console.error("Imagen Fout:", e);
-        // Nette foutmelding voor de gebruiker
+        
         let msg = "Generation Failed";
-        if (e.message.includes("403") || e.message.includes("permission")) {
-            msg = "Jouw API Key mag (nog) geen plaatjes maken van Google.";
+        if (e.message.includes("403") || e.message.includes("permission") || e.message.includes("not found")) {
+            msg = "Jouw API Key of Model heeft geen toegang.";
         }
-        container.innerHTML = `<div class="p-4 text-center"><p class="text-red-500 text-xs">${msg}</p><p class="text-[10px] text-gray-400 mt-1">${e.message}</p></div>`;
+        
+        if (container) {
+            container.innerHTML = `
+                <div class="p-4 text-center flex flex-col items-center justify-center h-full">
+                    <p class="text-red-500 text-xs font-bold mb-1">${msg}</p>
+                    <p class="text-[10px] text-gray-400 leading-tight">${e.message}</p>
+                    <button onclick="window.runSocialMediaGenerator()" class="mt-2 text-xs text-blue-500 underline">Try Again</button>
+                </div>`;
+        }
+        
+        // Als het faalt, toon de knop weer zodat je opnieuw kunt klikken
+        if (btn) {
+            btn.classList.remove('hidden');
+        }
     }
 }
 

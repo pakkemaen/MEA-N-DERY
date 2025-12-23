@@ -389,7 +389,9 @@ function buildPrompt() {
         }
 
         // Nutriënten logica (Vinoferm detectie)
+        // --- 1. Nutriënten Logica (Vinoferm & Hybrid detectie) ---
         const invLower = inventoryString.toLowerCase();
+        
         const hasSafeOrganic = invLower.includes('fermaid o') || invLower.includes('ferm o') || invLower.includes('cellvit') || invLower.includes('yeast hulls');
         const hasDAP = invLower.includes('dap') || invLower.includes('diammonium') || invLower.includes('nutrisal');
         const hasHybrid = invLower.includes('nutrivit') || invLower.includes('fermaid k') || invLower.includes('combi') || invLower.includes('ultra') || invLower.includes('tronozym');
@@ -397,16 +399,24 @@ function buildPrompt() {
         let baseNutrientRule = "";
         if (inventoryToggles.Nutrient) { 
              if (!hasSafeOrganic && (hasHybrid || hasDAP)) {
-                baseNutrientRule = `1. **Nutrients (HYBRID):** Detected Inorganic/Hybrid stock but NO Fermaid O. Use ONLY this stock. **WARNING:** Instruct user to STOP adding after 9% ABV.`;
+                baseNutrientRule = `1. **Nutrients (HYBRID/INORGANIC):** Detected stock: Inorganic/Hybrid but NO Fermaid O. Use ONLY this stock. **WARNING:** Instruct user to STOP adding nutrients after 9% ABV to avoid off-flavors.`;
             } else if (hasSafeOrganic) {
-                baseNutrientRule = `1. **Nutrients (ORGANIC):** Use Fermaid O/Cellvit from stock.`;
+                baseNutrientRule = `1. **Nutrients (ORGANIC):** Use Fermaid O/Cellvit from stock (TOSNA protocol).`;
             } else {
-                baseNutrientRule = `1. **Nutrients:** Prescribe standard TOSNA.`;
+                baseNutrientRule = `1. **Nutrients:** Prescribe standard TOSNA 2.0 (Fermaid O preference).`;
             }
         } else {
-             baseNutrientRule = `1. **Nutrients:** Use standard TOSNA guidelines.`;
+             baseNutrientRule = `1. **Nutrients:** Use standard TOSNA 2.0 guidelines.`;
         }
 
+        // --- 2. Stabilisatie Check (Campden vs Metabisulphite) ---
+        // Zorgt dat de AI de taal van de gebruiker spreekt
+        let stabiliserRule = "";
+        if (invLower.includes('campden')) {
+            stabiliserRule = `3. **NAMING CONVENTION:** The user has "Campden" in stock. Always write "**Campden Powder/Tablets**" instead of "Potassium Metabisulphite" in the ingredients list and instructions.`;
+        }
+
+        // --- 3. De Final Logic String ---
         const inventoryLogic = `
         ${inventoryInstruction} 
         **FULL STOCK LIST:** [${inventoryString}]. 
@@ -414,9 +424,10 @@ function buildPrompt() {
         **CRITICAL INVENTORY RULES:**
         1. **JSON Block:** MUST contain the **TOTAL** ingredients required (ignore stock here).
         2. **SHOPPING LIST TEXT:** - Compare Required Amount vs Stock Amount.
-           - IF (Stock >= Required): **SILENCE**. Do NOT mention this item in the text. Do NOT write "You have enough".
+           - IF (Stock >= Required): **SILENCE**. Do NOT mention this item in the shopping list text. Do NOT write "You have enough".
            - IF (Stock < Required): Write ONLY: "Buy [Amount Needed] of [Item]".
            - IF (Stock == 0): Write "Buy [Full Amount] of [Item]".
+        ${stabiliserRule}
         `;
 
         // 4. Style Router
@@ -3295,70 +3306,143 @@ function loadLabelFromBrew(e) {
 }
 
 // Thema Switcher (Signature / Artisan / Batch)
-// --- VERVANG DE HELE setLabelTheme FUNCTIE HIERMEE ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     const imgElement = document.getElementById('label-img-display');
     const imgSrc = imgElement.src;
     const hasImage = imgSrc && !imgElement.classList.contains('hidden') && imgSrc !== window.location.href;
 
-    // Haal de waardes op
-    const title = document.getElementById('labelTitle').value || 'TITEL';
-    const sub = document.getElementById('labelSubtitle').value || 'STYLE';
+    // 1. Data Ophalen
+    const title = document.getElementById('labelTitle').value || 'MEAD NAME';
+    const sub = document.getElementById('labelSubtitle').value || 'Style Description';
     const abv = document.getElementById('labelAbv').value || '0';
     const vol = document.getElementById('labelVol').value || '750';
-    const fg = document.getElementById('fg')?.value || '1.000'; // Probeer FG te vinden, anders default
+    const fg = document.getElementById('fg')?.value || ''; 
+    const desc = document.getElementById('labelDescription').value || '';
+    const details = document.getElementById('labelDetails').value || '';
+    const showWarning = document.getElementById('labelWarning')?.checked;
 
-    // Reset Classes & Active State
+    // 2. Knoppen Status Updaten
     document.querySelectorAll('.label-theme-btn').forEach(b => {
-        b.classList.remove('active', 'border-app-brand', 'text-app-brand');
-        if(b.dataset.theme === theme) b.classList.add('active', 'border-app-brand', 'text-app-brand');
+        // Reset stijl
+        b.classList.remove('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
+        // Activeer de gekozen knop
+        if(b.dataset.theme === theme) {
+            b.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
+        }
     });
 
-    // --- MEANDERY ORIGINAL STYLE ---
-    if (theme === 'signature') { // We gebruiken de knop "Signature" voor jouw "Original" stijl
+    // --- STIJL 1: STANDARD MEANDERY (Clean, Leesbaar, Klassiek) ---
+    if (theme === 'standard') {
         
-        // Bepaal tekstkleur (Wit als er een foto is, anders Goud/Bruin)
-        const textColor = hasImage ? 'text-white' : 'text-[#8F8C79]'; 
-        const bgColor = hasImage ? 'bg-black' : 'bg-white';
+        container.className = `relative w-full h-full overflow-hidden bg-[#fdfbf7] text-[#1a1a1a] font-sans p-8 flex flex-col items-center justify-between border-[6px] border-double border-[#d4c5a3]`;
+        container.style = "";
 
-        container.className = `relative w-full h-full overflow-hidden ${bgColor} ${textColor} font-sans p-6`;
-        container.style = ""; // Reset inline styles
-
-        // HTML Opbouw
-        let bgImageHtml = '';
+        // Afbeelding als rond logo (indien aanwezig)
+        let imageHtml = `<div class="w-24 h-24 rounded-full border border-current flex items-center justify-center mb-2"><span class="text-xs font-bold tracking-widest">MEA(N)DERY</span></div>`;
         if (hasImage) {
-            bgImageHtml = `<img src="${imgSrc}" class="label-bg-image opacity-90">`;
+            imageHtml = `<div class="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden mb-4"><img src="${imgSrc}" class="w-full h-full object-cover"></div>`;
         }
 
         container.innerHTML = `
+            <div class="text-center w-full border-b border-current/20 pb-4">
+                <p class="text-[10px] font-bold uppercase tracking-[0.4em] mb-2 opacity-60">Handcrafted in Belgium</p>
+                <h1 id="prev-title" class="text-4xl font-header font-bold uppercase tracking-wide leading-none">${title}</h1>
+                <h2 id="prev-subtitle" class="text-sm font-serif italic text-[#d97706] mt-1">${sub}</h2>
+            </div>
+
+            <div class="flex-grow flex flex-col items-center justify-center">
+                ${imageHtml}
+                <p id="prev-desc" class="text-xs text-center max-w-[80%] leading-relaxed opacity-80 font-serif">
+                    ${desc || "A refined honey wine."}
+                </p>
+            </div>
+
+            <div class="w-full text-center pt-4 border-t border-current/20">
+                <div class="flex justify-between items-center px-4 mb-2 font-bold font-mono text-lg">
+                    <span>${vol}ml</span>
+                    <span id="prev-abv">${abv}% ABV</span>
+                </div>
+                <p id="prev-details" class="text-[9px] uppercase tracking-widest opacity-50 mb-1">${details}</p>
+                <p id="prev-date" class="text-[9px] font-bold">${document.getElementById('labelDate').value}</p>
+                <p id="prev-warning" class="text-[6px] uppercase mt-2 opacity-40 ${showWarning ? '' : 'hidden'}">Contains Sulfites • Drink Responsibly</p>
+            </div>
+        `;
+    } 
+
+    // --- STIJL 2: SPECIAL MEANDERY (Donker, Artistiek, Foto-achtergrond) ---
+    else if (theme === 'special') {
+        
+        const textColor = hasImage ? 'text-white' : 'text-[#f4f1ea]'; 
+        const bgColor = hasImage ? 'bg-black' : 'bg-[#1a1a1a]';
+
+        container.className = `relative w-full h-full overflow-hidden ${bgColor} ${textColor} font-sans flex flex-row shadow-xl`;
+        container.style = ""; 
+
+        let bgImageHtml = '';
+        if (hasImage) {
+            bgImageHtml = `<div class="absolute inset-0 z-0"><img src="${imgSrc}" class="w-full h-full object-cover opacity-50"></div><div class="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black/80 z-0"></div>`;
+        }
+
+        const titleSize = title.length > 15 ? 'text-4xl' : 'text-6xl';
+
+        container.innerHTML = `
             ${bgImageHtml}
-            <div class="label-overlay flex justify-between h-full">
-                
-                <div class="vertical-text-group h-full flex justify-center">
-                    <h1 id="prev-title" class="text-6xl font-header font-bold uppercase tracking-wider whitespace-nowrap leading-none">${title}</h1>
-                    <h2 id="prev-subtitle" class="text-sm font-bold uppercase tracking-[0.2em] text-opacity-80 whitespace-nowrap">${sub}</h2>
+            
+            <div class="relative z-10 w-24 h-full flex flex-col justify-center items-center border-r border-white/10 p-2 bg-black/20 backdrop-blur-sm">
+                <div style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="h-full flex items-center justify-center text-center">
+                    <h1 id="prev-title" class="${titleSize} font-header font-bold uppercase tracking-wider leading-none whitespace-normal drop-shadow-md">${title}</h1>
+                    <h2 id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] mt-4 text-app-brand opacity-90">${sub}</h2>
+                </div>
+            </div>
+
+            <div class="relative z-10 flex-1 flex flex-col justify-between p-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-4xl font-bold leading-none text-white drop-shadow-md"><span id="prev-abv">${abv}</span><span class="text-lg">%</span></p>
+                        <p class="text-[9px] uppercase tracking-widest opacity-60">Alcohol</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="w-12 h-12 border border-white/30 rounded-full flex items-center justify-center mb-1">
+                            <span class="text-[8px] font-bold">M(N)</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="flex flex-col justify-between items-end h-full py-2">
-                    
-                    <div class="meandery-circle">
-                        <span>MEA(N)DERY</span>
-                    </div>
+                <div class="flex-grow flex items-center justify-center py-4">
+                    <p id="prev-desc" class="text-sm italic font-serif text-center leading-relaxed text-gray-200/90 drop-shadow-sm">
+                        ${desc || "Limited Edition Batch."}
+                    </p>
+                </div>
 
-                    <div class="text-right leading-tight">
-                        <p class="text-lg font-normal opacity-80">FG ${fg}</p>
-                        <p class="text-2xl font-bold">${abv}% ABV</p>
-                        <p class="text-xs opacity-60 mt-1">${vol} ML</p>
+                <div class="border-t border-white/20 pt-3">
+                    <div class="flex justify-between text-xs font-bold text-gray-300">
+                        <span id="prev-details">${details.substring(0, 25)}</span>
+                        <span>${vol}ml</span>
+                    </div>
+                    <div class="flex justify-between items-end mt-2">
+                        <p id="prev-warning" class="text-[6px] uppercase opacity-40 max-w-[60%] ${showWarning ? '' : 'hidden'}">Contains Sulfites</p>
+                        <p id="prev-date" class="text-[9px] font-mono opacity-60">${document.getElementById('labelDate').value}</p>
                     </div>
                 </div>
             </div>
         `;
-    } 
+    }
+} 
     
+    // --- ANDERE THEMA'S (Placeholder voor nu, om crashes te voorkomen) ---
     else {
-        // Fallback
-        container.innerHTML = `<div class="p-4">Select a theme</div>`;
+        container.innerHTML = `<div class="p-8 flex items-center justify-center h-full text-center text-gray-500">
+            <div>
+                <p class="font-bold text-xl mb-2">Theme: ${theme}</p>
+                <p class="text-xs">Layout not fully implemented yet.</p>
+                <div class="hidden">
+                    <span id="prev-title"></span><span id="prev-subtitle"></span><span id="prev-abv"></span>
+                    <span id="prev-vol"></span><span id="prev-desc"></span><span id="prev-details"></span>
+                    <span id="prev-date"></span><span id="prev-warning"></span>
+                </div>
+            </div>
+        </div>`;
     }
 }
 
@@ -3776,10 +3860,39 @@ async function runSocialMediaGenerator() {
 
 // 2. De functie om een plaatje te maken
 
-// --- FIX VOOR IMAGEN 4.0 & UI CRASH ---
 async function generateSocialImage(imagePrompt) {
     const container = document.getElementById('social-image-container');
-    const btn = document.getElementById('generate-social-image-btn'); // Zoek de knop
+    const btn = document.getElementById('generate-social-image-btn');
+    
+    // 1. HAAL DE GEKOZEN PERSONA OP
+    const personaSelect = document.getElementById('social-persona');
+    const selectedPersona = personaSelect ? personaSelect.value : '';
+
+    // 2. KIES DE STIJL PREFIX OP BASIS VAN DE PERSONA
+    let stylePrefix = "";
+
+    switch (selectedPersona) {
+        case "Ryan Reynolds":
+            // Stijl: Scherp, premium, een beetje 'te' perfect, high-contrast, filmisch.
+            stylePrefix = "Cinematic premium advertisement photography, sharp focus, high contrast lighting, witty composition, 8k resolution: ";
+            break;
+        case "Dry British":
+            // Stijl: Ingetogen, natuurlijk licht, klassiek, elegant, niet schreeuwerig.
+            stylePrefix = "Understated elegant photography, natural diffused lighting, classic composition, richly textured background, subtle and refined: ";
+            break;
+        case "The Sommelier":
+            // Stijl: Luxe, focus op details (macro), wijnkelder sfeer, rijk, diepe kleuren.
+            stylePrefix = "Luxurious macro photography, focus on liquid texture and details, ambient cellar lighting, rich bokeh background, high-end feel: ";
+            break;
+        case "The Viking":
+            // Stijl: Ruw, donker hout, vuurlicht, stoer, ambachtelijk, een beetje wild.
+            stylePrefix = "Rustic and bold photography, dark wood surfaces, warm firelight, rugged textures, ancient mead hall atmosphere, raw and powerful: ";
+            break;
+        default:
+            // De "Standaard" BrewBuddy stijl (Modern Artisan) als er niets is gekozen.
+            stylePrefix = "Artisan craft mead photography, warm natural light, rustic wooden background, highly detailed textures, inviting atmosphere, shallow depth of field: ";
+            break;
+    }
     
     // We hergebruiken de Google AI Key uit settings
     let apiKey = userSettings.apiKey;
@@ -3794,21 +3907,21 @@ async function generateSocialImage(imagePrompt) {
         return;
     }
 
-    // UI: Laat zien dat we bezig zijn
     if (container) {
-        container.innerHTML = `<div class="loader"></div><p class="text-xs text-center mt-2 text-app-secondary animate-pulse">Google Imagen is painting...</p>`;
+        // Laat even zien welke stijl we gebruiken in de loader tekst
+        const styleName = selectedPersona || "Default Artisan";
+        container.innerHTML = `<div class="loader"></div><p class="text-xs text-center mt-2 text-app-secondary animate-pulse">Painting in "${styleName}" style...</p>`;
     }
 
-    // 1. Haal het gekozen model op uit settings (of gebruik fallback)
-    // LET OP: Hier stond hardcoded 3.0, we pakken nu slim wat jij hebt ingesteld (4.0!)
     const model = userSettings.imageModel || "imagen-3.0-generate-001";
-
-    // 2. Bouw de URL dynamisch
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
 
     const requestBody = {
         instances: [
-            { prompt: `Professional product photography, cinematic lighting, 8k resolution, highly detailed: ${imagePrompt}` }
+            { 
+                // HIER COMBINEREN WE DE STIJL MET JOUW ONDERWERP
+                prompt: stylePrefix + imagePrompt 
+            }
         ],
         parameters: {
             sampleCount: 1,
@@ -3819,9 +3932,7 @@ async function generateSocialImage(imagePrompt) {
     try {
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
         });
 
@@ -3832,44 +3943,25 @@ async function generateSocialImage(imagePrompt) {
         
         const data = await response.json();
         
-        // Google geeft het plaatje terug als Base64 string in 'bytes'
         if (data.predictions && data.predictions.length > 0 && data.predictions[0].bytesBase64Encoded) {
             const base64Img = data.predictions[0].bytesBase64Encoded;
-            
-            // Render het plaatje
             if (container) {
                 container.innerHTML = `<img src="data:image/png;base64,${base64Img}" class="w-full h-full object-cover rounded-xl shadow-inner animate-fade-in">`;
             }
-            
-            // Verberg de knop als het gelukt is (VEILIGE MANIER)
-            if (btn) {
-                btn.classList.add('hidden');
-            }
+            if (btn) btn.classList.add('hidden');
         } else {
             throw new Error("Geen plaatje ontvangen van Google.");
         }
         
     } catch (e) {
         console.error("Imagen Fout:", e);
-        
         let msg = "Generation Failed";
-        if (e.message.includes("403") || e.message.includes("permission") || e.message.includes("not found")) {
-            msg = "Jouw API Key of Model heeft geen toegang.";
-        }
+        if (e.message.includes("403") || e.message.includes("permission")) msg = "API Key/Model toegang geweigerd.";
         
         if (container) {
-            container.innerHTML = `
-                <div class="p-4 text-center flex flex-col items-center justify-center h-full">
-                    <p class="text-red-500 text-xs font-bold mb-1">${msg}</p>
-                    <p class="text-[10px] text-gray-400 leading-tight">${e.message}</p>
-                    <button onclick="window.runSocialMediaGenerator()" class="mt-2 text-xs text-blue-500 underline">Try Again</button>
-                </div>`;
+            container.innerHTML = `<div class="p-4 text-center flex flex-col items-center justify-center h-full"><p class="text-red-500 text-xs font-bold mb-1">${msg}</p><p class="text-[10px] text-gray-400 leading-tight">${e.message}</p></div>`;
         }
-        
-        // Als het faalt, toon de knop weer zodat je opnieuw kunt klikken
-        if (btn) {
-            btn.classList.remove('hidden');
-        }
+        if (btn) btn.classList.remove('hidden');
     }
 }
 

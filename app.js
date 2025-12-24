@@ -3138,10 +3138,14 @@ function initLabelForge() {
     loadUserLabelFormats(); 
 
     // Live Preview Listeners (Tekst)
-    ['labelTitle', 'labelSubtitle', 'labelAbv', 'labelVol', 'labelDate', 'labelDescription', 'labelDetails'].forEach(id => {
+    ['labelTitle', 'labelSubtitle', 'labelAbv', 'labelFg', 'labelVol', 'labelDate', 'labelDescription', 'labelDetails'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', updateLabelPreviewText);
     });
     document.getElementById('labelWarning')?.addEventListener('change', updateLabelPreviewText);
+    document.getElementById('labelShowDetails')?.addEventListener('change', () => {
+        const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
+        setLabelTheme(activeTheme);
+    });
     
     // Recept laden
     document.getElementById('labelRecipeSelect')?.addEventListener('change', loadLabelFromBrew);
@@ -3291,6 +3295,7 @@ function loadLabelFromBrew(e) {
     document.getElementById('labelSubtitle').value = style;
 
     document.getElementById('labelAbv').value = brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '12';
+    document.getElementById('labelFg').value = brew.logData?.actualFG || brew.logData?.targetFG || '';
     document.getElementById('labelVol').value = (brew.batchSize * 1000) || '750';
     document.getElementById('labelDate').value = brew.logData?.brewDate || new Date().toLocaleDateString();
 
@@ -3324,9 +3329,11 @@ function setLabelTheme(theme) {
     const title = document.getElementById('labelTitle').value || 'MEAD NAME';
     const sub = document.getElementById('labelSubtitle').value || 'Style Description';
     const abv = document.getElementById('labelAbv').value || '0';
+    const fg = document.getElementById('labelFg')?.value || '';
     const vol = document.getElementById('labelVol').value || '750';
     const desc = document.getElementById('labelDescription').value || '';
     const details = document.getElementById('labelDetails').value || '';
+    const showDetails = document.getElementById('labelShowDetails')?.checked;
     const showWarning = document.getElementById('labelWarning')?.checked;
     const dateVal = document.getElementById('labelDate')?.value || '';
 
@@ -3336,98 +3343,142 @@ function setLabelTheme(theme) {
         if(b.dataset.theme === theme) b.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
     });
 
-    // --- STANDARD THEMA ---
+    // --- STANDARD (Scandi-Minimalist Style) ---
     if (theme === 'standard') {
-        container.className = `relative w-full h-full overflow-hidden bg-[#fdfbf7] text-[#1a1a1a] font-sans p-6 flex flex-col items-center justify-between border-[6px] border-double border-[#d4c5a3]`;
-        container.style = "";
+        
+        // Reset container stijl
+        container.className = `relative w-full h-full bg-white overflow-hidden flex p-8 font-sans`;
+        container.style = ""; 
 
-        // Plaatje of Logo Fallback
-        let centerPiece = '';
+        // Bepaal de accentkleur (Standaard Goud/Bruin, of Blauw als het woord 'Blueberry' of 'Melomel' erin zit voor de leuk)
+        // Je kunt dit later dynamisch maken, voor nu pakken we die chique "Vinterglød" kleur.
+        const accentColor = '#8F8C79'; // De grijs/goud tint uit je voorbeeld
+        
+        // Logo Logica
+        let logoHtml = '';
         if (hasImage) {
-            centerPiece = `<div class="w-28 h-28 rounded-full border-4 border-white shadow-md overflow-hidden mb-2"><img src="${imgSrc}" class="w-full h-full object-cover"></div>`;
+            // Als er een batch-foto is, gebruiken we die in de cirkel
+            logoHtml = `<img src="${imgSrc}" class="w-full h-full object-cover rounded-full">`;
         } else {
-            // HIER IS DE FIX: Als logo.png mist, toont hij tekst!
-            centerPiece = `
-                <div class="w-24 h-24 flex items-center justify-center mb-2 opacity-80 relative">
-                    <img src="logo.png" class="w-full h-full object-contain filter sepia-[.3]" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                    <div class="hidden absolute inset-0 items-center justify-center border-2 border-current rounded-full">
-                        <span class="text-[10px] font-bold tracking-widest text-center leading-tight">MEA<br>(N)<br>DERY</span>
-                    </div>
-                </div>`;
+            // Anders gebruiken we jouw nieuwe logo.png
+            logoHtml = `<img src="logo.png" class="w-full h-full object-contain p-2 opacity-80" onerror="this.style.display='none'">`;
         }
 
         container.innerHTML = `
-            <div class="text-center w-full border-b border-[#d4c5a3]/50 pb-2">
-                <p class="text-[8px] font-bold uppercase tracking-[0.3em] mb-1 opacity-50">Handcrafted</p>
-                <h1 id="prev-title" class="text-3xl font-header font-bold uppercase tracking-wide leading-none text-app-header">${title}</h1>
-                <h2 id="prev-subtitle" class="text-xs font-serif italic text-[#d97706] mt-1">${sub}</h2>
-            </div>
-            <div class="flex-grow flex flex-col items-center justify-center py-2">
-                ${centerPiece}
-                <p id="prev-desc" class="text-[10px] text-center max-w-[90%] leading-relaxed opacity-80 font-serif italic">${desc || "A refined honey wine."}</p>
-            </div>
-            <div class="w-full text-center pt-2 border-t border-[#d4c5a3]/50">
-                <div class="flex justify-between items-center px-2 mb-1 font-bold font-mono text-sm text-[#5c5c5c]">
-                    <span>${vol}ml</span><span id="prev-abv">${abv}% ABV</span>
+            <div class="h-full flex flex-row-reverse items-end justify-end gap-4">
+                
+                <div style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="h-full flex items-end">
+                    <h1 id="prev-title" class="text-6xl font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap leading-none max-h-full overflow-hidden text-ellipsis">
+                        ${title}
+                    </h1>
                 </div>
-                <div class="flex justify-between items-end px-2">
-                     <div class="text-left"><p class="text-[8px] font-bold uppercase tracking-wider opacity-40">Ingredients</p><p id="prev-details" class="text-[9px] font-medium leading-tight max-w-[100px]">${details}</p></div>
-                     <div class="text-right"><p id="prev-date" class="text-[9px] font-bold opacity-60">${dateVal}</p></div>
+
+                <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-2/3 flex items-end pb-1">
+                    <p id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap">
+                        ${sub}
+                    </p>
                 </div>
-                <p id="prev-warning" class="text-[6px] uppercase mt-2 opacity-40 ${showWarning ? '' : 'hidden'}">Contains Sulfites</p>
+            </div>
+
+            <div class="flex-1 flex flex-col justify-between items-end pl-4">
+                
+                <div class="w-40 h-40 rounded-full border-2 border-[#8F8C79] flex items-center justify-center p-1 bg-white relative z-10">
+                    ${logoHtml}
+                </div>
+
+                <div class="text-right text-[#8F8C79] mb-2">
+                    
+                    <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-2 max-w-[150px] ml-auto leading-tight opacity-70">
+                        ${details}
+                    </p>
+
+                    ${!showDetails ? `<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-3 opacity-50">Mea(n)dery</p>` : ''}
+                    
+                    ${fg ? `<p class="text-2xl font-header font-normal leading-none mb-1">FG ${fg}</p>` : ''}
+                    <p class="text-2xl font-header font-normal leading-none"><span id="prev-abv">${abv}</span>% ABV</p>
+                    
+                    <div class="mt-2 text-xs text-gray-400 font-sans flex flex-col items-end">
+                        <span>${vol}ml</span>
+                        <span id="prev-date">${dateVal}</span>
+                    </div>
+
+                    <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-2 opacity-40 max-w-[100px] ml-auto">
+                        Contains Sulfites
+                    </p>
+                </div>
             </div>
         `;
     } 
 
-    // --- SPECIAL THEMA ---
+    // --- THEMA 2: SPECIAL (Foto Achtergrond / "Burning of Troy" Style) ---
     else if (theme === 'special') {
-        const textColor = hasImage ? 'text-white' : 'text-[#f4f1ea]'; 
-        const bgColor = hasImage ? 'bg-black' : 'bg-[#1a1a1a]';
-        container.className = `relative w-full h-full overflow-hidden ${bgColor} ${textColor} font-sans flex flex-row shadow-xl`;
         
-        let bgImageHtml = '';
+        container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
+        container.style = ""; 
+
+        // 1. Achtergrond Logica
+        let bgHtml = '';
         if (hasImage) {
-            bgImageHtml = `<div class="absolute inset-0 z-0"><img src="${imgSrc}" class="w-full h-full object-cover opacity-50"></div><div class="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black/80 z-0"></div>`;
+            // Als er een foto is: Full screen, met een donkere waas erover voor leesbaarheid
+            bgHtml = `
+                <div class="absolute inset-0 z-0">
+                    <img src="${imgSrc}" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div>
+                </div>`;
+        } else {
+            // Fallback: Chique donkere gradient als er nog geen foto is
+            bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
         }
 
-        const titleSize = title.length > 15 ? 'text-3xl' : 'text-5xl';
-
-        // Logo Fallback voor Special (Wit/Inverted)
-        const logoHtml = `
-            <div class="w-10 h-10 opacity-80 relative">
-                <img src="logo.png" class="w-full h-full object-contain invert" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                <div class="hidden absolute inset-0 items-center justify-center border border-white/50 rounded-full">
-                    <span class="text-[6px] font-bold text-white">M(N)</span>
-                </div>
-            </div>`;
+        // 2. Logo Logica (Wit maken voor op donkere achtergrond)
+        const logoHtml = `<img src="logo.png" class="w-full h-full object-contain p-2 filter invert drop-shadow-md" onerror="this.style.display='none'">`;
 
         container.innerHTML = `
-            ${bgImageHtml}
-            <div class="relative z-10 w-20 h-full flex flex-col justify-center items-center border-r border-white/10 p-2 bg-black/20 backdrop-blur-sm">
-                <div style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="h-full flex items-center justify-center text-center">
-                    <h1 id="prev-title" class="${titleSize} font-header font-bold uppercase tracking-wider leading-none whitespace-normal drop-shadow-md text-center">${title}</h1>
-                    <h2 id="prev-subtitle" class="text-[10px] font-bold uppercase tracking-[0.3em] mt-4 text-app-brand opacity-90">${sub}</h2>
+            ${bgHtml}
+            
+            <div class="relative z-10 w-full h-full flex p-6 text-white">
+                
+                <div class="h-full flex flex-row-reverse items-end justify-end gap-3 flex-grow">
+                    
+                    <h1 id="prev-title" style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" 
+                        class="text-6xl font-header font-bold uppercase tracking-widest leading-none drop-shadow-lg whitespace-nowrap max-h-full overflow-hidden text-ellipsis">
+                        ${title}
+                    </h1>
+
+                    <p id="prev-subtitle" style="writing-mode: vertical-rl; transform: rotate(180deg);" 
+                       class="text-xs font-bold uppercase tracking-[0.4em] opacity-90 whitespace-nowrap max-h-[80%] border-l-2 border-white/50 pl-2">
+                        ${sub}
+                    </p>
                 </div>
-            </div>
-            <div class="relative z-10 flex-1 flex flex-col justify-between p-4 pl-5">
-                <div class="flex justify-between items-start">
-                    <div><p class="text-3xl font-bold leading-none text-white drop-shadow-md"><span id="prev-abv">${abv}</span><span class="text-sm">%</span></p><p class="text-[8px] uppercase tracking-widest opacity-60">Alcohol</p></div>
-                    ${logoHtml}
-                </div>
-                <div class="flex-grow flex items-center justify-center py-2">
-                    <p id="prev-desc" class="text-xs italic font-serif text-center leading-relaxed text-gray-200/90 drop-shadow-sm">${desc || "Limited Edition Batch."}</p>
-                </div>
-                <div class="border-t border-white/20 pt-2">
-                    <div class="flex justify-between text-[10px] font-bold text-gray-300"><span id="prev-details">${details.substring(0, 25)}</span><span>${vol}ml</span></div>
-                    <div class="flex justify-between items-end mt-2">
-                        <p id="prev-warning" class="text-[6px] uppercase opacity-40 max-w-[60%] ${showWarning ? '' : 'hidden'}">Contains Sulfites</p>
-                        <p id="prev-date" class="text-[8px] font-mono opacity-60">${dateVal}</p>
+
+                <div class="flex flex-col justify-between items-end pl-4 h-full">
+                    
+                    <div class="w-36 h-36 rounded-full border-2 border-white flex items-center justify-center backdrop-blur-sm bg-white/10 shadow-lg">
+                        ${logoHtml}
+                    </div>
+
+                    <div class="text-right drop-shadow-md">
+                        
+                        <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-2 text-gray-200 max-w-[150px] ml-auto leading-tight">
+                            ${details}
+                        </p>
+
+                        ${fg ? `<p class="text-xl font-header font-normal leading-none mb-1 opacity-80">FG ${fg}</p>` : ''}
+                        
+                        <p class="text-4xl font-header font-bold leading-none mb-3">${abv}% <span class="text-lg font-normal">ABV</span></p>
+                        
+                        <div class="text-[10px] font-mono uppercase tracking-widest opacity-70">
+                            <p>${vol}ML • ${dateVal}</p>
+                        </div>
+
+                        <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-2 opacity-50 max-w-[80px] ml-auto">
+                            Contains Sulfites
+                        </p>
                     </div>
                 </div>
             </div>
         `;
     }
-}
 
 // 5. LABEL MANAGER (ADD / DELETE / AUTO-DETECT)
 

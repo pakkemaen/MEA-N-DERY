@@ -6,7 +6,8 @@
     <title>MEA(N)DERY - AI Mead Recipe Creator</title>
     <meta name="theme-color" content="#a89a87"/>
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="app-icon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,6 +35,7 @@
 
     <div id="login-view" class="fixed inset-0 bg-app-primary flex items-center justify-center z-50">
         <div class="text-center p-8 max-w-md mx-auto">
+            <img src="logo.png" class="w-32 h-32 mx-auto mb-4 object-contain drop-shadow-lg" alt="Meandery Logo">
             <h1 class="text-6xl font-header text-app-header">MEA<span class="text-app-brand">(N)</span>DERY</h1>
             <p class="text-app-secondary mt-2 mb-8">Brewbuddy</p>
             <div class="card p-8 rounded-lg">
@@ -49,6 +51,7 @@
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
         
         <header class="text-center mb-4 no-print">
+            <img src="logo.png" class="w-16 h-16 mb-2 object-contain hover:scale-110 transition-transform duration-300">
             <h1 class="text-5xl font-header text-app-header">MEA<span class="text-app-brand">(N)</span>DERY</h1>
             <p class="text-app-secondary mt-2">Brewbuddy</p>
         </header>
@@ -575,11 +578,24 @@
                         <div><label class="text-xs">Title</label><input type="text" id="labelTitle" class="w-full p-1 border rounded bg-app-tertiary text-sm"></div>
                         <div><label class="text-xs">Style</label><input type="text" id="labelSubtitle" class="w-full p-1 border rounded bg-app-tertiary text-sm"></div>
                     </div>
-                    <div class="grid grid-cols-3 gap-2">
-                        <div><label class="text-xs">ABV %</label><input type="text" id="labelAbv" class="w-full p-1 border rounded bg-app-tertiary text-sm"></div>
-                        <div><label class="text-xs">Vol (ml)</label><input type="text" id="labelVol" class="w-full p-1 border rounded bg-app-tertiary text-sm"></div>
-                        <div><label class="text-xs">Date</label><input type="text" id="labelDate" class="w-full p-1 border rounded bg-app-tertiary text-sm"></div>
-                    </div>
+                    <div class="grid grid-cols-4 gap-2">
+    <div>
+        <label class="text-xs">ABV %</label>
+        <input type="text" id="labelAbv" class="w-full p-1 border rounded bg-app-tertiary text-sm">
+    </div>
+    <div>
+        <label class="text-xs">FG</label>
+        <input type="text" id="labelFg" class="w-full p-1 border rounded bg-app-tertiary text-sm" placeholder="1.000">
+    </div>
+    <div>
+        <label class="text-xs">Vol (ml)</label>
+        <input type="text" id="labelVol" class="w-full p-1 border rounded bg-app-tertiary text-sm">
+    </div>
+    <div>
+        <label class="text-xs">Date</label>
+        <input type="text" id="labelDate" class="w-full p-1 border rounded bg-app-tertiary text-sm">
+    </div>
+</div>
                     <div>
                         <div class="flex justify-between items-center mb-1">
                             <label class="text-xs">Back Label Story</label>
@@ -587,10 +603,16 @@
                         </div>
                         <textarea id="labelDescription" rows="3" class="w-full p-2 border rounded bg-app-tertiary text-xs" placeholder="A dry traditional mead..."></textarea>
                     </div>
-                    <div>
-                        <label class="text-xs">Details / Ingredients</label>
-                        <input type="text" id="labelDetails" class="w-full p-1 border rounded bg-app-tertiary text-xs text-app-secondary">
-                    </div>
+                    <div class="mt-2 pt-2 border-t border-app/10">
+    <div class="flex justify-between items-center mb-1">
+        <label class="text-xs font-bold text-app-secondary">Competition Mode</label>
+        <div class="flex items-center">
+            <input type="checkbox" id="labelShowDetails" class="h-3 w-3 text-app-brand rounded focus:ring-app-brand">
+            <label for="labelShowDetails" class="ml-1 text-[10px] text-app-primary cursor-pointer">Show Ingredients on Label</label>
+        </div>
+    </div>
+    <input type="text" id="labelDetails" class="w-full p-1 border rounded bg-app-tertiary text-xs text-app-secondary placeholder-gray-400" placeholder="Auto-filled from recipe...">
+</div>
                     <div class="flex items-center mt-2">
                         <input type="checkbox" id="labelWarning" class="h-4 w-4 text-app-brand">
                         <label for="labelWarning" class="ml-2 text-xs text-app-secondary">Add "Contains Sulfites / Drink Responsibly"</label>

@@ -3313,66 +3313,60 @@ function loadLabelFromBrew(e) {
 // Thema Switcher (Signature / Special)
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
-    
-    // 1. VEILIGE IMAGE CHECK (Gebruik geheugen of probeer DOM)
-    let imgSrc = window.currentLabelImageSrc || '';
-    if (!imgSrc) {
-        // Probeer het oude element nog te vinden als backup
-        const imgElement = document.getElementById('label-img-display');
-        if (imgElement && !imgElement.classList.contains('hidden') && imgElement.src !== window.location.href) {
-            imgSrc = imgElement.src;
-        }
-    }
-    const hasImage = imgSrc && imgSrc !== '';
+    if (!container) return; // Stop als we niet op de label pagina zijn
 
-    // 2. Data Ophalen
+    // 1. DATA OPHALEN (Veilig, zonder crashes)
     const title = document.getElementById('labelTitle').value || 'MEAD NAME';
     const sub = document.getElementById('labelSubtitle').value || 'Style Description';
-    const abv = document.getElementById('labelAbv').value || '0';
+    const abv = document.getElementById('labelAbv').value || '12';
     const fg = document.getElementById('labelFg')?.value || '';
     const vol = document.getElementById('labelVol').value || '750';
     const desc = document.getElementById('labelDescription').value || '';
     const details = document.getElementById('labelDetails').value || '';
-    const showDetails = document.getElementById('labelShowDetails')?.checked;
+    const dateVal = document.getElementById('labelDate')?.value || new Date().toLocaleDateString();
+    
+    // Checkboxes
     const showWarning = document.getElementById('labelWarning')?.checked;
-    const dateVal = document.getElementById('labelDate')?.value || '';
+    const showDetails = document.getElementById('labelShowDetails')?.checked; // Wedstrijd modus
 
-    // 3. Knoppen Status
+    // 2. AFBEELDING CHECK (Geheugen -> Element -> Leeg)
+    let imgSrc = window.currentLabelImageSrc || '';
+    const imgElement = document.getElementById('label-img-display');
+    // Probeer foto uit DOM te redden als hij niet in geheugen zit
+    if (!imgSrc && imgElement && !imgElement.classList.contains('hidden') && imgElement.src !== window.location.href) {
+        imgSrc = imgElement.src;
+    }
+    const hasImage = imgSrc && imgSrc.length > 10;
+
+    // 3. KNOPPEN STATUS UPDATEN
     document.querySelectorAll('.label-theme-btn').forEach(b => {
         b.classList.remove('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
         if(b.dataset.theme === theme) b.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
     });
 
-    // --- STANDARD (Scandi-Minimalist Style) ---
+    // =================================================================
+    // THEMA 1: STANDARD (Scandi-Minimalist Style)
+    // =================================================================
     if (theme === 'standard') {
         
-        // Reset container stijl
         container.className = `relative w-full h-full bg-white overflow-hidden flex p-8 font-sans`;
         container.style = ""; 
 
-        // Bepaal de accentkleur (Standaard Goud/Bruin, of Blauw als het woord 'Blueberry' of 'Melomel' erin zit voor de leuk)
-        // Je kunt dit later dynamisch maken, voor nu pakken we die chique "Vinterglød" kleur.
-        const accentColor = '#8F8C79'; // De grijs/goud tint uit je voorbeeld
-        
-        // Logo Logica
+        // Logo Logica: Foto in cirkel OF Logo.png
         let logoHtml = '';
         if (hasImage) {
-            // Als er een batch-foto is, gebruiken we die in de cirkel
             logoHtml = `<img src="${imgSrc}" class="w-full h-full object-cover rounded-full">`;
         } else {
-            // Anders gebruiken we jouw nieuwe logo.png
             logoHtml = `<img src="logo.png" class="w-full h-full object-contain p-2 opacity-80" onerror="this.style.display='none'">`;
         }
 
         container.innerHTML = `
             <div class="h-full flex flex-row-reverse items-end justify-end gap-4">
-                
                 <div style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="h-full flex items-end">
                     <h1 id="prev-title" class="text-6xl font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap leading-none max-h-full overflow-hidden text-ellipsis">
                         ${title}
                     </h1>
                 </div>
-
                 <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-2/3 flex items-end pb-1">
                     <p id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap">
                         ${sub}
@@ -3381,7 +3375,6 @@ function setLabelTheme(theme) {
             </div>
 
             <div class="flex-1 flex flex-col justify-between items-end pl-4">
-                
                 <div class="w-40 h-40 rounded-full border-2 border-[#8F8C79] flex items-center justify-center p-1 bg-white relative z-10">
                     ${logoHtml}
                 </div>
@@ -3410,41 +3403,38 @@ function setLabelTheme(theme) {
         `;
     } 
 
-    // --- THEMA 2: SPECIAL (Foto Achtergrond / "Burning of Troy" Style) ---
+    // =================================================================
+    // THEMA 2: SPECIAL (Foto Achtergrond / "Burning of Troy" Style)
+    // =================================================================
     else if (theme === 'special') {
         
         container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
         container.style = ""; 
 
-        // 1. Achtergrond Logica
+        // Achtergrond Logica
         let bgHtml = '';
         if (hasImage) {
-            // Als er een foto is: Full screen, met een donkere waas erover voor leesbaarheid
             bgHtml = `
                 <div class="absolute inset-0 z-0">
                     <img src="${imgSrc}" class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div>
                 </div>`;
         } else {
-            // Fallback: Chique donkere gradient als er nog geen foto is
             bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
         }
 
-        // 2. Logo Logica (Wit maken voor op donkere achtergrond)
+        // Wit Logo (Inverted)
         const logoHtml = `<img src="logo.png" class="w-full h-full object-contain p-2 filter invert drop-shadow-md" onerror="this.style.display='none'">`;
 
         container.innerHTML = `
             ${bgHtml}
             
             <div class="relative z-10 w-full h-full flex p-6 text-white">
-                
                 <div class="h-full flex flex-row-reverse items-end justify-end gap-3 flex-grow">
-                    
                     <h1 id="prev-title" style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" 
                         class="text-6xl font-header font-bold uppercase tracking-widest leading-none drop-shadow-lg whitespace-nowrap max-h-full overflow-hidden text-ellipsis">
                         ${title}
                     </h1>
-
                     <p id="prev-subtitle" style="writing-mode: vertical-rl; transform: rotate(180deg);" 
                        class="text-xs font-bold uppercase tracking-[0.4em] opacity-90 whitespace-nowrap max-h-[80%] border-l-2 border-white/50 pl-2">
                         ${sub}
@@ -3452,13 +3442,11 @@ function setLabelTheme(theme) {
                 </div>
 
                 <div class="flex flex-col justify-between items-end pl-4 h-full">
-                    
                     <div class="w-36 h-36 rounded-full border-2 border-white flex items-center justify-center backdrop-blur-sm bg-white/10 shadow-lg">
                         ${logoHtml}
                     </div>
 
                     <div class="text-right drop-shadow-md">
-                        
                         <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-2 text-gray-200 max-w-[150px] ml-auto leading-tight">
                             ${details}
                         </p>
@@ -3479,6 +3467,14 @@ function setLabelTheme(theme) {
             </div>
         `;
     }
+    
+    // =================================================================
+    // FALLBACK (Voorkomt 'Unexpected token else' error)
+    // =================================================================
+    else {
+        console.warn("Unknown theme selected:", theme);
+    }
+}
 
 // 5. LABEL MANAGER (ADD / DELETE / AUTO-DETECT)
 

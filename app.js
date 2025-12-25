@@ -3254,15 +3254,15 @@ function populateLabelPaperDropdown() {
 
 // 4. PREVIEW & UI LOGICA
 
-// Update de afmetingen van het voorbeeldvakje (mm)
+// --- UNIEKE VERSIE VAN DE UPDATE FUNCTIE ---
 function updateLabelPreviewText() {
-    // Helper: Schrijf alleen als het element ook echt bestaat
+    // Helper: Schrijf alleen als het element ook echt bestaat in de HTML
     const safeSet = (id, value) => {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
     };
 
-    // 1. Haal waardes op uit de invulvelden
+    // 1. Haal waardes op (met fallbacks zodat het nooit leeg is)
     const title = document.getElementById('labelTitle')?.value || 'MEAD NAME';
     const sub = document.getElementById('labelSubtitle')?.value || 'Style';
     const abv = document.getElementById('labelAbv')?.value || '0';
@@ -3280,7 +3280,7 @@ function updateLabelPreviewText() {
     safeSet('prev-desc', desc);
     safeSet('prev-details', details);
 
-    // 3. Toggles (Warning & Details)
+    // 3. Toggles (Warning & Details) controleren
     const warnCheck = document.getElementById('labelWarning');
     const warnPreview = document.getElementById('prev-warning');
     if (warnCheck && warnPreview) {
@@ -3292,20 +3292,6 @@ function updateLabelPreviewText() {
     if (detailCheck && detailPreview) {
         detailPreview.style.display = detailCheck.checked ? 'block' : 'none';
     }
-}
-
-// Update de tekst in het voorbeeld
-function updateLabelPreviewText() {
-    document.getElementById('prev-title').textContent = document.getElementById('labelTitle').value || 'Name';
-    document.getElementById('prev-subtitle').textContent = document.getElementById('labelSubtitle').value || 'STYLE';
-    document.getElementById('prev-abv').textContent = document.getElementById('labelAbv').value;
-    document.getElementById('prev-vol').textContent = document.getElementById('labelVol').value;
-    document.getElementById('prev-date').textContent = document.getElementById('labelDate').value;
-    document.getElementById('prev-desc').textContent = document.getElementById('labelDescription').value || 'Description...';
-    document.getElementById('prev-details').textContent = document.getElementById('labelDetails').value;
-    
-    const warn = document.getElementById('labelWarning').checked;
-    document.getElementById('prev-warning').classList.toggle('hidden', !warn);
 }
 
 // Data uit recept laden
@@ -3338,12 +3324,12 @@ function loadLabelFromBrew(e) {
     updateLabelPreviewText();
 }
 
-// Thema Switcher (Signature / Special)
+// --- LABEL THEMA FUNCTIE ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; // Stop als we niet op de label pagina zijn
 
-    // 1. DATA OPHALEN (Veilig, zonder crashes)
+    // 1. DATA OPHALEN
     const title = document.getElementById('labelTitle').value || 'MEAD NAME';
     const sub = document.getElementById('labelSubtitle').value || 'Style Description';
     const abv = document.getElementById('labelAbv').value || '12';
@@ -3355,12 +3341,11 @@ function setLabelTheme(theme) {
     
     // Checkboxes
     const showWarning = document.getElementById('labelWarning')?.checked;
-    const showDetails = document.getElementById('labelShowDetails')?.checked; // Wedstrijd modus
+    const showDetails = document.getElementById('labelShowDetails')?.checked; 
 
-    // 2. AFBEELDING CHECK (Geheugen -> Element -> Leeg)
+    // 2. AFBEELDING CHECK
     let imgSrc = window.currentLabelImageSrc || '';
     const imgElement = document.getElementById('label-img-display');
-    // Probeer foto uit DOM te redden als hij niet in geheugen zit
     if (!imgSrc && imgElement && !imgElement.classList.contains('hidden') && imgElement.src !== window.location.href) {
         imgSrc = imgElement.src;
     }
@@ -3373,33 +3358,28 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDARD (Scandi-Minimalist Style)
+    // THEMA 1: STANDARD (Modern Verticaal, Geen Cirkel voor Logo)
     // =================================================================
     if (theme === 'standard') {
-        
-        container.className = `relative w-full h-full bg-white overflow-hidden flex p-6 font-sans`; // Iets minder padding (p-6) voor meer ruimte
+        container.className = `relative w-full h-full bg-white overflow-hidden flex p-6 font-sans`;
         container.style = ""; 
 
-        const accentColor = '#8F8C79'; 
-        
         let logoHtml = '';
         if (hasImage) {
-            // Batch foto: Wel rond, want dat staat mooi bij een foto
+            // Als het een foto van de batch is: WEL in een cirkel
             logoHtml = `<img src="${imgSrc}" class="w-40 h-40 object-cover rounded-full border-4 border-white shadow-sm">`;
         } else {
-            // Logo PNG: GEEN cirkel, gewoon groot en vrijstaand
+            // Als het jouw LOGO is: GEEN cirkel, groot en vrijstaand
             logoHtml = `<img src="logo.png" class="w-full h-48 object-contain opacity-90" onerror="this.style.display='none'">`;
         }
 
         container.innerHTML = `
             <div class="h-full flex flex-row-reverse items-end justify-end gap-2 pr-2 border-r border-gray-100">
-                
                 <div style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="h-full flex items-end py-2">
                     <h1 id="prev-title" class="text-5xl font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap leading-none">
                         ${title}
                     </h1>
                 </div>
-
                 <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-full flex items-end pb-2">
                     <p id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap">
                         ${sub}
@@ -3408,30 +3388,22 @@ function setLabelTheme(theme) {
             </div>
 
             <div class="flex-1 flex flex-col justify-between items-center pl-4 py-2">
-                
                 <div class="w-full flex items-center justify-center flex-grow">
                     ${logoHtml}
                 </div>
-
                 <div class="text-right text-[#8F8C79] w-full mt-4">
-                    
                     <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-2 ml-auto leading-tight opacity-70">
                         ${details}
                     </p>
-
                     ${!showDetails ? `<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 opacity-50">Mea(n)dery</p>` : ''}
                     
                     <div class="border-t-2 border-[#8F8C79] pt-2">
                         ${fg ? `<p class="text-xl font-header font-normal leading-none mb-1">FG ${fg}</p>` : ''}
                         <p class="text-3xl font-header font-normal leading-none"><span id="prev-abv">${abv}</span>% <span class="text-sm">ABV</span></p>
-                        
                         <div class="mt-1 text-[10px] text-gray-400 font-sans flex justify-end gap-2 uppercase tracking-wide">
-                            <span>${vol}ml</span>
-                            <span>•</span>
-                            <span id="prev-date">${dateVal}</span>
+                            <span>${vol}ml</span><span>•</span><span id="prev-date">${dateVal}</span>
                         </div>
                     </div>
-
                     <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-2 opacity-40">
                         Contains Sulfites
                     </p>
@@ -3441,61 +3413,45 @@ function setLabelTheme(theme) {
     } 
 
     // =================================================================
-    // THEMA 2: SPECIAL (Foto Achtergrond / "Burning of Troy" Style)
+    // THEMA 2: SPECIAL (Foto Achtergrond, Wit Logo)
     // =================================================================
     else if (theme === 'special') {
-        
         container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
         container.style = ""; 
 
-        // Achtergrond Logica
         let bgHtml = '';
         if (hasImage) {
-            bgHtml = `
-                <div class="absolute inset-0 z-0">
-                    <img src="${imgSrc}" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div>
-                </div>`;
+            bgHtml = `<div class="absolute inset-0 z-0"><img src="${imgSrc}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div></div>`;
         } else {
             bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
         }
 
-        // Wit Logo (Inverted)
         const logoHtml = `<img src="logo.png" class="w-full h-full object-contain p-2 filter invert drop-shadow-md" onerror="this.style.display='none'">`;
 
         container.innerHTML = `
             ${bgHtml}
-            
             <div class="relative z-10 w-full h-full flex p-6 text-white">
                 <div class="h-full flex flex-row-reverse items-end justify-end gap-3 flex-grow">
-                    <h1 id="prev-title" style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" 
-                        class="text-6xl font-header font-bold uppercase tracking-widest leading-none drop-shadow-lg whitespace-nowrap max-h-full overflow-hidden text-ellipsis">
+                    <h1 id="prev-title" style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="text-6xl font-header font-bold uppercase tracking-widest leading-none drop-shadow-lg whitespace-nowrap max-h-full overflow-hidden text-ellipsis">
                         ${title}
                     </h1>
-                    <p id="prev-subtitle" style="writing-mode: vertical-rl; transform: rotate(180deg);" 
-                       class="text-xs font-bold uppercase tracking-[0.4em] opacity-90 whitespace-nowrap max-h-[80%] border-l-2 border-white/50 pl-2">
+                    <p id="prev-subtitle" style="writing-mode: vertical-rl; transform: rotate(180deg);" class="text-xs font-bold uppercase tracking-[0.4em] opacity-90 whitespace-nowrap max-h-[80%] border-l-2 border-white/50 pl-2">
                         ${sub}
                     </p>
                 </div>
-
                 <div class="flex flex-col justify-between items-end pl-4 h-full">
                     <div class="w-36 h-36 rounded-full border-2 border-white flex items-center justify-center backdrop-blur-sm bg-white/10 shadow-lg">
                         ${logoHtml}
                     </div>
-
                     <div class="text-right drop-shadow-md">
                         <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-2 text-gray-200 max-w-[150px] ml-auto leading-tight">
                             ${details}
                         </p>
-
                         ${fg ? `<p class="text-xl font-header font-normal leading-none mb-1 opacity-80">FG ${fg}</p>` : ''}
-                        
                         <p class="text-4xl font-header font-bold leading-none mb-3">${abv}% <span class="text-lg font-normal">ABV</span></p>
-                        
                         <div class="text-[10px] font-mono uppercase tracking-widest opacity-70">
                             <p>${vol}ML • ${dateVal}</p>
                         </div>
-
                         <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-2 opacity-50 max-w-[80px] ml-auto">
                             Contains Sulfites
                         </p>
@@ -3503,13 +3459,6 @@ function setLabelTheme(theme) {
                 </div>
             </div>
         `;
-    }
-    
-    // =================================================================
-    // FALLBACK (Voorkomt 'Unexpected token else' error)
-    // =================================================================
-    else {
-        console.warn("Unknown theme selected:", theme);
     }
 }
 

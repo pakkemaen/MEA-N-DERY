@@ -3256,13 +3256,13 @@ function populateLabelPaperDropdown() {
 
 // Update de afmetingen van het voorbeeldvakje (mm)
 function updateLabelPreviewText() {
-    // Helper: Schrijf alleen als het element bestaat
+    // Helper: Schrijf alleen als het element ook echt bestaat
     const safeSet = (id, value) => {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
     };
 
-    // Data ophalen uit invoervelden
+    // 1. Haal waardes op uit de invulvelden
     const title = document.getElementById('labelTitle')?.value || 'MEAD NAME';
     const sub = document.getElementById('labelSubtitle')?.value || 'Style';
     const abv = document.getElementById('labelAbv')?.value || '0';
@@ -3271,7 +3271,7 @@ function updateLabelPreviewText() {
     const desc = document.getElementById('labelDescription')?.value || '';
     const details = document.getElementById('labelDetails')?.value || '';
     
-    // Update de preview (veilig)
+    // 2. Schrijf ze naar het label (Veilig)
     safeSet('prev-title', title);
     safeSet('prev-subtitle', sub);
     safeSet('prev-abv', abv);
@@ -3280,18 +3280,17 @@ function updateLabelPreviewText() {
     safeSet('prev-desc', desc);
     safeSet('prev-details', details);
 
-    // Warning toggle speciaal behandelen
+    // 3. Toggles (Warning & Details)
     const warnCheck = document.getElementById('labelWarning');
     const warnPreview = document.getElementById('prev-warning');
     if (warnCheck && warnPreview) {
         warnPreview.style.display = warnCheck.checked ? 'block' : 'none';
     }
     
-    // Details toggle speciaal behandelen
-    const detailsCheck = document.getElementById('labelShowDetails');
-    const detailsPreview = document.getElementById('prev-details');
-    if (detailsCheck && detailsPreview) {
-        detailsPreview.style.display = detailsCheck.checked ? 'block' : 'none';
+    const detailCheck = document.getElementById('labelShowDetails');
+    const detailPreview = document.getElementById('prev-details');
+    if (detailCheck && detailPreview) {
+        detailPreview.style.display = detailCheck.checked ? 'block' : 'none';
     }
 }
 

@@ -3255,14 +3255,43 @@ function populateLabelPaperDropdown() {
 // 4. PREVIEW & UI LOGICA
 
 // Update de afmetingen van het voorbeeldvakje (mm)
-function updateLabelPreviewDimensions() {
-    const key = document.getElementById('labelPaper').value;
-    const fmt = builtInLabelFormats[key] || userLabelFormats[key];
-    const container = document.getElementById('label-preview-container');
+function updateLabelPreviewText() {
+    // Helper: Schrijf alleen als het element bestaat
+    const safeSet = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    // Data ophalen uit invoervelden
+    const title = document.getElementById('labelTitle')?.value || 'MEAD NAME';
+    const sub = document.getElementById('labelSubtitle')?.value || 'Style';
+    const abv = document.getElementById('labelAbv')?.value || '0';
+    const vol = document.getElementById('labelVol')?.value || '750';
+    const dateVal = document.getElementById('labelDate')?.value || '';
+    const desc = document.getElementById('labelDescription')?.value || '';
+    const details = document.getElementById('labelDetails')?.value || '';
     
-    if (fmt && container) {
-        container.style.width = `${fmt.width}mm`;
-        container.style.height = `${fmt.height}mm`;
+    // Update de preview (veilig)
+    safeSet('prev-title', title);
+    safeSet('prev-subtitle', sub);
+    safeSet('prev-abv', abv);
+    safeSet('prev-vol', vol);
+    safeSet('prev-date', dateVal);
+    safeSet('prev-desc', desc);
+    safeSet('prev-details', details);
+
+    // Warning toggle speciaal behandelen
+    const warnCheck = document.getElementById('labelWarning');
+    const warnPreview = document.getElementById('prev-warning');
+    if (warnCheck && warnPreview) {
+        warnPreview.style.display = warnCheck.checked ? 'block' : 'none';
+    }
+    
+    // Details toggle speciaal behandelen
+    const detailsCheck = document.getElementById('labelShowDetails');
+    const detailsPreview = document.getElementById('prev-details');
+    if (detailsCheck && detailsPreview) {
+        detailsPreview.style.display = detailsCheck.checked ? 'block' : 'none';
     }
 }
 
@@ -3349,53 +3378,62 @@ function setLabelTheme(theme) {
     // =================================================================
     if (theme === 'standard') {
         
-        container.className = `relative w-full h-full bg-white overflow-hidden flex p-8 font-sans`;
+        container.className = `relative w-full h-full bg-white overflow-hidden flex p-6 font-sans`; // Iets minder padding (p-6) voor meer ruimte
         container.style = ""; 
 
-        // Logo Logica: Foto in cirkel OF Logo.png
+        const accentColor = '#8F8C79'; 
+        
         let logoHtml = '';
         if (hasImage) {
-            logoHtml = `<img src="${imgSrc}" class="w-full h-full object-cover rounded-full">`;
+            // Batch foto: Wel rond, want dat staat mooi bij een foto
+            logoHtml = `<img src="${imgSrc}" class="w-40 h-40 object-cover rounded-full border-4 border-white shadow-sm">`;
         } else {
-            logoHtml = `<img src="logo.png" class="w-full h-full object-contain p-2 opacity-80" onerror="this.style.display='none'">`;
+            // Logo PNG: GEEN cirkel, gewoon groot en vrijstaand
+            logoHtml = `<img src="logo.png" class="w-full h-48 object-contain opacity-90" onerror="this.style.display='none'">`;
         }
 
         container.innerHTML = `
-            <div class="h-full flex flex-row-reverse items-end justify-end gap-4">
-                <div style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="h-full flex items-end">
-                    <h1 id="prev-title" class="text-6xl font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap leading-none max-h-full overflow-hidden text-ellipsis">
+            <div class="h-full flex flex-row-reverse items-end justify-end gap-2 pr-2 border-r border-gray-100">
+                
+                <div style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="h-full flex items-end py-2">
+                    <h1 id="prev-title" class="text-5xl font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap leading-none">
                         ${title}
                     </h1>
                 </div>
-                <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-2/3 flex items-end pb-1">
+
+                <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-full flex items-end pb-2">
                     <p id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap">
                         ${sub}
                     </p>
                 </div>
             </div>
 
-            <div class="flex-1 flex flex-col justify-between items-end pl-4">
-                <div class="w-40 h-40 rounded-full border-2 border-[#8F8C79] flex items-center justify-center p-1 bg-white relative z-10">
+            <div class="flex-1 flex flex-col justify-between items-center pl-4 py-2">
+                
+                <div class="w-full flex items-center justify-center flex-grow">
                     ${logoHtml}
                 </div>
 
-                <div class="text-right text-[#8F8C79] mb-2">
+                <div class="text-right text-[#8F8C79] w-full mt-4">
                     
-                    <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-2 max-w-[150px] ml-auto leading-tight opacity-70">
+                    <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-2 ml-auto leading-tight opacity-70">
                         ${details}
                     </p>
 
-                    ${!showDetails ? `<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-3 opacity-50">Mea(n)dery</p>` : ''}
+                    ${!showDetails ? `<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 opacity-50">Mea(n)dery</p>` : ''}
                     
-                    ${fg ? `<p class="text-2xl font-header font-normal leading-none mb-1">FG ${fg}</p>` : ''}
-                    <p class="text-2xl font-header font-normal leading-none"><span id="prev-abv">${abv}</span>% ABV</p>
-                    
-                    <div class="mt-2 text-xs text-gray-400 font-sans flex flex-col items-end">
-                        <span>${vol}ml</span>
-                        <span id="prev-date">${dateVal}</span>
+                    <div class="border-t-2 border-[#8F8C79] pt-2">
+                        ${fg ? `<p class="text-xl font-header font-normal leading-none mb-1">FG ${fg}</p>` : ''}
+                        <p class="text-3xl font-header font-normal leading-none"><span id="prev-abv">${abv}</span>% <span class="text-sm">ABV</span></p>
+                        
+                        <div class="mt-1 text-[10px] text-gray-400 font-sans flex justify-end gap-2 uppercase tracking-wide">
+                            <span>${vol}ml</span>
+                            <span>•</span>
+                            <span id="prev-date">${dateVal}</span>
+                        </div>
                     </div>
 
-                    <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-2 opacity-40 max-w-[100px] ml-auto">
+                    <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-2 opacity-40">
                         Contains Sulfites
                     </p>
                 </div>

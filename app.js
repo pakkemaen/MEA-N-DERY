@@ -3252,6 +3252,25 @@ function populateLabelPaperDropdown() {
     updateLabelPreviewDimensions();
 }
 
+// --- DEZE FUNCTIE PAST DE GROOTTE VAN DE PREVIEW AAN ---
+function updateLabelPreviewDimensions() {
+    const select = document.getElementById('labelPaper');
+    if (!select) return;
+    
+    const key = select.value;
+    // Zoek het formaat in de standaard lijst OF de eigen lijst
+    const fmt = builtInLabelFormats[key] || userLabelFormats[key];
+    
+    if (fmt) {
+        const container = document.getElementById('label-preview-container');
+        if (container) {
+            // Pas de breedte en hoogte aan (in millimeters)
+            container.style.width = fmt.width + 'mm';
+            container.style.height = fmt.height + 'mm';
+        }
+    }
+}
+
 // 4. PREVIEW & UI LOGICA
 
 // --- UNIEKE VERSIE VAN DE UPDATE FUNCTIE ---

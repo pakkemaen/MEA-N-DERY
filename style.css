@@ -29,25 +29,24 @@
         --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
-    /* OVERRIDE: DARK MODE ("The Cellar Look") */
+    /* OVERRIDE: DARK MODE ("The Cellar Look" - High Contrast Fix) */
     .dark {
         /* Achtergronden */
-        --bg-primary: #0f0f0f;       /* Diep zwart */
-        --bg-secondary: #1a1a1a;     /* Donkergrijs paneel */
-        --bg-tertiary: #262626;      /* Lichter grijs inputs */
+        --bg-primary: #0a0a0a;       /* Bijna puur zwart voor max contrast */
+        --bg-secondary: #171717;     /* Iets donkerder dan voorheen */
+        --bg-tertiary: #262626;      /* Inputs blijven duidelijk onderscheiden */
         
-        /* Tekst */
-        --text-primary: #e5e5e5;     /* Off-white */
-        --text-secondary: #a3a3a3;   /* Grijs */
-        --border-color: #333333;     /* Donkere rand */
+        /* Tekst - HIER ZIT DE VERBETERING */
+        --text-primary: #ffffff;     /* PUUR WIT (was #e5e5e5) */
+        --text-secondary: #d4d4d4;   /* LICHTGRIJS (was #a3a3a3) - Veel leesbaarder */
+        --border-color: #404040;     /* Iets duidelijker randje */
         
         /* Brand Colors */
-        --brand-color: #8F8C79;      /* De originele kleur */
-        --brand-dark: #a8a593;       /* Iets lichter voor hover in het donker */
-        --action-color: #d97706;     /* De originele Amber */
+        --brand-color: #8F8C79;      /* Origineel */
+        --brand-dark: #b8b5a3;       /* Lichter gemaakt voor leesbaarheid op donker */
+        --action-color: #d97706;     /* Amber */
         
-        /* Schaduw mag in dark mode iets sterker zijn */
-        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.7);
     }
 
     body {

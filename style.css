@@ -1,52 +1,54 @@
 /* --- 1. VARIABLES & THEME SETUP --- */
     
-    /* DEFAULT: LIGHT MODE ("The Parchment/Paper Look") */
+    /* --- 1. VARIABLES & THEME SETUP (HIGH CONTRAST EDITION) --- */
+    
+    /* DEFAULT: LIGHT MODE */
     :root {
-        /* Achtergronden */
-        --bg-primary: #f4f1ea;       /* Warm, "papier" wit (Luxe uitstraling) */
-        --bg-secondary: #ffffff;     /* Puur wit voor de kaarten/panelen (Diepte) */
-        --bg-tertiary: #ebe9e4;      /* Iets donkerder beige voor inputs */
+        /* Achtergronden (Behouden we, die zijn mooi) */
+        --bg-primary: #f4f1ea;       
+        --bg-secondary: #ffffff;     
+        --bg-tertiary: #ebe9e4;      
         
-        /* Tekst */
-        --text-primary: #2d2a26;     /* Zeer donker 'Charcoal' (Zachter dan zwart) */
-        --text-secondary: #6b655d;   /* Warm grijs */
-        --border-color: #d6d3c9;     /* Zachte rand, niet te hard */
+        /* Tekst - AANGEPAST: Veel donkerder/harder */
+        --text-primary: #000000;     /* Was donkergrijs, nu PUUR ZWART */
+        --text-secondary: #333333;   /* Was zachtgrijs, nu DONKERGRIJS (bijna zwart) */
+        --border-color: #a8a29e;     /* Iets donkerder randje voor duidelijkheid */
         
         /* Brand Colors */
-        --brand-color: #8F8C79;      /* Je Olijf/Goud basis */
-        --brand-dark: #666352;       /* Een donkerdere variant voor tekst-leesbaarheid op wit */
-        --action-color: #b45309;     /* Iets donkerder Amber voor goed contrast op wit */
+        --brand-color: #787565;      /* Iets donkerder olijf voor betere leesbaarheid */
+        --brand-dark: #4b493f;       
+        --action-color: #b45309;     
         
         /* Functional Colors */
         --danger-color: #dc2626;
         --success-color: #16a34a;
         --info-color: #2563eb;
         
-        /* Spacing & Radius (Universeel) */
+        /* Spacing & Radius */
         --radius-md: 8px;
         --radius-lg: 12px;
         --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
-    /* OVERRIDE: DARK MODE ("The Cellar Look" - High Contrast Fix) */
+    /* OVERRIDE: DARK MODE */
     .dark {
-        /* Achtergronden */
-        --bg-primary: #0a0a0a;       /* Bijna puur zwart voor max contrast */
-        --bg-secondary: #171717;     /* Iets donkerder dan voorheen */
-        --bg-tertiary: #262626;      /* Inputs blijven duidelijk onderscheiden */
+        /* Achtergronden (Diep zwart voor OLED schermen) */
+        --bg-primary: #000000;       /* Puur zwart */
+        --bg-secondary: #121212;     /* Heel donker grijs */
+        --bg-tertiary: #1e1e1e;      
         
-        /* Tekst - HIER ZIT DE VERBETERING */
-        --text-primary: #ffffff;     /* PUUR WIT (was #e5e5e5) */
-        --text-secondary: #d4d4d4;   /* LICHTGRIJS (was #a3a3a3) - Veel leesbaarder */
-        --border-color: #404040;     /* Iets duidelijker randje */
+        /* Tekst - AANGEPAST: Veel feller/witter */
+        --text-primary: #ffffff;     /* Puur wit (blijft hetzelfde) */
+        --text-secondary: #e0e0e0;   /* Was grijs, is nu BIJNA WIT (90% wit) */
+        --border-color: #404040;     
         
-        /* Brand Colors */
-        --brand-color: #8F8C79;      /* Origineel */
-        --brand-dark: #b8b5a3;       /* Lichter gemaakt voor leesbaarheid op donker */
-        --action-color: #d97706;     /* Amber */
+        /* Brand Colors (Lichter maken voor op zwart) */
+        --brand-color: #a3a08f;      /* Lichtere olijfkleur die 'gloeit' op zwart */
+        --brand-dark: #e5e5e5;       
+        --action-color: #f59e0b;     /* Feller amber */
         
-        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.7);
+        --shadow-md: 0 4px 6px -1px rgba(255, 255, 255, 0.05); /* Subtiele witte gloed */
     }
 
     body {

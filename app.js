@@ -3906,9 +3906,11 @@ function setLabelTheme(theme) {
         // Logo
         let logoHtml = '';
         if (hasImage) {
-            logoHtml = `<img src="${imgSrc}" class="w-20 h-20 object-cover rounded-full border-4 border-white shadow-sm">`;
+            // VOEG id="label-logo-img" TOE
+            logoHtml = `<img id="label-logo-img" src="${imgSrc}" class="w-20 h-20 object-cover rounded-full border-4 border-white shadow-sm">`;
         } else {
-            logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-20 h-20 object-contain opacity-90">`;
+            // VOEG id="label-logo-img" TOE
+            logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-20 h-20 object-contain opacity-90">`;
         }
 
         let peakDateVal = "2026-01-01"; 
@@ -5664,36 +5666,50 @@ window.hidePromptModal = function() {
 window.autoFitLabelText = function() {
     const titleEl = document.getElementById('prev-title');
     const container = document.getElementById('title-container');
+    const logoEl = document.getElementById('label-logo-img');
     
     if (!titleEl || !container) return;
 
-    // Reset naar groot
+    // 1. Reset naar groot om te beginnen
     let fontSize = 60; 
     titleEl.style.fontSize = fontSize + 'px';
     titleEl.style.lineHeight = '0.9'; 
     titleEl.style.display = 'block';
 
-    // Als de container niet zichtbaar is (tabblad dicht), stop
+    // Als de container niet zichtbaar is (andere tab), kunnen we niet rekenen. Stop.
     if (container.offsetWidth === 0 || container.offsetHeight === 0) return;
 
-    // Haal de echte afmetingen op
-    const maxWidth = container.offsetWidth;
-    const maxHeight = container.offsetHeight;
+    // Helper: Check of tekst en logo overlappen
+    const checkCollision = () => {
+        if (!logoEl) return false;
+        const tRect = titleEl.getBoundingClientRect();
+        const lRect = logoEl.getBoundingClientRect();
 
-    // Verklein lus: Zolang hij groter is, maak kleiner
-    // We gebruiken een buffer van 5px
-    while (
-        (titleEl.scrollWidth > maxWidth || titleEl.scrollHeight > maxHeight) 
-        && fontSize > 14 // VEILIGHEID: Stop nooit onder 14px
-    ) {
+        // Check overlap (simpele AABB collision detection)
+        // We voegen een buffer van 10px toe (padding)
+        const overlap = !(tRect.right < lRect.left - 10 || 
+                          tRect.left > lRect.right + 10 || 
+                          tRect.bottom < lRect.top - 10 || 
+                          tRect.top > lRect.bottom + 10);
+        return overlap;
+    };
+
+    // Helper: Check of tekst buiten de container valt
+    const checkOverflow = () => {
+        return (titleEl.scrollWidth > container.offsetWidth || 
+                titleEl.scrollHeight > container.offsetHeight);
+    }
+
+    // 2. Verklein lus
+    // Zolang (Tekst raakt Logo) OF (Tekst past niet in container) -> Verklein
+    while ( (checkCollision() || checkOverflow()) && fontSize > 12 ) {
         fontSize--; 
         titleEl.style.fontSize = fontSize + 'px';
     }
     
-    // Noodgreep: Als na de loop de font-size 14 is, forceer hem dan daarop
-    // zodat hij nooit 0 wordt of verdwijnt.
-    if (fontSize <= 14) {
-        titleEl.style.fontSize = '14px';
+    // 3. Veiligheid: Nooit onzichtbaar maken
+    if (fontSize <= 12) {
+        titleEl.style.fontSize = '12px';
     }
 }
 
@@ -5840,6 +5856,6 @@ function initApp() {
 // --- APP START ---
 // Dit is het enige startpunt van de applicatie
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("🍀 MEA(N)DERY V2.0 Quadrifoglio Loaded.");
+    console.log("🍀 MEA(N)DERY V2.1 Quadrifoglio Loaded.");
     initApp();
 });

@@ -678,8 +678,8 @@
             <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
         </summary>
         
-        <div class="pt-4 space-y-2">
-            <label class="flex items-center cursor-pointer group mt-1">
+        <div class="pt-4 space-y-2 pl-1">
+            <label class="flex items-center cursor-pointer group">
                 <input type="checkbox" id="labelShowSulfites" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
                 <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors">Contains Sulfites</span>
             </label>
@@ -714,13 +714,13 @@
             <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
         </summary>
         
-        <div class="pt-4 space-y-4">
+        <div class="pt-4 space-y-4 px-1">
             <div>
                 <div class="flex justify-between text-xs mb-1">
                     <label>Title Font Size (Max)</label>
                     <span id="disp-title-size" class="font-mono text-gray-400">60px</span>
                 </div>
-                <input type="range" id="tuneTitleSize" min="20" max="100" value="60" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                <input type="range" id="tuneTitleSize" min="20" max="150" value="60" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
 
             <div>
@@ -745,7 +745,6 @@
                     <span id="disp-logo-gap" class="font-mono text-gray-400">10px</span>
                 </div>
                 <input type="range" id="tuneLogoGap" min="0" max="150" value="10" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-                <p class="text-[9px] text-gray-400 mt-1">Increasing this pushes the title away from the logo.</p>
             </div>
         </div>
     </details>

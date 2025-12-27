@@ -3715,40 +3715,58 @@ async function loadUserLabelFormats() {
 function populateLabelPaperDropdown() {
     const select = document.getElementById('labelPaper');
     if (!select) return;
+    
+    // Huidige selectie onthouden
+    const currentVal = select.value;
     select.innerHTML = '';
     
-    // 1. Standaard Formaten
+    // 1. Standaard Formaten (Hardcoded fallback als builtInLabelFormats leeg is)
+    const defaults = (typeof builtInLabelFormats !== 'undefined') ? builtInLabelFormats : {
+        'avery_l7165': { name: 'Avery L7165 (99.1x67.7mm)' },
+        'herma_4453': { name: 'Herma 4453 (105x148mm)' },
+        'avery_l7163': { name: 'Avery L7163 (99.1x38.1mm)' }
+    };
+
     const groupBuiltIn = document.createElement('optgroup');
     groupBuiltIn.label = "Standard Formats";
-    Object.keys(builtInLabelFormats).forEach(key => {
+    Object.keys(defaults).forEach(key => {
         const opt = document.createElement('option');
-        opt.value = key; opt.text = builtInLabelFormats[key].name;
+        opt.value = key; 
+        opt.text = defaults[key].name;
         groupBuiltIn.appendChild(opt);
     });
     select.appendChild(groupBuiltIn);
 
     // 2. Eigen Formaten
-    if (Object.keys(userLabelFormats).length > 0) {
+    if (typeof userLabelFormats !== 'undefined' && Object.keys(userLabelFormats).length > 0) {
         const groupUser = document.createElement('optgroup');
         groupUser.label = "My Custom Formats";
         Object.keys(userLabelFormats).forEach(key => {
             const opt = document.createElement('option');
-            opt.value = key; opt.text = userLabelFormats[key].name;
+            opt.value = key; 
+            opt.text = userLabelFormats[key].name;
             groupUser.appendChild(opt);
         });
         select.appendChild(groupUser);
     }
 
-    // Toggle delete knopje
-    select.addEventListener('change', () => {
-        const isCustom = userLabelFormats.hasOwnProperty(select.value);
-        document.getElementById('deleteLabelFormatBtn').classList.toggle('hidden', !isCustom);
-        updateLabelPreviewDimensions();
-    });
+    // Toggle delete knopje logic
+    select.onchange = () => {
+        const isCustom = typeof userLabelFormats !== 'undefined' && userLabelFormats.hasOwnProperty(select.value);
+        const delBtn = document.getElementById('deleteLabelFormatBtn');
+        if(delBtn) delBtn.classList.toggle('hidden', !isCustom);
+        if(typeof updateLabelPreviewDimensions === 'function') updateLabelPreviewDimensions();
+    };
 
-    // Default selectie
-    if(!select.value) select.value = 'avery_l7165';
-    updateLabelPreviewDimensions();
+    // Herstel selectie of zet default
+    if (currentVal && (defaults[currentVal] || (typeof userLabelFormats !== 'undefined' && userLabelFormats[currentVal]))) {
+        select.value = currentVal;
+    } else {
+        select.value = 'avery_l7165';
+    }
+    
+    // Trigger update afmetingen
+    if(typeof updateLabelPreviewDimensions === 'function') updateLabelPreviewDimensions();
 }
 
 // --- DEZE FUNCTIE PAST DE GROOTTE VAN DE PREVIEW AAN ---
@@ -5679,12 +5697,13 @@ window.autoFitLabelText = function() {
     const sizeSlider = document.getElementById('tuneTitleSize');
     
     const safeZone = gapSlider ? parseInt(gapSlider.value) : 10;
-    const maxFontSize = sizeSlider ? parseInt(sizeSlider.value) : 60; // Dit is je nieuwe slider
+    // Gebruik slider waarde als start, fallback naar 60px
+    const startFontSize = sizeSlider ? parseInt(sizeSlider.value) : 60; 
 
     if (!titleEl || !container) return;
 
-    // 2. RESET NAAR DE MAXIMALE GROOTTE (uit de slider)
-    let fontSize = maxFontSize; 
+    // 2. RESET NAAR DE SLIDER GROOTTE
+    let fontSize = startFontSize; 
     titleEl.style.fontSize = fontSize + 'px';
     titleEl.style.lineHeight = '0.9'; 
     titleEl.style.display = 'block';
@@ -5697,7 +5716,6 @@ window.autoFitLabelText = function() {
         const tRect = titleEl.getBoundingClientRect();
         const lRect = logoEl.getBoundingClientRect();
 
-        // We checken of de tekst in de buurt komt van het logo + safeZone
         const overlap = !(tRect.right < (lRect.left - safeZone) || 
                           tRect.left > (lRect.right + safeZone) || 
                           tRect.bottom < (lRect.top - safeZone) || 
@@ -5710,8 +5728,8 @@ window.autoFitLabelText = function() {
                 titleEl.scrollHeight > container.offsetHeight);
     }
 
-    // 3. VERKLEIN LUS
-    // Zolang hij botst OF te groot is -> maak kleiner
+    // 3. VERKLEIN LUS (Alleen kleiner maken als het NIET past)
+    // Als de tekst past bij de gekozen grootte, blijft hij zo groot.
     while ( (checkCollision() || checkOverflow()) && fontSize > 10 ) {
         fontSize--; 
         titleEl.style.fontSize = fontSize + 'px';
@@ -5861,17 +5879,20 @@ function initApp() {
 
     // --- LAYOUT TUNING LISTENERS ---
     ['tuneTitleSize', 'tuneStyleSize', 'tuneTitleMargin', 'tuneLogoGap'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', (e) => {
-            // Update getalletje
-            if(id === 'tuneTitleSize') document.getElementById('disp-title-size').textContent = e.target.value + 'px';
-            if(id === 'tuneStyleSize') document.getElementById('disp-style-size').textContent = e.target.value + 'px';
-            if(id === 'tuneTitleMargin') document.getElementById('disp-title-margin').textContent = e.target.value + 'px';
-            if(id === 'tuneLogoGap') document.getElementById('disp-logo-gap').textContent = e.target.value + 'px';
-            
-            // Update label & forceer herberekening
-            const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
-            setLabelTheme(activeTheme);
-        });
+        const el = document.getElementById(id);
+        if(el) {
+            el.addEventListener('input', (e) => {
+                // Update getalletje naast slider
+                if(id === 'tuneTitleSize') document.getElementById('disp-title-size').textContent = e.target.value + 'px';
+                if(id === 'tuneStyleSize') document.getElementById('disp-style-size').textContent = e.target.value + 'px';
+                if(id === 'tuneTitleMargin') document.getElementById('disp-title-margin').textContent = e.target.value + 'px';
+                if(id === 'tuneLogoGap') document.getElementById('disp-logo-gap').textContent = e.target.value + 'px';
+                
+                // Update label & forceer herberekening
+                const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
+                if(typeof setLabelTheme === 'function') setLabelTheme(activeTheme);
+            });
+        }
     });
 }
 

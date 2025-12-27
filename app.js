@@ -3878,51 +3878,60 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: WRAP-AROUND (Front & Back op één etiket)
+    // THEMA 1: WRAP-AROUND FINAL (Logo Top-Right + Peak Date)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
-        // Logo voor de voorkant (groot en trots)
+        // Logo
         let logoHtml = '';
         if (hasImage) {
-            logoHtml = `<img src="${imgSrc}" class="w-32 h-32 object-cover rounded-full border-4 border-white shadow-sm">`;
+            logoHtml = `<img src="${imgSrc}" class="w-24 h-24 object-cover rounded-full border-4 border-white shadow-sm">`;
         } else {
-            logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain opacity-90">`;
+            logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-24 h-24 object-contain opacity-90">`;
         }
 
+        // BEREKEN PEAK DATUM (+6 Maanden voor preview)
+        let peakDateVal = "2026-01-01"; // Fallback
+        try {
+            const d = new Date();
+            d.setMonth(d.getMonth() + 6); // Tel 6 maanden op
+            peakDateVal = d.toLocaleDateString();
+        } catch(e) {}
+
         container.innerHTML = `
-            <div class="h-full w-[35%] bg-gray-50/50 border-r border-dashed border-gray-300 py-4 px-3 flex flex-col justify-between text-right">
+            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-3 px-3 flex flex-col justify-between text-right">
                 
-                <div class="flex flex-col gap-3">
-                    <p class="text-[7px] leading-relaxed text-gray-500 italic font-serif">
-                        ${desc || "A handcrafted honey wine, aged to perfection."}
+                <div class="flex flex-col gap-2 overflow-hidden">
+                    <p class="text-[7px] leading-relaxed text-gray-500 italic font-serif text-justify">
+                        ${desc || "A handcrafted honey wine, aged to perfection. Drink cool and share with friends."}
                     </p>
                     
-                    <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[7px] font-bold uppercase tracking-wider text-gray-400 leading-tight">
+                    <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[6px] font-bold uppercase tracking-wider text-gray-400 leading-tight border-t border-gray-200 pt-1">
                         ${details}
                     </p>
                 </div>
 
-                <div class="text-[#8F8C79]">
-                    <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[8px] font-bold uppercase tracking-wider border-t border-gray-200 pt-2 mb-2">
-                        <div class="text-gray-400">ABV</div> <div class="text-black">${abv}%</div>
-                        <div class="text-gray-400">FG</div> <div class="text-black">${fg || '-'}</div>
-                        <div class="text-gray-400">Vol</div> <div class="text-black">${vol}ml</div>
-                        <div class="text-gray-400">Date</div> <div class="text-black">${dateVal}</div>
+                <div class="text-[#8F8C79] mt-auto">
+                    <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[7px] font-bold uppercase tracking-wider border-t-2 border-gray-200 pt-2 mb-1">
+                        <div class="text-gray-400">ABV</div> <div class="text-black text-right">${abv}%</div>
+                        <div class="text-gray-400">FG</div> <div class="text-black text-right">${fg || '-'}</div>
+                        <div class="text-gray-400">Vol</div> <div class="text-black text-right">${vol}ml</div>
+                        <div class="text-gray-400">Bottled</div> <div class="text-black text-right">${dateVal}</div>
+                        <div class="text-app-brand">Peak</div> <div class="text-app-brand text-right">${peakDateVal}</div>
                     </div>
 
-                    <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[5px] uppercase opacity-50 leading-tight">
-                        Contains Sulfites • Drink Responsibly
+                    <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[5px] uppercase opacity-50 leading-tight mt-1">
+                        Contains Sulfites
                     </p>
                 </div>
             </div>
 
-            <div class="h-full w-[65%] flex flex-row items-center justify-between p-4 pl-6">
+            <div class="h-full w-[65%] flex flex-row p-4 pl-5 relative">
                 
-                <div class="h-full flex flex-col justify-center items-start gap-2">
-                    <div id="title-container" class="h-4/5 flex flex-col justify-center items-start overflow-hidden w-20">
+                <div class="h-full flex flex-col justify-center items-start gap-1 z-10">
+                    <div id="title-container" class="h-[90%] w-32 flex flex-col justify-center items-start overflow-hidden">
                         <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap origin-center" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
@@ -3933,15 +3942,15 @@ function setLabelTheme(theme) {
                     </p>
                 </div>
 
-                <div class="flex-grow flex items-center justify-center">
+                <div class="absolute top-4 right-4">
                     ${logoHtml}
                 </div>
             </div>
         `;
         
-        // Trigger de auto-fit functies
+        // Trigger auto-fit (dubbel voor zekerheid)
         setTimeout(window.autoFitLabelText, 50);
-        setTimeout(window.autoFitLabelText, 200);
+        setTimeout(window.autoFitLabelText, 250);
     }
 
     // =================================================================
@@ -5637,18 +5646,20 @@ window.autoFitLabelText = function() {
     
     if (!titleEl || !container) return;
 
-    // Reset: Begin op een veilige maximale grootte
+    // Reset naar groot
     let fontSize = 55; 
     titleEl.style.fontSize = fontSize + 'px';
-    titleEl.style.lineHeight = '0.9';
-    titleEl.style.display = 'block'; // Zeker weten dat hij zichtbaar is
+    titleEl.style.lineHeight = '0.85';
+    titleEl.style.display = 'block';
 
-    // Veiligheidscheck: Als container hoogte 0 is (verborgen tabblad), stop dan om errors te voorkomen
     if (container.clientHeight === 0) return;
 
-    // Zolang de tekst groter is dan de container...
-    // We gebruiken een minimum van 20px zodat hij nooit verdwijnt.
-    while (titleEl.scrollHeight > container.clientHeight && fontSize > 20) {
+    // We checken nu zowel hoogte als breedte (omdat hij roteert kan breedte ook een probleem zijn)
+    // We verkleinen zolang de inhoud groter is dan de container
+    while (
+        (titleEl.scrollHeight > container.clientHeight || titleEl.scrollWidth > container.clientWidth) 
+        && fontSize > 15
+    ) {
         fontSize -= 1; 
         titleEl.style.fontSize = fontSize + 'px';
     }

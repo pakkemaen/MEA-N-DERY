@@ -2166,8 +2166,6 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
     </div>
 </div>
 `;
-    </div>
-    `;
 
     return `
         <div class="brew-log-section" data-id="${idSuffix}">

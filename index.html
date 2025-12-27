@@ -86,27 +86,31 @@
             <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg overflow-y-auto" style="max-height: 80vh;">
                 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div onclick="switchMainView('brewing'); switchSubView('brew-day-1', 'brewing-main-view')" 
-                         class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 group">
-                        <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-brand transition-colors">Primary</p>
-                        <p id="stat-primary-batches" class="text-2xl font-header font-bold text-app-primary group-hover:text-white transition-colors">--</p>
-                    </div>
-                    <div onclick="switchMainView('brewing'); switchSubView('brew-day-2', 'brewing-main-view')" 
-                         class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 group">
-                        <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-brand transition-colors">Aging</p>
-                        <p id="stat-aging-batches" class="text-2xl font-header font-bold text-app-primary group-hover:text-white transition-colors">--</p>
-                    </div>
-                    <div onclick="switchMainView('management'); switchSubView('cellar', 'management-main-view')" 
-                         class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 group">
-                        <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-brand transition-colors">In Cellar</p>
-                        <p id="stat-bottles" class="text-2xl font-header font-bold text-app-primary group-hover:text-white transition-colors">--</p>
-                    </div>
-                    <div onclick="switchMainView('management'); switchSubView('financials', 'management-main-view')" 
-                         class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 group">
-                        <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-brand transition-colors">Value</p>
-                        <p id="stat-spent" class="text-xl font-header font-bold text-app-primary group-hover:text-white transition-colors">--</p>
-                    </div>
-                </div>
+    
+    <div onclick="switchMainView('brewing'); switchSubView('brew-day-1', 'brewing-main-view')" 
+         class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 group">
+        <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-primary transition-colors">Primary</p>
+        <p id="stat-primary-batches" class="text-2xl font-header font-bold text-app-brand transition-colors">--</p>
+    </div>
+
+    <div onclick="switchMainView('brewing'); switchSubView('brew-day-2', 'brewing-main-view')" 
+         class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 group">
+        <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-primary transition-colors">Aging</p>
+        <p id="stat-aging-batches" class="text-2xl font-header font-bold text-app-brand transition-colors">--</p>
+    </div>
+
+    <div onclick="switchMainView('management'); switchSubView('cellar', 'management-main-view')" 
+         class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 group">
+        <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-primary transition-colors">In Cellar</p>
+        <p id="stat-bottles" class="text-2xl font-header font-bold text-app-brand transition-colors">--</p>
+    </div>
+
+    <div onclick="switchMainView('management'); switchSubView('financials', 'management-main-view')" 
+         class="card p-3 text-center border-l-4 border-app-brand bg-app-tertiary cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 group">
+        <p class="text-xs text-app-secondary uppercase font-bold tracking-wider group-hover:text-app-primary transition-colors">Value</p>
+        <p id="stat-spent" class="text-xl font-header font-bold text-app-brand transition-colors">--</p>
+    </div>
+</div>
 
                 <div id="current-brew-card" class="card p-6 rounded-lg mb-6 hidden border-2 border-app-brand/20 bg-app-tertiary"></div>
 

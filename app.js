@@ -3878,7 +3878,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (Met strikte breedte-limiet voor titel)
+    // THEMA 1: STANDAARD (Strict Layout V3)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -3892,7 +3892,7 @@ function setLabelTheme(theme) {
             logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-24 h-24 object-contain opacity-90">`;
         }
 
-        // Peak Date berekening
+        // Peak Date
         let peakDateVal = "2026-01-01"; 
         try {
             const d = new Date();
@@ -3928,9 +3928,9 @@ function setLabelTheme(theme) {
 
             <div class="h-full w-[65%] flex flex-row relative p-2">
                 
-                <div id="title-container" class="h-full w-[70%] flex flex-col justify-center items-center overflow-hidden relative border-r border-transparent">
+                <div id="title-container" class="h-full w-[60%] flex flex-col justify-center items-center overflow-hidden relative">
                     <div class="h-[95%] w-full flex items-center justify-center">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-normal text-center leading-none break-words" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-none break-words whitespace-normal" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
                     </div>
@@ -3948,9 +3948,10 @@ function setLabelTheme(theme) {
             </div>
         `;
         
-        // Trigger auto-fit (meerdere keren voor rendering updates)
-        setTimeout(window.autoFitLabelText, 50);
-        setTimeout(window.autoFitLabelText, 300);
+        // Trigger auto-fit (meerdere keren met vertraging voor rendering)
+        setTimeout(window.autoFitLabelText, 10);
+        setTimeout(window.autoFitLabelText, 100);
+        setTimeout(window.autoFitLabelText, 500);
     }
 
     // =================================================================
@@ -5646,22 +5647,26 @@ window.autoFitLabelText = function() {
     
     if (!titleEl || !container) return;
 
-    // Reset naar groot
-    let fontSize = 50; 
+    // Reset naar een startgrootte (niet te groot starten om flash te voorkomen)
+    let fontSize = 60; 
     titleEl.style.fontSize = fontSize + 'px';
-    titleEl.style.lineHeight = '1.0'; // Strakke regelafstand
+    titleEl.style.lineHeight = '1.0'; 
     titleEl.style.display = 'block';
 
-    if (container.clientHeight === 0 || container.clientWidth === 0) return;
+    // Als de container niet zichtbaar is, stop
+    if (container.offsetWidth === 0 || container.offsetHeight === 0) return;
 
-    // Zolang de inhoud groter is dan de container (hoogte OF breedte)
-    // We trekken een marge af (padding)
+    // MARGE: We willen dat de tekst 10px kleiner is dan de container
+    const maxWidth = container.offsetWidth - 10;
+    const maxHeight = container.offsetHeight - 10;
+
+    // Zolang de tekst groter is dan de container...
+    // Let op: Bij vertical-rl is scrollWidth de "breedte" van het blok tekst (wat visueel breedte is na rotatie)
     while (
-        (titleEl.scrollWidth > (container.clientWidth - 10) || 
-         titleEl.scrollHeight > (container.clientHeight - 10)) 
-        && fontSize > 8
+        (titleEl.scrollWidth > maxWidth || titleEl.scrollHeight > maxHeight) 
+        && fontSize > 10
     ) {
-        fontSize -= 1; 
+        fontSize--; 
         titleEl.style.fontSize = fontSize + 'px';
     }
 }

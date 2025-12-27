@@ -1668,11 +1668,37 @@ window.showBrewDetail = function(brewId) {
     // 4. Render het logboek met de gecombineerde data
     const logHtml = getBrewLogHtml(combinedLogData, brew.id);
     
+    // --- KOSTEN BEREKENING UPDATE ---
     const currency = userSettings.currencySymbol || '€';
     let costHtml = '';
+    
     if (brew.totalCost > 0) {
-        const perL = brew.batchSize > 0 ? brew.totalCost / brew.batchSize : 0;
-        costHtml = `<div class="mt-6 p-4 bg-amber-100 rounded-lg dark:bg-amber-900/20"><h3 class="font-header text-lg text-amber-900 dark:text-amber-200">Cost</h3><p>Total: ${currency}${brew.totalCost.toFixed(2)}</p><p>Per Liter: ${currency}${perL.toFixed(2)}</p></div>`;
+        // 1. Bepaal het ECHTE volume (Volume na racking > Oorspronkelijke batch size)
+        // We kijken of er in logData een 'currentVolume' staat (ons nieuwe veld)
+        // Let op: logData kan leeg zijn bij oude batches, dus we bouwen veiligheid in.
+        const realVolume = (brew.logData && brew.logData.currentVolume && parseFloat(brew.logData.currentVolume) > 0) 
+                           ? parseFloat(brew.logData.currentVolume) 
+                           : (brew.batchSize > 0 ? brew.batchSize : 0);
+
+        // 2. Bereken prijs per liter op basis van wat er écht over is
+        const perL = realVolume > 0 ? brew.totalCost / realVolume : 0;
+        
+        // 3. Toon de info (Met een labeltje als het gebaseerd is op Racking Volume)
+        const volumeLabel = (brew.logData && brew.logData.currentVolume) ? "Actual Vol" : "Target Vol";
+        
+        costHtml = `
+            <div class="mt-6 p-4 bg-amber-100 rounded-lg dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <h3 class="font-header text-lg text-amber-900 dark:text-amber-200 font-bold uppercase">Financials</h3>
+                        <p class="text-xs text-amber-800/70 dark:text-amber-300/70">Based on ${volumeLabel}: ${realVolume}L</p>
+                    </div>
+                    <div class="text-right">
+                         <p class="text-sm text-amber-900 dark:text-amber-100">Total: <strong>${currency}${brew.totalCost.toFixed(2)}</strong></p>
+                         <p class="text-xl font-bold text-amber-700 dark:text-amber-400">${currency}${perL.toFixed(2)} <span class="text-xs font-normal">/ L</span></p>
+                    </div>
+                </div>
+            </div>`;
     }
 
     historyDetailContainer.innerHTML = `
@@ -4646,20 +4672,21 @@ window.removeCustomBottleFromList = function(index) {
     renderCustomBottlesList();
 }
 
-// --- DE HOOFDFUNCTIE: BOTTLE BATCH ---
-async function bottleBatch(e) {
+// --- BOTTLE BATCH (MET SLIMME PHYSICS & AUTO-CORRECT) ---
+window.bottleBatch = async function(e) {
     e.preventDefault();
     if (!currentBrewToBottleId) return;
 
     const submitButton = e.target.querySelector('button[type="submit"]');
     const originalButtonText = submitButton.innerHTML;
     submitButton.disabled = true;
-    submitButton.textContent = 'Processing...';
+    submitButton.textContent = 'Checking Physics...'; 
 
     try {
         const originalBrew = brews.find(b => b.id === currentBrewToBottleId);
         if (!originalBrew) throw new Error("Could not find the original recipe.");
 
+        // 1. VERZAMEL DE FLESSEN
         const bottlesData = [
             { size: 750, quantity: parseInt(document.getElementById('qty750').value) || 0, price: null },
             { size: 500, quantity: parseInt(document.getElementById('qty500').value) || 0, price: null },
@@ -4670,14 +4697,61 @@ async function bottleBatch(e) {
 
         if (bottlesData.length === 0) throw new Error("Enter quantity for at least one bottle.");
 
-        // 1. Stock Check
+        // --- STAP 2: PHYSICS CHECK & AUTO-CORRECT LOGIC (V3.0) ---
+        let totalLitersBottled = 0;
+        bottlesData.forEach(b => totalLitersBottled += (b.size * b.quantity) / 1000);
+
+        // Haal huidige volume op
+        const currentLogVol = (originalBrew.logData && originalBrew.logData.currentVolume && parseFloat(originalBrew.logData.currentVolume) > 0) 
+                              ? parseFloat(originalBrew.logData.currentVolume) 
+                              : originalBrew.batchSize;
+
+        let volumeUpdatePayload = {}; 
+        const diff = (totalLitersBottled - currentLogVol).toFixed(2);
+
+        // SCENARIO 1: MEER GEBOTTELD DAN AANWEZIG (Onmogelijk -> Altijd vragen)
+        if (totalLitersBottled > currentLogVol) {
+            
+            if (confirm(`⚠️ PHYSICS WARNING:\n\nYou are bottling ${totalLitersBottled.toFixed(2)}L, but logs say ${currentLogVol.toFixed(2)}L available (Diff: +${diff}L).\n\nClick OK to auto-correct the log to ${totalLitersBottled.toFixed(2)}L and proceed.\nClick Cancel to check your inputs.`)) {
+                volumeUpdatePayload = { "logData.currentVolume": totalLitersBottled.toFixed(2) };
+            } else {
+                throw new Error("Bottling cancelled by user.");
+            }
+
+        // SCENARIO 2: MINDER GEBOTTELD (Verlies? Of meetfout?)
+        // We vragen het alleen als het verschil groter is dan 0.5 Liter (kleine verliezen zijn normaal)
+        } else if ((currentLogVol - totalLitersBottled) > 0.5) {
+            
+            const loss = (currentLogVol - totalLitersBottled).toFixed(2);
+            
+            // De vraag: Is het verlies (OK) of een correctie (Cancel -> Update Log)?
+            // We gebruiken hier een trucje met confirm:
+            // OK = "Het is verlies (Spill/Trub)" -> Logboek NIET aanpassen (want je had echt 5L)
+            // Cancel = "Pas logboek aan (Meetfout)" -> Logboek WEL aanpassen
+            
+            // Omdat confirm() maar 2 smaken heeft, maken we een custom flow met prompt of een slimme confirm tekst.
+            // Laten we het simpel houden: We vragen of we het logboek moeten corrigeren.
+            
+            if (confirm(`📉 SIGNIFICANT LOSS DETECTED:\n\nYou are bottling ${totalLitersBottled.toFixed(2)}L, leaving ${loss}L behind.\n\nIs this normal loss (trub/spill)?\n\n[OK] = Yes, record as Loss. Keep log at ${currentLogVol.toFixed(2)}L.\n[Cancel] = No, I measured wrong. Update log to ${totalLitersBottled.toFixed(2)}L.`)) {
+                // OK geklikt: Doe niets (Het is verlies, dus logboek blijft 5L)
+                console.log("User confirmed loss. No log update.");
+            } else {
+                // Cancel geklikt: Gebruiker wil het logboek corrigeren
+                if(confirm(`Confirm: Update logbook volume from ${currentLogVol.toFixed(2)}L to ${totalLitersBottled.toFixed(2)}L?`)) {
+                     volumeUpdatePayload = { "logData.currentVolume": totalLitersBottled.toFixed(2) };
+                }
+            }
+        }
+        // ----------------------------------------------------
+
+        // --- STAP 3: STOCK CHECK (Verpakking) ---
         const closureType = document.getElementById('closureTypeSelect').value;
         const outOfStockItems = [];
         let totalBottles = 0;
 
         bottlesData.forEach(bottle => {
             totalBottles += bottle.quantity;
-            if (bottle.price === null) { // Alleen checken voor standaard flessen
+            if (bottle.price === null) { // Alleen checken voor standaard items
                 const stockId = `bottle_${bottle.size}`;
                 const currentStock = packagingCosts[stockId]?.qty || 0;
                 if (bottle.quantity > currentStock) {
@@ -4704,9 +4778,8 @@ async function bottleBatch(e) {
 
         if (outOfStockItems.length > 0) throw new Error(`Stock missing:\n- ${outOfStockItems.join('\n- ')}`);
 
-        // 2. Calculate Costs
-        // We gebruiken getPackagingCosts() die in het vorige blok zat.
-        // Als die functie er niet is, gebruiken we een veilige fallback.
+        // --- STAP 4: KOSTEN BEREKENEN ---
+        // Helper functie inline of extern gebruiken
         const packCosts = (typeof getPackagingCosts === 'function') ? getPackagingCosts() : {};
         let totalPackagingCost = 0;
 
@@ -4726,9 +4799,10 @@ async function bottleBatch(e) {
         const finalTotalCost = (originalBrew.totalCost || 0) + totalPackagingCost;
         const currency = userSettings.currencySymbol || '€';
 
+        // Finale Bevestiging
         if (confirm(`Packaging cost: ${currency}${totalPackagingCost.toFixed(2)}. Total batch cost: ${currency}${finalTotalCost.toFixed(2)}. Proceed?`)) {
             
-            // 3. Deduct Stock
+            // --- STAP 5: VOORRAAD AFBOEKEN ---
             const updatedStock = JSON.parse(JSON.stringify(packagingCosts));
             const deduct = (id, qty) => {
                 if (updatedStock[id]) {
@@ -4748,11 +4822,11 @@ async function bottleBatch(e) {
             } else deduct(closureType, totalBottles);
             deduct('label', totalBottles);
 
-            // Save Packaging
+            // Opslaan verpakking
             await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'settings', 'packaging'), updatedStock);
             packagingCosts = updatedStock;
 
-            // 4. Create Cellar Entry
+            // --- STAP 6: NAAR DE KELDER (CELLAR) ---
             const bottlingDate = new Date(document.getElementById('bottlingDate').value);
             const cellarData = {
                 userId, brewId: currentBrewToBottleId,
@@ -4766,9 +4840,15 @@ async function bottleBatch(e) {
 
             await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar'), cellarData);
 
-            // 5. Update Brew Status
-            await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId), { isBottled: true });
+            // --- STAP 7: STATUS UPDATE (MET AUTO-CORRECT VOLUME) ---
+            const brewUpdateData = { 
+                isBottled: true,
+                ...volumeUpdatePayload // <--- Hier wordt de log correctie toegepast indien nodig!
+            };
+            
+            await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId), brewUpdateData);
 
+            // Reset UI
             if (currentBrewDay.brewId === currentBrewToBottleId) {
                 currentBrewDay = { brewId: null };
                 await saveUserSettings();
@@ -4776,7 +4856,8 @@ async function bottleBatch(e) {
 
             hideBottlingModal();
             showToast("Batch bottled successfully!", "success");
-            // Refresh views
+            
+            // Refresh alle schermen
             if(typeof loadHistory === 'function') loadHistory();
             if(typeof loadCellar === 'function') loadCellar();
             if(typeof renderBrewDay === 'function') renderBrewDay('none');

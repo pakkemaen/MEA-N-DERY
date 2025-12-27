@@ -3897,7 +3897,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (Layout Fixed: Titel | Stijl | Logo)
+    // THEMA 1: STANDAARD (Absolute Positioning Fix)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -3914,7 +3914,7 @@ function setLabelTheme(theme) {
         let peakDateVal = "2026-01-01"; 
         try { const d = new Date(); d.setMonth(d.getMonth() + 6); peakDateVal = d.toLocaleDateString(); } catch(e) {}
 
-        // Extra info string opbouwen
+        // Info string opbouwen
         let extraInfoHtml = '';
         const showYeast = document.getElementById('labelShowYeast')?.checked;
         const showHoney = document.getElementById('labelShowHoney')?.checked;
@@ -3949,18 +3949,16 @@ function setLabelTheme(theme) {
                 </div>
             </div>
 
-            <div class="h-full w-[65%] flex flex-row relative p-2 pl-2">
+            <div class="h-full w-[65%] relative p-2">
                 
-                <div id="title-container" class="h-full w-[75%] flex flex-col justify-end items-center overflow-hidden border-r border-transparent">
-                    <div class="h-full w-full flex flex-col-reverse items-center justify-start">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-[0.95] break-words whitespace-normal" style="writing-mode: vertical-rl; transform: rotate(180deg); display: block;">
-                            ${title}
-                        </h1>
-                    </div>
+                <div id="title-container" class="absolute top-2 bottom-2 left-2 w-[70%] flex items-end justify-center overflow-hidden border-r border-transparent">
+                    <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-[0.9] break-words whitespace-normal" style="writing-mode: vertical-rl; transform: rotate(180deg); width: 100%; max-height: 100%;">
+                        ${title}
+                    </h1>
                 </div>
                 
-                <div class="h-full w-[12%] flex flex-col justify-end items-center pb-1">
-                     <p id="prev-subtitle" class="text-[9px] font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                <div class="absolute top-2 bottom-2 left-[72%] w-[10%] flex items-end justify-center">
+                     <p id="prev-subtitle" class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                         ${sub}
                     </p>
                 </div>
@@ -3971,7 +3969,7 @@ function setLabelTheme(theme) {
             </div>
         `;
         
-        // Trigger de auto-fit functie
+        // Trigger auto-fit
         setTimeout(window.autoFitLabelText, 50);
         setTimeout(window.autoFitLabelText, 300);
     }
@@ -5669,30 +5667,34 @@ window.autoFitLabelText = function() {
     
     if (!titleEl || !container) return;
 
-    // Reset naar een grote startwaarde
-    let fontSize = 55; 
+    // Reset naar groot
+    let fontSize = 60; 
     titleEl.style.fontSize = fontSize + 'px';
-    titleEl.style.lineHeight = '0.9'; // Iets strakker voor verticale tekst
-    
+    titleEl.style.lineHeight = '0.9'; 
+    titleEl.style.display = 'block';
+
     // Als de container niet zichtbaar is (tabblad dicht), stop
     if (container.offsetWidth === 0 || container.offsetHeight === 0) return;
 
+    // Haal de echte afmetingen op
     const maxWidth = container.offsetWidth;
     const maxHeight = container.offsetHeight;
 
-    // Zolang de tekst groter is dan de container...
-    // We gebruiken scrollWidth/Height omdat bij vertical-rl de dimensies draaien
+    // Verklein lus: Zolang hij groter is, maak kleiner
+    // We gebruiken een buffer van 5px
     while (
         (titleEl.scrollWidth > maxWidth || titleEl.scrollHeight > maxHeight) 
-        && fontSize > 14 // STOP NOOIT ONDER 14px!
+        && fontSize > 14 // VEILIGHEID: Stop nooit onder 14px
     ) {
         fontSize--; 
         titleEl.style.fontSize = fontSize + 'px';
     }
     
-    // Als de lus klaar is, staat de grootte goed.
-    // Voor de zekerheid: als hij toch op 14px is geëindigd en het past nog steeds niet 100%,
-    // dan is dat jammer, maar de tekst is tenminste zichtbaar.
+    // Noodgreep: Als na de loop de font-size 14 is, forceer hem dan daarop
+    // zodat hij nooit 0 wordt of verdwijnt.
+    if (fontSize <= 14) {
+        titleEl.style.fontSize = '14px';
+    }
 }
 
 function initApp() {

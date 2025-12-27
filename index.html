@@ -60,10 +60,16 @@
     <div id="login-view" class="fixed inset-0 bg-[#fdfbf7] dark:bg-[#1a1a1a] flex items-center justify-center z-50">
         <div class="text-center p-8 max-w-md mx-auto w-full">
             
-            <img src="logo.png" class="w-48 h-48 mx-auto mb-4 object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500" alt="Meandery Logo">
-            <h1 class="text-6xl font-header text-app-header mb-8 text-center">MEA<span class="text-app-brand">(N)</span>DERY</h1>
-            
-            <div class="card p-8 rounded-xl shadow-2xl bg-white dark:bg-[#2a2a2a] border border-gray-100 dark:border-gray-700">
+    <img src="logo.png" 
+         class="w-48 h-48 mx-auto mb-4 object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500" 
+         alt="Meandery Logo"
+         onerror="this.style.display='none'; document.getElementById('login-brand-text').classList.remove('hidden')">
+    
+    <h1 id="login-brand-text" class="hidden text-6xl font-header text-app-header mb-8 text-center">
+        MEA<span class="text-app-brand">(N)</span>DERY
+    </h1>
+    
+    <div class="card p-8 rounded-xl shadow-2xl bg-white dark:bg-[#2a2a2a] border border-gray-100 dark:border-gray-700">
                 <h2 class="text-3xl font-header font-bold mb-4 text-app-header">Welcome</h2>
                 <p class="text-app-secondary mb-6 text-sm">Please sign in to access your brewing data.</p>
                 <button id="google-login-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 btn flex items-center justify-center transition-colors shadow-md">
@@ -666,35 +672,40 @@
                 </div>
 
                 <div class="mt-4 pt-3 border-t border-app/10">
-                    <label class="text-xs font-bold text-app-brand uppercase tracking-wider mb-2 block">Extra Info on Label</label>
-                    
-                    <div class="bg-app-tertiary p-3 rounded-md border border-app-brand/10 space-y-2">
-                        <label class="flex items-center cursor-pointer group">
-                            <input type="checkbox" id="labelShowSulfites" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
-                            <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors">Contains Sulfites</span>
-                        </label>
+    <details class="group bg-app-tertiary rounded-md border border-app-brand/10">
+        <summary class="text-xs font-bold text-app-brand uppercase tracking-wider p-2 cursor-pointer flex justify-between items-center select-none hover:bg-app-brand/5">
+            <span>Extra Info on Label</span>
+            <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </summary>
+        
+        <div class="p-3 pt-0 space-y-2">
+            <label class="flex items-center cursor-pointer group mt-2">
+                <input type="checkbox" id="labelShowSulfites" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
+                <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors">Contains Sulfites</span>
+            </label>
 
-                        <label class="flex items-center cursor-pointer group">
-                            <input type="checkbox" id="labelShowYeast" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
-                            <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors truncate">
-                                Yeast: <span id="displayLabelYeast" class="text-app-secondary font-normal">--</span>
-                            </span>
-                        </label>
+            <label class="flex items-center cursor-pointer group">
+                <input type="checkbox" id="labelShowYeast" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
+                <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors truncate">
+                    Yeast: <span id="displayLabelYeast" class="text-app-secondary font-normal">--</span>
+                </span>
+            </label>
 
-                        <label class="flex items-center cursor-pointer group">
-                            <input type="checkbox" id="labelShowHoney" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
-                            <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors truncate">
-                                Honey: <span id="displayLabelHoney" class="text-app-secondary font-normal">--</span>
-                            </span>
-                        </label>
+            <label class="flex items-center cursor-pointer group">
+                <input type="checkbox" id="labelShowHoney" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
+                <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors truncate">
+                    Honey: <span id="displayLabelHoney" class="text-app-secondary font-normal">--</span>
+                </span>
+            </label>
 
-                        <label class="flex items-center cursor-pointer group">
-                            <input type="checkbox" id="labelShowDetails" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
-                            <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors">Full Ingredients List</span>
-                        </label>
-                    </div>
-                    <input type="hidden" id="labelDetails">
-                </div>
+            <label class="flex items-center cursor-pointer group">
+                <input type="checkbox" id="labelShowDetails" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
+                <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors">Full Ingredients List</span>
+            </label>
+            <input type="hidden" id="labelDetails">
+        </div>
+    </details>
+</div>
             </div>
 
             <div class="pt-4 border-t border-app">

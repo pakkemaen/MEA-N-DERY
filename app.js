@@ -1194,6 +1194,7 @@ function renderBrewDay(brewId) {
         }
     }
 
+    // --- STAPPEN RENDERING MET SLIMME DESCRIPTION CHECK ---
     let stepsHtml = primarySteps.map((step, index) => {
         const amountMatch = (step.title + " " + step.description).match(/(\d+[.,]?\d*)\s*(kg|g|l|ml|oz|lbs)/i);
         let inputHtml = '';
@@ -1204,29 +1205,37 @@ function renderBrewDay(brewId) {
         const isCompleted = stepState === true || (stepState && stepState.completed);
         const savedAmount = (stepState && stepState.actualAmount) ? stepState.actualAmount : '';
 
-        // Compactere Input Veld
+        // Input veld logica
         if (amountMatch && !isCompleted) {
             detectedAmount = amountMatch[1];
             detectedUnit = amountMatch[2].toLowerCase();
-            inputHtml = `<div class="mt-1 flex items-center gap-2 bg-app-tertiary/50 p-1 rounded border border-app-brand/10"><label class="text-[10px] font-bold text-app-secondary uppercase">Actual:</label><input type="number" step="0.01" id="step-input-${index}" class="w-20 p-0.5 text-xs border rounded bg-app-primary border-app text-app-header text-center" placeholder="${detectedAmount}" value="${detectedAmount}"><span class="text-xs font-bold text-app-secondary">${detectedUnit}</span></div>`;
+            inputHtml = `<div class="mt-1 flex items-center gap-2 bg-app-tertiary/50 p-1 rounded border border-app-brand/10"><label class="text-[10px] font-bold text-app-secondary uppercase">Actual:</label><input type="number" step="0.01" id="step-input-${index}" class="w-20 p-0.5 text-xs border rounded bg-app-secondary border-app text-app-header text-center" placeholder="${detectedAmount}" value="${detectedAmount}"><span class="text-xs font-bold text-app-secondary">${detectedUnit}</span></div>`;
         } else if (isCompleted && savedAmount) {
              inputHtml = `<div class="mt-1 text-[10px] text-green-600 font-mono">✓ Added: ${savedAmount} ${detectedUnit || ''}</div>`;
         }
 
         const timerHtml = step.duration > 0 ? `<div class="timer-display my-1 text-sm font-mono font-bold text-app-brand" id="timer-${index}">${formatTime(step.duration)}</div>` : '';
         
-        // Compactere Knoppen
         const buttonsHtml = step.duration > 0 
             ? `<button data-action="startTimer" data-step="${index}" class="text-xs bg-green-600 text-white py-1 px-3 rounded shadow hover:bg-green-700 btn uppercase tracking-wide">Start Timer</button>` 
             : `<button data-action="completeStep" data-step="${index}" data-unit="${detectedUnit}" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase tracking-wide">Check</button>`;
 
-        // Compactere Layout (Minder padding, strakkere teksten)
+        // --- HIER ZIT DE FIX: Check of de beschrijving nuttig is ---
+        // We tonen het ALLEEN als het bestaat, niet leeg is, en niet de standaardzin is.
+        let descHtml = '';
+        if (step.description && 
+            step.description.trim() !== '' && 
+            !step.description.toLowerCase().includes('follow the instruction')) {
+            
+            descHtml = `<p class="text-xs text-app-secondary mt-1 leading-snug">${step.description}</p>`;
+        }
+
         return `
         <div id="step-${index}" class="step-item p-3 border-b border-app-brand/10 last:border-0 ${isCompleted ? 'opacity-60 grayscale' : ''}">
             <div class="flex justify-between items-start gap-3">
                 <div class="flex-grow">
                     <p class="step-title font-bold text-sm text-app-header leading-tight">${index + 1}. ${step.title}</p>
-                    <p class="text-xs text-app-secondary mt-1 leading-snug">${step.description}</p>
+                    ${descHtml}
                     ${inputHtml}
                     ${timerHtml}
                 </div>

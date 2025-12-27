@@ -2152,12 +2152,20 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
                 </tbody>
             </table>
         </div>
-        
-        <div class="mt-2 mb-6 text-right">
-            <span id="blending-summary-${idSuffix}" class="text-xs text-app-secondary font-mono bg-app-tertiary/50 p-2 rounded border border-app-brand/5">
-                Set 'Vol after racking' to update Final ABV.
-            </span>
+    
+    <div class="overflow-x-auto log-container">
+        <table class="fermentation-table w-full" id="blendingTable-${idSuffix}">
+            </table>
+    </div>
+    
+    <div class="mt-3 mb-6 flex justify-end">
+        <div id="blending-summary-${idSuffix}" class="text-right bg-app-tertiary/50 p-3 rounded-lg border border-app-brand/10 shadow-sm min-w-[220px]">
+            <p class="text-[10px] text-app-secondary uppercase tracking-wider mb-1">Summary</p>
+            <p class="text-xs text-app-header italic">Set 'Vol after racking' to calc.</p>
         </div>
+    </div>
+</div>
+`;
     </div>
     `;
 
@@ -2380,9 +2388,16 @@ window.recalcTotalABV = function(idSuffix) {
     
     const summary = document.getElementById(`blending-summary-${idSuffix}`);
     if(summary) {
+        // NIEUWE OPMAAK: Strak uitgelijnd met Flexbox
         summary.innerHTML = `
-            Base: <strong>${startVolume.toFixed(2)}L</strong> @ ${baseABV.toFixed(1)}% <br>
-            New Total: <strong>${totalLiquidVolume.toFixed(2)}L</strong> @ <strong>${newABV.toFixed(2)}%</strong> ABV
+            <div class="flex justify-between gap-4 text-xs text-app-secondary mb-1">
+                <span>Base (${startVolume.toFixed(2)}L):</span>
+                <span>${baseABV.toFixed(2)}%</span>
+            </div>
+            <div class="flex justify-between gap-4 text-sm font-bold text-app-brand border-t border-app-brand/20 pt-2 mt-1">
+                <span>New Total (${totalLiquidVolume.toFixed(2)}L):</span>
+                <span>${newABV.toFixed(2)}% ABV</span>
+            </div>
         `;
     }
 };
@@ -3884,23 +3899,24 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (Title Fix + Dynamic Info)
+    // THEMA 1: STANDAARD (Layout Fixed: Titel | Stijl | Logo)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
+        // Logo
         let logoHtml = '';
         if (hasImage) {
-            logoHtml = `<img src="${imgSrc}" class="w-24 h-24 object-cover rounded-full border-4 border-white shadow-sm">`;
+            logoHtml = `<img src="${imgSrc}" class="w-20 h-20 object-cover rounded-full border-4 border-white shadow-sm">`;
         } else {
-            logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-24 h-24 object-contain opacity-90">`;
+            logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-20 h-20 object-contain opacity-90">`;
         }
 
         let peakDateVal = "2026-01-01"; 
         try { const d = new Date(); d.setMonth(d.getMonth() + 6); peakDateVal = d.toLocaleDateString(); } catch(e) {}
 
-        // --- NIEUW: BOUW DE EXTRA INFO STRING OP ---
+        // Extra info string opbouwen
         let extraInfoHtml = '';
         const showYeast = document.getElementById('labelShowYeast')?.checked;
         const showHoney = document.getElementById('labelShowHoney')?.checked;
@@ -3910,22 +3926,17 @@ function setLabelTheme(theme) {
         let infoParts = [];
         if (showYeast) infoParts.push(`Yeast: ${document.getElementById('displayLabelYeast').textContent}`);
         if (showHoney) infoParts.push(`Honey: ${document.getElementById('displayLabelHoney').textContent}`);
-        if (showDetails) infoParts.push(details); // De volledige lijst
-
-        // Zet ze achter elkaar met een bolletje
+        if (showDetails) infoParts.push(details);
         const infoString = infoParts.join(' • ');
 
         container.innerHTML = `
             <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-3 px-3 flex flex-col justify-between text-right z-20 relative">
-                
                 <div class="flex flex-col gap-2 overflow-hidden">
                     <p id="prev-desc" class="text-[7px] leading-relaxed text-gray-500 italic font-serif text-justify">
                         ${desc || "A handcrafted honey wine."}
                     </p>
-                    
                     ${infoString ? `<p class="text-[6px] font-bold uppercase tracking-wider text-gray-400 leading-tight border-t border-gray-200 pt-1">${infoString}</p>` : ''}
                 </div>
-
                 <div class="text-[#8F8C79] mt-auto">
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[7px] font-bold uppercase tracking-wider border-t-2 border-gray-200 pt-2 mb-1">
                         <div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>
@@ -3940,18 +3951,18 @@ function setLabelTheme(theme) {
                 </div>
             </div>
 
-            <div class="h-full w-[65%] flex flex-row relative p-2 pl-4">
+            <div class="h-full w-[65%] flex flex-row relative p-2 pl-2">
                 
-                <div id="title-container" class="h-full w-[65%] flex flex-col justify-end items-center overflow-hidden relative border-r border-transparent py-4">
-                    <div class="w-full h-full flex flex-col-reverse items-center justify-start min-w-[20px]">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-normal text-center leading-[0.9] break-words origin-bottom" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                <div id="title-container" class="h-full w-[75%] flex flex-col justify-end items-center overflow-hidden border-r border-transparent">
+                    <div class="h-full w-full flex flex-col-reverse items-center justify-start">
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-[0.95] break-words whitespace-normal" style="writing-mode: vertical-rl; transform: rotate(180deg); display: block;">
                             ${title}
                         </h1>
                     </div>
                 </div>
                 
-                <div class="h-full flex flex-col justify-end items-center w-[15%] py-4">
-                     <p id="prev-subtitle" class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                <div class="h-full w-[12%] flex flex-col justify-end items-center pb-1">
+                     <p id="prev-subtitle" class="text-[9px] font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                         ${sub}
                     </p>
                 </div>
@@ -3962,7 +3973,7 @@ function setLabelTheme(theme) {
             </div>
         `;
         
-        // Trigger auto-fit agressief
+        // Trigger de auto-fit functie
         setTimeout(window.autoFitLabelText, 50);
         setTimeout(window.autoFitLabelText, 300);
     }
@@ -5660,31 +5671,30 @@ window.autoFitLabelText = function() {
     
     if (!titleEl || !container) return;
 
-    // Startgrootte
+    // Reset naar een grote startwaarde
     let fontSize = 55; 
     titleEl.style.fontSize = fontSize + 'px';
-    titleEl.style.lineHeight = '1.0'; 
-    titleEl.style.display = 'block';
-
-    // Veiligheid: Als container onzichtbaar is, doe niks (voorkomt 0px errors)
+    titleEl.style.lineHeight = '0.9'; // Iets strakker voor verticale tekst
+    
+    // Als de container niet zichtbaar is (tabblad dicht), stop
     if (container.offsetWidth === 0 || container.offsetHeight === 0) return;
 
     const maxWidth = container.offsetWidth;
     const maxHeight = container.offsetHeight;
 
-    // Verklein lus
+    // Zolang de tekst groter is dan de container...
+    // We gebruiken scrollWidth/Height omdat bij vertical-rl de dimensies draaien
     while (
         (titleEl.scrollWidth > maxWidth || titleEl.scrollHeight > maxHeight) 
-        && fontSize > 12 // Niet kleiner dan 12px gaan!
+        && fontSize > 14 // STOP NOOIT ONDER 14px!
     ) {
         fontSize--; 
         titleEl.style.fontSize = fontSize + 'px';
     }
     
-    // FAILSAFE: Als hij per ongeluk toch onzichtbaar is geworden, reset naar leesbaar
-    if (fontSize <= 12) {
-         titleEl.style.fontSize = '14px'; // Minimaal leesbaar
-    }
+    // Als de lus klaar is, staat de grootte goed.
+    // Voor de zekerheid: als hij toch op 14px is geëindigd en het past nog steeds niet 100%,
+    // dan is dat jammer, maar de tekst is tenminste zichtbaar.
 }
 
 function initApp() {

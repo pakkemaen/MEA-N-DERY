@@ -3914,7 +3914,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (Clean Data & Better Alignment)
+    // THEMA 1: STANDAARD (Layout Tweaks: Big Logo, Left Align)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -3924,12 +3924,12 @@ function setLabelTheme(theme) {
         const styleSize = document.getElementById('tuneStyleSize')?.value || 9;
         const titleMargin = document.getElementById('tuneTitleMargin')?.value || 0;
 
-        // Logo
+        // Logo (GROTER GEMAAKT: w-28 h-28)
         let logoHtml = '';
         if (hasImage) {
-            logoHtml = `<img id="label-logo-img" src="${imgSrc}" class="w-20 h-20 object-cover rounded-full border-4 border-white shadow-sm">`;
+            logoHtml = `<img id="label-logo-img" src="${imgSrc}" class="w-28 h-28 object-cover rounded-full border-4 border-white shadow-sm">`;
         } else {
-            logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-20 h-20 object-contain opacity-90">`;
+            logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-28 h-28 object-contain opacity-90">`;
         }
 
         // Info string
@@ -3945,7 +3945,6 @@ function setLabelTheme(theme) {
         if (showDetails) infoParts.push(details);
         const infoString = infoParts.join(' • ');
 
-        // Datum logica (laat leeg als dateVal leeg is)
         let peakDateVal = "";
         if (dateVal) {
             try { const d = new Date(dateVal); d.setMonth(d.getMonth() + 6); peakDateVal = d.toLocaleDateString(); } catch(e) {}
@@ -3976,7 +3975,7 @@ function setLabelTheme(theme) {
 
             <div class="h-full w-[65%] relative p-2">
                 
-                <div id="title-container" class="absolute top-2 bottom-2 left-2 w-[55%] flex flex-row-reverse items-center justify-center overflow-hidden border-r border-transparent" 
+                <div id="title-container" class="absolute top-2 bottom-2 left-0 w-[55%] pl-1 flex flex-row-reverse items-center justify-center overflow-hidden border-r border-transparent" 
                      style="padding-bottom: ${titleMargin}px;">
                     
                     <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-[0.9] break-words whitespace-normal" style="writing-mode: vertical-rl; transform: rotate(180deg); width: auto; max-height: 100%;">
@@ -3984,7 +3983,7 @@ function setLabelTheme(theme) {
                     </h1>
                 </div>
                 
-                <div class="absolute top-2 bottom-2 left-[58%] w-[10%] flex items-end justify-center" style="padding-bottom: ${titleMargin}px;">
+                <div class="absolute top-2 bottom-2 left-[52%] w-[10%] flex items-end justify-center" style="padding-bottom: ${titleMargin}px;">
                      <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" 
                         style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: ${styleSize}px;">
                         ${sub}

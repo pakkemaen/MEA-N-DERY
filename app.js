@@ -1730,6 +1730,12 @@ window.showBrewDetail = function(brewId) {
         container.style.display = 'block';
         renderFlavorWheel(brew.id, ['Sweetness', 'Acidity', 'Fruity/Floral', 'Spiciness', 'Earthy/Woody', 'Body'], Object.values(brew.predictedFlavorProfile));
     }
+
+    // Dit zorgt dat Actual FG en ABV direct worden ingevuld op basis van de tabel
+    setTimeout(() => {
+        window.syncLogToFinal(brew.id); 
+    }, 50);
+
 }
 
 // --- GRAFIEKEN VOOR HISTORIE ---

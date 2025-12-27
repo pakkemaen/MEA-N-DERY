@@ -5674,13 +5674,17 @@ window.autoFitLabelText = function() {
     const container = document.getElementById('title-container');
     const logoEl = document.getElementById('label-logo-img');
     
-    // HAAL DE GAP WAARDE OP (Of gebruik standaard 10px)
+    // HAAL DE WAARDES OP UIT DE SLIDERS
     const gapSlider = document.getElementById('tuneLogoGap');
     const safeZone = gapSlider ? parseInt(gapSlider.value) : 10;
+    
+    const sizeSlider = document.getElementById('tuneTitleSize');
+    const maxFontSize = sizeSlider ? parseInt(sizeSlider.value) : 60;
 
     if (!titleEl || !container) return;
 
-    let fontSize = 60; 
+    // 1. Reset naar de MAXIMAAL ingestelde grootte van de slider
+    let fontSize = maxFontSize; 
     titleEl.style.fontSize = fontSize + 'px';
     titleEl.style.lineHeight = '0.9'; 
     titleEl.style.display = 'block';
@@ -5693,24 +5697,28 @@ window.autoFitLabelText = function() {
         const lRect = logoEl.getBoundingClientRect();
 
         // Check overlap met de ingestelde SAFE ZONE buffer
-        const overlap = !(tRect.right < lRect.left - safeZone || 
-                          tRect.left > lRect.right + safeZone || 
-                          tRect.bottom < lRect.top - safeZone || 
-                          tRect.top > lRect.bottom + safeZone);
+        // We vergroten de "box" van het logo virtueel met de safeZone waarde
+        const overlap = !(tRect.right < (lRect.left - safeZone) || 
+                          tRect.left > (lRect.right + safeZone) || 
+                          tRect.bottom < (lRect.top - safeZone) || 
+                          tRect.top > (lRect.bottom + safeZone));
         return overlap;
     };
 
     const checkOverflow = () => {
+        // ScrollWidth is de werkelijke breedte van de content, offsetWidth is de zichtbare container
         return (titleEl.scrollWidth > container.offsetWidth || 
                 titleEl.scrollHeight > container.offsetHeight);
     }
 
-    while ( (checkCollision() || checkOverflow()) && fontSize > 12 ) {
+    // 2. Verklein lus: Zolang (Tekst raakt Logo) OF (Tekst past niet in container) -> Verklein
+    while ( (checkCollision() || checkOverflow()) && fontSize > 10 ) {
         fontSize--; 
         titleEl.style.fontSize = fontSize + 'px';
     }
     
-    if (fontSize <= 12) titleEl.style.fontSize = '12px';
+    // Veiligheid: Nooit onzichtbaar maken
+    if (fontSize <= 10) titleEl.style.fontSize = '10px';
 }
 
 function initApp() {
@@ -5853,17 +5861,15 @@ function initApp() {
     // (Optioneel: handleStyleChange aanroep hier)
 
     // --- LAYOUT TUNING LISTENERS ---
-    ['tuneStyleSize', 'tuneTitleMargin', 'tuneLogoGap'].forEach(id => {
+    ['tuneTitleSize', 'tuneStyleSize', 'tuneTitleMargin', 'tuneLogoGap'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', (e) => {
             // Update het getalletje naast de slider
-            const displayId = id.replace('tune', 'disp').replace('Size', '-size').replace('Margin', '-margin').replace('Gap', '-gap').toLowerCase();
-            const disp = document.getElementById(`disp-${id.substring(4).toLowerCase().replace('size','-size').replace('margin','-margin').replace('gap','-gap')}`); // Quick fix voor ID matching
-            // Simpelere manier voor ID matching hieronder in de html structuur die ik gaf:
+            if(id === 'tuneTitleSize') document.getElementById('disp-title-size').textContent = e.target.value + 'px';
             if(id === 'tuneStyleSize') document.getElementById('disp-style-size').textContent = e.target.value + 'px';
             if(id === 'tuneTitleMargin') document.getElementById('disp-title-margin').textContent = e.target.value + 'px';
             if(id === 'tuneLogoGap') document.getElementById('disp-logo-gap').textContent = e.target.value + 'px';
             
-            // Update het label
+            // Trigger update: Eerst opnieuw renderen (voor margins/font-size), dan auto-fit
             const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
             setLabelTheme(activeTheme);
         });

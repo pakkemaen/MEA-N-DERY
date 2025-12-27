@@ -3878,7 +3878,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: WRAP-AROUND FINAL (Multi-line Title Support)
+    // THEMA 1: WRAP-AROUND FINAL (Fixed Title Fit)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -3901,7 +3901,7 @@ function setLabelTheme(theme) {
         } catch(e) {}
 
         container.innerHTML = `
-            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-3 px-3 flex flex-col justify-between text-right">
+            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-3 px-3 flex flex-col justify-between text-right z-20 relative">
                 
                 <div class="flex flex-col gap-2 overflow-hidden">
                     <p class="text-[7px] leading-relaxed text-gray-500 italic font-serif text-justify">
@@ -3926,30 +3926,31 @@ function setLabelTheme(theme) {
                 </div>
             </div>
 
-            <div class="h-full w-[65%] flex flex-row p-4 pl-5 relative">
+            <div class="h-full w-[65%] flex flex-row relative p-2">
                 
-                <div class="h-full flex flex-col justify-center items-center gap-1 z-10">
-                    
-                    <div id="title-container" class="h-[90%] w-40 flex flex-col justify-center items-center overflow-hidden">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-normal text-center origin-center leading-tight break-words" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                <div id="title-container" class="h-full flex-grow flex flex-col justify-center items-center overflow-hidden relative">
+                    <div class="h-[90%] w-full flex items-center justify-center">
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-normal text-center leading-tight break-words" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
                     </div>
-                    
-                    <p id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                </div>
+                
+                <div class="h-full flex flex-col justify-center items-center w-8">
+                     <p id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                         ${sub}
                     </p>
                 </div>
 
-                <div class="absolute top-4 right-4">
+                <div class="absolute top-4 right-4 z-10">
                     ${logoHtml}
                 </div>
             </div>
         `;
         
-        // Trigger auto-fit (dubbel voor zekerheid)
+        // Trigger auto-fit (meerdere keren voor rendering updates)
         setTimeout(window.autoFitLabelText, 50);
-        setTimeout(window.autoFitLabelText, 250);
+        setTimeout(window.autoFitLabelText, 300);
     }
 
     // =================================================================
@@ -5645,21 +5646,29 @@ window.autoFitLabelText = function() {
     
     if (!titleEl || !container) return;
 
-    // Reset: Begin groot
-    let fontSize = 50; 
+    // Reset naar een startgrootte
+    let fontSize = 42; // Iets conservatiever starten
     titleEl.style.fontSize = fontSize + 'px';
-    // Belangrijk: Leading (regelafstand) iets ruimer zetten voor multi-line
-    titleEl.style.lineHeight = '1.1'; 
+    titleEl.style.lineHeight = '1.1';
     titleEl.style.display = 'block';
 
-    if (container.clientHeight === 0) return;
+    // Veiligheidscheck
+    if (container.clientHeight === 0 || container.clientWidth === 0) return;
 
-    // Zolang de tekst groter is dan de container...
-    while (
-        (titleEl.scrollHeight > container.clientHeight || titleEl.scrollWidth > container.clientWidth) 
-        && fontSize > 10
-    ) {
-        fontSize -= 1; 
+    // Helper functie om te checken of het past
+    const checkFit = () => {
+        const textRect = titleEl.getBoundingClientRect();
+        const contRect = container.getBoundingClientRect();
+        
+        // Omdat de tekst geroteerd is, moeten we slim vergelijken.
+        // We checken simpelweg of de tekst-box binnen de container-box past.
+        // We geven 2px marge.
+        return (textRect.height <= contRect.height - 4) && (textRect.width <= contRect.width - 4);
+    };
+
+    // Zolang het niet past EN de fontgrootte > 8 is, verkleinen
+    while (!checkFit() && fontSize > 8) {
+        fontSize -= 1;
         titleEl.style.fontSize = fontSize + 'px';
     }
 }

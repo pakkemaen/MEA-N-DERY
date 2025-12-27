@@ -169,7 +169,12 @@ window.switchSubView = function(viewName, parentViewId) {
     if (viewName === 'brew-day-2') renderBrewDay2();
     if (viewName === 'creator') populateEquipmentProfilesDropdown(); 
     if (viewName === 'social') populateSocialRecipeDropdown();
-    if (viewName === 'labels') { populateLabelRecipeDropdown(); updateLabelPreviewDimensions(); }
+    if (viewName === 'labels') { 
+        populateLabelRecipeDropdown(); 
+        updateLabelPreviewDimensions(); 
+        // NIEUW: Forceer direct het standaard thema (met logo) bij openen
+        if(typeof setLabelTheme === 'function') setLabelTheme('standard');
+    }
     
     // --- NIEUW: RESET DE CHAT BIJ OPENEN ---
     if (viewName === 'troubleshoot') {
@@ -3866,11 +3871,10 @@ function setLabelTheme(theme) {
 
         let logoHtml = '';
         if (hasImage) {
-            // Als het een foto van de batch is: WEL in een cirkel
             logoHtml = `<img src="${imgSrc}" class="w-40 h-40 object-cover rounded-full border-4 border-white shadow-sm">`;
         } else {
-            // Als het jouw LOGO is: GEEN cirkel, groot en vrijstaand
-            logoHtml = `<img src="logo.png" class="w-full h-48 object-contain opacity-90" onerror="this.style.display='none'">`;
+            // NIEUWE REGEL (Met favicon fallback):
+            logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-48 object-contain opacity-90">`;
         }
 
         container.innerHTML = `
@@ -3926,7 +3930,7 @@ function setLabelTheme(theme) {
             bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
         }
 
-        const logoHtml = `<img src="logo.png" class="w-full h-full object-contain p-2 filter invert drop-shadow-md" onerror="this.style.display='none'">`;
+        const logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain p-2 filter invert drop-shadow-md">`;
 
         container.innerHTML = `
             ${bgHtml}

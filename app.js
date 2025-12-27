@@ -2452,11 +2452,12 @@ window.updateDashboardStats = function() {
 
 // --- DASHBOARD TIMELINE WIDGET ---
 
+// --- FIX VOOR TIMELINE KAART (LEESBAARHEID) ---
 window.renderActiveBrewTimeline = function() {
     const card = document.getElementById('current-brew-card');
     if (!card) return;
 
-    // 1. Zoek de meest relevante actieve batch (Wel startdatum, niet gebotteld)
+    // 1. Zoek de meest relevante actieve batch
     const activeBrew = brews.find(b => b.logData && b.logData.brewDate && b.logData.brewDate !== '' && !b.isBottled);
 
     if (!activeBrew) {
@@ -2469,50 +2470,42 @@ window.renderActiveBrewTimeline = function() {
     const brewDate = new Date(activeBrew.logData.brewDate);
     const daysElapsed = Math.floor((now - brewDate) / (1000 * 60 * 60 * 24));
     
-    // 3. Bepaal het "Metabolisme" (Snelheid op basis van ABV)
+    // 3. Bepaal het "Metabolisme"
     const targetABV = parseFloat(activeBrew.logData.targetABV) || 12;
     let paceModifier = 1; 
-    if (targetABV < 8) paceModifier = 0.5; // Hydromel gaat sneller
-    if (targetABV > 14) paceModifier = 1.5; // Sack mead gaat trager
+    if (targetABV < 8) paceModifier = 0.5; 
+    if (targetABV > 14) paceModifier = 1.5;
 
-    // 4. Bepaal de Biologische Fase & Smart Tip
+    // 4. Bepaal de Fase & Tip
     let phaseName = "";
     let smartTip = "";
     let progressPercent = 0;
     
-    // FASE 1: Lag Phase & Growth (Dag 0-3)
     if (daysElapsed <= (3 * paceModifier)) {
         phaseName = "Lag / Biomass Growth";
         smartTip = "Yeast is multiplying. Oxygen is good now. Degas gently.";
         progressPercent = 15;
-    } 
-    // FASE 2: Active Fermentation (Dag 4-14)
-    else if (daysElapsed <= (14 * paceModifier)) {
+    } else if (daysElapsed <= (14 * paceModifier)) {
         phaseName = "Vigorous Fermentation";
         smartTip = "Sugar is converting to alcohol. Keep temperature stable.";
         progressPercent = 40;
-    } 
-    // FASE 3: Cleanup / Conditioning (Dag 15-30)
-    else if (daysElapsed <= (30 * paceModifier)) {
+    } else if (daysElapsed <= (30 * paceModifier)) {
         phaseName = "Cleanup Phase";
         smartTip = "Yeast is cleaning up off-flavors. Do not disturb.";
         progressPercent = 70;
-    } 
-    // FASE 4: Bulk Aging (Dag 30+)
-    else {
+    } else {
         phaseName = "Bulk Aging / Clearing";
         smartTip = "Waiting for clarity. Patience is the main ingredient.";
         progressPercent = 90;
     }
 
-    // Override als Primary handmatig is afgevinkt
     if (activeBrew.primaryComplete) {
         phaseName = "Secondary / Maturation";
         smartTip = "Aging for complexity. Ensure airlock is tight.";
         progressPercent = Math.max(progressPercent, 60); 
     }
 
-    // 5. Render de Timeline (Met Hartslag)
+    // 5. Render de Timeline
     const stages = [
         { name: 'Lag', active: daysElapsed >= 0 },
         { name: 'Active', active: daysElapsed > (3 * paceModifier) },
@@ -2525,31 +2518,32 @@ window.renderActiveBrewTimeline = function() {
     let timelineItemsHtml = stages.map((stage, index) => {
         const isPulse = index === activeIndex ? 'living-node' : '';
         const isActive = stage.active ? 'background: var(--brand-color); border-color: var(--brand-color);' : '';
+        const labelClass = stage.active ? 'text-app-brand font-bold' : 'text-gray-400'; // Duidelijkere labels
         
         return `
             <div class="timeline-item ${stage.active ? 'active' : ''}">
                 <div class="timeline-node ${isPulse}" style="${isActive}"></div>
-                <div class="timeline-label text-[10px] uppercase tracking-wide">${stage.name}</div>
+                <div class="timeline-label text-[10px] uppercase tracking-wide ${labelClass}">${stage.name}</div>
             </div>
         `;
     }).join('');
 
     card.innerHTML = `
-        <div class="flex justify-between items-start mb-2">
+        <div class="flex justify-between items-start mb-4">
             <div class="pr-4">
                 <div class="flex items-center gap-2">
                     <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    <h3 class="text-xl font-header font-bold text-app-brand leading-tight">${activeBrew.recipeName}</h3>
+                    <h3 class="text-xl font-header font-bold text-app-brand leading-tight uppercase">${activeBrew.recipeName}</h3>
                 </div>
-                <p class="text-app-primary font-bold text-sm mt-1">Day ${daysElapsed}: ${phaseName}</p>
-                <p class="text-app-secondary text-xs italic mt-1">"${smartTip}"</p>
+                <p class="text-app-header font-bold text-sm mt-1">Day ${daysElapsed}: ${phaseName}</p>
+                <p class="text-gray-500 dark:text-gray-400 text-xs italic mt-1">"${smartTip}"</p>
             </div>
             <button onclick="window.showBrewDetail('${activeBrew.id}')" class="flex-shrink-0 bg-transparent border border-app-brand text-app-brand hover:bg-app-brand hover:text-white text-xs font-bold uppercase px-3 py-2 rounded transition-colors">
                 View
             </button>
         </div>
         
-        <div class="timeline-container mt-4 mb-2">
+        <div class="timeline-container mt-2 mb-2">
             <div class="timeline-connector">
                 <div class="timeline-progress" style="width: ${progressPercent}%;"></div>
             </div>
@@ -2560,8 +2554,8 @@ window.renderActiveBrewTimeline = function() {
     card.classList.remove('hidden');
 }
 
+// --- FIX VOOR INSIGHT WIDGET (LEESBAARHEID) ---
 window.updateNextActionWidget = function() {
-    // Simpele versie: check of er iets te doen is
     const list = document.getElementById('next-action-list');
     const widget = document.getElementById('next-action-widget');
     if(!list || !widget) return;
@@ -2573,20 +2567,22 @@ window.updateNextActionWidget = function() {
     inventory.forEach(i => {
         if(i.expirationDate) {
             const days = (new Date(i.expirationDate) - now) / (1000*60*60*24);
-            if(days < 30) actions.push(`Use <strong>${i.name}</strong> soon (Expires in ${Math.ceil(days)} days)`);
+            if(days < 30) actions.push(`Use <strong class="text-app-brand">${i.name}</strong> soon (Expires in ${Math.ceil(days)} days)`);
         }
     });
     
-    // Check active fermentation (simpel: > 14 dagen in primary)
+    // Check active fermentation
     brews.forEach(b => {
         if(b.logData?.brewDate && !b.primaryComplete) {
             const days = (now - new Date(b.logData.brewDate)) / (1000*60*60*24);
-            if(days > 14) actions.push(`Check gravity of <strong>${b.recipeName}</strong> (Day ${Math.floor(days)})`);
+            if(days > 14) actions.push(`Check gravity of <strong class="text-app-brand">${b.recipeName}</strong> (Day ${Math.floor(days)})`);
         }
     });
 
     if(actions.length > 0) {
         list.innerHTML = actions.slice(0, 3).map(a => `<li>${a}</li>`).join('');
+        // Zorg dat de lijst zichtbaar is (text-app-header i.p.v. text-app-primary)
+        list.className = "list-disc pl-5 space-y-2 text-app-header text-sm leading-relaxed";
         widget.classList.remove('hidden');
     } else {
         widget.classList.add('hidden');

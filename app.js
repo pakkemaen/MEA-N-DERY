@@ -3878,7 +3878,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (Strict Layout V3)
+    // THEMA 1: STANDAARD (Final Alignment & Live Data Fix)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -3904,7 +3904,7 @@ function setLabelTheme(theme) {
             <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-3 px-3 flex flex-col justify-between text-right z-20 relative">
                 
                 <div class="flex flex-col gap-2 overflow-hidden">
-                    <p class="text-[7px] leading-relaxed text-gray-500 italic font-serif text-justify">
+                    <p id="prev-desc" class="text-[7px] leading-relaxed text-gray-500 italic font-serif text-justify">
                         ${desc || "A handcrafted honey wine, aged to perfection."}
                     </p>
                     <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[6px] font-bold uppercase tracking-wider text-gray-400 leading-tight border-t border-gray-200 pt-1">
@@ -3914,10 +3914,10 @@ function setLabelTheme(theme) {
 
                 <div class="text-[#8F8C79] mt-auto">
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[7px] font-bold uppercase tracking-wider border-t-2 border-gray-200 pt-2 mb-1">
-                        <div class="text-gray-400">ABV</div> <div class="text-black text-right">${abv}%</div>
-                        <div class="text-gray-400">FG</div> <div class="text-black text-right">${fg || '-'}</div>
-                        <div class="text-gray-400">Vol</div> <div class="text-black text-right">${vol}ml</div>
-                        <div class="text-gray-400">Bottled</div> <div class="text-black text-right">${dateVal}</div>
+                        <div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>
+                        <div class="text-gray-400">FG</div> <div class="text-black text-right"><span id="prev-fg">${fg || '-'}</span></div>
+                        <div class="text-gray-400">Vol</div> <div class="text-black text-right"><span id="prev-vol">${vol}</span>ml</div>
+                        <div class="text-gray-400">Bottled</div> <div class="text-black text-right"><span id="prev-date">${dateVal}</span></div>
                         <div class="text-app-brand">Peak</div> <div class="text-app-brand text-right">${peakDateVal}</div>
                     </div>
                     <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[5px] uppercase opacity-50 leading-tight mt-1">
@@ -3926,18 +3926,18 @@ function setLabelTheme(theme) {
                 </div>
             </div>
 
-            <div class="h-full w-[65%] flex flex-row relative p-2">
+            <div class="h-full w-[65%] flex flex-row relative p-2 pl-4">
                 
-                <div id="title-container" class="h-full w-[60%] flex flex-col justify-center items-center overflow-hidden relative">
-                    <div class="h-[95%] w-full flex items-center justify-center">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-none break-words whitespace-normal" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                <div id="title-container" class="h-full w-[65%] flex flex-col justify-end items-center overflow-hidden relative border-r border-transparent py-4">
+                    <div class="w-full flex flex-col-reverse items-center justify-start h-full">
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-normal text-center leading-[0.9] break-words origin-bottom" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
                     </div>
                 </div>
                 
-                <div class="h-full flex flex-col justify-center items-center w-[10%]">
-                     <p id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                <div class="h-full flex flex-col justify-end items-center w-[15%] py-4">
+                     <p id="prev-subtitle" class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                         ${sub}
                     </p>
                 </div>
@@ -3948,10 +3948,9 @@ function setLabelTheme(theme) {
             </div>
         `;
         
-        // Trigger auto-fit (meerdere keren met vertraging voor rendering)
-        setTimeout(window.autoFitLabelText, 10);
-        setTimeout(window.autoFitLabelText, 100);
-        setTimeout(window.autoFitLabelText, 500);
+        // Trigger auto-fit (meerdere keren voor rendering updates)
+        setTimeout(window.autoFitLabelText, 50);
+        setTimeout(window.autoFitLabelText, 300);
     }
 
     // =================================================================

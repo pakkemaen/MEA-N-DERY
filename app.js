@@ -2027,6 +2027,7 @@ function getLogDataFromDOM(containerId) {
         actualFG: container.querySelector(`#actualFG${suffix}`)?.value || '',
         targetABV: (container.querySelector(`#targetABV${suffix}`)?.value || '').replace('%', ''),
         finalABV: container.querySelector(`#finalABV${suffix}`)?.value || '',
+        currentVolume: container.querySelector(`#currentVol${suffix}`)?.value || '',
         actualIngredients: actuals,
         fermentationLog: Array.from(container.querySelectorAll(`#fermentationTable${suffix} tbody tr`)).map(row => ({
             date: row.cells[0].querySelector('input').value,
@@ -2053,18 +2054,30 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
     const useTargetABV = parsedTargets.targetABV || data.targetABV || '';
     const fermLog = data.fermentationLog || Array.from({ length: 3 }, () => ({}));
     
+    // 1. Haal de Blending data op
     const blendingLog = data.blendingLog || [];
 
+    // De copy script voor OG
     const copyOgToLogScript = `const ogInput = document.getElementById('actualOG-${idSuffix}'); const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input'); if (ogInput && firstSgInput) { firstSgInput.value = ogInput.value; }`;
 
+    // 2. De HTML voor de Blending tabel (AANGEPAST: Betere uitlijning summary)
+    // 2. De HTML voor de Blending tabel (MET VOLUME INPUT)
     const blendingHtml = `
     <div class="log-item mt-6 border-t-2 border-app-brand/10 pt-4">
-        <div class="flex justify-between items-center mb-2">
-            <label class="font-bold text-app-header flex items-center gap-2">
-                <svg class="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                Fortification / Blending Log
-            </label>
-            <button onclick="window.addBlendingRow('${idSuffix}')" class="text-xs bg-pink-50 text-pink-600 border border-pink-200 px-2 py-1 rounded hover:bg-pink-100 font-bold uppercase transition-colors">
+        <div class="flex justify-between items-end mb-4">
+            <div>
+                <label class="font-bold text-app-header flex items-center gap-2 mb-1">
+                    <svg class="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    Fortification / Blending
+                </label>
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="text-app-secondary">Vol after racking (L):</span>
+                    <input type="number" id="currentVol-${idSuffix}" step="0.01" value="${data.currentVolume || ''}" placeholder="e.g. 4.6" 
+                           class="w-16 p-1 text-center border rounded bg-pink-50 border-pink-200 text-pink-700 font-bold" 
+                           oninput="window.recalcTotalABV('${idSuffix}')">
+                </div>
+            </div>
+            <button onclick="window.addBlendingRow('${idSuffix}')" class="text-xs bg-pink-50 text-pink-600 border border-pink-200 px-2 py-1.5 rounded hover:bg-pink-100 font-bold uppercase transition-colors h-8">
                 + Add Spirit/Juice
             </button>
         </div>
@@ -2094,13 +2107,16 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
                 </tbody>
             </table>
         </div>
-        <p id="blending-summary-${idSuffix}" class="text-xs text-right mt-2 text-app-secondary font-mono bg-app-tertiary/50 p-1 rounded inline-block float-right">
-            Add liquids above to update Final ABV.
-        </p>
-        <div class="clearfix"></div>
+        
+        <div class="mt-2 mb-6 text-right">
+            <span id="blending-summary-${idSuffix}" class="text-xs text-app-secondary font-mono bg-app-tertiary/50 p-2 rounded border border-app-brand/5">
+                Set 'Vol after racking' to update Final ABV.
+            </span>
+        </div>
     </div>
     `;
 
+    // 3. De Return string (AANGEPAST: Fermentation knop styling)
     return `
         <div class="brew-log-section" data-id="${idSuffix}">
             <h3>Brewmaster's Log</h3>
@@ -2128,7 +2144,12 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
                                 <td><input type="text" value="${row.notes || ''}" class="w-full"></td>
                             </tr>`).join('')}</tbody>
                     </table>
-                    <div class="text-right mt-1"><button onclick="window.addLogLine('${idSuffix}')" class="text-xs text-app-brand underline">+ Add Row</button></div>
+                    
+                    <div class="text-right mt-2">
+                        <button onclick="window.addLogLine('${idSuffix}')" class="text-xs bg-app-tertiary text-app-brand border border-app-brand/20 px-2 py-1 rounded hover:bg-app-secondary font-bold uppercase transition-colors">
+                            + Add Measurement
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -2258,43 +2279,48 @@ window.addBlendingRow = function(idSuffix) {
 };
 
 window.recalcTotalABV = function(idSuffix) {
-    // 1. Haal basis gegevens (uit fermentatie)
+    // 1. Haal basis gegevens
     const targetABVField = document.getElementById(`targetABV-${idSuffix}`);
     const finalABVField = document.getElementById(`finalABV-${idSuffix}`);
-    const batchSizeField = document.getElementById(`batchSize`); // Of uit target volume als fallback
-
-    // We hebben het huidige volume nodig. Als dat er niet is, gebruiken we batch size.
-    // LET OP: Dit is een schatting. Eigenlijk zou je 'Current Volume' moeten bijhouden.
-    let currentVol = 5.0; // Default fallback
+    
+    // NIEUW: Haal het "Volume na racking" op
+    const currentVolInput = document.getElementById(`currentVol-${idSuffix}`);
+    
+    // Probeer batch size te vinden als fallback
+    let fallbackVol = 5.0;
     if(brews && currentBrewDay.brewId) {
          const b = brews.find(x => x.id === currentBrewDay.brewId);
-         if(b) currentVol = b.batchSize || 5;
+         if(b) fallbackVol = b.batchSize || 5;
+    }
+
+    // Gebruik de input, of anders de fallback
+    let startVolume = parseFloat(currentVolInput.value);
+    if (isNaN(startVolume) || startVolume <= 0) {
+        startVolume = fallbackVol;
     }
 
     // Haal de "Base ABV" op (wat de gist heeft gemaakt)
-    // We kijken eerst of er al een berekende waarde in FinalABV staat (door de SG berekening)
-    // Als die leeg is, pakken we TargetABV als gok.
     let baseABV = parseFloat(finalABVField.value) || parseFloat(targetABVField.value) || 0;
-
-    // Als de SG calculator net gedraaid heeft, is finalABVField al gevuld met de SG-waarde.
-    // We moeten voorkomen dat we dubbel gaan rekenen.
-    // Strategie: We berekenen eerst SG-ABV opnieuw om "schoon" te beginnen.
+    
+    // Check of we SG-based ABV moeten gebruiken
     const ogVal = parseFloat(document.getElementById(`actualOG-${idSuffix}`).value.replace(',', '.'));
     const fgVal = parseFloat(document.getElementById(`actualFG-${idSuffix}`).value.replace(',', '.'));
     if (!isNaN(ogVal) && !isNaN(fgVal)) {
         baseABV = (ogVal - fgVal) * 131.25;
     }
 
-    let totalAlcVolume = currentVol * (baseABV / 100);
-    let totalLiquidVolume = currentVol;
+    // --- DE REKENSOM ---
+    // Hoeveel pure alcohol zit er in de startvloeistof?
+    let totalAlcVolume = startVolume * (baseABV / 100);
+    let totalLiquidVolume = startVolume;
 
-    // 2. Loop door de blending tabel
+    // 2. Loop door de blending tabel en voeg toe
     const rows = document.querySelectorAll(`#blendingTable-${idSuffix} tbody tr`);
     rows.forEach(row => {
         const inputs = row.querySelectorAll('input');
         const vol = parseFloat(inputs[2].value) || 0;
         const abv = parseFloat(inputs[3].value) || 0;
-
+        
         if (vol > 0) {
             totalLiquidVolume += vol;
             totalAlcVolume += (vol * (abv / 100));
@@ -2303,12 +2329,18 @@ window.recalcTotalABV = function(idSuffix) {
 
     // 3. Bereken Totaal
     const newABV = (totalAlcVolume / totalLiquidVolume) * 100;
-
+    
     // 4. Update UI
+    // We updaten Final ABV alleen als er daadwerkelijk blending rows zijn OF als het volume is aangepast
     finalABVField.value = newABV.toFixed(2) + '%';
-
+    
     const summary = document.getElementById(`blending-summary-${idSuffix}`);
-    if(summary) summary.textContent = `New Total: ${totalLiquidVolume.toFixed(2)}L @ ${newABV.toFixed(2)}% ABV (Base: ${baseABV.toFixed(1)}%)`;
+    if(summary) {
+        summary.innerHTML = `
+            Base: <strong>${startVolume.toFixed(2)}L</strong> @ ${baseABV.toFixed(1)}% <br>
+            New Total: <strong>${totalLiquidVolume.toFixed(2)}L</strong> @ <strong>${newABV.toFixed(2)}%</strong> ABV
+        `;
+    }
 };
 
 // --- VERBETERDE ABV CALCULATOR (Live Update) ---

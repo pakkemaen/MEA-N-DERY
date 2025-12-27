@@ -2067,7 +2067,7 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
                         <tbody>${fermLog.map(row => `<tr>
                                 <td><input type="date" value="${row.date || ''}" class="w-full"></td>
                                 <td><input type="number" step="0.5" value="${row.temp || '18'}" class="w-full text-center"></td>
-                                <td><input type="number" step="0.001" value="${row.sg || ''}" class="w-full text-center"></td>
+                                <td><input type="number" step="0.001" value="${row.sg || ''}" class="w-full text-center" oninput="window.syncLogToFinal('${idSuffix}')"></td>
                                 <td><input type="text" value="${row.notes || ''}" class="w-full"></td>
                             </tr>`).join('')}</tbody>
                     </table>
@@ -2172,17 +2172,68 @@ window.addLogLine = function(idSuffix) {
     const tbody = document.querySelector(`#fermentationTable-${idSuffix} tbody`);
     if (!tbody) return;
     const newRow = document.createElement('tr');
-    newRow.innerHTML = `<td><input type="date" class="w-full" ondblclick="this.value = new Date().toISOString().split('T')[0]"></td><td><input type="number" step="0.5" class="w-full text-center"></td><td><input type="number" step="0.001" class="w-full text-center"></td><td><input type="text" class="w-full"></td>`;
+    newRow.innerHTML = `
+        <td><input type="date" class="w-full" ondblclick="this.value = new Date().toISOString().split('T')[0]"></td>
+        <td><input type="number" step="0.5" class="w-full text-center"></td>
+        <td><input type="number" step="0.001" class="w-full text-center" oninput="window.syncLogToFinal('${idSuffix}')"></td>
+        <td><input type="text" class="w-full"></td>
+    `;
     tbody.appendChild(newRow);
 }
 
+// --- VERBETERDE ABV CALCULATOR (Live Update) ---
 window.autoCalculateABV = function(idSuffix) {
-    const og = parseFloat(document.getElementById(`actualOG-${idSuffix}`)?.value.replace(',','.'));
-    const fg = parseFloat(document.getElementById(`actualFG-${idSuffix}`)?.value.replace(',','.'));
+    // 1. Haal de velden op
+    const ogInput = document.getElementById(`actualOG-${idSuffix}`);
+    const fgInput = document.getElementById(`actualFG-${idSuffix}`);
     const abvInput = document.getElementById(`finalABV-${idSuffix}`);
-    if (!isNaN(og) && !isNaN(fg) && abvInput) {
+
+    if (!ogInput || !fgInput || !abvInput) return;
+
+    // 2. Waardes ophalen & Komma's fixen (Europa gebruikt , en JS wil .)
+    const ogText = ogInput.value.replace(',', '.');
+    const fgText = fgInput.value.replace(',', '.');
+
+    const og = parseFloat(ogText);
+    const fg = parseFloat(fgText);
+
+    // 3. Berekenen
+    if (!isNaN(og) && !isNaN(fg) && og > 0 && fg > 0) {
+        // De standaard formule: (OG - FG) * 131.25
         const abv = (og - fg) * 131.25;
-        abvInput.value = abv >= 0 ? abv.toFixed(1) + '%' : '';
+        
+        // Afronden op 1 decimaal en % teken toevoegen
+        // We zorgen dat het niet negatief kan zijn (als OG nog niet ingevuld is)
+        abvInput.value = abv >= 0 ? abv.toFixed(1) + '%' : '0.0%';
+    } else {
+        // Als de velden leeg of ongeldig zijn, maak ABV leeg
+        abvInput.value = '';
+    }
+};
+
+// --- AUTO SYNC: Tabel naar Hoofdveld ---
+window.syncLogToFinal = function(idSuffix) {
+    // 1. Zoek alle rijen in de tabel
+    const rows = document.querySelectorAll(`#fermentationTable-${idSuffix} tbody tr`);
+    let lastKnownSG = '';
+
+    // 2. Loop erdoorheen en onthoud de laatste waarde die niet leeg is
+    rows.forEach(row => {
+        // De SG input zit in de 3e kolom (index 2)
+        const sgInput = row.cells[2].querySelector('input');
+        if (sgInput && sgInput.value.trim() !== '') {
+            lastKnownSG = sgInput.value;
+        }
+    });
+
+    // 3. Update het "Actual FG" veld bovenaan
+    if (lastKnownSG) {
+        const fgField = document.getElementById(`actualFG-${idSuffix}`);
+        if (fgField) {
+            fgField.value = lastKnownSG;
+            // Trigger direct de ABV berekening zodat het percentage ook update
+            window.autoCalculateABV(idSuffix); 
+        }
     }
 };
 

@@ -331,6 +331,30 @@
         border-bottom: none;
     }
 
+    /* --- TABEL KOLOMMEN FIX --- */
+    /* Voegt verticale lijntjes toe tussen de kolommen */
+    .fermentation-table th:not(:last-child),
+    .fermentation-table td:not(:last-child) {
+        border-right: 1px solid var(--border-color);
+    }
+
+    /* Zorg dat de input veldjes in de tabel niet tegen de lijntjes plakken */
+    .fermentation-table input {
+        text-align: center; /* Alles netjes in het midden */
+    }
+    
+    /* De eerste kolom (Datum) mag links uitgelijnd blijven */
+    .fermentation-table td:first-child input {
+        text-align: left;
+        padding-left: 8px !important;
+    }
+    
+    /* De laatste kolom (Notes) mag links uitgelijnd blijven */
+    .fermentation-table td:last-child input {
+        text-align: left;
+        padding-left: 8px !important;
+    }
+
     /* --- 7. NAVIGATION TABS --- */
     .sub-tab {
         padding: 8px 16px;

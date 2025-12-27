@@ -3797,6 +3797,12 @@ function updateLabelPreviewText() {
     if (detailCheck && detailPreview) {
         detailPreview.style.display = detailCheck.checked ? 'block' : 'none';
     }
+
+    // --- NIEUW: ROEP DE AUTO-FIT AAN AAN HET EINDE ---
+    if (typeof window.autoFitLabelText === 'function') {
+        // Kleine vertraging zodat de DOM zeker geupdate is
+        setTimeout(window.autoFitLabelText, 10);
+    }
 }
 
 // Data uit recept laden
@@ -3872,13 +3878,12 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: ORIGINAL "REEVES" LAYOUT (Retro-Modern)
+    // THEMA 1: REEVES STYLE (Met Auto-Fit Container)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
-        // Logo instellingen (Middelgroot)
         let logoHtml = '';
         if (hasImage) {
             logoHtml = `<img src="${imgSrc}" class="w-24 h-24 object-cover rounded-full border-4 border-white shadow-sm">`;
@@ -3887,51 +3892,45 @@ function setLabelTheme(theme) {
         }
 
         container.innerHTML = `
-            <div class="h-full flex-grow flex flex-row-reverse items-end justify-end py-4 pl-4 gap-2">
-                
-                <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-full flex items-end">
-                    <h1 id="prev-title" class="text-5xl font-header font-bold uppercase tracking-widest text-[#8F8C79] leading-[0.85] max-h-full overflow-hidden text-ellipsis">
+            <div id="title-container" class="h-full py-4 pl-4 flex flex-col justify-end items-start border-r border-gray-100" style="width: 45%;">
+                <div style="writing-mode: vertical-rl; transform: rotate(180deg); width: 100%; height: 100%; display: flex; align-items: end;">
+                    <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap origin-bottom-left">
                         ${title}
                     </h1>
                 </div>
+            </div>
 
-                <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-full flex items-end pb-1">
-                    <p id="prev-subtitle" class="text-xl font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap">
+            <div class="h-full py-4 flex flex-col justify-end items-start px-2" style="width: 15%;">
+                <div style="writing-mode: vertical-rl; transform: rotate(180deg); height: 100%; display: flex; align-items: end; gap: 10px;">
+                    <p id="prev-subtitle" class="text-xl font-bold uppercase tracking-[0.2em] text-gray-400 whitespace-nowrap">
                         ${sub}
                     </p>
-                </div>
-
-                <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-full flex items-end pb-1">
                     <p id="prev-details" class="text-[8px] font-bold uppercase tracking-[0.2em] text-gray-300 whitespace-nowrap">
-                        ${details || 'NO WATER MELOMEL'}
+                        ${details || 'HONEY WINE'}
                     </p>
                 </div>
             </div>
 
-            <div class="w-1/3 h-full flex flex-col justify-between items-end py-4 pr-4">
-                
-                <div class="flex justify-end w-full">
-                    ${logoHtml}
-                </div>
+            <div class="flex-1 h-full flex flex-col justify-between items-end py-4 pr-4">
+                <div>${logoHtml}</div>
 
                 <div class="text-right text-[#8F8C79]">
-                    
                     ${fg ? `<p class="text-sm font-bold opacity-60 mb-0 leading-none">FG ${fg}</p>` : ''}
-                    
                     <p class="text-3xl font-header font-bold leading-none mb-2">
                         <span id="prev-abv">${abv}</span>% <span class="text-xs font-normal">ABV</span>
                     </p>
-                    
                     <p class="text-[10px] font-mono uppercase tracking-widest opacity-50 border-t border-gray-200 pt-1 mt-1">
-                        ${vol}ML <br> ${dateVal}
+                        ${vol}ML • ${dateVal}
                     </p>
-
                     <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-2 opacity-40 max-w-[80px] ml-auto leading-tight">
                         Contains Sulfites
                     </p>
                 </div>
             </div>
         `;
+        
+        // Trigger de auto-fit direct na het laden van het thema
+        setTimeout(window.autoFitLabelText, 50);
     }
 
     // =================================================================
@@ -5617,6 +5616,26 @@ window.hidePromptModal = function() {
     const modal = document.getElementById('prompt-modal');
     if (modal) {
         modal.classList.add('hidden');
+    }
+}
+
+// --- NIEUWE FUNCTIE: TEKST AUTOMATISCH PASSEND MAKEN ---
+window.autoFitLabelText = function() {
+    const titleEl = document.getElementById('prev-title');
+    const container = document.getElementById('title-container');
+    
+    if (!titleEl || !container) return;
+
+    // Reset naar een grote grootte om te beginnen
+    let fontSize = 80; // Start groot (bv 80px)
+    titleEl.style.fontSize = fontSize + 'px';
+    titleEl.style.lineHeight = '0.85';
+
+    // Zolang de tekst groter is dan de container (hoogte), maak het kleiner
+    // We gebruiken scrollHeight (inhoud) vs clientHeight (beschikbaar)
+    while (titleEl.scrollHeight > container.clientHeight && fontSize > 10) {
+        fontSize--;
+        titleEl.style.fontSize = fontSize + 'px';
     }
 }
 

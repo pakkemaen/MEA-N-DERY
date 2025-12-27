@@ -285,9 +285,14 @@ async function performApiCall(prompt, schema = null) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || `Google Error: ${response.status}`);
+        // SPECIFIEKE CHECK VOOR LIMIET
+        if (response.status === 429) {
+            throw new Error("⛔ QUOTA BEREIKT: Je daglimiet voor dit model is op. Ga naar Settings en kies 'Gemini Flash' of wacht even.");
         }
+        
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `Google Error: ${response.status}`);
+    }
 
         const data = await response.json();
         if (data.candidates && data.candidates.length > 0) {
@@ -2928,6 +2933,18 @@ function applySettings() {
         aiModelField.value = userSettings.aiModel;
     }
 
+    const chatModelField = document.getElementById('chatModelInput');
+    if (chatModelField && userSettings.chatModel) {
+        let exists = Array.from(chatModelField.options).some(o => o.value === userSettings.chatModel);
+        if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = userSettings.chatModel;
+            opt.text = userSettings.chatModel + " (Saved)";
+            chatModelField.add(opt, 0);
+        }
+        chatModelField.value = userSettings.chatModel;
+    }
+
     const imgModelField = document.getElementById('imageModelInput');
     if (imgModelField && userSettings.imageModel) {
         // Check of hij erin staat, zo niet, voeg toe (zodat saved value werkt zonder scan)
@@ -2966,6 +2983,7 @@ async function saveUserSettings() {
     const newSettings = {
         apiKey: document.getElementById('apiKeyInput').value.trim(),
         aiModel: document.getElementById('aiModelInput').value,
+        chatModel: document.getElementById('chatModelInput').value,
         imageModel: document.getElementById('imageModelInput').value,
         defaultBatchSize: parseFloat(document.getElementById('defaultBatchSizeInput').value) || 5,
         currencySymbol: document.getElementById('defaultCurrencyInput').value.trim() || '€',
@@ -3330,7 +3348,7 @@ window.resetTroubleshootChat = function() {
     if(chatBox) {
         chatBox.innerHTML = `
         <div class="flex items-start gap-3">
-            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">AI</div>
+            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">DOC</div>
             <div class="bg-white dark:bg-gray-800 p-3 rounded-lg rounded-tl-none shadow-sm text-sm text-app-header border border-gray-100 dark:border-gray-700 max-w-[85%]">
                 Hi! I'm your Mead Medic. Describe your issue or upload a photo of your brew.
             </div>
@@ -3375,7 +3393,7 @@ window.sendTroubleshootMessage = async function() {
             ${currentChatImageBase64 ? '<div class="mb-2"><span class="text-[10px] uppercase bg-white/20 px-1 rounded">📷 Image attached</span></div>' : ''}
             ${text}
         </div>
-        <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">ME</div>
+        <img src="assets/logo.png" alt="Me" class="w-8 h-8 rounded-full bg-app-tertiary flex-shrink-0 object-cover border border-app-brand/20">
     </div>`;
     chatBox.insertAdjacentHTML('beforeend', userHtml);
     
@@ -3393,7 +3411,7 @@ window.sendTroubleshootMessage = async function() {
     const loadingId = 'loading-' + Date.now();
     chatBox.insertAdjacentHTML('beforeend', `
         <div id="${loadingId}" class="flex items-start gap-3 animate-pulse">
-            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">AI</div>
+            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">DOC</div>
             <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg rounded-tl-none text-xs text-gray-500">Thinking...</div>
         </div>
     `);
@@ -3469,15 +3487,23 @@ async function performChatApiCall(history, base64Image) {
         body: JSON.stringify(requestBody)
     });
 
-    if (!response.ok) throw new Error(`AI Error: ${response.status}`);
+    if (!response.ok) {
+        // SPECIFIEKE CHECK VOOR LIMIET
+        if (response.status === 429) {
+            throw new Error("⛔ QUOTA BEREIKT: Je hebt te snel/veel gechat voor dit model. Schakel over naar Flash in Settings.");
+        }
+
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(`AI Error (${response.status}) using model '${model}': ${errData.error?.message || response.statusText}`);
+    }
     const data = await response.json();
     return data.candidates[0].content.parts[0].text;
 }
 
-// --- FUNCTIE: HAAL MODELLEN OP & VERDEEL ZE (DUAL ENGINE) ---
 window.fetchAvailableModels = async function() {
     const apiKey = document.getElementById('apiKeyInput').value.trim();
     const textSelect = document.getElementById('aiModelInput');
+    const chatSelect = document.getElementById('chatModelInput'); // NIEUW
     const imageSelect = document.getElementById('imageModelInput');
     const btn = document.getElementById('fetchModelsBtn');
 
@@ -3501,15 +3527,13 @@ window.fetchAvailableModels = async function() {
         textModels.sort((a, b) => b.name.localeCompare(a.name));
 
         // 2. FILTER VOOR BEELD (Imagen)
-        // We zoeken naar modellen met 'image' of 'imagen' in de naam.
-        // Google is soms vaag over 'supportedMethods' voor plaatjes, dus we doen het op naam.
         const imageModels = data.models.filter(m => 
             m.name.toLowerCase().includes("imagen") || 
             (m.name.toLowerCase().includes("image") && !m.name.toLowerCase().includes("embedding"))
         );
         imageModels.sort((a, b) => b.name.localeCompare(a.name));
 
-        // --- VUL DROPDOWN 1: TEXT ---
+        // --- VUL DROPDOWN 1: RECIPE ENGINE ---
         textSelect.innerHTML = '';
         textModels.forEach(model => {
             const cleanName = model.name.replace('models/', '');
@@ -3518,15 +3542,25 @@ window.fetchAvailableModels = async function() {
             opt.text = cleanName;
             textSelect.appendChild(opt);
         });
-        // Herstel saved value
-        if (userSettings.aiModel && Array.from(textSelect.options).some(o => o.value === userSettings.aiModel)) {
-            textSelect.value = userSettings.aiModel;
-        }
 
-        // --- VUL DROPDOWN 2: IMAGE ---
+        // --- VUL DROPDOWN 2: CHAT ENGINE (NIEUW) ---
+        // We gebruiken dezelfde lijst als voor recepten (want het zijn beide tekstmodellen)
+        chatSelect.innerHTML = '';
+        textModels.forEach(model => {
+            const cleanName = model.name.replace('models/', '');
+            const opt = document.createElement('option');
+            opt.value = cleanName;
+            opt.text = cleanName;
+            chatSelect.appendChild(opt);
+        });
+
+        // Herstel saved values
+        if (userSettings.aiModel) textSelect.value = userSettings.aiModel;
+        if (userSettings.chatModel) chatSelect.value = userSettings.chatModel; // NIEUW
+
+        // --- VUL DROPDOWN 3: IMAGE ENGINE ---
         imageSelect.innerHTML = '';
         if (imageModels.length === 0) {
-            // Fallback als de scan geen image models vindt (soms verbergt Google ze)
             const fallback = document.createElement('option');
             fallback.value = "imagen-3.0-generate-001";
             fallback.text = "imagen-3.0-generate-001 (Default)";
@@ -3540,12 +3574,9 @@ window.fetchAvailableModels = async function() {
                 imageSelect.appendChild(opt);
             });
         }
-        // Herstel saved value
-        if (userSettings.imageModel && Array.from(imageSelect.options).some(o => o.value === userSettings.imageModel)) {
-            imageSelect.value = userSettings.imageModel;
-        }
+        if (userSettings.imageModel) imageSelect.value = userSettings.imageModel;
 
-        showToast(`Scan compleet! Tekst: ${textModels.length}, Beeld: ${imageModels.length}`, "success");
+        showToast(`Scan compleet! Models updated.`, "success");
 
     } catch (error) {
         console.error(error);

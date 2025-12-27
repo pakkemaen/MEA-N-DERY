@@ -811,8 +811,7 @@
 
     <div id="troubleshoot-view" class="h-full flex flex-col h-[70vh]">
     <div class="flex justify-between items-center mb-4 border-b border-app-brand/10 pb-2">
-        <h3 class="text-xl font-header font-bold text-app-brand flex items-center gap-2">
-            🚑 Mead Medic
+    <h3 class="text-xl font-header font-bold text-app-brand flex items-center gap-2">
         </h3>
         <button onclick="window.resetTroubleshootChat()" class="text-xs text-red-500 hover:text-red-700 font-bold uppercase">
             Clear Chat
@@ -821,7 +820,7 @@
 
     <div id="chat-history" class="flex-grow overflow-y-auto mb-4 p-4 bg-app-tertiary/30 rounded-lg border border-app-brand/10 space-y-4 shadow-inner custom-scrollbar">
         <div class="flex items-start gap-3">
-            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">AI</div>
+            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">DOC</div>
             <div class="bg-white dark:bg-gray-800 p-3 rounded-lg rounded-tl-none shadow-sm text-sm text-app-header border border-gray-100 dark:border-gray-700 max-w-[85%]">
                 Hi! I'm your Mead Medic. What seems to be the problem? (You can upload a photo too!)
             </div>
@@ -1048,7 +1047,7 @@
                 <div class="mb-4">
                     <p class="text-xs text-app-secondary mb-1 font-bold">Recipe & Logic Engine</p>
                     <div class="relative w-full">
-                        <select id="aiModelInput" class="w-full p-2 border rounded bg-app-tertiary border-app text-app-header appearance-none text-sm">
+                        <select id="aiModelInput" class="w-full p-2 border rounded bg-app-tertiary border-app text-app-header appearance-none text-sm focus:ring-2 focus:ring-app-brand">
                             <option value="gemini-2.5-pro">gemini-2.5-pro (Default)</option>
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-app-header">
@@ -1057,10 +1056,22 @@
                     </div>
                 </div>
 
-                <div>
+                <div class="mb-4">
+                    <p class="text-xs text-app-secondary mb-1 font-bold">Chat & Troubleshoot Engine</p>
+                    <div class="relative w-full">
+                        <select id="chatModelInput" class="w-full p-2 border rounded bg-app-tertiary border-app text-app-header appearance-none text-sm focus:ring-2 focus:ring-app-brand">
+                            </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-app-header">
+                            <svg class="fill-current h-4 w-4" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-app-secondary mt-1">Recommended: gemini-1.5-flash (Fast & Visual)</p>
+                </div>
+
+                <div class="mb-4">
                     <p class="text-xs text-app-secondary mb-1 font-bold">Image Generation Engine</p>
                     <div class="relative w-full">
-                        <select id="imageModelInput" class="w-full p-2 border rounded bg-app-tertiary border-app text-app-header appearance-none text-sm">
+                        <select id="imageModelInput" class="w-full p-2 border rounded bg-app-tertiary border-app text-app-header appearance-none text-sm focus:ring-2 focus:ring-app-brand">
                             <option value="imagen-3.0-generate-001">imagen-3.0-generate-001 (Default)</option>
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-app-header">
@@ -1068,7 +1079,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
             <div class="mb-6 card p-6 rounded-lg">
                 <h3 class="text-xl font-header font-bold mb-4">Defaults</h3>

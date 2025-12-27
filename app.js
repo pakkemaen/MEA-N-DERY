@@ -3792,20 +3792,20 @@ function updateLabelPreviewDimensions() {
 
 // --- UNIEKE VERSIE VAN DE UPDATE FUNCTIE ---
 function updateLabelPreviewText() {
-    // Helper: Schrijf alleen als het element ook echt bestaat in de HTML
     const safeSet = (id, value) => {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
     };
 
-    // 1. Haal waardes op (met fallbacks zodat het nooit leeg is)
-    const title = document.getElementById('labelTitle')?.value || 'MEAD NAME';
-    const sub = document.getElementById('labelSubtitle')?.value || 'Style';
-    const abv = document.getElementById('labelAbv')?.value || '0';
-    const vol = document.getElementById('labelVol')?.value || '750';
+    // 1. Haal waardes op (GEEN Defaults meer!)
+    const title = document.getElementById('labelTitle')?.value || '';
+    const sub = document.getElementById('labelSubtitle')?.value || '';
+    const abv = document.getElementById('labelAbv')?.value || '';
+    const vol = document.getElementById('labelVol')?.value || '';
     const dateVal = document.getElementById('labelDate')?.value || '';
     const desc = document.getElementById('labelDescription')?.value || '';
     const details = document.getElementById('labelDetails')?.value || '';
+    
     
     // 2. Schrijf ze naar het label (Veilig)
     safeSet('prev-title', title);
@@ -3837,7 +3837,6 @@ function updateLabelPreviewText() {
 }
 
 // Data uit recept laden
-// Data uit recept laden
 function loadLabelFromBrew(e) {
     const brewId = e.target.value;
     if (!brewId) return;
@@ -3852,10 +3851,10 @@ function loadLabelFromBrew(e) {
     document.getElementById('labelSubtitle').value = style;
 
     // ABV, FG, Vol, Date laden...
-    document.getElementById('labelAbv').value = brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '12';
+    document.getElementById('labelAbv').value = brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '';
     document.getElementById('labelFg').value = brew.logData?.actualFG || brew.logData?.targetFG || '';
-    document.getElementById('labelVol').value = '330'; 
-    document.getElementById('labelDate').value = brew.logData?.brewDate || new Date().toLocaleDateString();
+    document.getElementById('labelVol').value = brew.batchSize ? (brew.batchSize * 1000).toString() : ''; // Zet L om naar ml, anders leeg
+    document.getElementById('labelDate').value = brew.logData?.brewDate || '';
 
     // --- NIEUW: INGREDIËNTEN ANALYSE VOOR CHECKBOXES ---
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
@@ -3915,7 +3914,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (Met Fine-Tune Controls)
+    // THEMA 1: STANDAARD (Clean Data & Better Alignment)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -3924,7 +3923,6 @@ function setLabelTheme(theme) {
         // 1. HAAL TUNING WAARDES OP
         const styleSize = document.getElementById('tuneStyleSize')?.value || 9;
         const titleMargin = document.getElementById('tuneTitleMargin')?.value || 0;
-        // Logo gap wordt gebruikt in de auto-fit functie, niet hier direct in HTML
 
         // Logo
         let logoHtml = '';
@@ -3933,9 +3931,6 @@ function setLabelTheme(theme) {
         } else {
             logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-20 h-20 object-contain opacity-90">`;
         }
-
-        let peakDateVal = "2026-01-01"; 
-        try { const d = new Date(); d.setMonth(d.getMonth() + 6); peakDateVal = d.toLocaleDateString(); } catch(e) {}
 
         // Info string
         let extraInfoHtml = '';
@@ -3950,22 +3945,28 @@ function setLabelTheme(theme) {
         if (showDetails) infoParts.push(details);
         const infoString = infoParts.join(' • ');
 
+        // Datum logica (laat leeg als dateVal leeg is)
+        let peakDateVal = "";
+        if (dateVal) {
+            try { const d = new Date(dateVal); d.setMonth(d.getMonth() + 6); peakDateVal = d.toLocaleDateString(); } catch(e) {}
+        }
+
         container.innerHTML = `
             <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-3 px-3 flex flex-col justify-between text-right z-20 relative">
                 <div class="flex flex-col gap-2 overflow-hidden">
                     <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-500 italic font-serif text-justify">
-                        ${desc || "A handcrafted honey wine."}
+                        ${desc}
                     </p>
                     ${infoString ? `<p class="text-[5px] font-bold uppercase tracking-wider text-gray-400 leading-tight border-t border-gray-200 pt-1">${infoString}</p>` : ''}
                 </div>
                 
                 <div class="text-[#8F8C79] mt-auto">
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider border-t-2 border-gray-200 pt-2 mb-1">
-                        <div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>
-                        <div class="text-gray-400">FG</div> <div class="text-black text-right"><span id="prev-fg">${fg || '-'}</span></div>
-                        <div class="text-gray-400">Vol</div> <div class="text-black text-right"><span id="prev-vol">${vol}</span>ml</div>
-                        <div class="text-gray-400">Bottled</div> <div class="text-black text-right"><span id="prev-date">${dateVal}</span></div>
-                        <div class="text-gray-400">Peak</div> <div class="text-black text-right">${peakDateVal}</div>
+                        ${abv ? `<div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>` : ''}
+                        ${fg ? `<div class="text-gray-400">FG</div> <div class="text-black text-right"><span id="prev-fg">${fg}</span></div>` : ''}
+                        ${vol ? `<div class="text-gray-400">Vol</div> <div class="text-black text-right"><span id="prev-vol">${vol}</span>ml</div>` : ''}
+                        ${dateVal ? `<div class="text-gray-400">Bottled</div> <div class="text-black text-right"><span id="prev-date">${dateVal}</span></div>` : ''}
+                        ${peakDateVal ? `<div class="text-gray-400">Peak</div> <div class="text-black text-right">${peakDateVal}</div>` : ''}
                     </div>
                     <p style="display: ${showSulfites ? 'block' : 'none'}" class="text-[5px] uppercase opacity-50 leading-tight mt-1">
                         Contains Sulfites
@@ -3975,15 +3976,15 @@ function setLabelTheme(theme) {
 
             <div class="h-full w-[65%] relative p-2">
                 
-                <div id="title-container" class="absolute top-2 bottom-2 left-2 w-[70%] flex items-end justify-center overflow-hidden border-r border-transparent" 
+                <div id="title-container" class="absolute top-2 bottom-2 left-2 w-[55%] flex flex-row-reverse items-center justify-center overflow-hidden border-r border-transparent" 
                      style="padding-bottom: ${titleMargin}px;">
                     
-                    <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-[0.9] break-words whitespace-normal" style="writing-mode: vertical-rl; transform: rotate(180deg); width: 100%; max-height: 100%;">
+                    <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-[0.9] break-words whitespace-normal" style="writing-mode: vertical-rl; transform: rotate(180deg); width: auto; max-height: 100%;">
                         ${title}
                     </h1>
                 </div>
                 
-                <div class="absolute top-2 bottom-2 left-[72%] w-[10%] flex items-end justify-center" style="padding-bottom: ${titleMargin}px;">
+                <div class="absolute top-2 bottom-2 left-[58%] w-[10%] flex items-end justify-center" style="padding-bottom: ${titleMargin}px;">
                      <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" 
                         style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: ${styleSize}px;">
                         ${sub}
@@ -5697,25 +5698,27 @@ window.autoFitLabelText = function() {
     const sizeSlider = document.getElementById('tuneTitleSize');
     
     const safeZone = gapSlider ? parseInt(gapSlider.value) : 10;
-    // Gebruik slider waarde als start, fallback naar 60px
-    const startFontSize = sizeSlider ? parseInt(sizeSlider.value) : 60; 
+    const maxFontSize = sizeSlider ? parseInt(sizeSlider.value) : 60;
 
     if (!titleEl || !container) return;
 
-    // 2. RESET NAAR DE SLIDER GROOTTE
-    let fontSize = startFontSize; 
+    // 2. RESET NAAR MAX (Begin groot)
+    let fontSize = maxFontSize; 
     titleEl.style.fontSize = fontSize + 'px';
     titleEl.style.lineHeight = '0.9'; 
     titleEl.style.display = 'block';
 
     if (container.offsetWidth === 0 || container.offsetHeight === 0) return;
 
-    // Helper: Check botsing met Safe Zone
+    // 3. CHECK FUNCTIES (Puur visueel)
+    
+    // Check 1: Botst hij met het logo?
     const checkCollision = () => {
         if (!logoEl) return false;
         const tRect = titleEl.getBoundingClientRect();
         const lRect = logoEl.getBoundingClientRect();
 
+        // Is er overlap? (Rekening houdend met safeZone rondom het logo)
         const overlap = !(tRect.right < (lRect.left - safeZone) || 
                           tRect.left > (lRect.right + safeZone) || 
                           tRect.bottom < (lRect.top - safeZone) || 
@@ -5723,13 +5726,19 @@ window.autoFitLabelText = function() {
         return overlap;
     };
 
+    // Check 2: Past hij in zijn eigen container?
     const checkOverflow = () => {
-        return (titleEl.scrollWidth > container.offsetWidth || 
-                titleEl.scrollHeight > container.offsetHeight);
+        const tRect = titleEl.getBoundingClientRect();
+        const cRect = container.getBoundingClientRect();
+
+        // Omdat de tekst geroteerd is, moeten we slim kijken.
+        // We checken of de tekst-rechthoek groter is dan de container-rechthoek.
+        // We geven 2px marge voor afrondingsfouten.
+        return (tRect.height > cRect.height + 2) || (tRect.width > cRect.width + 2);
     }
 
-    // 3. VERKLEIN LUS (Alleen kleiner maken als het NIET past)
-    // Als de tekst past bij de gekozen grootte, blijft hij zo groot.
+    // 4. VERKLEIN LUS
+    // Zolang (Botsing OF Overflow) -> Verklein
     while ( (checkCollision() || checkOverflow()) && fontSize > 10 ) {
         fontSize--; 
         titleEl.style.fontSize = fontSize + 'px';

@@ -3878,59 +3878,76 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: REEVES STYLE (Met Auto-Fit Container)
+    // THEMA 1: REEVES STYLE FINAL (Met Story & Auto-Fit)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
+        // Logo: Klein en subtiel (w-16 = 64px)
         let logoHtml = '';
         if (hasImage) {
-            logoHtml = `<img src="${imgSrc}" class="w-24 h-24 object-cover rounded-full border-4 border-white shadow-sm">`;
+            logoHtml = `<img src="${imgSrc}" class="w-16 h-16 object-cover rounded-full border-2 border-gray-100 shadow-sm">`;
         } else {
-            logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-24 h-24 object-contain opacity-90">`;
+            logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-16 h-16 object-contain opacity-90">`;
         }
 
         container.innerHTML = `
-            <div id="title-container" class="h-full py-4 pl-4 flex flex-col justify-end items-start border-r border-gray-100" style="width: 45%;">
-                <div style="writing-mode: vertical-rl; transform: rotate(180deg); width: 100%; height: 100%; display: flex; align-items: end;">
-                    <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap origin-bottom-left">
+            <div class="h-full py-3 pl-3 flex gap-2 border-r border-gray-100" style="width: 55%;">
+                
+                <div id="title-container" class="h-full flex flex-col justify-end items-start overflow-hidden" style="flex: 2;">
+                    <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap origin-bottom-left" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                         ${title}
                     </h1>
                 </div>
-            </div>
 
-            <div class="h-full py-4 flex flex-col justify-end items-start px-2" style="width: 15%;">
-                <div style="writing-mode: vertical-rl; transform: rotate(180deg); height: 100%; display: flex; align-items: end; gap: 10px;">
-                    <p id="prev-subtitle" class="text-xl font-bold uppercase tracking-[0.2em] text-gray-400 whitespace-nowrap">
-                        ${sub}
-                    </p>
-                    <p id="prev-details" class="text-[8px] font-bold uppercase tracking-[0.2em] text-gray-300 whitespace-nowrap">
-                        ${details || 'HONEY WINE'}
-                    </p>
+                <div class="h-full flex flex-col justify-end items-start overflow-hidden" style="flex: 1;">
+                    <div style="writing-mode: vertical-rl; transform: rotate(180deg); display: flex; align-items: end; gap: 8px;">
+                        <p id="prev-subtitle" class="text-sm font-bold uppercase tracking-[0.25em] text-gray-400 whitespace-nowrap">
+                            ${sub}
+                        </p>
+                        <p id="prev-details" class="text-[8px] font-bold uppercase tracking-[0.2em] text-gray-300 whitespace-nowrap">
+                            ${details || 'HONEY WINE'}
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex-1 h-full flex flex-col justify-between items-end py-4 pr-4">
-                <div>${logoHtml}</div>
+            <div class="flex-1 h-full flex flex-col justify-between items-end py-3 pr-3 pl-2">
+                
+                <div class="w-full flex justify-end">
+                    ${logoHtml}
+                </div>
+
+                <div class="w-full text-right my-auto overflow-hidden">
+                    <p class="text-[7px] leading-tight text-gray-400 italic font-serif line-clamp-4">
+                        ${desc || "Handcrafted with patience and passion."}
+                    </p>
+                </div>
 
                 <div class="text-right text-[#8F8C79]">
-                    ${fg ? `<p class="text-sm font-bold opacity-60 mb-0 leading-none">FG ${fg}</p>` : ''}
-                    <p class="text-3xl font-header font-bold leading-none mb-2">
-                        <span id="prev-abv">${abv}</span>% <span class="text-xs font-normal">ABV</span>
-                    </p>
-                    <p class="text-[10px] font-mono uppercase tracking-widest opacity-50 border-t border-gray-200 pt-1 mt-1">
+                    
+                    <div class="flex flex-col items-end gap-0">
+                        ${fg ? `<p class="text-[10px] font-bold opacity-60 leading-none">FG ${fg}</p>` : ''}
+                        <p class="text-2xl font-header font-bold leading-none mt-0.5">
+                            <span id="prev-abv">${abv}</span>% <span class="text-[10px] font-normal">ABV</span>
+                        </p>
+                    </div>
+                    
+                    <p class="text-[8px] font-mono uppercase tracking-widest opacity-50 mt-1">
                         ${vol}ML • ${dateVal}
                     </p>
-                    <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-2 opacity-40 max-w-[80px] ml-auto leading-tight">
+
+                    <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[5px] uppercase mt-1 opacity-40 max-w-[80px] ml-auto leading-tight">
                         Contains Sulfites
                     </p>
                 </div>
             </div>
         `;
         
-        // Trigger de auto-fit direct na het laden van het thema
-        setTimeout(window.autoFitLabelText, 50);
+        // Trigger de auto-fit direct en nog eens na een korte render-tijd
+        setTimeout(window.autoFitLabelText, 10);
+        setTimeout(window.autoFitLabelText, 100);
     }
 
     // =================================================================
@@ -5619,22 +5636,22 @@ window.hidePromptModal = function() {
     }
 }
 
-// --- NIEUWE FUNCTIE: TEKST AUTOMATISCH PASSEND MAKEN ---
+// --- FUNCTIE: TEKST AUTOMATISCH PASSEND MAKEN ---
 window.autoFitLabelText = function() {
     const titleEl = document.getElementById('prev-title');
     const container = document.getElementById('title-container');
     
     if (!titleEl || !container) return;
 
-    // Reset naar een grote grootte om te beginnen
-    let fontSize = 80; // Start groot (bv 80px)
+    // Reset: Begin groot, maar niet té groot
+    let fontSize = 60; 
     titleEl.style.fontSize = fontSize + 'px';
-    titleEl.style.lineHeight = '0.85';
+    titleEl.style.lineHeight = '0.9';
 
-    // Zolang de tekst groter is dan de container (hoogte), maak het kleiner
-    // We gebruiken scrollHeight (inhoud) vs clientHeight (beschikbaar)
-    while (titleEl.scrollHeight > container.clientHeight && fontSize > 10) {
-        fontSize--;
+    // Zolang de tekst groter is dan de container (visuele hoogte = scrollHeight bij vertical mode), verklein.
+    // We voegen een buffer van 10px toe voor de zekerheid.
+    while ((titleEl.scrollHeight > container.clientHeight) && fontSize > 12) {
+        fontSize -= 2; // Snellere stappen
         titleEl.style.fontSize = fontSize + 'px';
     }
 }

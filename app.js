@@ -738,8 +738,8 @@ async function renderRecipeOutput(markdown, isTweak = false) {
     const fullHtml = `
             <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
                 <button onclick="window.generateRecipe()" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn text-sm flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Retry</button>
-                <button onclick="window.showLastPrompt()" class="bg-app-tertiary text-app-primary border border-app-brand/30 py-2 px-4 rounded-lg hover:bg-app-secondary transition-colors btn text-sm">Show AI Prompt</button>
-                <button onclick="window.print()" class="bg-app-tertiary text-app-primary border border-app-brand/30 py-2 px-4 rounded-lg hover:bg-app-secondary transition-colors btn">Print Recipe</button>
+                <button onclick="window.showLastPrompt()" class="bg-app-tertiary text-app-header border border-app-brand/30 py-2 px-4 rounded-lg hover:bg-app-secondary transition-colors btn text-sm">Show AI Prompt</button>
+                <button onclick="window.print()" class="bg-app-tertiary text-app-header border border-app-brand/30 py-2 px-4 rounded-lg hover:bg-app-secondary transition-colors btn">Print Recipe</button>
             </div>
             
             <div class="recipe-content">${recipeHtml}</div>
@@ -755,7 +755,7 @@ async function renderRecipeOutput(markdown, isTweak = false) {
                 </div>
                 <button onclick="window.findCommercialWaterMatch()" class="bg-app-brand text-white py-2 px-3 rounded text-sm hover:opacity-90 btn shadow-sm whitespace-nowrap">Find Matching Brand</button>
             </div>
-            <div id="water-brand-results" class="hidden mt-4 pt-4 border-t border-app-brand/20 text-sm text-app-primary"></div>
+            <div id="water-brand-results" class="hidden mt-4 pt-4 border-t border-app-brand/20 text-sm text-app-header"></div>
         </div>
 
         ${flavorProfileHtml}
@@ -764,7 +764,7 @@ async function renderRecipeOutput(markdown, isTweak = false) {
             <h3 class="text-2xl font-header font-bold text-center mb-4">Not quite right? Tweak it.</h3>
             <div class="card p-4 rounded-lg">
                 <label for="tweak-unsaved-request" class="block text-sm font-bold mb-2">Describe what you want to change:</label>
-                <textarea id="tweak-unsaved-request" rows="3" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-primary" placeholder="e.g., 'Make this for 20 liters', or 'Replace the apples with pears'"></textarea>
+                <textarea id="tweak-unsaved-request" rows="3" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-header" placeholder="e.g., 'Make this for 20 liters', or 'Replace the apples with pears'"></textarea>
                 <button id="tweak-unsaved-btn" class="w-full mt-3 bg-app-brand text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Generate Tweaked Recipe</button>
             </div>
             <div id="tweak-unsaved-output" class="mt-6"></div>
@@ -862,7 +862,7 @@ window.findCommercialWaterMatch = async function() {
         brands.forEach(b => {
             html += `<div class="p-3 card rounded border border-app-brand/30 shadow-sm flex flex-col gap-2">
                         <div class="flex justify-between items-start">
-                            <span class="font-bold text-app-primary">${b.brand}</span>
+                            <span class="font-bold text-app-header">${b.brand}</span>
                             <button onclick="window.applyWaterTweak('${b.brand}', '${b.tweak_instruction.replace(/'/g, "\\'")}')" class="text-xs bg-app-tertiary hover:bg-app-secondary text-app-brand border border-app-brand py-1 px-2 rounded transition-colors font-bold uppercase tracking-wider">Select</button>
                         </div>
                         <p class="text-xs text-app-secondary">${b.reason}</p>
@@ -1208,7 +1208,7 @@ function renderBrewDay(brewId) {
         if (amountMatch && !isCompleted) {
             detectedAmount = amountMatch[1];
             detectedUnit = amountMatch[2].toLowerCase();
-            inputHtml = `<div class="mt-1 flex items-center gap-2 bg-app-tertiary/50 p-1 rounded border border-app-brand/10"><label class="text-[10px] font-bold text-app-secondary uppercase">Actual:</label><input type="number" step="0.01" id="step-input-${index}" class="w-20 p-0.5 text-xs border rounded bg-app-primary border-app text-app-primary text-center" placeholder="${detectedAmount}" value="${detectedAmount}"><span class="text-xs font-bold text-app-secondary">${detectedUnit}</span></div>`;
+            inputHtml = `<div class="mt-1 flex items-center gap-2 bg-app-tertiary/50 p-1 rounded border border-app-brand/10"><label class="text-[10px] font-bold text-app-secondary uppercase">Actual:</label><input type="number" step="0.01" id="step-input-${index}" class="w-20 p-0.5 text-xs border rounded bg-app-primary border-app text-app-header text-center" placeholder="${detectedAmount}" value="${detectedAmount}"><span class="text-xs font-bold text-app-secondary">${detectedUnit}</span></div>`;
         } else if (isCompleted && savedAmount) {
              inputHtml = `<div class="mt-1 text-[10px] text-green-600 font-mono">✓ Added: ${savedAmount} ${detectedUnit || ''}</div>`;
         }
@@ -1225,7 +1225,7 @@ function renderBrewDay(brewId) {
         <div id="step-${index}" class="step-item p-3 border-b border-app-brand/10 last:border-0 ${isCompleted ? 'opacity-60 grayscale' : ''}">
             <div class="flex justify-between items-start gap-3">
                 <div class="flex-grow">
-                    <p class="step-title font-bold text-sm text-app-primary leading-tight">${index + 1}. ${step.title}</p>
+                    <p class="step-title font-bold text-sm text-app-header leading-tight">${index + 1}. ${step.title}</p>
                     <p class="text-xs text-app-secondary mt-1 leading-snug">${step.description}</p>
                     ${inputHtml}
                     ${timerHtml}
@@ -1312,7 +1312,7 @@ window.renderBrewDay2 = async function() {
                 </div>
             </div>
             <div>
-                <h4 class="font-bold text-sm leading-tight ${isChecked ? 'text-green-600 line-through decoration-2 opacity-70' : 'text-app-primary'}">${step.title}</h4>
+                <h4 class="font-bold text-sm leading-tight ${isChecked ? 'text-green-600 line-through decoration-2 opacity-70' : 'text-app-header'}">${step.title}</h4>
                 <p class="text-xs text-app-secondary mt-0.5 leading-snug ${isChecked ? 'line-through opacity-50' : ''}">${step.desc || step.description}</p>
             </div>
         </div>`;
@@ -2081,7 +2081,7 @@ function getActualIngredientsHtml(brew) {
     const rows = planned.map(p => {
         const saved = actuals.find(a => a.name === p.name);
         const val = saved ? saved.actualQty : p.quantity;
-        return `<tr data-name="${p.name}" data-plannedqty="${p.quantity}" data-plannedunit="${p.unit}"><td class="py-2 px-3">${p.name}</td><td class="py-2 px-3 text-app-secondary">${p.quantity} ${p.unit}</td><td class="py-2 px-3"><input type="number" step="0.01" class="actual-qty-input w-24 p-1 border rounded bg-app-primary border-app text-app-primary" value="${val}"></td><td class="py-2 px-3">${p.unit}</td></tr>`;
+        return `<tr data-name="${p.name}" data-plannedqty="${p.quantity}" data-plannedunit="${p.unit}"><td class="py-2 px-3">${p.name}</td><td class="py-2 px-3 text-app-secondary">${p.quantity} ${p.unit}</td><td class="py-2 px-3"><input type="number" step="0.01" class="actual-qty-input w-24 p-1 border rounded bg-app-primary border-app text-app-header" value="${val}"></td><td class="py-2 px-3">${p.unit}</td></tr>`;
     }).join('');
 
     return `<div class="log-item"><label>Actual Ingredients Log</label><table class="fermentation-table w-full" id="actualsTable-${idSuffix}"><thead><tr><th>Ingredient</th><th>Planned</th><th>Actual</th><th>Unit</th></tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -2269,14 +2269,14 @@ window.renderInventory = function() {
                 <div id="item-${item.id}" class="p-4 card rounded-xl border-l-4 ${catClass.replace('cat-', 'border-')} shadow-sm hover:shadow-md transition-all bg-app-secondary group relative">
                     <div class="flex justify-between items-start">
                         <div class="pr-4">
-                            <div class="font-bold text-xl text-app-primary leading-tight">${item.name}</div>
+                            <div class="font-bold text-xl text-app-header leading-tight">${item.name}</div>
                             <div class="text-xs ${dateClass} mt-1 flex items-center gap-1">
                                 Exp: ${expDateStr}
                             </div>
                         </div>
                         <div class="text-right">
                             <div class="inline-block bg-app-tertiary px-2 py-1 rounded-lg border border-app-brand/10 mb-2">
-                                <div class="font-mono font-bold text-app-primary text-sm">${item.qty} <span class="text-xs font-normal text-app-secondary">${item.unit}</span></div>
+                                <div class="font-mono font-bold text-app-header text-sm">${item.qty} <span class="text-xs font-normal text-app-secondary">${item.unit}</span></div>
                             </div>
                             <div class="text-xs text-app-secondary font-mono mb-3">
                                 ${currency}${(item.price || 0).toFixed(2)}
@@ -2581,7 +2581,7 @@ window.updateNextActionWidget = function() {
 
     if(actions.length > 0) {
         list.innerHTML = actions.slice(0, 3).map(a => `<li>${a}</li>`).join('');
-        // Zorg dat de lijst zichtbaar is (text-app-header i.p.v. text-app-primary)
+        // Zorg dat de lijst zichtbaar is (text-app-header i.p.v. text-app-header)
         list.className = "list-disc pl-5 space-y-2 text-app-header text-sm leading-relaxed";
         widget.classList.remove('hidden');
     } else {
@@ -4220,7 +4220,7 @@ window.renderEquipmentProfiles = function() {
             <div class="flex justify-between items-start">
                  
                  <div class="pr-4">
-                    <div class="font-bold text-xl text-app-primary leading-tight">${p.name}</div>
+                    <div class="font-bold text-xl text-app-header leading-tight">${p.name}</div>
                     <div class="text-xs font-bold uppercase tracking-wider text-blue-500 mt-1">${p.type}</div>
                     <div class="text-xs text-app-secondary mt-2">
                         Capacity: <strong>${p.capacityLiters || 'N/A'}L</strong> 
@@ -4666,7 +4666,7 @@ window.renderInventory = function() {
                     <div class="flex justify-between items-start">
                         
                         <div class="pr-4">
-                            <div class="font-bold text-xl text-app-primary leading-tight">${item.name}</div>
+                            <div class="font-bold text-xl text-app-header leading-tight">${item.name}</div>
                             <div class="text-xs ${dateClass} mt-1 flex items-center gap-1">
                                 <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 Exp: ${expDateStr}
@@ -4675,7 +4675,7 @@ window.renderInventory = function() {
 
                         <div class="text-right">
                             <div class="inline-block bg-app-tertiary px-2 py-1 rounded-lg border border-app-brand/10 mb-2">
-                                <div class="font-mono font-bold text-app-primary text-sm">${item.qty} <span class="text-xs font-normal text-app-secondary">${item.unit}</span></div>
+                                <div class="font-mono font-bold text-app-header text-sm">${item.qty} <span class="text-xs font-normal text-app-secondary">${item.unit}</span></div>
                             </div>
                             <div class="text-xs text-app-secondary font-mono mb-3">
                                 ${currency}${(item.price || 0).toFixed(2)}
@@ -4803,7 +4803,7 @@ window.renderPackagingUI = function() {
                        <div class="flex justify-between items-start">
                            
                            <div>
-                               <div class="font-bold text-xl text-app-primary">${item.name}</div>
+                               <div class="font-bold text-xl text-app-header">${item.name}</div>
                                <div class="text-xs text-app-secondary mt-1">Cost/Unit: <strong>${currency}${costPerUnit}</strong></div>
                            </div>
 
@@ -4874,8 +4874,8 @@ window.editPackagingItem = function(itemId) {
         <div class="w-full space-y-2 p-2 bg-app-primary rounded">
             <p class="font-bold">${item.name}</p>
             <div class="grid grid-cols-2 gap-2">
-                <input type="number" id="edit-qty-${itemId}" value="${itemData.qty}" placeholder="Quantity" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">
-                <input type="number" id="edit-price-${itemId}" value="${itemData.price}" step="0.01" placeholder="Total Price (${currency})" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-primary">
+                <input type="number" id="edit-qty-${itemId}" value="${itemData.qty}" placeholder="Quantity" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-header">
+                <input type="number" id="edit-price-${itemId}" value="${itemData.price}" step="0.01" placeholder="Total Price (${currency})" class="w-full p-1 border rounded bg-app-tertiary border-app text-app-header">
             </div>
             <div class="flex gap-2">
                 <button onclick="window.updatePackagingItem('${itemId}')" class="w-full bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm btn">Save</button>

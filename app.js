@@ -2053,41 +2053,9 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
     const useTargetABV = parsedTargets.targetABV || data.targetABV || '';
     const fermLog = data.fermentationLog || Array.from({ length: 3 }, () => ({}));
     
-    // De copy script voor OG
-    const copyOgToLogScript = `const ogInput = document.getElementById('actualOG-${idSuffix}'); const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input'); if (ogInput && firstSgInput) { firstSgInput.value = ogInput.value; }`;
-
-    return `
-        <div class="brew-log-section" data-id="${idSuffix}">
-            <h3>Brewmaster's Log</h3>
-            <div class="log-grid">
-                <div class="log-item"><label>Recipe Name:</label><input type="text" id="recipeName-${idSuffix}" value="${data.recipeName || ''}"></div>
-                <div class="log-item"><label>Brew Date:</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}"></div>
-            </div>
-            <div class="log-grid">
-                <div class="log-item"><label>Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${useTargetOG}" readonly class="bg-app-primary"></div>
-                <div class="log-item"><label>Actual OG:</label><input type="text" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" oninput="${copyOgToLogScript}; window.autoCalculateABV('${idSuffix}')"></div>
-                <div class="log-item"><label>Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${useTargetFG}" readonly class="bg-app-primary"></div>
-                <div class="log-item"><label>Actual FG:</label><input type="text" id="actualFG-${idSuffix}" value="${data.actualFG || ''}" oninput="window.autoCalculateABV('${idSuffix}')"></div>
-                <div class="log-item"><label>Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${useTargetABV}%" readonly class="bg-app-primary"></div>
-                <div class="log-item"><label>Final ABV:</label><input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}"></div>
-            </div>
-            <div class="log-item">
-                <label>Fermentation Log</label>
-                <div class="overflow-x-auto log-container">
-                     <table class="fermentation-table table-fixed w-full" id="fermentationTable-${idSuffix}" style="min-width: 500px;">
-                        <thead><tr><th style="width: 120px;">Date</th><th style="width: 80px;">Temp (°C)</th><th style="width: 90px;">S.G.</th><th>Notes</th></tr></thead>
-                        <tbody>${fermLog.map(row => `<tr>
-                                <td><input type="date" value="${row.date || ''}" class="w-full"></td>
-                                <td><input type="number" step="0.5" value="${row.temp || '18'}" class="w-full text-center"></td>
-                                <td><input type="number" step="0.001" value="${row.sg || ''}" class="w-full text-center" oninput="window.syncLogToFinal('${idSuffix}')"></td>
-                                <td><input type="text" value="${row.notes || ''}" class="w-full"></td>
-                            </tr>`).join('')}</tbody>
-                    </table>
-                    <div class="text-right mt-1"><button onclick="window.addLogLine('${idSuffix}')" class="text-xs text-app-brand underline">+ Add Row</button></div>
-                </div>
-            </div>
-
     const blendingLog = data.blendingLog || [];
+
+    const copyOgToLogScript = `const ogInput = document.getElementById('actualOG-${idSuffix}'); const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input'); if (ogInput && firstSgInput) { firstSgInput.value = ogInput.value; }`;
 
     const blendingHtml = `
     <div class="log-item mt-6 border-t-2 border-app-brand/10 pt-4">
@@ -2132,6 +2100,39 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
         <div class="clearfix"></div>
     </div>
     `;
+
+    return `
+        <div class="brew-log-section" data-id="${idSuffix}">
+            <h3>Brewmaster's Log</h3>
+            <div class="log-grid">
+                <div class="log-item"><label>Recipe Name:</label><input type="text" id="recipeName-${idSuffix}" value="${data.recipeName || ''}"></div>
+                <div class="log-item"><label>Brew Date:</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}"></div>
+            </div>
+            <div class="log-grid">
+                <div class="log-item"><label>Target OG:</label><input type="text" id="targetOG-${idSuffix}" value="${useTargetOG}" readonly class="bg-app-primary"></div>
+                <div class="log-item"><label>Actual OG:</label><input type="text" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" oninput="${copyOgToLogScript}; window.autoCalculateABV('${idSuffix}')"></div>
+                <div class="log-item"><label>Target FG:</label><input type="text" id="targetFG-${idSuffix}" value="${useTargetFG}" readonly class="bg-app-primary"></div>
+                <div class="log-item"><label>Actual FG:</label><input type="text" id="actualFG-${idSuffix}" value="${data.actualFG || ''}" oninput="window.autoCalculateABV('${idSuffix}')"></div>
+                <div class="log-item"><label>Target ABV:</label><input type="text" id="targetABV-${idSuffix}" value="${useTargetABV}%" readonly class="bg-app-primary"></div>
+                <div class="log-item"><label>Final ABV:</label><input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}"></div>
+            </div>
+            <div class="log-item">
+                <label>Fermentation Log</label>
+                <div class="overflow-x-auto log-container">
+                     <table class="fermentation-table table-fixed w-full" id="fermentationTable-${idSuffix}" style="min-width: 500px;">
+                        <thead><tr><th style="width: 120px;">Date</th><th style="width: 80px;">Temp (°C)</th><th style="width: 90px;">S.G.</th><th>Notes</th></tr></thead>
+                        <tbody>${fermLog.map(row => `<tr>
+                                <td><input type="date" value="${row.date || ''}" class="w-full"></td>
+                                <td><input type="number" step="0.5" value="${row.temp || '18'}" class="w-full text-center"></td>
+                                <td><input type="number" step="0.001" value="${row.sg || ''}" class="w-full text-center" oninput="window.syncLogToFinal('${idSuffix}')"></td>
+                                <td><input type="text" value="${row.notes || ''}" class="w-full"></td>
+                            </tr>`).join('')}</tbody>
+                    </table>
+                    <div class="text-right mt-1"><button onclick="window.addLogLine('${idSuffix}')" class="text-xs text-app-brand underline">+ Add Row</button></div>
+                </div>
+            </div>
+            
+            ${blendingHtml}
 
             <div class="log-item"><label>Aging Notes:</label><textarea id="agingNotes-${idSuffix}" rows="4">${data.agingNotes || ''}</textarea></div>
             <div class="log-item"><label>Bottling Notes:</label><textarea id="bottlingNotes-${idSuffix}" rows="3">${data.bottlingNotes || ''}</textarea></div>

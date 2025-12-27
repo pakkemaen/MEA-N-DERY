@@ -3878,7 +3878,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: WRAP-AROUND FINAL (Logo Top-Right + Peak Date)
+    // THEMA 1: WRAP-AROUND FINAL (Multi-line Title Support)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -3892,11 +3892,11 @@ function setLabelTheme(theme) {
             logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-24 h-24 object-contain opacity-90">`;
         }
 
-        // BEREKEN PEAK DATUM (+6 Maanden voor preview)
-        let peakDateVal = "2026-01-01"; // Fallback
+        // Peak Date
+        let peakDateVal = "2026-01-01"; 
         try {
             const d = new Date();
-            d.setMonth(d.getMonth() + 6); // Tel 6 maanden op
+            d.setMonth(d.getMonth() + 6); 
             peakDateVal = d.toLocaleDateString();
         } catch(e) {}
 
@@ -3907,7 +3907,6 @@ function setLabelTheme(theme) {
                     <p class="text-[7px] leading-relaxed text-gray-500 italic font-serif text-justify">
                         ${desc || "A handcrafted honey wine, aged to perfection. Drink cool and share with friends."}
                     </p>
-                    
                     <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[6px] font-bold uppercase tracking-wider text-gray-400 leading-tight border-t border-gray-200 pt-1">
                         ${details}
                     </p>
@@ -3921,7 +3920,6 @@ function setLabelTheme(theme) {
                         <div class="text-gray-400">Bottled</div> <div class="text-black text-right">${dateVal}</div>
                         <div class="text-app-brand">Peak</div> <div class="text-app-brand text-right">${peakDateVal}</div>
                     </div>
-
                     <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[5px] uppercase opacity-50 leading-tight mt-1">
                         Contains Sulfites
                     </p>
@@ -3930,14 +3928,15 @@ function setLabelTheme(theme) {
 
             <div class="h-full w-[65%] flex flex-row p-4 pl-5 relative">
                 
-                <div class="h-full flex flex-col justify-center items-start gap-1 z-10">
-                    <div id="title-container" class="h-[90%] w-32 flex flex-col justify-center items-start overflow-hidden">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap origin-center" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                <div class="h-full flex flex-col justify-center items-center gap-1 z-10">
+                    
+                    <div id="title-container" class="h-[90%] w-40 flex flex-col justify-center items-center overflow-hidden">
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-normal text-center origin-center leading-tight break-words" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
                     </div>
                     
-                    <p id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap ml-1" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                    <p id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                         ${sub}
                     </p>
                 </div>
@@ -5646,19 +5645,19 @@ window.autoFitLabelText = function() {
     
     if (!titleEl || !container) return;
 
-    // Reset naar groot
-    let fontSize = 55; 
+    // Reset: Begin groot
+    let fontSize = 50; 
     titleEl.style.fontSize = fontSize + 'px';
-    titleEl.style.lineHeight = '0.85';
+    // Belangrijk: Leading (regelafstand) iets ruimer zetten voor multi-line
+    titleEl.style.lineHeight = '1.1'; 
     titleEl.style.display = 'block';
 
     if (container.clientHeight === 0) return;
 
-    // We checken nu zowel hoogte als breedte (omdat hij roteert kan breedte ook een probleem zijn)
-    // We verkleinen zolang de inhoud groter is dan de container
+    // Zolang de tekst groter is dan de container...
     while (
         (titleEl.scrollHeight > container.clientHeight || titleEl.scrollWidth > container.clientWidth) 
-        && fontSize > 15
+        && fontSize > 10
     ) {
         fontSize -= 1; 
         titleEl.style.fontSize = fontSize + 'px';

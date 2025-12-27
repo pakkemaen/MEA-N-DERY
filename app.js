@@ -3800,6 +3800,7 @@ function updateLabelPreviewText() {
 }
 
 // Data uit recept laden
+// Data uit recept laden
 function loadLabelFromBrew(e) {
     const brewId = e.target.value;
     if (!brewId) return;
@@ -3813,9 +3814,17 @@ function loadLabelFromBrew(e) {
     if (brew.recipeMarkdown.toLowerCase().includes('bochet')) style = "Bochet (Caramelized)";
     document.getElementById('labelSubtitle').value = style;
 
+    // ABV ophalen
     document.getElementById('labelAbv').value = brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '12';
+    
+    // FG ophalen
     document.getElementById('labelFg').value = brew.logData?.actualFG || brew.logData?.targetFG || '';
-    document.getElementById('labelVol').value = (brew.batchSize * 1000) || '750';
+    
+    // --- AANGEPAST: STANDAARD 330ML ---
+    // Oude regel was: (brew.batchSize * 1000) || '750';
+    document.getElementById('labelVol').value = '330'; 
+    
+    // Datum ophalen
     document.getElementById('labelDate').value = brew.logData?.brewDate || new Date().toLocaleDateString();
 
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
@@ -3871,7 +3880,7 @@ function setLabelTheme(theme) {
 
         let logoHtml = '';
         if (hasImage) {
-            logoHtml = `<img src="${imgSrc}" class="w-40 h-40 object-cover rounded-full border-4 border-white shadow-sm">`;
+            logoHtml = `<img src="${imgSrc}" class="w-32 h-32 object-cover rounded-full border-4 border-white shadow-sm">`;
         } else {
             // NIEUWE REGEL (Met favicon fallback):
             logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-48 object-contain opacity-90">`;

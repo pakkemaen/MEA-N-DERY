@@ -2083,28 +2083,26 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
     // 1. Haal de Blending data op
     const blendingLog = data.blendingLog || [];
 
-    // De copy script voor OG
     const copyOgToLogScript = `const ogInput = document.getElementById('actualOG-${idSuffix}'); const firstSgInput = document.querySelector('#fermentationTable-${idSuffix} tbody tr:first-child td:nth-child(3) input'); if (ogInput && firstSgInput) { firstSgInput.value = ogInput.value; }`;
 
-    // 2. De HTML voor de Blending tabel (AANGEPAST: Betere uitlijning summary)
-    // 2. De HTML voor de Blending tabel (MET VOLUME INPUT)
+    // 2. De HTML voor de Blending tabel (AANGEPAST: Uniforme Stijl)
     const blendingHtml = `
     <div class="log-item mt-6 border-t-2 border-app-brand/10 pt-4">
         <div class="flex justify-between items-end mb-4">
             <div>
                 <label class="font-bold text-app-header flex items-center gap-2 mb-1">
-                    <svg class="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    <svg class="w-4 h-4 text-app-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                     Fortification / Blending
                 </label>
                 <div class="flex items-center gap-2 text-xs">
                     <span class="text-app-secondary">Vol after racking (L):</span>
                     <input type="number" id="currentVol-${idSuffix}" step="0.01" value="${data.currentVolume || ''}" placeholder="e.g. 4.6" 
-                           class="w-16 p-1 text-center border rounded bg-pink-50 border-pink-200 text-pink-700 font-bold" 
+                           class="w-16 p-1 text-center border rounded bg-app-tertiary border-app-brand/20 text-app-header font-bold focus:ring-1 focus:ring-app-brand" 
                            oninput="window.recalcTotalABV('${idSuffix}')">
                 </div>
             </div>
-            <button onclick="window.addBlendingRow('${idSuffix}')" class="text-xs bg-pink-50 text-pink-600 border border-pink-200 px-2 py-1.5 rounded hover:bg-pink-100 font-bold uppercase transition-colors h-8">
-                + Add Spirit/Juice
+            <button onclick="window.addBlendingRow('${idSuffix}')" class="text-xs bg-app-tertiary text-app-brand border border-app-brand/20 px-3 py-1.5 rounded hover:bg-app-secondary font-bold uppercase transition-colors shadow-sm h-8 flex items-center">
+                + Add Liquid
             </button>
         </div>
         
@@ -2142,7 +2140,6 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
     </div>
     `;
 
-    // 3. De Return string (AANGEPAST: Fermentation knop styling)
     return `
         <div class="brew-log-section" data-id="${idSuffix}">
             <h3>Brewmaster's Log</h3>
@@ -2172,7 +2169,7 @@ function getBrewLogHtml(logData, idSuffix = 'new', parsedTargets = {}) {
                     </table>
                     
                     <div class="text-right mt-2">
-                        <button onclick="window.addLogLine('${idSuffix}')" class="text-xs bg-app-tertiary text-app-brand border border-app-brand/20 px-2 py-1 rounded hover:bg-app-secondary font-bold uppercase transition-colors">
+                        <button onclick="window.addLogLine('${idSuffix}')" class="text-xs bg-app-tertiary text-app-brand border border-app-brand/20 px-3 py-1.5 rounded hover:bg-app-secondary font-bold uppercase transition-colors shadow-sm inline-flex items-center">
                             + Add Measurement
                         </button>
                     </div>

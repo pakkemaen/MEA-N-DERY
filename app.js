@@ -5674,16 +5674,16 @@ window.autoFitLabelText = function() {
     const container = document.getElementById('title-container');
     const logoEl = document.getElementById('label-logo-img');
     
-    // HAAL DE WAARDES OP UIT DE SLIDERS
+    // 1. HAAL TUNING WAARDES OP
     const gapSlider = document.getElementById('tuneLogoGap');
-    const safeZone = gapSlider ? parseInt(gapSlider.value) : 10;
-    
     const sizeSlider = document.getElementById('tuneTitleSize');
-    const maxFontSize = sizeSlider ? parseInt(sizeSlider.value) : 60;
+    
+    const safeZone = gapSlider ? parseInt(gapSlider.value) : 10;
+    const maxFontSize = sizeSlider ? parseInt(sizeSlider.value) : 60; // Dit is je nieuwe slider
 
     if (!titleEl || !container) return;
 
-    // 1. Reset naar de MAXIMAAL ingestelde grootte van de slider
+    // 2. RESET NAAR DE MAXIMALE GROOTTE (uit de slider)
     let fontSize = maxFontSize; 
     titleEl.style.fontSize = fontSize + 'px';
     titleEl.style.lineHeight = '0.9'; 
@@ -5691,13 +5691,13 @@ window.autoFitLabelText = function() {
 
     if (container.offsetWidth === 0 || container.offsetHeight === 0) return;
 
+    // Helper: Check botsing met Safe Zone
     const checkCollision = () => {
         if (!logoEl) return false;
         const tRect = titleEl.getBoundingClientRect();
         const lRect = logoEl.getBoundingClientRect();
 
-        // Check overlap met de ingestelde SAFE ZONE buffer
-        // We vergroten de "box" van het logo virtueel met de safeZone waarde
+        // We checken of de tekst in de buurt komt van het logo + safeZone
         const overlap = !(tRect.right < (lRect.left - safeZone) || 
                           tRect.left > (lRect.right + safeZone) || 
                           tRect.bottom < (lRect.top - safeZone) || 
@@ -5706,18 +5706,17 @@ window.autoFitLabelText = function() {
     };
 
     const checkOverflow = () => {
-        // ScrollWidth is de werkelijke breedte van de content, offsetWidth is de zichtbare container
         return (titleEl.scrollWidth > container.offsetWidth || 
                 titleEl.scrollHeight > container.offsetHeight);
     }
 
-    // 2. Verklein lus: Zolang (Tekst raakt Logo) OF (Tekst past niet in container) -> Verklein
+    // 3. VERKLEIN LUS
+    // Zolang hij botst OF te groot is -> maak kleiner
     while ( (checkCollision() || checkOverflow()) && fontSize > 10 ) {
         fontSize--; 
         titleEl.style.fontSize = fontSize + 'px';
     }
     
-    // Veiligheid: Nooit onzichtbaar maken
     if (fontSize <= 10) titleEl.style.fontSize = '10px';
 }
 
@@ -5863,13 +5862,13 @@ function initApp() {
     // --- LAYOUT TUNING LISTENERS ---
     ['tuneTitleSize', 'tuneStyleSize', 'tuneTitleMargin', 'tuneLogoGap'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', (e) => {
-            // Update het getalletje naast de slider
+            // Update getalletje
             if(id === 'tuneTitleSize') document.getElementById('disp-title-size').textContent = e.target.value + 'px';
             if(id === 'tuneStyleSize') document.getElementById('disp-style-size').textContent = e.target.value + 'px';
             if(id === 'tuneTitleMargin') document.getElementById('disp-title-margin').textContent = e.target.value + 'px';
             if(id === 'tuneLogoGap') document.getElementById('disp-logo-gap').textContent = e.target.value + 'px';
             
-            // Trigger update: Eerst opnieuw renderen (voor margins/font-size), dan auto-fit
+            // Update label & forceer herberekening
             const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
             setLabelTheme(activeTheme);
         });

@@ -61,7 +61,7 @@
         <div class="text-center p-8 max-w-md mx-auto w-full">
             
     <img src="logo.png" 
-         class="w-48 h-48 mx-auto mb-4 object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500" 
+         class="w-72 h-72 mx-auto mb-4 object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500" 
          alt="Meandery Logo"
          onerror="this.style.display='none'; document.getElementById('login-brand-text').classList.remove('hidden')">
     
@@ -671,7 +671,7 @@
                     <textarea id="labelDescription" rows="3" class="w-full p-2 border rounded bg-app-tertiary text-xs" placeholder="A dry traditional mead..."></textarea>
                 </div>
 
-                <div class="mt-4 pt-3 border-t border-app/10">
+                <div class="space-y-3 mb-6 pt-4 border-t border-app">
     <details class="group">
         <summary class="flex justify-between items-center cursor-pointer text-sm font-bold text-app-brand uppercase tracking-wider select-none list-none">
             <span>Extra Info on Label</span>
@@ -679,7 +679,7 @@
         </summary>
         
         <div class="pt-4 space-y-2">
-            <label class="flex items-center cursor-pointer group mt-2">
+            <label class="flex items-center cursor-pointer group mt-1">
                 <input type="checkbox" id="labelShowSulfites" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
                 <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors">Contains Sulfites</span>
             </label>
@@ -710,7 +710,7 @@
 <div class="space-y-3 mb-6 pt-4 border-t border-app">
     <details class="group">
         <summary class="flex justify-between items-center cursor-pointer text-sm font-bold text-app-brand uppercase tracking-wider select-none list-none">
-            <span>🛠️ Fine-Tune Layout</span>
+            <span>Fine-Tune Layout</span>
             <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
         </summary>
         
@@ -745,7 +745,7 @@
                     <span id="disp-logo-gap" class="font-mono text-gray-400">10px</span>
                 </div>
                 <input type="range" id="tuneLogoGap" min="0" max="150" value="10" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-                <p class="text-[9px] text-gray-400 mt-1">Forces title to shrink if it gets too close to logo.</p>
+                <p class="text-[9px] text-gray-400 mt-1">Increasing this pushes the title away from the logo.</p>
             </div>
         </div>
     </details>

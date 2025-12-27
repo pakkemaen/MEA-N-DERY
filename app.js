@@ -3872,7 +3872,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDARD (Modern Verticaal, Geen Cirkel voor Logo)
+    // THEMA 1: STANDARD (Modern Verticaal, Geoptimaliseerd voor ruimte)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex p-6 font-sans`;
@@ -3880,10 +3880,11 @@ function setLabelTheme(theme) {
 
         let logoHtml = '';
         if (hasImage) {
-            logoHtml = `<img src="${imgSrc}" class="w-32 h-32 object-cover rounded-full border-4 border-white shadow-sm">`;
+            // Uploaded image: Kleiner maken (h-24) en randje
+            logoHtml = `<img src="${imgSrc}" class="h-24 w-auto object-cover rounded-full border-4 border-white shadow-sm">`;
         } else {
-            // NIEUWE REGEL (Met favicon fallback):
-            logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-48 object-contain opacity-90">`;
+            // Standaard logo: Kleiner maken (h-24) zodat tekst past
+            logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="h-24 w-auto object-contain opacity-90">`;
         }
 
         container.innerHTML = `
@@ -3900,30 +3901,35 @@ function setLabelTheme(theme) {
                 </div>
             </div>
 
-            <div class="flex-1 flex flex-col justify-between items-center pl-4 py-2">
-                <div class="w-full flex items-center justify-center flex-grow">
+            <div class="flex-1 flex flex-col justify-between items-center pl-4 py-1">
+                
+                <div class="w-full flex items-center justify-center py-2">
                     ${logoHtml}
                 </div>
-                <div class="text-right text-[#8F8C79] w-full mt-4">
-                    <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-2 ml-auto leading-tight opacity-70">
+
+                <div class="text-right text-[#8F8C79] w-full mt-1 flex-grow flex flex-col justify-end">
+                    
+                    <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-1 ml-auto leading-tight opacity-70 break-words max-w-full">
                         ${details}
                     </p>
-                    ${!showDetails ? `<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 opacity-50">Mea(n)dery</p>` : ''}
                     
-                    <div class="border-t-2 border-[#8F8C79] pt-2">
-                        ${fg ? `<p class="text-xl font-header font-normal leading-none mb-1">FG ${fg}</p>` : ''}
+                    ${!showDetails ? `<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1 opacity-50">Mea(n)dery</p>` : ''}
+                    
+                    <div class="border-t-2 border-[#8F8C79] pt-1">
+                        ${fg ? `<p class="text-xs font-header font-normal leading-none mb-0.5 opacity-80">FG ${fg}</p>` : ''}
                         <p class="text-3xl font-header font-normal leading-none"><span id="prev-abv">${abv}</span>% <span class="text-sm">ABV</span></p>
-                        <div class="mt-1 text-[10px] text-gray-400 font-sans flex justify-end gap-2 uppercase tracking-wide">
+                        <div class="mt-0.5 text-[10px] text-gray-400 font-sans flex justify-end gap-2 uppercase tracking-wide">
                             <span>${vol}ml</span><span>•</span><span id="prev-date">${dateVal}</span>
                         </div>
                     </div>
-                    <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-2 opacity-40">
-                        Contains Sulfites
+
+                    <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-1 opacity-60">
+                        Contains Sulfites • Drink Responsibly
                     </p>
                 </div>
             </div>
         `;
-    } 
+    }
 
     // =================================================================
     // THEMA 2: SPECIAL (Foto Achtergrond, Wit Logo)

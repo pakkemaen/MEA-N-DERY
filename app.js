@@ -3924,12 +3924,13 @@ function setLabelTheme(theme) {
         const styleSize = document.getElementById('tuneStyleSize')?.value || 9;
         const titleMargin = document.getElementById('tuneTitleMargin')?.value || 0;
 
-        // Logo (GROTER GEMAAKT: w-28 h-28)
+        // Logo (AANGEPAST: object-right-top toegevoegd)
         let logoHtml = '';
+        // We maken de container (w-32) iets groter, en dwingen de inhoud naar rechtsboven
         if (hasImage) {
-            logoHtml = `<img id="label-logo-img" src="${imgSrc}" class="w-28 h-28 object-cover rounded-full border-4 border-white shadow-sm">`;
+            logoHtml = `<img id="label-logo-img" src="${imgSrc}" class="w-32 h-32 object-contain object-right-top rounded-full border-4 border-white shadow-sm">`;
         } else {
-            logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-28 h-28 object-contain opacity-90">`;
+            logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-right-top opacity-90">`;
         }
 
         // Info string
@@ -3990,7 +3991,7 @@ function setLabelTheme(theme) {
                     </p>
                 </div>
 
-                <div class="absolute top-4 right-4 z-10">
+                <div class="absolute top-0 right-0 z-10">
                     ${logoHtml}
                 </div>
             </div>

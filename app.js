@@ -3393,7 +3393,8 @@ window.sendTroubleshootMessage = async function() {
             ${currentChatImageBase64 ? '<div class="mb-2"><span class="text-[10px] uppercase bg-white/20 px-1 rounded">📷 Image attached</span></div>' : ''}
             ${text}
         </div>
-        <img src="assets/logo.png" alt="Me" class="w-8 h-8 rounded-full bg-app-tertiary flex-shrink-0 object-cover border border-app-brand/20">
+        
+        <img src="logo.png" onerror="this.src='favicon.png'" alt="Me" class="w-8 h-8 rounded-full bg-app-tertiary flex-shrink-0 object-contain border border-app-brand/20 p-0.5">
     </div>`;
     chatBox.insertAdjacentHTML('beforeend', userHtml);
     
@@ -3451,19 +3452,31 @@ async function performChatApiCall(history, base64Image) {
     if (!apiKey && typeof CONFIG !== 'undefined') apiKey = CONFIG.firebase.apiKey;
     if (!apiKey) throw new Error("No API Key");
 
-    // We gebruiken Gemini 1.5 Flash (die is snel en ondersteunt tekst + beeld)
-    const model = "gemini-1.5-flash"; 
+    // --- FIX: KOPPELING MET SETTINGS ---
+    // 1. Kijk of de gebruiker een specifiek Chat Model heeft gekozen.
+    // 2. Zo niet, gebruik het algemene AI model.
+    // 3. Als alles faalt, gebruik 'gemini-2.0-flash' (die werkt wel volgens jouw lijst).
+    let model = "gemini-2.0-flash"; 
+    
+    if (userSettings.chatModel && userSettings.chatModel.trim() !== "") {
+        model = userSettings.chatModel;
+    } else if (userSettings.aiModel && userSettings.aiModel.trim() !== "") {
+        model = userSettings.aiModel;
+    }
+
+    // Console log zodat je kunt zien wat er gebeurt (F12)
+    console.log("Mead Medic is using model:", model);
+
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     // Bouw de prompt op basis van de geschiedenis
-    // We maken er één lange context string van, want dat is veiliger dan multi-turn arrays complexiteit
     let promptContext = "You are an expert Mead Troubleshooter. Be concise, helpful, and scientific. Keep answers under 150 words unless asked for detail.\n\nCONVERSATION HISTORY:\n";
     
     history.forEach(msg => {
         promptContext += `${msg.role === 'user' ? 'USER' : 'AI'}: ${msg.text} ${msg.hasImage ? '[User uploaded an image]' : ''}\n`;
     });
     
-    promptContext += `\nUSER'S NEWEST INPUT: `; // De laatste input zit al in de history, maar voor de duidelijkheid.
+    promptContext += `\nUSER'S NEWEST INPUT: `; 
 
     const parts = [{ text: promptContext }];
     

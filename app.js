@@ -2453,16 +2453,12 @@ window.deleteCellarItem = async function(id, name) {
 window.updateCostAnalysis = function() {
     const currency = userSettings.currencySymbol || '€';
     
-    // 1. Inventory Value
+    // 1. Bereken Totalen
     let invValue = inventory.reduce((sum, item) => sum + (item.price || 0), 0);
-    
-    // 2. Active Brews Value (alles niet gebotteld)
     let activeValue = brews.filter(b => !b.isBottled).reduce((sum, b) => sum + (b.totalCost || 0), 0);
-    
-    // 3. Cellar Value
     let cellarValue = cellar.reduce((sum, c) => sum + (c.totalBatchCost || 0), 0);
     
-    // Update DOM elements als ze bestaan
+    // Update Tekst Elementen
     const elInv = document.getElementById('total-inventory-value');
     const elActive = document.getElementById('total-active-value');
     const elCellar = document.getElementById('total-cellar-value');
@@ -2473,23 +2469,62 @@ window.updateCostAnalysis = function() {
     if(elCellar) elCellar.textContent = `${currency}${cellarValue.toFixed(2)}`;
     if(elGrand) elGrand.textContent = `${currency}${(invValue + activeValue + cellarValue).toFixed(2)}`;
     
-    // Update Chart als die bestaat
+    // 2. Update de Grafiek met VASTE Kleuren
     const ctx = document.getElementById('cost-chart');
     if (ctx && window.Chart) {
+        
+        // Data groeperen
         const spendByCategory = inventory.reduce((acc, item) => {
             const cat = item.category || 'Other';
             acc[cat] = (acc[cat] || 0) + (item.price || 0);
             return acc;
         }, {});
+
+        // Definieer vaste kleuren per categorie (zodat Fruit altijd rood is, etc.)
+        const categoryColors = {
+            'Honey': '#f59e0b',        // Goud/Amber
+            'Yeast': '#a16207',        // Donkergeel/Bruin
+            'Nutrient': '#65a30d',     // Frisgroen
+            'Malt Extract': '#7c2d12', // Donkerbruin (Mout)
+            'Fruit': '#dc2626',        // Rood
+            'Spice': '#ea580c',        // Oranje
+            'Adjunct': '#57534e',      // Grijs
+            'Chemical': '#2563eb',     // Blauw
+            'Water': '#0891b2',        // Cyaan
+            'Other': '#8F8C79'         // Je Brand Color
+        };
+
+        const labels = Object.keys(spendByCategory);
+        const data = Object.values(spendByCategory);
         
+        // Wijs de kleuren toe op basis van de labelnaam
+        const backgroundColors = labels.map(cat => categoryColors[cat] || '#8F8C79');
+
         if (window.costChart) window.costChart.destroy();
+        
         window.costChart = new Chart(ctx.getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: Object.keys(spendByCategory),
-                datasets: [{ data: Object.values(spendByCategory), backgroundColor: ['#8F8C79', '#b45309', '#2d2a26', '#16a34a', '#2563eb', '#9333ea'] }]
+                labels: labels,
+                datasets: [{ 
+                    data: data, 
+                    backgroundColor: backgroundColors,
+                    borderWidth: 0 // Geen witte randjes voor een strakker effect
+                }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true, // Bolletjes i.p.v. vierkantjes
+                            padding: 20
+                        }
+                    }
+                }
+            }
         });
     }
 }
@@ -4282,13 +4317,13 @@ window.renderEquipmentProfiles = function() {
     }
     
     listDiv.innerHTML = equipmentProfiles.map(p => `
-        <div id="equip-item-${p.id}" class="p-4 card rounded-xl border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-all bg-app-secondary mb-3 group relative">
+        <div id="equip-item-${p.id}" class="p-4 card rounded-xl border-l-4 border-app-brand shadow-sm hover:shadow-md transition-all bg-app-secondary mb-3 group relative">
             <div class="flex justify-between items-start">
                  
                  <div class="pr-4">
                     <div class="font-bold text-xl text-app-header leading-tight">${p.name}</div>
                     <div class="text-xs text-app-secondary mt-1 flex flex-col gap-0.5">
-                        <span class="font-bold uppercase tracking-wider text-blue-600 mb-1">${p.type}</span>
+                        <span class="font-bold uppercase tracking-wider text-app-brand mb-1">${p.type}</span>
                         <span>Capacity: ${p.capacityLiters || '-'}L</span>
                         <span>Loss: ${p.trubLossLiters || 0}L ${p.type === 'Kettle' ? `• Boil-off: ${p.boilOffRateLitersPerHour || 0}L/hr` : ''}</span>
                     </div>
@@ -4302,7 +4337,7 @@ window.renderEquipmentProfiles = function() {
             </div>
 
             <div class="flex justify-end gap-4 mt-2 pt-2 border-t border-app-brand/5">
-                <button onclick="window.editEquipmentProfile('${p.id}')" class="text-xs font-bold text-app-secondary hover:text-blue-600 uppercase tracking-wider flex items-center gap-1 transition-colors">
+                <button onclick="window.editEquipmentProfile('${p.id}')" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1 transition-colors">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg> 
                     Edit
                 </button>
@@ -4865,7 +4900,7 @@ window.renderPackagingUI = function() {
                 const costPerUnit = (itemData.qty > 0 && itemData.price > 0) ? (itemData.price / itemData.qty).toFixed(2) : '0.00';
                 
                 return `
-                   <div id="pkg-item-${item.id}" class="p-4 card rounded-xl border-l-4 border-amber-600 shadow-sm hover:shadow-md transition-all bg-app-secondary mb-3 group relative">
+                   <div id="pkg-item-${item.id}" class="p-4 card rounded-xl border-l-4 border-app-brand shadow-sm hover:shadow-md transition-all bg-app-secondary mb-3 group relative">
                        <div class="flex justify-between items-start">
                            
                            <div class="pr-4">
@@ -4886,7 +4921,7 @@ window.renderPackagingUI = function() {
                        </div>
 
                        <div class="flex justify-end gap-4 mt-2 pt-2 border-t border-app-brand/5">
-                           <button onclick="window.editPackagingItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-blue-600 uppercase tracking-wider flex items-center gap-1 transition-colors">
+                           <button onclick="window.editPackagingItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1 transition-colors">
                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                Edit
                            </button>

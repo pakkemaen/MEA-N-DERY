@@ -3820,26 +3820,32 @@ function loadLabelFromBrew(e) {
     if (brew.recipeMarkdown.toLowerCase().includes('bochet')) style = "Bochet (Caramelized)";
     document.getElementById('labelSubtitle').value = style;
 
-    // ABV ophalen
+    // ABV, FG, Vol, Date laden...
     document.getElementById('labelAbv').value = brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '12';
-    
-    // FG ophalen
     document.getElementById('labelFg').value = brew.logData?.actualFG || brew.logData?.targetFG || '';
-    
-    // --- AANGEPAST: STANDAARD 330ML ---
-    // Oude regel was: (brew.batchSize * 1000) || '750';
     document.getElementById('labelVol').value = '330'; 
-    
-    // Datum ophalen
     document.getElementById('labelDate').value = brew.logData?.brewDate || new Date().toLocaleDateString();
 
+    // --- NIEUW: INGREDIËNTEN ANALYSE VOOR CHECKBOXES ---
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
-    const yeast = ings.find(i => i.name.toLowerCase().includes('yeast'))?.name || 'Yeast';
-    const honey = ings.find(i => i.name.toLowerCase().includes('honey'))?.name || 'Honey';
-    document.getElementById('labelDetails').value = `${yeast} • ${honey}`;
+    
+    // Zoek Gist (Naam bevat 'Yeast' of Categorie is Yeast)
+    const yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist'));
+    const yeastName = yeastItem ? yeastItem.name.replace(/yeast/gi, '').trim() : 'Unknown';
+    document.getElementById('displayLabelYeast').textContent = yeastName;
 
-    const needsWarning = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta');
-    document.getElementById('labelWarning').checked = needsWarning;
+    // Zoek Honing
+    const honeyItem = ings.find(i => i.name.toLowerCase().includes('honey') || i.name.toLowerCase().includes('honing'));
+    const honeyName = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
+    document.getElementById('displayLabelHoney').textContent = honeyName;
+
+    // Zet de algemene details tekst (voor het "Full Ingredients" vinkje)
+    const fullList = ings.map(i => i.name).join(' • ');
+    document.getElementById('labelDetails').value = fullList;
+
+    // Auto-detect sulfiet uit recept tekst
+    const needsWarning = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
+    document.getElementById('labelShowSulfites').checked = needsWarning;
 
     updateLabelPreviewText();
 }
@@ -3878,13 +3884,12 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (Final Alignment & Live Data Fix)
+    // THEMA 1: STANDAARD (Title Fix + Dynamic Info)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
-        // Logo
         let logoHtml = '';
         if (hasImage) {
             logoHtml = `<img src="${imgSrc}" class="w-24 h-24 object-cover rounded-full border-4 border-white shadow-sm">`;
@@ -3892,24 +3897,33 @@ function setLabelTheme(theme) {
             logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-24 h-24 object-contain opacity-90">`;
         }
 
-        // Peak Date
         let peakDateVal = "2026-01-01"; 
-        try {
-            const d = new Date();
-            d.setMonth(d.getMonth() + 6); 
-            peakDateVal = d.toLocaleDateString();
-        } catch(e) {}
+        try { const d = new Date(); d.setMonth(d.getMonth() + 6); peakDateVal = d.toLocaleDateString(); } catch(e) {}
+
+        // --- NIEUW: BOUW DE EXTRA INFO STRING OP ---
+        let extraInfoHtml = '';
+        const showYeast = document.getElementById('labelShowYeast')?.checked;
+        const showHoney = document.getElementById('labelShowHoney')?.checked;
+        const showDetails = document.getElementById('labelShowDetails')?.checked;
+        const showSulfites = document.getElementById('labelShowSulfites')?.checked;
+
+        let infoParts = [];
+        if (showYeast) infoParts.push(`Yeast: ${document.getElementById('displayLabelYeast').textContent}`);
+        if (showHoney) infoParts.push(`Honey: ${document.getElementById('displayLabelHoney').textContent}`);
+        if (showDetails) infoParts.push(details); // De volledige lijst
+
+        // Zet ze achter elkaar met een bolletje
+        const infoString = infoParts.join(' • ');
 
         container.innerHTML = `
             <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-3 px-3 flex flex-col justify-between text-right z-20 relative">
                 
                 <div class="flex flex-col gap-2 overflow-hidden">
                     <p id="prev-desc" class="text-[7px] leading-relaxed text-gray-500 italic font-serif text-justify">
-                        ${desc || "A handcrafted honey wine, aged to perfection."}
+                        ${desc || "A handcrafted honey wine."}
                     </p>
-                    <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[6px] font-bold uppercase tracking-wider text-gray-400 leading-tight border-t border-gray-200 pt-1">
-                        ${details}
-                    </p>
+                    
+                    ${infoString ? `<p class="text-[6px] font-bold uppercase tracking-wider text-gray-400 leading-tight border-t border-gray-200 pt-1">${infoString}</p>` : ''}
                 </div>
 
                 <div class="text-[#8F8C79] mt-auto">
@@ -3920,7 +3934,7 @@ function setLabelTheme(theme) {
                         <div class="text-gray-400">Bottled</div> <div class="text-black text-right"><span id="prev-date">${dateVal}</span></div>
                         <div class="text-app-brand">Peak</div> <div class="text-app-brand text-right">${peakDateVal}</div>
                     </div>
-                    <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[5px] uppercase opacity-50 leading-tight mt-1">
+                    <p style="display: ${showSulfites ? 'block' : 'none'}" class="text-[5px] uppercase opacity-50 leading-tight mt-1">
                         Contains Sulfites
                     </p>
                 </div>
@@ -3929,7 +3943,7 @@ function setLabelTheme(theme) {
             <div class="h-full w-[65%] flex flex-row relative p-2 pl-4">
                 
                 <div id="title-container" class="h-full w-[65%] flex flex-col justify-end items-center overflow-hidden relative border-r border-transparent py-4">
-                    <div class="w-full flex flex-col-reverse items-center justify-start h-full">
+                    <div class="w-full h-full flex flex-col-reverse items-center justify-start min-w-[20px]">
                         <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-normal text-center leading-[0.9] break-words origin-bottom" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
@@ -3948,7 +3962,7 @@ function setLabelTheme(theme) {
             </div>
         `;
         
-        // Trigger auto-fit (meerdere keren voor rendering updates)
+        // Trigger auto-fit agressief
         setTimeout(window.autoFitLabelText, 50);
         setTimeout(window.autoFitLabelText, 300);
     }
@@ -5646,27 +5660,30 @@ window.autoFitLabelText = function() {
     
     if (!titleEl || !container) return;
 
-    // Reset naar een startgrootte (niet te groot starten om flash te voorkomen)
-    let fontSize = 60; 
+    // Startgrootte
+    let fontSize = 55; 
     titleEl.style.fontSize = fontSize + 'px';
     titleEl.style.lineHeight = '1.0'; 
     titleEl.style.display = 'block';
 
-    // Als de container niet zichtbaar is, stop
+    // Veiligheid: Als container onzichtbaar is, doe niks (voorkomt 0px errors)
     if (container.offsetWidth === 0 || container.offsetHeight === 0) return;
 
-    // MARGE: We willen dat de tekst 10px kleiner is dan de container
-    const maxWidth = container.offsetWidth - 10;
-    const maxHeight = container.offsetHeight - 10;
+    const maxWidth = container.offsetWidth;
+    const maxHeight = container.offsetHeight;
 
-    // Zolang de tekst groter is dan de container...
-    // Let op: Bij vertical-rl is scrollWidth de "breedte" van het blok tekst (wat visueel breedte is na rotatie)
+    // Verklein lus
     while (
         (titleEl.scrollWidth > maxWidth || titleEl.scrollHeight > maxHeight) 
-        && fontSize > 10
+        && fontSize > 12 // Niet kleiner dan 12px gaan!
     ) {
         fontSize--; 
         titleEl.style.fontSize = fontSize + 'px';
+    }
+    
+    // FAILSAFE: Als hij per ongeluk toch onzichtbaar is geworden, reset naar leesbaar
+    if (fontSize <= 12) {
+         titleEl.style.fontSize = '14px'; // Minimaal leesbaar
     }
 }
 

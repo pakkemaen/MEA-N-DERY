@@ -589,169 +589,186 @@
         </div>
     </div> 
     <div id="labels-view" class="hidden mt-4">
-        <div class="flex flex-col lg:flex-row gap-8 h-full">
-            <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg overflow-y-auto" style="max-height: 85vh;">
-                <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app flex items-center gap-2">
-                    🏷️ Label Forge
-                </h2>
-                
-                <div class="space-y-4 mb-6">
-                    <h3 class="text-sm font-bold text-app-brand uppercase tracking-wider">1. Data Source</h3>
-                    <div>
-                        <label class="text-xs">Select Batch</label>
-                        <select id="labelRecipeSelect" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-header text-sm">
-                            <option value="">-- Load from History --</option>
-                        </select>
-                    </div>
+    <div class="flex flex-col lg:flex-row gap-8 h-full">
+        <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg overflow-y-auto" style="max-height: 85vh;">
+            <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app flex items-center gap-2">
+                🏷️ Label Forge
+            </h2>
+            
+            <div class="space-y-4 mb-6">
+                <h3 class="text-sm font-bold text-app-brand uppercase tracking-wider">1. Data Source</h3>
+                <div>
+                    <label class="text-xs">Select Batch</label>
+                    <select id="labelRecipeSelect" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-header text-sm">
+                        <option value="">-- Load from History --</option>
+                    </select>
                 </div>
+            </div>
 
-                <div class="space-y-4 mb-6 pt-4 border-t border-app">
-                    <h3 class="text-sm font-bold text-app-brand uppercase tracking-wider">2. Design</h3>
-                    <div>
-    <label class="text-xs">Visual Theme</label>
-    <div class="grid grid-cols-2 gap-2 mt-1">
-        <button class="label-theme-btn active btn border border-app-brand text-app-brand text-xs py-2 font-bold uppercase tracking-wider" data-theme="standard">
-            Standard
-        </button>
-        
-        <button class="label-theme-btn btn border border-gray-400 text-gray-500 text-xs py-2 font-bold uppercase tracking-wider hover:bg-gray-100 dark:hover:bg-gray-700" data-theme="special">
-            Special
-        </button>
-    </div>
-</div>
-                    <div>
-                        <label class="text-xs">Label Artwork</label>
-                        <div class="flex gap-2 mt-1">
-                            <button id="ai-label-art-btn" class="flex-grow bg-purple-600 text-white text-xs font-bold py-2 px-3 rounded hover:bg-purple-700 btn flex items-center justify-center gap-1">
-                                ✨ Generate Art
-                            </button>
-                            <label class="cursor-pointer bg-app-tertiary border border-app text-app-header text-xs py-2 px-3 rounded hover:bg-app-secondary btn">
-                                📂 Upload <input type="file" id="logoUpload" accept="image/*" class="hidden">
-                            </label>
-                        </div>
-                        <p class="text-[10px] text-app-secondary mt-1">Uses your "Image Generation Engine" setting.</p>
-                    </div>
-                </div>
-
-                <div class="space-y-3 mb-6 pt-4 border-t border-app">
-                    <h3 class="text-sm font-bold text-app-brand uppercase tracking-wider">3. Content</h3>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div><label class="text-xs">Title</label><input type="text" id="labelTitle" class="w-full p-1 border rounded bg-app-tertiary text-sm"></div>
-                        <div><label class="text-xs">Style</label><input type="text" id="labelSubtitle" class="w-full p-1 border rounded bg-app-tertiary text-sm"></div>
-                    </div>
-                    <div class="grid grid-cols-4 gap-2">
-    <div>
-        <label class="text-xs">ABV %</label>
-        <input type="text" id="labelAbv" class="w-full p-1 border rounded bg-app-tertiary text-sm">
-    </div>
-    <div>
-        <label class="text-xs">FG</label>
-        <input type="text" id="labelFg" class="w-full p-1 border rounded bg-app-tertiary text-sm" placeholder="1.000">
-    </div>
-    <div>
-        <label class="text-xs">Vol (ml)</label>
-        <input type="text" id="labelVol" class="w-full p-1 border rounded bg-app-tertiary text-sm">
-    </div>
-    <div>
-        <label class="text-xs">Date</label>
-        <input type="text" id="labelDate" class="w-full p-1 border rounded bg-app-tertiary text-sm">
-    </div>
-</div>
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-xs">Back Label Story</label>
-                            <button id="ai-label-desc-btn" class="text-[10px] text-blue-500 hover:underline">✨ Write for me</button>
-                        </div>
-                        <textarea id="labelDescription" rows="3" class="w-full p-2 border rounded bg-app-tertiary text-xs" placeholder="A dry traditional mead..."></textarea>
-                    </div>
-                    <div class="mt-2 pt-2 border-t border-app/10">
-    <div class="flex justify-between items-center mb-1">
-        <label class="text-xs font-bold text-app-secondary">Competition Mode</label>
-        <div class="flex items-center">
-            <input type="checkbox" id="labelShowDetails" class="h-3 w-3 text-app-brand rounded focus:ring-app-brand">
-            <label for="labelShowDetails" class="ml-1 text-[10px] text-app-header cursor-pointer">Show Ingredients on Label</label>
-        </div>
-    </div>
-    <input type="text" id="labelDetails" class="w-full p-1 border rounded bg-app-tertiary text-xs text-app-secondary placeholder-gray-400" placeholder="Auto-filled from recipe...">
-</div>
-                    <div class="flex items-center mt-2">
-                        <input type="checkbox" id="labelWarning" class="h-4 w-4 text-app-brand">
-                        <label for="labelWarning" class="ml-2 text-xs text-app-secondary">Add "Contains Sulfites"</label>
-                    </div>
-                </div>
-
-                <div class="pt-4 border-t border-app">
-                    <div class="flex justify-between items-end mb-2">
-                        <h3 class="text-sm font-bold text-app-brand uppercase tracking-wider">4. Print Layout</h3>
-                        <button onclick="window.openLabelFormatModal()" class="text-[10px] text-blue-600 hover:underline flex items-center gap-1">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                            Add Custom Size
+            <div class="space-y-4 mb-6 pt-4 border-t border-app">
+                <h3 class="text-sm font-bold text-app-brand uppercase tracking-wider">2. Design</h3>
+                <div>
+                    <label class="text-xs">Visual Theme</label>
+                    <div class="grid grid-cols-2 gap-2 mt-1">
+                        <button class="label-theme-btn active btn border border-app-brand text-app-brand text-xs py-2 font-bold uppercase tracking-wider" data-theme="standard">
+                            Standard
+                        </button>
+                        
+                        <button class="label-theme-btn btn border border-gray-400 text-gray-500 text-xs py-2 font-bold uppercase tracking-wider hover:bg-gray-100 dark:hover:bg-gray-700" data-theme="special">
+                            Special
                         </button>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 mb-4">
-                        <div>
-                            <label class="text-xs">Paper Format</label>
-                            <div class="flex gap-1">
-                                <select id="labelPaper" class="w-full p-1 border rounded bg-app-tertiary text-sm">
-                                </select>
-                                <button onclick="window.deleteCustomLabelFormat()" id="deleteLabelFormatBtn" class="hidden text-red-500 hover:text-red-700 px-1 font-bold text-lg" title="Delete selected format">&times;</button>
-                            </div>
-                        </div>
-                        <div><button id="printLabelsBtn" class="w-full h-full mt-4 bg-app-action text-white font-bold rounded hover:opacity-90 btn">🖨️ Print Sheet</button></div>
+                </div>
+                <div>
+                    <label class="text-xs">Label Artwork</label>
+                    <div class="flex gap-2 mt-1">
+                        <button id="ai-label-art-btn" class="flex-grow bg-purple-600 text-white text-xs font-bold py-2 px-3 rounded hover:bg-purple-700 btn flex items-center justify-center gap-1">
+                            ✨ Generate Art
+                        </button>
+                        <label class="cursor-pointer bg-app-tertiary border border-app text-app-header text-xs py-2 px-3 rounded hover:bg-app-secondary btn">
+                            📂 Upload <input type="file" id="logoUpload" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                    <p class="text-[10px] text-app-secondary mt-1">Uses your "Image Generation Engine" setting.</p>
+                </div>
+            </div>
+
+            <div class="space-y-3 mb-6 pt-4 border-t border-app">
+                <h3 class="text-sm font-bold text-app-brand uppercase tracking-wider">3. Content</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="text-xs">Title</label><input type="text" id="labelTitle" class="w-full p-1 border rounded bg-app-tertiary text-sm"></div>
+                    <div><label class="text-xs">Style</label><input type="text" id="labelSubtitle" class="w-full p-1 border rounded bg-app-tertiary text-sm"></div>
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                    <div>
+                        <label class="text-xs">ABV %</label>
+                        <input type="text" id="labelAbv" class="w-full p-1 border rounded bg-app-tertiary text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs">FG</label>
+                        <input type="text" id="labelFg" class="w-full p-1 border rounded bg-app-tertiary text-sm" placeholder="1.000">
+                    </div>
+                    <div>
+                        <label class="text-xs">Vol (ml)</label>
+                        <input type="text" id="labelVol" class="w-full p-1 border rounded bg-app-tertiary text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs">Date</label>
+                        <input type="text" id="labelDate" class="w-full p-1 border rounded bg-app-tertiary text-sm">
                     </div>
                 </div>
-            </aside>
-            <main class="lg:w-2/3 bg-gray-200 dark:bg-gray-800 p-8 rounded-lg shadow-inner flex flex-col items-center justify-center relative">
-                <p class="absolute top-4 left-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Live Preview</p>
-                
-                <div id="label-preview-container" class="bg-white text-black shadow-2xl relative overflow-hidden transition-all duration-300 transform hover:scale-105" 
-                     style="width: 99.1mm; height: 67.7mm; padding: 5mm;">
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-xs">Back Label Story</label>
+                        <button id="ai-label-desc-btn" class="text-[10px] text-blue-500 hover:underline">✨ Write for me</button>
+                    </div>
+                    <textarea id="labelDescription" rows="3" class="w-full p-2 border rounded bg-app-tertiary text-xs" placeholder="A dry traditional mead..."></textarea>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-app/10">
+                    <label class="text-xs font-bold text-app-brand uppercase tracking-wider mb-2 block">Extra Info on Label</label>
                     
-                    <div id="label-content" class="relative w-full h-full bg-white overflow-hidden flex p-6 font-sans">
-                        
-                        <div class="h-full flex flex-row-reverse items-end justify-end gap-2 pr-2 border-r border-gray-100">
-                            <div style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="h-full flex items-end py-2">
-                                <h1 id="prev-title" class="text-2xl font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap leading-none">
-                                    MEAD NAME
-                                </h1>
-                            </div>
-                            <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-full flex items-end pb-2">
-                                <p id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap">
-                                    STYLE DESCRIPTION
-                                </p>
-                            </div>
-                        </div>
+                    <div class="bg-app-tertiary p-3 rounded-md border border-app-brand/10 space-y-2">
+                        <label class="flex items-center cursor-pointer group">
+                            <input type="checkbox" id="labelShowSulfites" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
+                            <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors">Contains Sulfites</span>
+                        </label>
 
-                        <div class="flex-1 flex flex-col justify-between items-center pl-4 py-2">
-                            <div class="w-full flex items-center justify-center flex-grow">
-                                <img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-48 object-contain opacity-90">
-                                <img id="label-img-display" src="" class="hidden w-full h-full object-cover">
-                            </div>
-                            
-                            <div class="text-right text-[#8F8C79] w-full mt-4">
-                                <p id="prev-details" class="hidden text-[8px] font-mono uppercase mb-2 ml-auto leading-tight opacity-70">
-                                    </p>
-                                <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 opacity-50">Mea(n)dery</p>
-                                
-                                <div class="border-t-2 border-[#8F8C79] pt-2">
-                                    <p class="text-3xl font-header font-normal leading-none"><span id="prev-abv">12</span>% <span class="text-sm">ABV</span></p>
-                                    <div class="mt-1 text-[10px] text-gray-400 font-sans flex justify-end gap-2 uppercase tracking-wide">
-                                        <span><span id="prev-vol">750</span>ml</span><span>•</span><span id="prev-date">2025</span>
-                                    </div>
-                                </div>
-                                <p id="prev-warning" class="hidden text-[6px] uppercase mt-2 opacity-40">
-                                    Contains Sulfites
-                                </p>
-                            </div>
-                        </div>
+                        <label class="flex items-center cursor-pointer group">
+                            <input type="checkbox" id="labelShowYeast" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
+                            <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors truncate">
+                                Yeast: <span id="displayLabelYeast" class="text-app-secondary font-normal">--</span>
+                            </span>
+                        </label>
 
+                        <label class="flex items-center cursor-pointer group">
+                            <input type="checkbox" id="labelShowHoney" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
+                            <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors truncate">
+                                Honey: <span id="displayLabelHoney" class="text-app-secondary font-normal">--</span>
+                            </span>
+                        </label>
+
+                        <label class="flex items-center cursor-pointer group">
+                            <input type="checkbox" id="labelShowDetails" class="rounded text-app-brand focus:ring-app-brand h-3 w-3">
+                            <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors">Full Ingredients List</span>
+                        </label>
                     </div>
+                    <input type="hidden" id="labelDetails">
                 </div>
+            </div>
+
+            <div class="pt-4 border-t border-app">
+                <div class="flex justify-between items-end mb-2">
+                    <h3 class="text-sm font-bold text-app-brand uppercase tracking-wider">4. Print Layout</h3>
+                    <button onclick="window.openLabelFormatModal()" class="text-[10px] text-blue-600 hover:underline flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Add Custom Size
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <div>
+                        <label class="text-xs">Paper Format</label>
+                        <div class="flex gap-1">
+                            <select id="labelPaper" class="w-full p-1 border rounded bg-app-tertiary text-sm">
+                            </select>
+                            <button onclick="window.deleteCustomLabelFormat()" id="deleteLabelFormatBtn" class="hidden text-red-500 hover:text-red-700 px-1 font-bold text-lg" title="Delete selected format">&times;</button>
+                        </div>
+                    </div>
+                    <div><button id="printLabelsBtn" class="w-full h-full mt-4 bg-app-action text-white font-bold rounded hover:opacity-90 btn">🖨️ Print Sheet</button></div>
+                </div>
+            </div>
+        </aside>
+        
+        <main class="lg:w-2/3 bg-gray-200 dark:bg-gray-800 p-8 rounded-lg shadow-inner flex flex-col items-center justify-center relative">
+            <p class="absolute top-4 left-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Live Preview</p>
+            
+            <div id="label-preview-container" class="bg-white text-black shadow-2xl relative overflow-hidden transition-all duration-300 transform hover:scale-105" 
+                 style="width: 99.1mm; height: 67.7mm; padding: 5mm;">
                 
-                <p class="mt-8 text-xs text-gray-500">Preview size is approximate. Print output will be exact mm.</p>
-            </main>
-        </div>
+                <div id="label-content" class="relative w-full h-full bg-white overflow-hidden flex p-6 font-sans">
+                    
+                    <div class="h-full flex flex-row-reverse items-end justify-end gap-2 pr-2 border-r border-gray-100">
+                        <div style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="h-full flex items-end py-2">
+                            <h1 id="prev-title" class="text-2xl font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap leading-none">
+                                MEAD NAME
+                            </h1>
+                        </div>
+                        <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-full flex items-end pb-2">
+                            <p id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap">
+                                STYLE DESCRIPTION
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 flex flex-col justify-between items-center pl-4 py-2">
+                        <div class="w-full flex items-center justify-center flex-grow">
+                            <img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-48 object-contain opacity-90">
+                            <img id="label-img-display" src="" class="hidden w-full h-full object-cover">
+                        </div>
+                        
+                        <div class="text-right text-[#8F8C79] w-full mt-4">
+                            <p id="prev-desc" class="hidden"></p> <p id="prev-details" class="hidden text-[8px] font-mono uppercase mb-2 ml-auto leading-tight opacity-70">
+                            </p>
+                            
+                            <div class="border-t-2 border-[#8F8C79] pt-2">
+                                <p class="text-3xl font-header font-normal leading-none"><span id="prev-abv">12</span>% <span class="text-sm">ABV</span></p>
+                                <div class="mt-1 text-[10px] text-gray-400 font-sans flex justify-end gap-2 uppercase tracking-wide">
+                                    <span><span id="prev-vol">750</span>ml</span><span>•</span><span id="prev-date">2025</span>
+                                </div>
+                            </div>
+                            <p id="prev-warning" class="hidden text-[6px] uppercase mt-2 opacity-40">
+                                Contains Sulfites
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            
+            <p class="mt-8 text-xs text-gray-500">Preview size is approximate. Print output will be exact mm.</p>
+        </main>
     </div>
+</div>
 
     <div id="water-view" class="hidden mt-4">
         <div class="flex flex-col lg:flex-row gap-8 lg:items-start">

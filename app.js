@@ -3878,7 +3878,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: WRAP-AROUND FINAL (Fixed Title Fit)
+    // THEMA 1: STANDAARD (Met strikte breedte-limiet voor titel)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -3892,7 +3892,7 @@ function setLabelTheme(theme) {
             logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-24 h-24 object-contain opacity-90">`;
         }
 
-        // Peak Date
+        // Peak Date berekening
         let peakDateVal = "2026-01-01"; 
         try {
             const d = new Date();
@@ -3905,7 +3905,7 @@ function setLabelTheme(theme) {
                 
                 <div class="flex flex-col gap-2 overflow-hidden">
                     <p class="text-[7px] leading-relaxed text-gray-500 italic font-serif text-justify">
-                        ${desc || "A handcrafted honey wine, aged to perfection. Drink cool and share with friends."}
+                        ${desc || "A handcrafted honey wine, aged to perfection."}
                     </p>
                     <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[6px] font-bold uppercase tracking-wider text-gray-400 leading-tight border-t border-gray-200 pt-1">
                         ${details}
@@ -3928,15 +3928,15 @@ function setLabelTheme(theme) {
 
             <div class="h-full w-[65%] flex flex-row relative p-2">
                 
-                <div id="title-container" class="h-full flex-grow flex flex-col justify-center items-center overflow-hidden relative">
-                    <div class="h-[90%] w-full flex items-center justify-center">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-normal text-center leading-tight break-words" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                <div id="title-container" class="h-full w-[70%] flex flex-col justify-center items-center overflow-hidden relative border-r border-transparent">
+                    <div class="h-[95%] w-full flex items-center justify-center">
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-normal text-center leading-none break-words" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
                     </div>
                 </div>
                 
-                <div class="h-full flex flex-col justify-center items-center w-8">
+                <div class="h-full flex flex-col justify-center items-center w-[10%]">
                      <p id="prev-subtitle" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                         ${sub}
                     </p>
@@ -5646,29 +5646,22 @@ window.autoFitLabelText = function() {
     
     if (!titleEl || !container) return;
 
-    // Reset naar een startgrootte
-    let fontSize = 42; // Iets conservatiever starten
+    // Reset naar groot
+    let fontSize = 50; 
     titleEl.style.fontSize = fontSize + 'px';
-    titleEl.style.lineHeight = '1.1';
+    titleEl.style.lineHeight = '1.0'; // Strakke regelafstand
     titleEl.style.display = 'block';
 
-    // Veiligheidscheck
     if (container.clientHeight === 0 || container.clientWidth === 0) return;
 
-    // Helper functie om te checken of het past
-    const checkFit = () => {
-        const textRect = titleEl.getBoundingClientRect();
-        const contRect = container.getBoundingClientRect();
-        
-        // Omdat de tekst geroteerd is, moeten we slim vergelijken.
-        // We checken simpelweg of de tekst-box binnen de container-box past.
-        // We geven 2px marge.
-        return (textRect.height <= contRect.height - 4) && (textRect.width <= contRect.width - 4);
-    };
-
-    // Zolang het niet past EN de fontgrootte > 8 is, verkleinen
-    while (!checkFit() && fontSize > 8) {
-        fontSize -= 1;
+    // Zolang de inhoud groter is dan de container (hoogte OF breedte)
+    // We trekken een marge af (padding)
+    while (
+        (titleEl.scrollWidth > (container.clientWidth - 10) || 
+         titleEl.scrollHeight > (container.clientHeight - 10)) 
+        && fontSize > 8
+    ) {
+        fontSize -= 1; 
         titleEl.style.fontSize = fontSize + 'px';
     }
 }

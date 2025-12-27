@@ -4282,32 +4282,32 @@ window.renderEquipmentProfiles = function() {
     }
     
     listDiv.innerHTML = equipmentProfiles.map(p => `
-        <div id="equip-item-${p.id}" class="p-4 card rounded-xl border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-all bg-app-secondary mb-3">
+        <div id="equip-item-${p.id}" class="p-4 card rounded-xl border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-all bg-app-secondary mb-3 group relative">
             <div class="flex justify-between items-start">
                  
                  <div class="pr-4">
                     <div class="font-bold text-xl text-app-header leading-tight">${p.name}</div>
-                    <div class="text-xs font-bold uppercase tracking-wider text-blue-500 mt-1">${p.type}</div>
-                    <div class="text-xs text-app-secondary mt-2">
-                        Capacity: <strong>${p.capacityLiters || 'N/A'}L</strong> 
-                        <span class="mx-1">•</span> 
-                        Loss: <strong>${p.trubLossLiters || 0}L</strong>
-                        ${p.type === 'Kettle' ? `<span class="mx-1">•</span> Boil-off: <strong>${p.boilOffRateLitersPerHour || 0}L/hr</strong>` : ''}
+                    <div class="text-xs text-app-secondary mt-1 flex flex-col gap-0.5">
+                        <span class="font-bold uppercase tracking-wider text-blue-600 mb-1">${p.type}</span>
+                        <span>Capacity: ${p.capacityLiters || '-'}L</span>
+                        <span>Loss: ${p.trubLossLiters || 0}L ${p.type === 'Kettle' ? `• Boil-off: ${p.boilOffRateLitersPerHour || 0}L/hr` : ''}</span>
                     </div>
                 </div>
 
                 <div class="text-right">
-                    <div class="inline-block bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-lg border border-blue-100 dark:border-blue-800">
-                        <span class="font-bold text-xl text-blue-700 dark:text-blue-300">${p.quantity || 1}x</span>
+                    <div class="inline-block bg-app-tertiary px-2 py-1 rounded-lg border border-app-brand/10 mb-2">
+                        <div class="font-mono font-bold text-app-header text-sm">${p.quantity || 1} <span class="text-xs font-normal text-app-secondary">units</span></div>
                     </div>
                 </div>
             </div>
 
-            <div class="flex justify-end gap-4 mt-3 pt-2 border-t border-app-brand/5">
+            <div class="flex justify-end gap-4 mt-2 pt-2 border-t border-app-brand/5">
                 <button onclick="window.editEquipmentProfile('${p.id}')" class="text-xs font-bold text-app-secondary hover:text-blue-600 uppercase tracking-wider flex items-center gap-1 transition-colors">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg> 
                     Edit
                 </button>
                 <button onclick="window.deleteEquipmentProfile('${p.id}')" class="text-xs font-bold text-app-secondary hover:text-red-600 uppercase tracking-wider flex items-center gap-1 transition-colors">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> 
                     Delete
                 </button>
             </div>
@@ -4865,27 +4865,35 @@ window.renderPackagingUI = function() {
                 const costPerUnit = (itemData.qty > 0 && itemData.price > 0) ? (itemData.price / itemData.qty).toFixed(2) : '0.00';
                 
                 return `
-                   <div id="pkg-item-${item.id}" class="p-4 card rounded-xl border-l-4 border-amber-600 shadow-sm hover:shadow-md transition-all bg-app-secondary mb-3">
+                   <div id="pkg-item-${item.id}" class="p-4 card rounded-xl border-l-4 border-amber-600 shadow-sm hover:shadow-md transition-all bg-app-secondary mb-3 group relative">
                        <div class="flex justify-between items-start">
                            
-                           <div>
-                               <div class="font-bold text-xl text-app-header">${item.name}</div>
-                               <div class="text-xs text-app-secondary mt-1">Cost/Unit: <strong>${currency}${costPerUnit}</strong></div>
+                           <div class="pr-4">
+                               <div class="font-bold text-xl text-app-header leading-tight">${item.name}</div>
+                               <div class="text-xs text-app-secondary mt-1">
+                                   Cost/Unit: <strong>${currency}${costPerUnit}</strong>
+                               </div>
                            </div>
 
                            <div class="text-right">
-                               <div class="inline-block bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg border border-amber-100 dark:border-amber-800 mb-1">
-                                   <div class="font-mono font-bold text-amber-800 dark:text-amber-200 text-sm">${itemData.qty} <span class="text-xs font-normal">items</span></div>
+                               <div class="inline-block bg-app-tertiary px-2 py-1 rounded-lg border border-app-brand/10 mb-2">
+                                   <div class="font-mono font-bold text-app-header text-sm">${itemData.qty} <span class="text-xs font-normal text-app-secondary">st</span></div>
                                </div>
-                               <div class="text-xs text-app-secondary font-mono block">
+                               <div class="text-xs text-app-secondary font-mono mb-3">
                                    Total: ${currency}${itemData.price.toFixed(2)}
                                </div>
                            </div>
                        </div>
 
-                       <div class="flex justify-end gap-4 mt-3 pt-2 border-t border-app-brand/5">
-                           <button onclick="window.editPackagingItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-blue-600 uppercase tracking-wider flex items-center gap-1 transition-colors">Edit</button>
-                           <button onclick="window.clearPackagingItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-red-600 uppercase tracking-wider flex items-center gap-1 transition-colors">Delete</button>
+                       <div class="flex justify-end gap-4 mt-2 pt-2 border-t border-app-brand/5">
+                           <button onclick="window.editPackagingItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-blue-600 uppercase tracking-wider flex items-center gap-1 transition-colors">
+                               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                               Edit
+                           </button>
+                           <button onclick="window.clearPackagingItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-red-600 uppercase tracking-wider flex items-center gap-1 transition-colors">
+                               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                               Delete
+                           </button>
                        </div>
                    </div>`;
            }).join('');

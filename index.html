@@ -452,7 +452,7 @@
             <button id="calculators-sub-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold">Calculators</button>
             <button id="labels-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Labels</button>
             <button id="water-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Water</button>
-            <button id="troubleshoot-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Troubleshoot</button>
+            <button id="troubleshoot-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Mead Medic</button>
             <button id="social-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Social</button>
             <button id="library-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold">Library</button>
         </nav>
@@ -809,19 +809,45 @@
         </div>
     </div>
 
-    <div id="troubleshoot-view" class="hidden mt-4">
-        <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg">
-            <h2 class="text-3xl font-header text-center">Troubleshooter</h2>
-            <div class="max-w-xl mx-auto">
-                <div class="card p-6 rounded-lg">
-                    <label>Problem:</label>
-                    <textarea id="troubleshoot-description" rows="5" class="w-full p-2 border rounded-md"></textarea>
-                    <button id="troubleshoot-btn" class="w-full mt-4 bg-purple-700 text-white btn">Get Advice</button>
-                </div>
-                <div id="troubleshoot-output" class="mt-6 prose"></div>
+    <div id="troubleshoot-view" class="h-full flex flex-col h-[70vh]">
+    <div class="flex justify-between items-center mb-4 border-b border-app-brand/10 pb-2">
+        <h3 class="text-xl font-header font-bold text-app-brand flex items-center gap-2">
+            🚑 Mead Medic
+        </h3>
+        <button onclick="window.resetTroubleshootChat()" class="text-xs text-red-500 hover:text-red-700 font-bold uppercase">
+            Clear Chat
+        </button>
+    </div>
+
+    <div id="chat-history" class="flex-grow overflow-y-auto mb-4 p-4 bg-app-tertiary/30 rounded-lg border border-app-brand/10 space-y-4 shadow-inner custom-scrollbar">
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">AI</div>
+            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg rounded-tl-none shadow-sm text-sm text-app-header border border-gray-100 dark:border-gray-700 max-w-[85%]">
+                Hi! I'm your Mead Medic. What seems to be the problem? (You can upload a photo too!)
             </div>
         </div>
     </div>
+
+    <div class="mt-auto">
+        <div id="chat-image-preview" class="hidden mb-2 relative w-fit">
+            <img id="chat-preview-img" class="h-20 rounded border border-app-brand/20">
+            <button onclick="window.clearChatImage()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md">&times;</button>
+        </div>
+
+        <div class="flex gap-2">
+            <label class="cursor-pointer flex items-center justify-center w-10 h-10 bg-app-tertiary hover:bg-app-secondary rounded-lg border border-app-brand/20 transition-colors">
+                <svg class="w-5 h-5 text-app-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <input type="file" id="chat-image-input" accept="image/*" class="hidden" onchange="window.handleChatImageSelect(this)">
+            </label>
+
+            <input type="text" id="chat-input" class="flex-grow p-2 border rounded-lg bg-app-secondary border-app text-app-header focus:ring-2 focus:ring-app-brand" placeholder="Describe the issue..." onkeypress="if(event.key === 'Enter') window.sendTroubleshootMessage()">
+            
+            <button onclick="window.sendTroubleshootMessage()" id="chat-send-btn" class="bg-app-action text-white px-4 rounded-lg hover:opacity-90 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+    </div>
+</div>
 
     <div id="social-view" class="hidden mt-4">
         <div class="flex flex-col lg:flex-row gap-8">

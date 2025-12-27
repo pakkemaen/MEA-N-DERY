@@ -151,9 +151,12 @@ window.switchMainView = function(viewName) {
 
 window.switchSubView = function(viewName, parentViewId) {
     const parentView = document.getElementById(parentViewId);
+    
+    // Verberg alle sub-views in deze sectie
     parentView.querySelectorAll('[id$="-view"]').forEach(v => v.classList.add('hidden'));
     parentView.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
 
+    // Toon de gekozen view
     const viewId = `${viewName}-view`;
     const tabId = `${viewName}-sub-tab`;
     const viewToShow = document.getElementById(viewId);
@@ -162,10 +165,18 @@ window.switchSubView = function(viewName, parentViewId) {
     if (viewToShow) viewToShow.classList.remove('hidden');
     if (tabToActivate) tabToActivate.classList.add('active');
 
+    // --- SPECIFIEKE ACTIES PER VIEW ---
     if (viewName === 'brew-day-2') renderBrewDay2();
     if (viewName === 'creator') populateEquipmentProfilesDropdown(); 
     if (viewName === 'social') populateSocialRecipeDropdown();
     if (viewName === 'labels') { populateLabelRecipeDropdown(); updateLabelPreviewDimensions(); }
+    
+    // --- NIEUW: RESET DE CHAT BIJ OPENEN ---
+    if (viewName === 'troubleshoot') {
+        if(typeof window.resetTroubleshootChat === 'function') {
+            window.resetTroubleshootChat();
+        }
+    }
 }
 
 // --- Initialization & Auth ---
@@ -3307,21 +3318,160 @@ async function getWaterAdvice() {
     }
 }
 
-// --- TROUBLESHOOTER ---
-async function getTroubleshootingAdvice() {
-    const desc = document.getElementById('troubleshoot-description').value;
-    const output = document.getElementById('troubleshoot-output');
-    if (!desc.trim()) { output.innerHTML = `<p class="text-red-500">Describe the problem first.</p>`; return; }
+// --- MEAD MEDIC CHAT SYSTEM ---
 
-    output.innerHTML = getLoaderHtml("Diagnosing issue...");
-    const prompt = `Mead Expert: Troubleshoot this: "${desc}". Diagnose, ask clarifying questions, and offer solutions. Format: Markdown.`;
+let chatHistory = []; // Houdt het gesprek bij
+let currentChatImageBase64 = null; // Houdt de geselecteerde foto vast
 
-    try {
-        const text = await performApiCall(prompt);
-        output.innerHTML = marked.parse(text);
-    } catch (error) {
-        output.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+// 1. Initialiseer / Reset
+window.resetTroubleshootChat = function() {
+    chatHistory = [];
+    const chatBox = document.getElementById('chat-history');
+    if(chatBox) {
+        chatBox.innerHTML = `
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">AI</div>
+            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg rounded-tl-none shadow-sm text-sm text-app-header border border-gray-100 dark:border-gray-700 max-w-[85%]">
+                Hi! I'm your Mead Medic. Describe your issue or upload a photo of your brew.
+            </div>
+        </div>`;
     }
+    window.clearChatImage();
+}
+
+// 2. Foto Selectie Handling
+window.handleChatImageSelect = function(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            currentChatImageBase64 = e.target.result.split(',')[1]; // Alleen de data, niet de prefix
+            
+            // Toon preview
+            document.getElementById('chat-preview-img').src = e.target.result;
+            document.getElementById('chat-image-preview').classList.remove('hidden');
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+window.clearChatImage = function() {
+    currentChatImageBase64 = null;
+    document.getElementById('chat-image-input').value = '';
+    document.getElementById('chat-image-preview').classList.add('hidden');
+}
+
+// 3. Bericht Versturen
+window.sendTroubleshootMessage = async function() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    const chatBox = document.getElementById('chat-history');
+    const sendBtn = document.getElementById('chat-send-btn');
+
+    if (!text && !currentChatImageBase64) return;
+
+    // A. Render USER bericht
+    let userHtml = `<div class="flex items-start gap-3 justify-end animate-fade-in">
+        <div class="bg-blue-600 text-white p-3 rounded-lg rounded-tr-none shadow-sm text-sm max-w-[85%]">
+            ${currentChatImageBase64 ? '<div class="mb-2"><span class="text-[10px] uppercase bg-white/20 px-1 rounded">📷 Image attached</span></div>' : ''}
+            ${text}
+        </div>
+        <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">ME</div>
+    </div>`;
+    chatBox.insertAdjacentHTML('beforeend', userHtml);
+    
+    // Voeg toe aan geschiedenis
+    chatHistory.push({ role: "user", text: text, hasImage: !!currentChatImageBase64 });
+
+    // UI Updates
+    input.value = '';
+    const imageToSend = currentChatImageBase64; // Bewaar ref voor API call
+    window.clearChatImage();
+    chatBox.scrollTop = chatBox.scrollHeight;
+    sendBtn.disabled = true;
+
+    // B. Render AI 'Typing...'
+    const loadingId = 'loading-' + Date.now();
+    chatBox.insertAdjacentHTML('beforeend', `
+        <div id="${loadingId}" class="flex items-start gap-3 animate-pulse">
+            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">AI</div>
+            <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg rounded-tl-none text-xs text-gray-500">Thinking...</div>
+        </div>
+    `);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // C. API Call (Speciaal voor Chat + Vision)
+    try {
+        const response = await performChatApiCall(chatHistory, imageToSend);
+        
+        // Verwijder loader
+        document.getElementById(loadingId).remove();
+
+        // Render AI bericht (met Markdown parsing)
+        const aiHtml = `<div class="flex items-start gap-3 animate-fade-in">
+            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs flex-shrink-0">AI</div>
+            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg rounded-tl-none shadow-sm text-sm text-app-header border border-gray-100 dark:border-gray-700 max-w-[90%] prose prose-sm max-w-none">
+                ${marked.parse(response)}
+            </div>
+        </div>`;
+        
+        chatBox.insertAdjacentHTML('beforeend', aiHtml);
+        chatHistory.push({ role: "model", text: response }); // Voeg AI antwoord toe aan geheugen
+
+    } catch (error) {
+        document.getElementById(loadingId).remove();
+        chatBox.insertAdjacentHTML('beforeend', `<div class="text-center text-red-500 text-xs my-2">Error: ${error.message}</div>`);
+    } finally {
+        sendBtn.disabled = false;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        input.focus(); // Focus terug voor snelle chat
+    }
+}
+
+// 4. De Speciale API functie (Ondersteunt Context + Plaatjes)
+async function performChatApiCall(history, base64Image) {
+    let apiKey = userSettings.apiKey;
+    if (!apiKey && typeof CONFIG !== 'undefined') apiKey = CONFIG.firebase.apiKey;
+    if (!apiKey) throw new Error("No API Key");
+
+    // We gebruiken Gemini 1.5 Flash (die is snel en ondersteunt tekst + beeld)
+    const model = "gemini-1.5-flash"; 
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    // Bouw de prompt op basis van de geschiedenis
+    // We maken er één lange context string van, want dat is veiliger dan multi-turn arrays complexiteit
+    let promptContext = "You are an expert Mead Troubleshooter. Be concise, helpful, and scientific. Keep answers under 150 words unless asked for detail.\n\nCONVERSATION HISTORY:\n";
+    
+    history.forEach(msg => {
+        promptContext += `${msg.role === 'user' ? 'USER' : 'AI'}: ${msg.text} ${msg.hasImage ? '[User uploaded an image]' : ''}\n`;
+    });
+    
+    promptContext += `\nUSER'S NEWEST INPUT: `; // De laatste input zit al in de history, maar voor de duidelijkheid.
+
+    const parts = [{ text: promptContext }];
+    
+    // Als er een afbeelding is, voegen we die toe aan de request
+    if (base64Image) {
+        parts.push({
+            inline_data: {
+                mime_type: "image/jpeg",
+                data: base64Image
+            }
+        });
+    }
+
+    const requestBody = {
+        contents: [{ parts: parts }]
+    };
+
+    const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) throw new Error(`AI Error: ${response.status}`);
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
 }
 
 // --- FUNCTIE: HAAL MODELLEN OP & VERDEEL ZE (DUAL ENGINE) ---

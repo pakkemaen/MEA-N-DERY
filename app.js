@@ -3872,63 +3872,62 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: ORIGINAL LAYOUT (Blueberry Style)
+    // THEMA 1: ORIGINAL "REEVES" LAYOUT (Retro-Modern)
     // =================================================================
     if (theme === 'standard') {
-        // We gebruiken flex-row om Links (Tekst) en Rechts (Logo+Data) te scheiden
-        container.className = `relative w-full h-full bg-white overflow-hidden flex p-5 font-sans`;
+        container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
-        // Logo instellingen (Middelgroot, vierkant of rond)
+        // Logo instellingen (Middelgroot)
         let logoHtml = '';
         if (hasImage) {
-            logoHtml = `<img src="${imgSrc}" class="w-32 h-32 object-cover rounded-full border-4 border-white shadow-sm">`;
+            logoHtml = `<img src="${imgSrc}" class="w-24 h-24 object-cover rounded-full border-4 border-white shadow-sm">`;
         } else {
-            logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain opacity-90">`;
+            logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-24 h-24 object-contain opacity-90">`;
         }
 
         container.innerHTML = `
-            <div class="h-full flex items-end justify-start gap-3 border-r-2 border-gray-100 pr-4 mr-2">
+            <div class="h-full flex-grow flex flex-row-reverse items-end justify-end py-4 pl-4 gap-2">
                 
                 <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-full flex items-end">
-                    <h1 id="prev-title" class="text-6xl font-header font-bold uppercase tracking-widest text-[#8F8C79] whitespace-nowrap leading-none">
+                    <h1 id="prev-title" class="text-5xl font-header font-bold uppercase tracking-widest text-[#8F8C79] leading-[0.85] max-h-full overflow-hidden text-ellipsis">
                         ${title}
                     </h1>
                 </div>
 
                 <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-full flex items-end pb-1">
-                    <p id="prev-subtitle" class="text-2xl font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap">
+                    <p id="prev-subtitle" class="text-xl font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap">
                         ${sub}
                     </p>
                 </div>
 
                 <div style="writing-mode: vertical-rl; transform: rotate(180deg);" class="h-full flex items-end pb-1">
-                    <p id="prev-details" class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-300 whitespace-nowrap">
-                        ${details || 'MEA(N)DERY'}
+                    <p id="prev-details" class="text-[8px] font-bold uppercase tracking-[0.2em] text-gray-300 whitespace-nowrap">
+                        ${details || 'NO WATER MELOMEL'}
                     </p>
                 </div>
             </div>
 
-            <div class="flex-1 flex flex-col justify-between items-end h-full py-1 pl-2">
+            <div class="w-1/3 h-full flex flex-col justify-between items-end py-4 pr-4">
                 
-                <div class="w-full flex justify-center lg:justify-end">
+                <div class="flex justify-end w-full">
                     ${logoHtml}
                 </div>
 
                 <div class="text-right text-[#8F8C79]">
                     
-                    ${fg ? `<p class="text-lg font-bold opacity-70 mb-0 leading-none">FG ${fg}</p>` : ''}
+                    ${fg ? `<p class="text-sm font-bold opacity-60 mb-0 leading-none">FG ${fg}</p>` : ''}
                     
-                    <p class="text-5xl font-header font-bold leading-none mb-1">
-                        <span id="prev-abv">${abv}</span>% <span class="text-sm font-normal">ABV</span>
+                    <p class="text-3xl font-header font-bold leading-none mb-2">
+                        <span id="prev-abv">${abv}</span>% <span class="text-xs font-normal">ABV</span>
                     </p>
                     
-                    <p class="text-xs font-mono uppercase tracking-widest opacity-60">
-                        ${vol}ML • <span id="prev-date">${dateVal}</span>
+                    <p class="text-[10px] font-mono uppercase tracking-widest opacity-50 border-t border-gray-200 pt-1 mt-1">
+                        ${vol}ML <br> ${dateVal}
                     </p>
 
-                    <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-2 opacity-40 max-w-[120px] ml-auto leading-tight">
-                        Contains Sulfites • Drink Responsibly
+                    <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-2 opacity-40 max-w-[80px] ml-auto leading-tight">
+                        Contains Sulfites
                     </p>
                 </div>
             </div>

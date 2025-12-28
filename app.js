@@ -3716,28 +3716,30 @@ function populateLabelPaperDropdown() {
     const select = document.getElementById('labelPaper');
     if (!select) return;
     
-    // Huidige selectie onthouden
+    // Bewaar huidige keuze indien mogelijk
     const currentVal = select.value;
     select.innerHTML = '';
     
-    // 1. Standaard Formaten (Hardcoded fallback als builtInLabelFormats leeg is)
-    const defaults = (typeof builtInLabelFormats !== 'undefined') ? builtInLabelFormats : {
+    // 1. HARDE DATA (Fallback) - Dit garandeert dat de lijst nooit leeg is
+    const standardFormats = {
         'avery_l7165': { name: 'Avery L7165 (99.1x67.7mm)' },
         'herma_4453': { name: 'Herma 4453 (105x148mm)' },
         'avery_l7163': { name: 'Avery L7163 (99.1x38.1mm)' }
     };
 
+    // Voeg Standaard Groep toe
     const groupBuiltIn = document.createElement('optgroup');
     groupBuiltIn.label = "Standard Formats";
-    Object.keys(defaults).forEach(key => {
+    
+    Object.keys(standardFormats).forEach(key => {
         const opt = document.createElement('option');
         opt.value = key; 
-        opt.text = defaults[key].name;
+        opt.text = standardFormats[key].name;
         groupBuiltIn.appendChild(opt);
     });
     select.appendChild(groupBuiltIn);
 
-    // 2. Eigen Formaten
+    // 2. Custom Formaten (uit variabele of database)
     if (typeof userLabelFormats !== 'undefined' && Object.keys(userLabelFormats).length > 0) {
         const groupUser = document.createElement('optgroup');
         groupUser.label = "My Custom Formats";
@@ -3750,7 +3752,7 @@ function populateLabelPaperDropdown() {
         select.appendChild(groupUser);
     }
 
-    // Toggle delete knopje logic
+    // Toggle delete knop functionaliteit
     select.onchange = () => {
         const isCustom = typeof userLabelFormats !== 'undefined' && userLabelFormats.hasOwnProperty(select.value);
         const delBtn = document.getElementById('deleteLabelFormatBtn');
@@ -3758,14 +3760,14 @@ function populateLabelPaperDropdown() {
         if(typeof updateLabelPreviewDimensions === 'function') updateLabelPreviewDimensions();
     };
 
-    // Herstel selectie of zet default
-    if (currentVal && (defaults[currentVal] || (typeof userLabelFormats !== 'undefined' && userLabelFormats[currentVal]))) {
+    // Zet de waarde terug (of default)
+    if (currentVal && (standardFormats[currentVal] || (typeof userLabelFormats !== 'undefined' && userLabelFormats[currentVal]))) {
         select.value = currentVal;
     } else {
         select.value = 'avery_l7165';
     }
     
-    // Trigger update afmetingen
+    // Trigger de dimensie update direct
     if(typeof updateLabelPreviewDimensions === 'function') updateLabelPreviewDimensions();
 }
 

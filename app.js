@@ -3981,7 +3981,7 @@ function setLabelTheme(theme) {
                      style="left: ${titleX}px; padding-left: 2px;">
                     
                     <div id="title-container" class="h-full flex flex-col justify-end">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-[0.9] whitespace-nowrap" 
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-hidden" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
@@ -5695,8 +5695,8 @@ window.hidePromptModal = function() {
 // --- FUNCTIE: TEKST AUTOMATISCH PASSEND MAKEN ---
 window.autoFitLabelText = function() {
     const titleEl = document.getElementById('prev-title');
-    const groupEl = document.getElementById('text-group'); // Check de hele groep
-    const container = document.querySelector('#label-content .relative.w-\\[65\\%\\]'); // De voorkant container
+    const groupEl = document.getElementById('text-group'); 
+    const container = document.querySelector('#label-content .relative.w-\\[65\\%\\]'); 
     const logoEl = document.getElementById('label-logo-img');
     
     // Sliders ophalen
@@ -5712,14 +5712,17 @@ window.autoFitLabelText = function() {
     let fontSize = startFontSize; 
     titleEl.style.fontSize = fontSize + 'px';
     titleEl.style.lineHeight = '0.9'; 
-    titleEl.style.display = 'block';
+    
+    // BELANGRIJK: Voor line-clamp-2 moet dit -webkit-box zijn, NIET block!
+    titleEl.style.display = '-webkit-box'; 
+    titleEl.style.webkitBoxOrient = 'vertical'; // Nodig voor de clamp
+    titleEl.style.webkitLineClamp = '2';        // Forceer max 2 regels
 
     if (!container || container.offsetWidth === 0) return;
 
     // Collision Logic
     const checkCollision = () => {
         if (!logoEl) return false;
-        // We meten nu de HELE GROEP (Titel + Style) vs Logo
         const gRect = groupEl.getBoundingClientRect(); 
         const lRect = logoEl.getBoundingClientRect();
 
@@ -5731,9 +5734,7 @@ window.autoFitLabelText = function() {
     };
 
     const checkOverflow = () => {
-        // Past de groep nog wel in de container?
-        // We gebruiken hier offsetLeft + offsetWidth omdat getBoundingClientRect soms lastig is met rotaties
-        // Maar voor simpliciteit: kijken of de groep 'rechtse' rand buiten de container valt
+        // Check of de groep buiten de container valt
         return (groupEl.offsetWidth + groupEl.offsetLeft > container.offsetWidth);
     }
 

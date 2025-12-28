@@ -3850,20 +3850,33 @@ function loadLabelFromBrew(e) {
     let style = "Traditional Mead";
     if (brew.recipeMarkdown.toLowerCase().includes('melomel')) style = "Melomel (Fruit Mead)";
     if (brew.recipeMarkdown.toLowerCase().includes('bochet')) style = "Bochet (Caramelized)";
+    if (brew.recipeMarkdown.toLowerCase().includes('metheglin')) style = "Metheglin (Spiced)";
     document.getElementById('labelSubtitle').value = style;
 
-    // ABV, FG, Vol, Date laden...
+    // ABV, FG laden...
     document.getElementById('labelAbv').value = brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '';
     document.getElementById('labelFg').value = brew.logData?.actualFG || brew.logData?.targetFG || '';
-    document.getElementById('labelVol').value = brew.batchSize ? (brew.batchSize * 1000).toString() : ''; // Zet L om naar ml, anders leeg
-    document.getElementById('labelDate').value = brew.logData?.brewDate || '';
+    
+    // 1. VOLUME FIX: Standaard naar 330ml (of wat er in de log staat), niet 5000ml
+    document.getElementById('labelVol').value = '330'; 
+    
+    // Datum
+    document.getElementById('labelDate').value = brew.logData?.brewDate || new Date().toISOString().split('T')[0];
 
-    // --- NIEUW: INGREDIËNTEN ANALYSE VOOR CHECKBOXES ---
+    // 3. YEAST FIX: Betere detectie
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
     
-    // Zoek Gist (Naam bevat 'Yeast' of Categorie is Yeast)
-    const yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist'));
-    const yeastName = yeastItem ? yeastItem.name.replace(/yeast/gi, '').trim() : 'Unknown';
+    // Zoek Gist in JSON
+    let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist') || i.name.toLowerCase().includes('lalvin') || i.name.toLowerCase().includes('wyeast') || i.name.toLowerCase().includes('mangrove'));
+    let yeastName = 'Unknown';
+
+    if (yeastItem) {
+        yeastName = yeastItem.name.replace(/yeast/gi, '').trim();
+    } else {
+        // Fallback: Zoek in de tekst als JSON faalt
+        const match = brew.recipeMarkdown.match(/(?:Yeast|Gist):\s*([^\n\r]+)/i);
+        if (match && match[1]) yeastName = match[1].trim();
+    }
     document.getElementById('displayLabelYeast').textContent = yeastName;
 
     // Zoek Honing
@@ -3871,11 +3884,11 @@ function loadLabelFromBrew(e) {
     const honeyName = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
     document.getElementById('displayLabelHoney').textContent = honeyName;
 
-    // Zet de algemene details tekst (voor het "Full Ingredients" vinkje)
+    // Zet details
     const fullList = ings.map(i => i.name).join(' • ');
     document.getElementById('labelDetails').value = fullList;
 
-    // Auto-detect sulfiet uit recept tekst
+    // Auto-detect sulfiet
     const needsWarning = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
     document.getElementById('labelShowSulfites').checked = needsWarning;
 
@@ -3916,7 +3929,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (Flex Group Layout)
+    // THEMA 1: STANDAARD (Final Fixes: Date, Vol, Sulfites, Alignment)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -3936,8 +3949,7 @@ function setLabelTheme(theme) {
             logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-center opacity-90">`;
         }
 
-        // Info string opbouwen (ongewijzigd)
-        let extraInfoHtml = '';
+        // Info string opbouwen
         const showYeast = document.getElementById('labelShowYeast')?.checked;
         const showHoney = document.getElementById('labelShowHoney')?.checked;
         const showDetails = document.getElementById('labelShowDetails')?.checked;
@@ -3949,11 +3961,28 @@ function setLabelTheme(theme) {
         if (showDetails) infoParts.push(details);
         const infoString = infoParts.join(' • ');
 
-        let peakDateVal = "";
-        if (dateVal) { try { const d = new Date(dateVal); d.setMonth(d.getMonth() + 6); peakDateVal = d.toLocaleDateString(); } catch(e) {} }
+        // 4. PEAK DATE LOGIC (Slimme berekening)
+        let peakDateVal = "Unknown";
+        if (dateVal) {
+            try { 
+                const d = new Date(dateVal); 
+                const abvNum = parseFloat(abv);
+                
+                // Logic: Hydromel (<8%) = 2 mnd, Standaard = 6 mnd, Zwaar (>14%) = 12 mnd
+                let monthsToAdd = 6;
+                if (!isNaN(abvNum)) {
+                    if (abvNum < 8) monthsToAdd = 2;
+                    else if (abvNum > 14) monthsToAdd = 12;
+                }
+                
+                d.setMonth(d.getMonth() + monthsToAdd); 
+                peakDateVal = d.toLocaleDateString(); 
+            } catch(e) {}
+        }
 
         container.innerHTML = `
             <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-3 px-3 flex flex-col justify-between text-right z-20 relative">
+                
                 <div class="flex flex-col gap-2 overflow-hidden">
                     <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-500 italic font-serif text-justify">
                         ${desc}
@@ -3969,9 +3998,11 @@ function setLabelTheme(theme) {
                         ${dateVal ? `<div class="text-gray-400">Bottled</div> <div class="text-black text-right"><span id="prev-date">${dateVal}</span></div>` : ''}
                         ${peakDateVal ? `<div class="text-gray-400">Peak</div> <div class="text-black text-right">${peakDateVal}</div>` : ''}
                     </div>
-                    <p style="display: ${showSulfites ? 'block' : 'none'}" class="text-[5px] uppercase opacity-50 leading-tight mt-1">
-                        Contains Sulfites
-                    </p>
+                    <div style="min-height: 8px;"> 
+                        <p style="display: ${showSulfites ? 'block' : 'none'}" class="text-[5px] uppercase opacity-50 leading-tight">
+                            Contains Sulfites
+                        </p>
+                    </div>
                 </div>
             </div>
 

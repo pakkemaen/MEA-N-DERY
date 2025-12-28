@@ -3975,7 +3975,9 @@ function setLabelTheme(theme) {
                 </div>
             </div>
 
-            <div id="text-group" class="absolute top-0 bottom-0 flex flex-row items-end" 
+            <div class="h-full w-[65%] relative p-2 overflow-hidden">
+                
+                <div id="text-group" class="absolute top-0 bottom-0 flex flex-row items-end" 
                      style="left: ${titleX}px; padding-left: 2px;">
                     
                     <div id="title-container" class="h-full flex flex-col justify-end">

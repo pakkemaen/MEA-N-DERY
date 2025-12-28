@@ -3975,9 +3975,7 @@ function setLabelTheme(theme) {
                 </div>
             </div>
 
-            <div class="h-full w-[65%] relative p-2 overflow-hidden">
-                
-                <div id="text-group" class="absolute top-0 bottom-0 flex flex-row items-end" 
+            <div id="text-group" class="absolute top-0 bottom-0 flex flex-row items-end" 
                      style="left: ${titleX}px; padding-left: 2px;">
                     
                     <div id="title-container" class="h-full flex flex-col justify-end">
@@ -3987,7 +3985,7 @@ function setLabelTheme(theme) {
                         </h1>
                     </div>
 
-                    <div id="style-container" class="h-[50%] flex flex-col justify-end" style="margin-left: ${styleGap}px;">
+                    <div id="style-container" class="h-[50%] flex flex-col justify-end overflow-hidden" style="margin-left: ${styleGap}px;">
                          <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: ${styleSize}px;">
                             ${sub}

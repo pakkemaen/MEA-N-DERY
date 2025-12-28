@@ -3914,26 +3914,27 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (Layout Tweaks: Big Logo, Left Align)
+    // THEMA 1: STANDAARD (Flex Group Layout)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
         // 1. HAAL TUNING WAARDES OP
-        const styleSize = document.getElementById('tuneStyleSize')?.value || 9;
-        const titleMargin = document.getElementById('tuneTitleMargin')?.value || 0;
+        const titleSizeMax = document.getElementById('tuneTitleSize')?.value || 100;
+        const titleX = document.getElementById('tuneTitleX')?.value || 0;
+        const styleSize = document.getElementById('tuneStyleSize')?.value || 14;
+        const styleGap = document.getElementById('tuneStyleGap')?.value || 5;
 
-        // Logo (AANGEPAST: object-right-top toegevoegd)
+        // Logo
         let logoHtml = '';
-        // We maken de container (w-32) iets groter, en dwingen de inhoud naar rechtsboven
         if (hasImage) {
-            logoHtml = `<img id="label-logo-img" src="${imgSrc}" class="w-32 h-32 object-contain object-right-top rounded-full border-4 border-white shadow-sm">`;
+            logoHtml = `<img id="label-logo-img" src="${imgSrc}" class="w-32 h-32 object-contain object-center rounded-full border-4 border-white shadow-sm">`;
         } else {
-            logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-right-top opacity-90">`;
+            logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-center opacity-90">`;
         }
 
-        // Info string
+        // Info string opbouwen (ongewijzigd)
         let extraInfoHtml = '';
         const showYeast = document.getElementById('labelShowYeast')?.checked;
         const showHoney = document.getElementById('labelShowHoney')?.checked;
@@ -3947,9 +3948,7 @@ function setLabelTheme(theme) {
         const infoString = infoParts.join(' • ');
 
         let peakDateVal = "";
-        if (dateVal) {
-            try { const d = new Date(dateVal); d.setMonth(d.getMonth() + 6); peakDateVal = d.toLocaleDateString(); } catch(e) {}
-        }
+        if (dateVal) { try { const d = new Date(dateVal); d.setMonth(d.getMonth() + 6); peakDateVal = d.toLocaleDateString(); } catch(e) {} }
 
         container.innerHTML = `
             <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-3 px-3 flex flex-col justify-between text-right z-20 relative">
@@ -3974,24 +3973,28 @@ function setLabelTheme(theme) {
                 </div>
             </div>
 
-            <div class="h-full w-[65%] relative p-2">
+            <div class="h-full w-[65%] relative p-2 overflow-hidden">
                 
-                <div id="title-container" class="absolute top-2 bottom-2 left-0 w-[55%] pl-1 flex flex-row-reverse items-center justify-center overflow-hidden border-r border-transparent" 
-                     style="padding-bottom: ${titleMargin}px;">
+                <div id="text-group" class="absolute top-0 bottom-0 flex flex-row items-center" 
+                     style="left: ${titleX}px; padding-left: 2px;">
                     
-                    <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-[0.9] break-words whitespace-normal" style="writing-mode: vertical-rl; transform: rotate(180deg); width: auto; max-height: 100%;">
-                        ${title}
-                    </h1>
-                </div>
-                
-                <div class="absolute top-2 bottom-2 left-[52%] w-[10%] flex items-end justify-center" style="padding-bottom: ${titleMargin}px;">
-                     <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" 
-                        style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: ${styleSize}px;">
-                        ${sub}
-                    </p>
+                    <div id="title-container" class="h-full flex flex-col justify-center">
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-[0.9] whitespace-nowrap" 
+                            style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                            ${title}
+                        </h1>
+                    </div>
+
+                    <div id="style-container" class="h-full flex flex-col justify-center" style="margin-left: ${styleGap}px;">
+                         <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" 
+                            style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: ${styleSize}px;">
+                            ${sub}
+                        </p>
+                    </div>
+
                 </div>
 
-                <div class="absolute top-0 right-0 z-10">
+                <div class="absolute -top-6 -right-6 z-10">
                     ${logoHtml}
                 </div>
             </div>
@@ -5690,55 +5693,49 @@ window.hidePromptModal = function() {
 // --- FUNCTIE: TEKST AUTOMATISCH PASSEND MAKEN ---
 window.autoFitLabelText = function() {
     const titleEl = document.getElementById('prev-title');
-    const container = document.getElementById('title-container');
+    const groupEl = document.getElementById('text-group'); // Check de hele groep
+    const container = document.querySelector('#label-content .relative.w-\\[65\\%\\]'); // De voorkant container
     const logoEl = document.getElementById('label-logo-img');
     
-    // 1. HAAL TUNING WAARDES OP
+    // Sliders ophalen
     const gapSlider = document.getElementById('tuneLogoGap');
     const sizeSlider = document.getElementById('tuneTitleSize');
     
     const safeZone = gapSlider ? parseInt(gapSlider.value) : 10;
-    const maxFontSize = sizeSlider ? parseInt(sizeSlider.value) : 60;
+    const startFontSize = sizeSlider ? parseInt(sizeSlider.value) : 100;
 
-    if (!titleEl || !container) return;
+    if (!titleEl || !groupEl) return;
 
-    // 2. RESET NAAR MAX (Begin groot)
-    let fontSize = maxFontSize; 
+    // Reset naar groot
+    let fontSize = startFontSize; 
     titleEl.style.fontSize = fontSize + 'px';
     titleEl.style.lineHeight = '0.9'; 
     titleEl.style.display = 'block';
 
-    if (container.offsetWidth === 0 || container.offsetHeight === 0) return;
+    if (!container || container.offsetWidth === 0) return;
 
-    // 3. CHECK FUNCTIES (Puur visueel)
-    
-    // Check 1: Botst hij met het logo?
+    // Collision Logic
     const checkCollision = () => {
         if (!logoEl) return false;
-        const tRect = titleEl.getBoundingClientRect();
+        // We meten nu de HELE GROEP (Titel + Style) vs Logo
+        const gRect = groupEl.getBoundingClientRect(); 
         const lRect = logoEl.getBoundingClientRect();
 
-        // Is er overlap? (Rekening houdend met safeZone rondom het logo)
-        const overlap = !(tRect.right < (lRect.left - safeZone) || 
-                          tRect.left > (lRect.right + safeZone) || 
-                          tRect.bottom < (lRect.top - safeZone) || 
-                          tRect.top > (lRect.bottom + safeZone));
+        const overlap = !(gRect.right < (lRect.left - safeZone) || 
+                          gRect.left > (lRect.right + safeZone) || 
+                          gRect.bottom < (lRect.top - safeZone) || 
+                          gRect.top > (lRect.bottom + safeZone));
         return overlap;
     };
 
-    // Check 2: Past hij in zijn eigen container?
     const checkOverflow = () => {
-        const tRect = titleEl.getBoundingClientRect();
-        const cRect = container.getBoundingClientRect();
-
-        // Omdat de tekst geroteerd is, moeten we slim kijken.
-        // We checken of de tekst-rechthoek groter is dan de container-rechthoek.
-        // We geven 2px marge voor afrondingsfouten.
-        return (tRect.height > cRect.height + 2) || (tRect.width > cRect.width + 2);
+        // Past de groep nog wel in de container?
+        // We gebruiken hier offsetLeft + offsetWidth omdat getBoundingClientRect soms lastig is met rotaties
+        // Maar voor simpliciteit: kijken of de groep 'rechtse' rand buiten de container valt
+        return (groupEl.offsetWidth + groupEl.offsetLeft > container.offsetWidth);
     }
 
-    // 4. VERKLEIN LUS
-    // Zolang (Botsing OF Overflow) -> Verklein
+    // Verklein lus
     while ( (checkCollision() || checkOverflow()) && fontSize > 10 ) {
         fontSize--; 
         titleEl.style.fontSize = fontSize + 'px';
@@ -5887,17 +5884,18 @@ function initApp() {
     // (Optioneel: handleStyleChange aanroep hier)
 
     // --- LAYOUT TUNING LISTENERS ---
-    ['tuneTitleSize', 'tuneStyleSize', 'tuneTitleMargin', 'tuneLogoGap'].forEach(id => {
+    ['tuneTitleSize', 'tuneTitleX', 'tuneStyleSize', 'tuneStyleGap', 'tuneLogoGap'].forEach(id => {
         const el = document.getElementById(id);
         if(el) {
             el.addEventListener('input', (e) => {
-                // Update getalletje naast slider
+                // Update getalletjes
                 if(id === 'tuneTitleSize') document.getElementById('disp-title-size').textContent = e.target.value + 'px';
+                if(id === 'tuneTitleX') document.getElementById('disp-title-x').textContent = e.target.value + 'px';
                 if(id === 'tuneStyleSize') document.getElementById('disp-style-size').textContent = e.target.value + 'px';
-                if(id === 'tuneTitleMargin') document.getElementById('disp-title-margin').textContent = e.target.value + 'px';
+                if(id === 'tuneStyleGap') document.getElementById('disp-style-gap').textContent = e.target.value + 'px';
                 if(id === 'tuneLogoGap') document.getElementById('disp-logo-gap').textContent = e.target.value + 'px';
                 
-                // Update label & forceer herberekening
+                // Update label
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
                 if(typeof setLabelTheme === 'function') setLabelTheme(activeTheme);
             });

@@ -1652,14 +1652,27 @@ function loadHistory() {
 
 function renderHistoryList() {
     const term = document.getElementById('history-search-input')?.value.toLowerCase() || '';
+    
+    // Filteren
     const filtered = brews.filter(b => (b.recipeName || 'Untitled').toLowerCase().includes(term));
+    
     const list = document.getElementById('history-list');
     if (!list) return;
     
     if (brews.length === 0) { list.innerHTML = `<p class="text-center text-app-secondary/80">No brews yet.</p>`; return; }
     if (filtered.length === 0) { list.innerHTML = `<p class="text-center text-app-secondary/80">No matches.</p>`; return; }
 
-    list.innerHTML = filtered.map(b => `<div class="p-4 card rounded-lg cursor-pointer hover:bg-app-primary" onclick="window.showBrewDetail('${b.id}')"><h4 class="font-bold text-lg font-header">${b.recipeName}</h4><p class="text-sm text-app-secondary/80">Saved: ${b.createdAt.toDate().toLocaleDateString()}</p></div>`).join('');
+    list.innerHTML = filtered.map(b => {
+        // --- VEILIGHEIDSCHECK ---
+        // Als b.createdAt null is (net opgeslagen), toon 'Saving...'
+        const dateStr = b.createdAt ? b.createdAt.toDate().toLocaleDateString() : 'Saving...';
+
+        return `
+        <div class="p-4 card rounded-lg cursor-pointer hover:bg-app-primary" onclick="window.showBrewDetail('${b.id}')">
+            <h4 class="font-bold text-lg font-header">${b.recipeName}</h4>
+            <p class="text-sm text-app-secondary/80">Saved: ${dateStr}</p>
+        </div>`;
+    }).join('');
 }
 
 window.showBrewDetail = function(brewId) {
@@ -1783,6 +1796,132 @@ window.showBrewDetail = function(brewId) {
         window.syncLogToFinal(brew.id); 
     }, 50);
 
+}
+
+// --- TITLE EDITOR FUNCTIES ---
+
+// 1. Toon de editor
+window.showTitleEditor = function(brewId) {
+    const displayEl = document.getElementById(`title-display-${brewId}`);
+    const editorEl = document.getElementById(`title-editor-${brewId}`);
+    const inputEl = document.getElementById(`title-input-${brewId}`);
+    
+    if(displayEl && editorEl) {
+        displayEl.classList.add('hidden');
+        editorEl.classList.remove('hidden');
+        if(inputEl) inputEl.focus();
+    }
+}
+
+// 2. Verberg de editor (Annuleren)
+window.hideTitleEditor = function(brewId) {
+    const displayEl = document.getElementById(`title-display-${brewId}`);
+    const editorEl = document.getElementById(`title-editor-${brewId}`);
+    
+    if(displayEl && editorEl) {
+        displayEl.classList.remove('hidden');
+        editorEl.classList.add('hidden');
+    }
+}
+
+// 3. Sla de nieuwe titel op
+window.saveNewTitle = async function(brewId) {
+    if (!userId) return;
+    
+    const inputEl = document.getElementById(`title-input-${brewId}`);
+    const newTitle = inputEl ? inputEl.value.trim() : null;
+
+    if (!newTitle) {
+        showToast("Title cannot be empty.", "error");
+        return;
+    }
+
+    try {
+        const brewRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
+        
+        // Update zowel de hoofdtitel als de logData titel voor consistentie
+        await updateDoc(brewRef, { 
+            recipeName: newTitle,
+            "logData.recipeName": newTitle
+        });
+
+        // Update lokale data direct (zodat je niet hoeft te refreshen)
+        const brewIndex = brews.findIndex(b => b.id === brewId);
+        if (brewIndex > -1) {
+            brews[brewIndex].recipeName = newTitle;
+            if(brews[brewIndex].logData) {
+                brews[brewIndex].logData.recipeName = newTitle;
+            }
+        }
+
+        // Update de UI
+        const headerTitle = document.querySelector(`#title-display-${brewId} h2`);
+        if(headerTitle) headerTitle.textContent = newTitle;
+        
+        window.hideTitleEditor(brewId);
+        renderHistoryList(); // Update de lijst aan de zijkant
+        showToast("Title updated!", "success");
+
+    } catch (error) {
+        console.error("Error updating title:", error);
+        showToast("Update failed.", "error");
+    }
+}
+
+// --- DELETE RECIPE FUNCTIE ---
+window.deleteBrew = async function(brewId) {
+    if (!userId) return;
+    
+    if (!confirm("Are you sure you want to delete this recipe permanently?")) return;
+
+    try {
+        // Verwijder uit Firestore
+        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId));
+        
+        showToast("Recipe deleted.", "success");
+        
+        // Ga terug naar de lijstweergave
+        if(typeof window.goBackToHistoryList === 'function') {
+            window.goBackToHistoryList();
+        }
+    } catch (error) {
+        console.error("Error deleting brew:", error);
+        showToast("Could not delete recipe.", "error");
+    }
+}
+
+// --- FUNCTIE: VERWIJDER RECEPT ---
+window.deleteBrew = async function(brewId) {
+    // 1. Veiligheidscheck: is er een gebruiker?
+    if (!userId) return;
+
+    // 2. Dubbele check bij de gebruiker
+    if (!confirm("Weet je zeker dat je dit recept definitief wilt verwijderen? Dit kan niet ongedaan worden gemaakt.")) {
+        return;
+    }
+
+    try {
+        // 3. Verwijder uit de database
+        // We gebruiken de hardcoded paden zoals in de rest van je app
+        const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
+        await deleteDoc(brewDocRef);
+
+        // 4. Succes melding
+        showToast("Recept succesvol verwijderd.", "success");
+
+        // 5. Ga terug naar het overzicht
+        if (typeof window.goBackToHistoryList === 'function') {
+            window.goBackToHistoryList();
+        } else {
+            // Fallback als goBackToHistoryList niet bestaat
+            document.getElementById('history-detail-container').classList.add('hidden');
+            document.getElementById('history-list-container').classList.remove('hidden');
+        }
+
+    } catch (error) {
+        console.error("Fout bij verwijderen:", error);
+        showToast("Kon het recept niet verwijderen.", "error");
+    }
 }
 
 // --- GRAFIEKEN VOOR HISTORIE ---

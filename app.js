@@ -3977,17 +3977,17 @@ function setLabelTheme(theme) {
 
             <div class="h-full w-[65%] relative p-2 overflow-hidden">
                 
-                <div id="text-group" class="absolute top-0 bottom-0 flex flex-row items-center" 
+                <div id="text-group" class="absolute top-0 bottom-0 flex flex-row items-end" 
                      style="left: ${titleX}px; padding-left: 2px;">
                     
-                    <div id="title-container" class="h-full flex flex-col justify-center">
+                    <div id="title-container" class="h-full flex flex-col justify-end">
                         <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-[0.9] whitespace-nowrap" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
                     </div>
 
-                    <div id="style-container" class="h-full flex flex-col justify-center" style="margin-left: ${styleGap}px;">
+                    <div id="style-container" class="h-[50%] flex flex-col justify-end" style="margin-left: ${styleGap}px;">
                          <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: ${styleSize}px;">
                             ${sub}

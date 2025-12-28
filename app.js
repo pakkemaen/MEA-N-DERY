@@ -1149,7 +1149,7 @@ window.startActualBrewDay = async function(brewId) {
     renderBrewDay(brewId);
 }
 
-// --- SMART PARSER: Haalt stappen uit oude tekst recepten ---
+// --- SMART PARSER: Haalt stappen uit receptteksten ---
 function extractStepsFromMarkdown(markdown) {
     if (!markdown) return { day1: [], day2: [] };
 
@@ -1157,27 +1157,50 @@ function extractStepsFromMarkdown(markdown) {
     const day1 = [];
     const day2 = [];
     
-    // Regex zoekt naar regels die beginnen met een cijfer (bv: "1. Mix honey...")
-    const stepRegex = /^(\d+)\.\s+(.*)/;
+    // VERBETERDE REGEX: 
+    // Accepteert nu "1.", "1)", en "1 " (flexibeler met leestekens)
+    const stepRegex = /^(\d+)[\.\)\s]\s+(.*)/;
+    
+    // Backup: Bullet points (voor als de AI vergeet te nummeren)
+    const bulletRegex = /^[-*•]\s+(.*)/;
 
     lines.forEach(line => {
-        const match = line.trim().match(stepRegex);
+        const cleanLine = line.trim();
+        let match = cleanLine.match(stepRegex);
+        let text = "";
+        let stepNum = 0;
+
         if (match) {
-            const text = match[2];
+            stepNum = parseInt(match[1]);
+            text = match[2];
+        } else {
+            // Als geen nummer, probeer bullet point
+            match = cleanLine.match(bulletRegex);
+            if (match) {
+                text = match[1];
+                stepNum = day1.length + day2.length + 1; // Genereer zelf een nummer
+            }
+        }
+
+        // Alleen doorgaan als we tekst hebben én het geen header is (geen ## of **)
+        if (text && !cleanLine.startsWith('#') && !cleanLine.startsWith('**')) {
             const lower = text.toLowerCase();
 
-            // KEYWORDS: Wat hoort bij Fase 2 (Rijping)?
-            const isSecondary = lower.includes('rack') || 
-                                lower.includes('siphon') || 
-                                lower.includes('secondary') || 
-                                lower.includes('stabiliz') || 
-                                lower.includes('backsweeten') || 
-                                lower.includes('bottle') || 
-                                lower.includes('bottling') || 
-                                lower.includes('aging') || 
-                                lower.includes('wait for clear');
+            // KEYWORDS: Wat hoort écht bij Fase 2?
+            // We zijn iets strenger zodat "Prepare bottles" in stap 1 niet per ongeluk naar dag 2 gaat.
+            const isSecondary = (
+                lower.includes('rack into') || 
+                lower.includes('siphon') || 
+                (lower.includes('secondary') && !lower.includes('primary')) || 
+                lower.includes('stabiliz') || 
+                lower.includes('backsweeten') || 
+                (lower.includes('bottle') && !lower.includes('clean') && !lower.includes('sanitize')) || 
+                lower.includes('bottling') || 
+                (lower.includes('aging') && !lower.includes('yeast')) || 
+                lower.includes('wait for clear')
+            );
 
-            const stepObj = { title: `Step ${match[1]}`, description: text, duration: 0 };
+            const stepObj = { title: `Step ${stepNum}`, description: text, duration: 0 };
 
             if (isSecondary) {
                 day2.push(stepObj);
@@ -1187,9 +1210,20 @@ function extractStepsFromMarkdown(markdown) {
         }
     });
 
-    // FALLBACK: Als de AI geen genummerde lijst heeft gemaakt, of alles in Day 1 zet
-    if (day2.length === 0 && day1.length === 0) {
-        return { day1: [], day2: [] }; // Geef leeg terug, zodat de defaults inschakelen
+    // FALLBACK: Als alles in Day 2 is beland (foutje), gooi de eerste helft terug naar Day 1
+    if (day1.length === 0 && day2.length > 0) {
+        // Als we stap 1 zien in de 'day2' lijst, is er iets misgegaan.
+        // We verplaatsen alles tot aan de eerste echte 'racking/bottling' stap terug naar day1.
+        // Voor nu: simpele split als noodoplossing.
+        const firstRealSecondaryIndex = day2.findIndex(s => 
+            s.description.toLowerCase().includes('rack') || 
+            s.description.toLowerCase().includes('bottle')
+        );
+        
+        if (firstRealSecondaryIndex > 0) {
+            const stepsToMove = day2.splice(0, firstRealSecondaryIndex);
+            day1.push(...stepsToMove);
+        }
     }
 
     return { day1, day2 };
@@ -1745,7 +1779,7 @@ window.showBrewDetail = function(brewId) {
         <div class="print-button-container mb-4 grid grid-cols-2 gap-2 no-print">
             <button onclick="window.resumeBrew('${brew.id}')" class="bg-green-600 text-white py-2 px-4 rounded btn font-bold shadow-md hover:bg-green-700 flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Resume Batch
+                Start / Resume Batch
             </button>
             <button onclick="window.cloneBrew('${brew.id}')" class="bg-blue-600 text-white py-2 px-4 rounded btn font-bold shadow-md hover:bg-blue-700 flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>

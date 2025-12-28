@@ -3961,22 +3961,35 @@ function setLabelTheme(theme) {
         if (showDetails) infoParts.push(details);
         const infoString = infoParts.join(' • ');
 
-        // 4. PEAK DATE LOGIC (Slimme berekening)
+        // --- 4. PEAK DATE LOGIC (SLIMME VERSIE V3.0) ---
+        // We proberen eerst de 'echte' berekende datum uit de database te halen
         let peakDateVal = "Unknown";
-        if (dateVal) {
+        
+        // Haal het geselecteerde brew object op
+        const selectEl = document.getElementById('labelRecipeSelect');
+        const selectedBrew = brews.find(b => b.id === selectEl.value);
+
+        if (selectedBrew && selectedBrew.peakFlavorDate) {
+            // SCENARIO 1: DE WAARHEID (Datum opgeslagen tijdens bottelen)
+            try {
+                const pd = new Date(selectedBrew.peakFlavorDate);
+                peakDateVal = pd.toLocaleDateString('nl-NL'); // Of 'en-GB' als je dat liever hebt
+            } catch(e) { console.error(e); }
+        } else if (dateVal) {
+            // SCENARIO 2: SCHATTING (Nog niet gebotteld, bereken op basis van ABV)
             try { 
                 const d = new Date(dateVal); 
                 const abvNum = parseFloat(abv);
                 
-                // Logic: Hydromel (<8%) = 2 mnd, Standaard = 6 mnd, Zwaar (>14%) = 12 mnd
+                // Logic: Hydromel (<8%) = 3 mnd, Standaard = 6 mnd, Zwaar (>14%) = 12 mnd
                 let monthsToAdd = 6;
                 if (!isNaN(abvNum)) {
-                    if (abvNum < 8) monthsToAdd = 2;
+                    if (abvNum < 8) monthsToAdd = 3;
                     else if (abvNum > 14) monthsToAdd = 12;
                 }
                 
                 d.setMonth(d.getMonth() + monthsToAdd); 
-                peakDateVal = d.toLocaleDateString(); 
+                peakDateVal = d.toLocaleDateString('nl-NL'); 
             } catch(e) {}
         }
 
@@ -4988,7 +5001,89 @@ window.removeCustomBottleFromList = function(index) {
     renderCustomBottlesList();
 }
 
-// --- BOTTLE BATCH (MET SLIMME PHYSICS & AUTO-CORRECT) ---
+// --- AI ANALYSE VOOR RIJPING (V3.0) ---
+window.analyzeAgingPotential = async function() {
+    if (!currentBrewToBottleId) return;
+    
+    const brew = brews.find(b => b.id === currentBrewToBottleId);
+    if (!brew) return;
+
+    const btn = document.getElementById('analyze-aging-btn');
+    const dateInput = document.getElementById('peakFlavorDate');
+    const reasonInput = document.getElementById('peakFlavorReason');
+    
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<div class="loader" style="width:14px; height:14px; border-width:2px;"></div> Analyzing...';
+    btn.disabled = true;
+
+    // 1. Data Verzamelen (De Waarheid)
+    const today = new Date().toISOString().split('T')[0];
+    const created = brew.createdAt ? brew.createdAt.toDate().toISOString().split('T')[0] : 'Unknown';
+    const log = brew.logData || {};
+    
+    const context = `
+    **RECIPE NAME:** ${brew.recipeName}
+    **BREW DATE:** ${log.brewDate || created}
+    **TODAY:** ${today}
+    
+    **STATS (TARGET vs ACTUAL):**
+    - OG: Target ${log.targetOG} vs Actual ${log.actualOG || 'Unknown'}
+    - FG: Target ${log.targetFG} vs Actual ${log.actualFG || 'Unknown'}
+    - ABV: Target ${log.targetABV} vs Actual ${log.finalABV || 'Unknown'}
+    
+    **INGREDIENTS:**
+    ${brew.recipeMarkdown ? brew.recipeMarkdown.substring(0, 500) : 'See logs'}
+    `;
+
+    // 2. De Prompt
+    const prompt = `You are an expert Mead Cellarmaster. 
+    Analyze this batch data to determine the specific **Peak Flavor Date**.
+    
+    **LOGIC RULES:**
+    1. **High ABV (>14%) or Bochet:** Needs 12-24 months aging.
+    2. **Hydromel (<8%):** Peak is soon (3-6 months).
+    3. **Missed FG (Too Sweet):** If Actual FG > Target FG significantly, add +3-6 months for sugar/acid integration.
+    4. **Spices/Oak:** Needs +3 months to mellow.
+    
+    **DATA:**
+    ${context}
+    
+    **OUTPUT:** Provide a JSON object with:
+    - "date": The specific calculated date (YYYY-MM-DD).
+    - "reason": A very short (max 15 words) explanation (e.g. "High residual sugar requires 12 months to balance").
+    `;
+
+    const schema = {
+        type: "OBJECT",
+        properties: {
+            "date": { "type": "STRING" },
+            "reason": { "type": "STRING" }
+        },
+        required: ["date", "reason"]
+    };
+
+    try {
+        const jsonResponse = await performApiCall(prompt, schema);
+        const result = JSON.parse(jsonResponse);
+        
+        // 3. UI Invullen
+        dateInput.value = result.date;
+        reasonInput.value = result.reason;
+        
+        // Visuele feedback
+        dateInput.classList.add('ring-2', 'ring-purple-500');
+        setTimeout(() => dateInput.classList.remove('ring-2', 'ring-purple-500'), 1000);
+
+    } catch (error) {
+        console.error("Aging analysis failed:", error);
+        showToast("Analysis failed. Please fill manually.", "error");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+// --- BOTTLE BATCH (MET AI AGING DATA SAVE) ---
 window.bottleBatch = async function(e) {
     e.preventDefault();
     if (!currentBrewToBottleId) return;
@@ -4996,7 +5091,7 @@ window.bottleBatch = async function(e) {
     const submitButton = e.target.querySelector('button[type="submit"]');
     const originalButtonText = submitButton.innerHTML;
     submitButton.disabled = true;
-    submitButton.textContent = 'Checking Physics...'; 
+    submitButton.textContent = 'Processing...'; 
 
     try {
         const originalBrew = brews.find(b => b.id === currentBrewToBottleId);
@@ -5013,11 +5108,10 @@ window.bottleBatch = async function(e) {
 
         if (bottlesData.length === 0) throw new Error("Enter quantity for at least one bottle.");
 
-        // --- STAP 2: PHYSICS CHECK & AUTO-CORRECT LOGIC (V3.0) ---
+        // --- STAP 2: PHYSICS CHECK & AUTO-CORRECT LOGIC ---
         let totalLitersBottled = 0;
         bottlesData.forEach(b => totalLitersBottled += (b.size * b.quantity) / 1000);
 
-        // Haal huidige volume op
         const currentLogVol = (originalBrew.logData && originalBrew.logData.currentVolume && parseFloat(originalBrew.logData.currentVolume) > 0) 
                               ? parseFloat(originalBrew.logData.currentVolume) 
                               : originalBrew.batchSize;
@@ -5025,53 +5119,30 @@ window.bottleBatch = async function(e) {
         let volumeUpdatePayload = {}; 
         const diff = (totalLitersBottled - currentLogVol).toFixed(2);
 
-        // SCENARIO 1: MEER GEBOTTELD DAN AANWEZIG (Onmogelijk -> Altijd vragen)
         if (totalLitersBottled > currentLogVol) {
-            
-            if (confirm(`⚠️ PHYSICS WARNING:\n\nYou are bottling ${totalLitersBottled.toFixed(2)}L, but logs say ${currentLogVol.toFixed(2)}L available (Diff: +${diff}L).\n\nClick OK to auto-correct the log to ${totalLitersBottled.toFixed(2)}L and proceed.\nClick Cancel to check your inputs.`)) {
+            if (confirm(`⚠️ PHYSICS WARNING:\n\nYou are bottling ${totalLitersBottled.toFixed(2)}L, but logs say ${currentLogVol.toFixed(2)}L available (Diff: +${diff}L).\n\nClick OK to auto-correct the log to ${totalLitersBottled.toFixed(2)}L and proceed.`)) {
                 volumeUpdatePayload = { "logData.currentVolume": totalLitersBottled.toFixed(2) };
             } else {
                 throw new Error("Bottling cancelled by user.");
             }
-
-        // SCENARIO 2: MINDER GEBOTTELD (Verlies? Of meetfout?)
-        // We vragen het alleen als het verschil groter is dan 0.5 Liter (kleine verliezen zijn normaal)
         } else if ((currentLogVol - totalLitersBottled) > 0.5) {
-            
-            const loss = (currentLogVol - totalLitersBottled).toFixed(2);
-            
-            // De vraag: Is het verlies (OK) of een correctie (Cancel -> Update Log)?
-            // We gebruiken hier een trucje met confirm:
-            // OK = "Het is verlies (Spill/Trub)" -> Logboek NIET aanpassen (want je had echt 5L)
-            // Cancel = "Pas logboek aan (Meetfout)" -> Logboek WEL aanpassen
-            
-            // Omdat confirm() maar 2 smaken heeft, maken we een custom flow met prompt of een slimme confirm tekst.
-            // Laten we het simpel houden: We vragen of we het logboek moeten corrigeren.
-            
-            if (confirm(`📉 SIGNIFICANT LOSS DETECTED:\n\nYou are bottling ${totalLitersBottled.toFixed(2)}L, leaving ${loss}L behind.\n\nIs this normal loss (trub/spill)?\n\n[OK] = Yes, record as Loss. Keep log at ${currentLogVol.toFixed(2)}L.\n[Cancel] = No, I measured wrong. Update log to ${totalLitersBottled.toFixed(2)}L.`)) {
-                // OK geklikt: Doe niets (Het is verlies, dus logboek blijft 5L)
-                console.log("User confirmed loss. No log update.");
-            } else {
-                // Cancel geklikt: Gebruiker wil het logboek corrigeren
-                if(confirm(`Confirm: Update logbook volume from ${currentLogVol.toFixed(2)}L to ${totalLitersBottled.toFixed(2)}L?`)) {
-                     volumeUpdatePayload = { "logData.currentVolume": totalLitersBottled.toFixed(2) };
-                }
+            if (!confirm(`📉 SIGNIFICANT LOSS DETECTED:\n\nYou are bottling ${totalLitersBottled.toFixed(2)}L, leaving ${(currentLogVol - totalLitersBottled).toFixed(2)}L behind.\n\nClick OK if this is normal loss (trub). Click Cancel to adjust amounts.`)) {
+                 throw new Error("Bottling cancelled by user.");
             }
         }
-        // ----------------------------------------------------
 
-        // --- STAP 3: STOCK CHECK (Verpakking) ---
+        // --- STAP 3: STOCK CHECK ---
         const closureType = document.getElementById('closureTypeSelect').value;
         const outOfStockItems = [];
         let totalBottles = 0;
 
         bottlesData.forEach(bottle => {
             totalBottles += bottle.quantity;
-            if (bottle.price === null) { // Alleen checken voor standaard items
+            if (bottle.price === null) { 
                 const stockId = `bottle_${bottle.size}`;
                 const currentStock = packagingCosts[stockId]?.qty || 0;
                 if (bottle.quantity > currentStock) {
-                    outOfStockItems.push(`${bottle.quantity} x ${bottle.size}ml bottle(s) (only ${currentStock} in stock)`);
+                    outOfStockItems.push(`${bottle.quantity} x ${bottle.size}ml bottle(s)`);
                 }
             }
         });
@@ -5095,7 +5166,6 @@ window.bottleBatch = async function(e) {
         if (outOfStockItems.length > 0) throw new Error(`Stock missing:\n- ${outOfStockItems.join('\n- ')}`);
 
         // --- STAP 4: KOSTEN BEREKENEN ---
-        // Helper functie inline of extern gebruiken
         const packCosts = (typeof getPackagingCosts === 'function') ? getPackagingCosts() : {};
         let totalPackagingCost = 0;
 
@@ -5115,8 +5185,7 @@ window.bottleBatch = async function(e) {
         const finalTotalCost = (originalBrew.totalCost || 0) + totalPackagingCost;
         const currency = userSettings.currencySymbol || '€';
 
-        // Finale Bevestiging
-        if (confirm(`Packaging cost: ${currency}${totalPackagingCost.toFixed(2)}. Total batch cost: ${currency}${finalTotalCost.toFixed(2)}. Proceed?`)) {
+        if (confirm(`Total cost: ${currency}${finalTotalCost.toFixed(2)}. Proceed?`)) {
             
             // --- STAP 5: VOORRAAD AFBOEKEN ---
             const updatedStock = JSON.parse(JSON.stringify(packagingCosts));
@@ -5138,12 +5207,16 @@ window.bottleBatch = async function(e) {
             } else deduct(closureType, totalBottles);
             deduct('label', totalBottles);
 
-            // Opslaan verpakking
             await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'settings', 'packaging'), updatedStock);
             packagingCosts = updatedStock;
 
-            // --- STAP 6: NAAR DE KELDER (CELLAR) ---
+            // --- STAP 6: NAAR DE KELDER (MET AI DATUM) ---
             const bottlingDate = new Date(document.getElementById('bottlingDate').value);
+            
+            // NIEUW: Lees de berekende datum uit het formulier
+            const peakDate = document.getElementById('peakFlavorDate').value || null;
+            const peakReason = document.getElementById('peakFlavorReason').value || 'Generated by Mazer 2.0';
+
             const cellarData = {
                 userId, brewId: currentBrewToBottleId,
                 recipeName: originalBrew.recipeName,
@@ -5151,15 +5224,17 @@ window.bottleBatch = async function(e) {
                 bottles: bottlesData.map(({price, ...rest}) => rest),
                 totalBatchCost: finalTotalCost,
                 ingredientCost: originalBrew.totalCost || 0,
-                peakFlavorDate: null, peakFlavorJustification: 'Generated by Mazer 2.0'
+                peakFlavorDate: peakDate,  // <--- OPSLAAN
+                peakFlavorJustification: peakReason // <--- OPSLAAN
             };
 
             await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar'), cellarData);
 
-            // --- STAP 7: STATUS UPDATE (MET AUTO-CORRECT VOLUME) ---
+            // --- STAP 7: STATUS UPDATE (MET AI DATUM & VOLUME) ---
             const brewUpdateData = { 
                 isBottled: true,
-                ...volumeUpdatePayload // <--- Hier wordt de log correctie toegepast indien nodig!
+                peakFlavorDate: peakDate, // <--- OOK OPSLAAN IN BREW, ZODAT LABEL FORGE HET VINDT!
+                ...volumeUpdatePayload 
             };
             
             await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId), brewUpdateData);
@@ -5173,7 +5248,6 @@ window.bottleBatch = async function(e) {
             hideBottlingModal();
             showToast("Batch bottled successfully!", "success");
             
-            // Refresh alle schermen
             if(typeof loadHistory === 'function') loadHistory();
             if(typeof loadCellar === 'function') loadCellar();
             if(typeof renderBrewDay === 'function') renderBrewDay('none');
@@ -5193,7 +5267,6 @@ window.bottleBatch = async function(e) {
 // --- INVENTORY MANAGEMENT FUNCTIONS ---
 
 // --- BARCODE SCANNER FUNCTIONS ---
-
 function startScanner() {
     const container = document.getElementById('barcode-scanner-container');
     if (container) container.classList.remove('hidden');

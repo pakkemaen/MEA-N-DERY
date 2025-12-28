@@ -1280,84 +1280,84 @@
         <div class="bg-app-tertiary p-8 rounded-lg shadow-xl w-full max-w-lg"> <h3 class="text-2xl font-header font-bold mb-6">Bottle Batch</h3>
             <form id="bottling-form">
                 <div class="space-y-6">
-                    <div><label>Date</label><input type="date" id="bottlingDate" required class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header"></div>
-                    <div><label>Closure</label><select id="closureTypeSelect" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header"><option value="auto">Auto</option><option value="cork">Cork</option></select></div>
-                    <div><label>Standard Bottles</label><div class="grid grid-cols-4 gap-2"><input type="number" id="qty750" placeholder="750ml"><input type="number" id="qty500" placeholder="500ml"><input type="number" id="qty330" placeholder="330ml"><input type="number" id="qty250" placeholder="250ml"></div></div>
-                    <div class="border-t pt-4">
-                        <label>Custom</label><div class="grid grid-cols-3 gap-2"><input type="number" id="customSize" placeholder="ml"><input type="number" id="customQty" placeholder="Qty"><input type="number" id="customPrice" placeholder="€"></div>
-                        <button type="button" onclick="window.addCustomBottleToList()" class="w-full mt-2 bg-blue-600 text-white btn">+ Add</button>
+                    
+                    <div class="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-bold text-purple-800 dark:text-purple-300 text-sm flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                                Peak Flavor Forecast
+                            </h4>
+                            <button type="button" id="analyze-aging-btn" onclick="window.analyzeAgingPotential()" class="text-xs bg-purple-600 text-white px-3 py-1.5 rounded hover:bg-purple-700 btn shadow-sm transition-colors flex items-center gap-1">
+                                ✨ AI Analyze Log
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-app-secondary mb-1">Estimated Peak Date</label>
+                                <input type="date" id="peakFlavorDate" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header font-bold text-purple-700 dark:text-purple-300">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-app-secondary mb-1">Reasoning</label>
+                                <textarea id="peakFlavorReason" rows="1" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header text-xs" placeholder="Click analyze to generate..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2">Bottling Date</label>
+                            <input type="date" id="bottlingDate" required class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-2">Closure Type</label>
+                            <select id="closureTypeSelect" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header">
+                                <option value="auto" selected>Automatic (based on size)</option>
+                                <option value="cork">Cork</option>
+                                <option value="crown_cap_26">Crown Cap 26mm</option>
+                                <option value="crown_cap_29">Crown Cap 29mm</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Number of Bottles</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <div>
+                                <label class="block text-xs text-app-secondary mb-1">750ml</label>
+                                <input type="number" id="qty750" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header text-center">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-app-secondary mb-1">500ml</label>
+                                <input type="number" id="qty500" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header text-center">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-app-secondary mb-1">330ml</label>
+                                <input type="number" id="qty330" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header text-center">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-app-secondary mb-1">250ml</label>
+                                <input type="number" id="qty250" min="0" step="1" placeholder="0" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header text-center">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-app pt-4">
+                        <label class="block text-sm font-bold mb-2">Custom Sizes</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="number" id="customSize" min="0" step="1" placeholder="ml" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header">
+                            <input type="number" id="customQty" min="0" step="1" placeholder="Qty" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header">
+                            <input type="number" id="customPrice" min="0" step="0.01" placeholder="€ cost" class="w-full p-2 border rounded-md bg-app-primary border-app text-app-header">
+                        </div>
+                        <button type="button" onclick="window.addCustomBottleToList()" class="w-full mt-2 bg-blue-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-700 btn text-sm">
+                            + Add Custom Bottle
+                        </button>
                         <div id="custom-bottles-list" class="mt-2 space-y-1"></div>
                     </div>
                 </div>
-                <div class="flex justify-end gap-4 mt-8">
-                    <button type="button" onclick="window.hideBottlingModal()" class="px-6 py-2 bg-gray-600 text-white btn">Cancel</button>
-                    <button type="submit" class="px-6 py-2 bg-app-action text-white btn">Bottle</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
-    <div id="prompt-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="bg-app-tertiary p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-full overflow-y-auto">
-            <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-header font-bold">AI Prompt</h3><button id="close-prompt-modal-btn" class="text-2xl font-bold">&times;</button></div>
-            <pre id="prompt-modal-content" class="whitespace-pre-wrap text-sm bg-app-primary p-4 rounded text-app-header font-mono"></pre>
-        </div>
-    </div>
-
-    <div id="danger-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="bg-app-tertiary p-6 rounded-lg shadow-xl w-full max-w-md">
-            <h3 class="text-xl font-header text-red-600 mb-4">Sure?</h3>
-            <p class="text-app-secondary mb-4">Type "<strong id="danger-confirm-text" class="text-red-500"></strong>" to confirm.</p>
-            <input type="text" id="danger-confirm-input" class="w-full p-2 border rounded-md">
-            <div class="flex justify-end gap-4 mt-4"><button id="danger-cancel-btn" class="btn bg-gray-600 text-white">Cancel</button><button id="danger-confirm-btn" class="btn bg-red-700 text-white" disabled>Confirm</button></div>
-        </div>
-    </div>
-
-   <div id="label-format-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-app-tertiary p-6 rounded-lg shadow-xl w-full max-w-md relative overflow-y-auto max-h-full">
-            <button onclick="document.getElementById('label-format-modal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-white font-bold text-xl">&times;</button>
-            
-            <h3 class="text-xl font-header font-bold mb-2">Add Custom Label Sheet</h3>
-            
-            <div class="mb-6 bg-app-primary p-3 rounded-lg border border-app-brand/30">
-                <label class="text-[10px] font-bold text-app-brand uppercase tracking-wider mb-1 block">✨ AI Auto-Detect</label>
-                <div class="flex gap-2">
-                    <input type="text" id="lf-lookup-code" placeholder="e.g. Avery L7165, Herma 4453..." class="w-full p-2 border rounded bg-app-tertiary text-sm focus:ring-1 focus:ring-app-brand">
-                    <button id="lf-lookup-btn" class="bg-purple-600 text-white font-bold py-2 px-3 rounded hover:bg-purple-700 btn whitespace-nowrap text-sm">
-                        Find
-                    </button>
-                </div>
-                <p class="text-[10px] text-app-secondary mt-1">Enter code/brand. AI will try to fill the form below.</p>
-            </div>
-
-            <hr class="border-app-secondary/20 mb-4">
-            
-            <form id="label-format-form" class="space-y-3">
-                <div><label class="text-xs font-bold">Format Name</label><input type="text" id="lf-name" placeholder="e.g. Action Labels" class="w-full p-2 border rounded bg-app-primary text-sm" required></div>
-                
-                <div class="grid grid-cols-2 gap-3">
-                    <div><label class="text-xs">Label Width (mm)</label><input type="number" id="lf-width" step="0.1" class="w-full p-2 border rounded bg-app-primary text-sm" required></div>
-                    <div><label class="text-xs">Label Height (mm)</label><input type="number" id="lf-height" step="0.1" class="w-full p-2 border rounded bg-app-primary text-sm" required></div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div><label class="text-xs">Cols (Horizontal)</label><input type="number" id="lf-cols" class="w-full p-2 border rounded bg-app-primary text-sm" required></div>
-                    <div><label class="text-xs">Rows (Vertical)</label><input type="number" id="lf-rows" class="w-full p-2 border rounded bg-app-primary text-sm" required></div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div><label class="text-xs">Top Margin (mm)</label><input type="number" id="lf-marginTop" step="0.1" value="0" class="w-full p-2 border rounded bg-app-primary text-sm"></div>
-                    <div><label class="text-xs">Left Margin (mm)</label><input type="number" id="lf-marginLeft" step="0.1" value="0" class="w-full p-2 border rounded bg-app-primary text-sm"></div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div><label class="text-xs">Gap Horizontal (mm)</label><input type="number" id="lf-gapX" step="0.1" value="0" class="w-full p-2 border rounded bg-app-primary text-sm"></div>
-                    <div><label class="text-xs">Gap Vertical (mm)</label><input type="number" id="lf-gapY" step="0.1" value="0" class="w-full p-2 border rounded bg-app-primary text-sm"></div>
-                </div>
-
-                <div class="flex justify-end gap-3 mt-6">
-                    <button type="button" onclick="document.getElementById('label-format-modal').classList.add('hidden')" class="px-4 py-2 bg-gray-600 text-white rounded text-sm hover:opacity-90 btn">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-green-600 text-white font-bold rounded text-sm hover:opacity-90 btn">Save Format</button>
+                <div class="flex justify-end gap-4 mt-8 pt-4 border-t border-app">
+                    <button type="button" onclick="window.hideBottlingModal()" class="px-6 py-2 rounded-lg bg-gray-600 text-gray-300 hover:bg-gray-500 btn">Cancel</button>
+                    <button type="submit" class="px-6 py-2 rounded-lg bg-app-action text-white font-bold hover:opacity-90 btn shadow-lg">Confirm Bottling</button>
                 </div>
             </form>
         </div>

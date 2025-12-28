@@ -3981,7 +3981,7 @@ function setLabelTheme(theme) {
                      style="left: ${titleX}px; padding-left: 2px;">
                     
                     <div id="title-container" class="h-full flex flex-col justify-end">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-center leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-hidden" 
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-hidden" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
@@ -5713,10 +5713,10 @@ window.autoFitLabelText = function() {
     titleEl.style.fontSize = fontSize + 'px';
     titleEl.style.lineHeight = '0.9'; 
     
-    // BELANGRIJK: Voor line-clamp-2 moet dit -webkit-box zijn, NIET block!
+    // Zorg dat line-clamp werkt
     titleEl.style.display = '-webkit-box'; 
-    titleEl.style.webkitBoxOrient = 'vertical'; // Nodig voor de clamp
-    titleEl.style.webkitLineClamp = '2';        // Forceer max 2 regels
+    titleEl.style.webkitBoxOrient = 'vertical'; 
+    titleEl.style.webkitLineClamp = '2';
 
     if (!container || container.offsetWidth === 0) return;
 
@@ -5734,17 +5734,17 @@ window.autoFitLabelText = function() {
     };
 
     const checkOverflow = () => {
-        // Check of de groep buiten de container valt
         return (groupEl.offsetWidth + groupEl.offsetLeft > container.offsetWidth);
     }
 
-    // Verklein lus
-    while ( (checkCollision() || checkOverflow()) && fontSize > 10 ) {
+    // Verklein lus: AANGEPAST NAAR > 5 (zodat je kleiner kan gaan)
+    while ( (checkCollision() || checkOverflow()) && fontSize > 5 ) {
         fontSize--; 
         titleEl.style.fontSize = fontSize + 'px';
     }
     
-    if (fontSize <= 10) titleEl.style.fontSize = '10px';
+    // Veiligheidsgrens verlaagd naar 5px
+    if (fontSize <= 5) titleEl.style.fontSize = '5px';
 }
 
 function initApp() {

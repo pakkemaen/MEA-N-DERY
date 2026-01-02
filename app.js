@@ -1149,7 +1149,7 @@ window.startActualBrewDay = async function(brewId) {
     renderBrewDay(brewId);
 }
 
-// --- SMART PARSER V4: Strict Boundaries (Stop bij Notes) ---
+// --- SMART PARSER V5: Clean Titles & No Redundant Numbers ---
 function extractStepsFromMarkdown(markdown) {
     if (!markdown) return { day1: [], day2: [] };
 
@@ -1159,70 +1159,90 @@ function extractStepsFromMarkdown(markdown) {
     
     let isParsingInstructions = false;
 
-    // Regex om te zien of een regel een Header is (# Title of **Title**)
-    // We kijken specifiek naar Instructions om te starten, en ELKE andere header om te stoppen.
+    // Regexen
     const instructionHeaderRegex = /^(?:#+|__|\*\*)\s*(?:Instructions|Steps|Method|Procedure|Bereiding)(?:__|\*\*|:)?/i;
-    const anyHeaderRegex = /^(?:#+|__|\*\*)\s*([a-zA-Z].*)/; // Pakt regels die beginnen met # of ** en tekst bevatten
-
-    // Regex voor stappen
-    const stepRegex = /(?:^|\s)(\d+)[\.\)\s]\s+(.*)/;
-    const bulletRegex = /^[-*•]\s+(.*)/;
+    const anyHeaderRegex = /^(?:#+|__|\*\*)\s*([a-zA-Z].*)/; 
+    
+    // 1. Zoek nummer aan begin (1. of 1) of bullet)
+    const prefixRegex = /^(?:Step\s+)?(\d+)[\.\)\s]\s*|^\s*[-*•]\s+/i;
+    
     const blackList = ['abv:', 'batch size:', 'style:', 'sweetness:', 'og:', 'fg:', 'buy ', 'target '];
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        const cleanLine = line.trim();
+        let cleanLine = line.trim();
         
         if (!cleanLine) continue;
 
-        // 1. STATUS CHECK: Zitten we in de instructie-sectie?
+        // Sectie detectie
         if (cleanLine.match(instructionHeaderRegex)) {
             isParsingInstructions = true;
-            continue; // Sla de header zelf over
+            continue; 
         }
-
-        // 2. STOPBORD: Als we al aan het parsen zijn, en we zien een NIEUWE Header... STOP!
-        // Dit voorkomt dat "Brewer's Notes", "Water Profile" etc. worden meegenomen.
         if (isParsingInstructions && cleanLine.match(anyHeaderRegex)) {
-            // We controleren even of het geen sub-stap is die per ongeluk dikgedrukt is.
-            // Als het begint met #, ##, ### -> Zeker stoppen.
             if (cleanLine.startsWith('#')) break; 
-            
-            // Als het "Notes", "Tips", "Profile" bevat -> Stoppen.
             if (cleanLine.match(/(Note|Tip|Profile|Summary|Data)/i)) break;
         }
-
-        // Als we nog niet bij de instructies zijn, negeer deze regel
         if (!isParsingInstructions) continue;
-
-        // 3. STAPPEN VERWERKEN (Alleen als we in de sectie zitten)
         if (blackList.some(badWord => cleanLine.toLowerCase().includes(badWord))) continue;
 
-        let match = cleanLine.match(stepRegex);
-        let text = "";
-        let stepNum = 0;
+        // --- SCHOONMAAK LOGICA ---
+        
+        // 1. Verwijder het nummer van de AI (bv "11." of "Step 1:") aan het begin
+        cleanLine = cleanLine.replace(prefixRegex, '');
 
-        if (match) {
-            stepNum = parseInt(match[1]);
-            text = match[2];
-        } else {
-            // Bullet points
-            match = cleanLine.match(bulletRegex);
-            if (match) {
-                text = match[1];
-                stepNum = day1.length + day2.length + 1; 
+        // 2. Verwijder Markdown bold chars aan de buitenkant
+        cleanLine = cleanLine.replace(/^\*\*|\*\*$/g, '').trim();
+
+        if (cleanLine) {
+            const lower = cleanLine.toLowerCase();
+            
+            // --- TITEL vs OMSCHRIJVING SPLITSEN ---
+            // We proberen de titel te "stelen" uit de tekst.
+            // Vaak formatteert AI het als: "**Sanitation:** Clean everything..." of "Mixing: Add honey..."
+            
+            let title = "Action"; // Fallback
+            let description = cleanLine;
+
+            // Strategie A: Dubbele punt splitter (Sanitation: Clean...)
+            // We pakken het eerste deel als titel, MAAR alleen als het kort is (< 50 chars)
+            const colonSplit = cleanLine.match(/^([^:]+):\s*(.*)/);
+            
+            // Strategie B: Bold text splitter (**Sanitation** Clean...)
+            const boldSplit = cleanLine.match(/^\*\*([^*]+)\*\*\s*(.*)/);
+
+            if (boldSplit) {
+                title = boldSplit[1].replace(':', '').trim(); // Haal dubbele punt weg uit titel
+                description = boldSplit[2] || boldSplit[1]; // Als er geen tekst na bold is, is bold de beschrijving
+            } else if (colonSplit && colonSplit[1].length < 50) {
+                title = colonSplit[1].trim();
+                description = colonSplit[2].trim();
+            } else {
+                // Strategie C: Geen duidelijke splitsing?
+                // Gebruik de eerste paar woorden als titel (max 5 woorden)
+                const words = cleanLine.split(' ');
+                if (words.length > 5) {
+                    title = words.slice(0, 4).join(' ') + '...';
+                } else {
+                    title = cleanLine;
+                    description = ""; // Geen extra uitleg nodig als de titel alles zegt
+                }
             }
-        }
 
-        if (text) {
-            // Schoonmaak
-            text = text.replace(/^\*\*|\*\*$/g, '').replace(/^\*|\*$/g, '').trim();
-            const lower = text.toLowerCase();
+            // Timer detectie (haal uit beschrijving)
+            let duration = 0;
+            const timerMatch = description.match(/\[TIMER:(\d{2}):(\d{2}):(\d{2})\]/);
+            if (timerMatch) {
+                duration = (parseInt(timerMatch[1])*3600) + (parseInt(timerMatch[2])*60) + parseInt(timerMatch[3]);
+                description = description.replace(timerMatch[0], '').trim();
+            }
+            
+            // Ook checken of timer in de titel zat (per ongeluk)
+            title = title.replace(/\[TIMER:.*?\]/, '').trim();
 
-            // Soms zet de AI "Step 1:" in de tekst, dat halen we weg
-            text = text.replace(/^Step \d+:\s*/i, '');
+            const stepObj = { title: title, description: description, duration: duration };
 
-            // KEYWORDS voor Fase 2
+            // Fase bepalen
             const isSecondary = (
                 lower.includes('rack into') || 
                 lower.includes('siphon') || 
@@ -1235,15 +1255,6 @@ function extractStepsFromMarkdown(markdown) {
                 lower.includes('wait for clear')
             );
 
-            const stepObj = { title: `Step ${stepNum}`, description: text, duration: 0 };
-
-            // Timer detectie
-            const timerMatch = text.match(/\[TIMER:(\d{2}):(\d{2}):(\d{2})\]/);
-            if (timerMatch) {
-                stepObj.duration = (parseInt(timerMatch[1])*3600) + (parseInt(timerMatch[2])*60) + parseInt(timerMatch[3]);
-                stepObj.description = text.replace(timerMatch[0], '').trim();
-            }
-
             if (isSecondary) {
                 day2.push(stepObj);
             } else {
@@ -1252,7 +1263,7 @@ function extractStepsFromMarkdown(markdown) {
         }
     }
 
-    // FALLBACK
+    // Fallback correctie
     if (day1.length === 0 && day2.length > 0) {
         const splitIndex = day2.findIndex(s => 
             s.description.toLowerCase().includes('rack') || 

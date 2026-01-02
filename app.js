@@ -1412,7 +1412,7 @@ function renderBrewDay(brewId) {
             
             <div class="mt-6 space-y-3 pb-2 border-t border-app-brand/10 pt-4">
                 
-                <button onclick="window.finishPrimaryManual('${brew.id}')" class="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 btn font-bold shadow-md uppercase tracking-wider flex items-center justify-center gap-2">
+                <button onclick="window.finishPrimaryManual('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn font-bold shadow-md uppercase tracking-wider flex items-center justify-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
                     Finish Primary & Go to Aging
                 </button>
@@ -2448,7 +2448,7 @@ window.resumeBrew = async function(brewId) {
     }
 }
 
-// --- FUNCTIE: RECEPT KOPIËREN VOOR NIEUWE BATCH ---
+// --- FUNCTIE: RECEPT KOPIËREN VOOR NIEUWE BATCH (SMART NAMING) ---
 window.cloneBrew = async function(brewId) {
     const original = brews.find(b => b.id === brewId);
     if (!original) return;
@@ -2456,9 +2456,26 @@ window.cloneBrew = async function(brewId) {
     if (!confirm(`Start a fresh new batch based on "${original.recipeName}"?`)) return;
 
     try {
+        // --- SMART NAME GENERATOR ---
+        let newName = original.recipeName;
+        // Regex zoekt naar "(Batch X)" aan het einde van de naam
+        const batchRegex = /\(Batch (\d+)\)$/;
+        const match = newName.match(batchRegex);
+
+        if (match) {
+            // Er staat al een nummer (bv Batch 2). We maken er eentje hoger van.
+            const currentNum = parseInt(match[1]);
+            const nextNum = currentNum + 1;
+            newName = newName.replace(batchRegex, `(Batch ${nextNum})`);
+        } else {
+            // Eerste keer kopiëren? Voeg (Batch 2) toe.
+            newName = `${newName} (Batch 2)`;
+        }
+        // -----------------------------
+
         // Maak een kopie, maar WIST de logboeken en datums
         const newBrew = {
-            recipeName: `${original.recipeName} (Batch 2)`, // Of (Clone)
+            recipeName: newName, 
             recipeMarkdown: original.recipeMarkdown,
             flavorProfile: original.flavorProfile || {},
             createdAt: serverTimestamp(),
@@ -2476,7 +2493,7 @@ window.cloneBrew = async function(brewId) {
 
         const docRef = await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews'), newBrew);
         
-        showToast("Recipe cloned! Starting new brew day...", "success");
+        showToast(`Started "${newName}"!`, "success");
         
         // Ga direct naar de nieuwe batch
         window.startActualBrewDay(docRef.id);
@@ -2485,13 +2502,6 @@ window.cloneBrew = async function(brewId) {
         console.error(e);
         showToast("Error cloning recipe.", "error");
     }
-}
-
-window.goBackToHistoryList = function() {
-    const detailContainer = document.getElementById('history-detail-container');
-    detailContainer.innerHTML = ''; // Fix double ID issue
-    detailContainer.classList.add('hidden');
-    document.getElementById('history-list-container').classList.remove('hidden');
 }
 
 // --- LOGGING & DATA FUNCTIONS ---
@@ -5390,21 +5400,47 @@ function populateEquipmentProfilesDropdown() {
 
 let currentBrewToBottleId = null; 
 
+// --- TOON BOTTLING MODAL (VEILIGE VERSIE) ---
 window.showBottlingModal = function(brewId) {
-    customBottles = []; // Reset de lijst
-    renderCustomBottlesList(); // Maak de UI leeg
-    currentBrewToBottleId = brewId;
-    const bottlingForm = document.getElementById('bottling-form');
-    if(bottlingForm) bottlingForm.reset();
-    
-    const dateInput = document.getElementById('bottlingDate');
-    if(dateInput) dateInput.valueAsDate = new Date();
-    
-    document.getElementById('bottling-modal').classList.remove('hidden');
+    console.log("Probeer modal te openen voor:", brewId);
+
+    // STAP 1: Open de modal DIRECT (zodat je altijd iets ziet)
+    const modal = document.getElementById('bottling-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex'; // Forceer zichtbaarheid voor de zekerheid
+    } else {
+        alert("Fout: Kan 'bottling-modal' niet vinden in de HTML.");
+        return;
+    }
+
+    // STAP 2: Vul de data in (veilig ingepakt)
+    try {
+        currentBrewToBottleId = brewId;
+        customBottles = []; // Reset lijst
+        
+        // Check of de render functie bestaat voordat we hem aanroepen
+        if (typeof window.renderCustomBottlesList === 'function') {
+            window.renderCustomBottlesList(); 
+        }
+
+        const bottlingForm = document.getElementById('bottling-form');
+        if (bottlingForm) bottlingForm.reset();
+        
+        const dateInput = document.getElementById('bottlingDate');
+        if (dateInput) dateInput.valueAsDate = new Date();
+
+    } catch (error) {
+        console.error("Kleine fout bij laden data in modal (maar hij is wel open):", error);
+    }
 }
 
 window.hideBottlingModal = function() {
-    document.getElementById('bottling-modal').classList.add('hidden');
+    const modal = document.getElementById('bottling-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none'; // Verberg weer netjes
+    }
     currentBrewToBottleId = null;
 }
 

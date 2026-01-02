@@ -1757,20 +1757,43 @@ window.completeStep = async function(stepIndex, isSkipping = false) {
     }
 }
 
+// --- UPDATE UI (PROGRESS BAR FIX) ---
 function updateUI() {
-    // Veiligheidscheck: deel nooit door 0
-    const total = brewDaySteps.length;
+    // 1. Find the active brew to get the correct step count
+    const activeBrew = brews.find(b => b.id === currentBrewDay.brewId);
+    
+    // Fallback: If no active brew found, stop
+    if (!activeBrew) return;
+
+    // 2. Combine Primary and Secondary steps to get the TOTAL count
+    // (Or just Primary if we are only tracking Day 1 progress)
+    // For the Brew Day 1 screen, we usually track only Primary steps.
+    // Let's grab the steps currently in memory for this brew.
+    const steps = activeBrew.brewDaySteps || brewDaySteps || [];
+
+    const total = steps.length;
+    
+    // Calculate progress based on the current step index
+    // Safety check: divide by 0 protection
     const progress = total > 0 ? (currentStepIndex / total) * 100 : 0;
     
+    // 3. Update the bar width
     const bar = document.getElementById('brew-day-progress');
     if (bar) {
         bar.style.width = `${progress}%`;
-        // Kleurverandering bij voltooiing (optioneel, leuk effect)
-        if (progress === 100) bar.classList.add('bg-green-500');
-        else bar.classList.remove('bg-green-500');
+        
+        // Optional: Green color when 100% complete
+        if (progress >= 100) {
+            bar.classList.add('bg-green-500');
+            bar.classList.remove('bg-app-brand');
+        } else {
+            bar.classList.add('bg-app-brand');
+            bar.classList.remove('bg-green-500');
+        }
     }
 
-    brewDaySteps.forEach((step, index) => {
+    // 4. Update individual step visual states
+    steps.forEach((step, index) => {
         const div = document.getElementById(`step-${index}`);
         if (!div) return;
         
@@ -1779,6 +1802,7 @@ function updateUI() {
         
         if (index < currentStepIndex) {
             div.classList.add('completed');
+            // Ensure the button shows "DONE"
             if(controls && !controls.innerHTML.includes('DONE')) {
                 controls.innerHTML = `<span class="text-[10px] font-bold text-white bg-green-600 px-2 py-1 rounded shadow-sm tracking-wide">DONE</span>`;
             }

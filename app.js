@@ -1345,8 +1345,8 @@ function renderBrewDay(brewId) {
             : '';
         
         const buttonsHtml = step.duration > 0 
-            ? `<button data-action="startTimer" data-step="${index}" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn uppercase tracking-wide font-bold">Start Timer</button>` 
-            : `<button data-action="completeStep" data-step="${index}" data-unit="${detectedUnit}" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1.5 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase tracking-wide">Check</button>`;
+            ? `<button onclick="window.startStepTimer(${index})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn uppercase tracking-wide font-bold">Start Timer</button>` 
+            : `<button onclick="window.completeStep(${index})" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1.5 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase tracking-wide">Check</button>`;
 
         let descHtml = '';
         if (step.description && step.description.trim() !== '' && !step.description.toLowerCase().includes('follow the instruction')) {
@@ -1359,8 +1359,7 @@ function renderBrewDay(brewId) {
                 <div class="flex-grow">
                     <p class="step-title font-bold text-sm text-app-header leading-tight flex items-center gap-2">
                         <span class="flex items-center justify-center w-5 h-5 rounded-full bg-app-tertiary text-[10px] text-app-secondary border border-app-brand/20 font-mono">${index + 1}</span>
-                        ${step.title}
-                    </p>
+                        <span class="font-bold text-app-header">${step.title}</span> </p>
                     <div class="pl-7">
                         ${descHtml}
                         ${inputHtml}
@@ -1584,7 +1583,7 @@ function initializeBrewDayState(steps) {
     updateUI();
 }
 
-function startStepTimer(stepIndex, resumeTime = null) {
+window.startStepTimer = function(stepIndex, resumeTime = null) {
     if (stepTimerInterval) return;
     const activeBrew = brews.find(b => b.id === currentBrewDay.brewId);
     if (!activeBrew) return;
@@ -1672,7 +1671,7 @@ async function resetBrewDay() {
     }
 }
 
-async function completeStep(stepIndex, isSkipping = false) {
+window.completeStep = async function(stepIndex, isSkipping = false) {
     if (navigator.vibrate) navigator.vibrate(15);
     if (stepTimerInterval) { clearInterval(stepTimerInterval); stepTimerInterval = null; remainingTime = 0; localStorage.removeItem('activeBrewDayTimer'); }
 

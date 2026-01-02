@@ -5404,13 +5404,22 @@ let currentBrewToBottleId = null;
 window.showBottlingModal = function(brewId) {
     console.log("Probeer modal te openen voor:", brewId);
 
-    // STAP 1: Open de modal DIRECT (zodat je altijd iets ziet)
+    // STAP 1: Open de modal DIRECT (Geforceerd)
     const modal = document.getElementById('bottling-modal');
     if (modal) {
+        // Verwijder de hidden class
         modal.classList.remove('hidden');
-        modal.style.display = 'flex'; // Forceer zichtbaarheid voor de zekerheid
+        
+        // Forceer display flex via inline styles
+        modal.style.display = 'flex';
+        
+        // Forceer Z-Index naar extreem hoog (boven alles)
+        modal.style.zIndex = '9999'; 
+        
+        // Zorg dat de achtergrond ook goed staat
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
     } else {
-        alert("Fout: Kan 'bottling-modal' niet vinden in de HTML.");
+        alert("Fout: Kan 'bottling-modal' element niet vinden in de HTML.");
         return;
     }
 

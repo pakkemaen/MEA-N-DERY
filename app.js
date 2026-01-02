@@ -1410,59 +1410,132 @@ function renderBrewDay(brewId) {
 
             ${logHtml}
             
-            <div class="mt-6 space-y-3 pb-2">
-                <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn text-sm font-bold shadow-md uppercase tracking-wider flex justify-center items-center gap-2">Save Log Changes</button>
-                <button onclick="window.deductActualsFromInventory('${brew.id}')" class="w-full bg-app-tertiary text-app-secondary border border-app-brand/20 py-3 px-4 rounded-lg hover:bg-app-primary btn text-xs font-bold uppercase tracking-wider transition-colors">Deduct Actuals from Inventory</button>
+            <div class="mt-6 space-y-3 pb-2 border-t border-app-brand/10 pt-4">
+                
+                <button onclick="window.finishPrimaryManual('${brew.id}')" class="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 btn font-bold shadow-md uppercase tracking-wider flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+                    Finish Primary & Go to Aging
+                </button>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn text-xs font-bold shadow-sm uppercase tracking-wider">
+                        Save Logs
+                    </button>
+                    <button onclick="window.deductActualsFromInventory('${brew.id}')" class="bg-app-tertiary text-app-secondary border border-app-brand/20 py-3 px-4 rounded-lg hover:bg-app-primary btn text-xs font-bold uppercase tracking-wider transition-colors">
+                        Update Stock
+                    </button>
+                </div>
             </div>
-        </div>
     `;
 
     initializeBrewDayState(primarySteps);
 }
 
-// --- BREW DAY 2 (VISUAL UPDATE: MATCHING DAY 1 STYLE) ---
+// --- HANDMATIG AFRONDEN FASE 1 ---
+window.finishPrimaryManual = async function(brewId) {
+    if (!confirm("Are you sure Primary Fermentation is done? This will move the batch to the 'Brew Day 2' list.")) return;
+
+    // 1. Update Database
+    await markPrimaryAsComplete(brewId);
+
+    // 2. Reset de actieve pointer (zodat Day 2 de lijst laat zien, en niet deze batch opent)
+    currentBrewDay = { brewId: null };
+    await saveUserSettings();
+
+    // 3. Feedback & Navigatie
+    showToast("Moved to Aging/Secondary!", "success");
+    
+    // Ga naar het overzicht van Dag 2
+    switchSubView('brew-day-2', 'brewing-main-view');
+    renderBrewDay2();
+    
+    // Ververs Dag 1 (die wordt nu leeg of toont een andere batch)
+    renderBrewDay('none');
+}
+
+// --- BREW DAY 2: SMART OVERVIEW & DETAIL ---
 window.renderBrewDay2 = async function() {
     const container = document.getElementById('brew-day-2-view');
     if (!container) return;
 
-    if (!currentBrewDay || !currentBrewDay.brewId) {
-        container.innerHTML = `<div class="text-center p-8"><p class="text-app-secondary">No active brew selected.</p></div>`;
+    // 1. Zoek alle batches die in Fase 2 zitten (Primary klaar, niet gebotteld)
+    const agingBrews = brews.filter(b => b.primaryComplete && !b.isBottled);
+
+    // 2. Bepaal of we een SPECIFIEKE batch moeten tonen
+    let activeSecondaryBrew = null;
+    
+    if (currentBrewDay && currentBrewDay.brewId) {
+        const candidate = brews.find(b => b.id === currentBrewDay.brewId);
+        // We tonen alleen detail als de geselecteerde batch OOK echt in fase 2 zit
+        if (candidate && candidate.primaryComplete && !candidate.isBottled) {
+            activeSecondaryBrew = candidate;
+        }
+    }
+
+    // --- SCENARIO A: OVERZICHT (LIJST WEERGAVE) ---
+    // Als er geen actieve batch is, OF de actieve batch zit nog in Dag 1 -> Toon Lijst
+    if (!activeSecondaryBrew) {
+        if (agingBrews.length === 0) {
+            container.innerHTML = `
+                <div class="text-center p-8 bg-app-secondary rounded-lg shadow-lg">
+                    <h3 class="text-xl font-header font-bold text-app-brand mb-2">The Cellar is Quiet</h3>
+                    <p class="text-app-secondary">No batches are currently in the aging/secondary phase.</p>
+                    <button onclick="window.switchSubView('history', 'brewing-main-view')" class="mt-4 text-blue-600 hover:underline text-sm">Check History</button>
+                </div>`;
+            return;
+        }
+
+        const listHtml = agingBrews.map(brew => {
+            const startDate = brew.logData?.brewDate ? new Date(brew.logData.brewDate).toLocaleDateString() : 'Unknown';
+            return `
+            <div onclick="window.openSecondaryDetail('${brew.id}')" class="p-4 card rounded-lg cursor-pointer hover:bg-app-primary border-l-4 border-purple-500 shadow-sm transition-all group">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-lg font-header group-hover:text-purple-600 transition-colors">${brew.recipeName}</h4>
+                        <p class="text-xs text-app-secondary">Started: ${startDate}</p>
+                    </div>
+                    <svg class="w-5 h-5 text-gray-400 group-hover:text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </div>
+            </div>`;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-header font-bold mb-6 text-center">Secondary / Aging Batches</h2>
+                <div class="space-y-3">
+                    ${listHtml}
+                </div>
+            </div>
+        `;
         return;
     }
 
-    const brew = brews.find(b => b.id === currentBrewDay.brewId);
-    if (!brew) return;
-
-    // 1. Stappen bepalen
+    // --- SCENARIO B: DETAIL WEERGAVE (CHECKLIST) ---
+    // Dit is de code die je al had, maar nu met een "Terug" knop
+    const brew = activeSecondaryBrew;
+    
+    // Stappen ophalen
     let steps = brew.secondarySteps || [];
-    let source = "Custom Recipe Steps";
-
     if (steps.length === 0 && brew.recipeMarkdown) {
         const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
-        if (extracted.day2.length > 0) { steps = extracted.day2; source = "Extracted from Recipe"; }
+        if (extracted.day2.length > 0) steps = extracted.day2;
     }
-
-    // Fallback als er echt niets is
+    // Fallback steps
     if (steps.length === 0) {
         steps = [
-            { title: "Stability Check", desc: "Ensure SG is stable (measure 3 days apart)." },
-            { title: "Racking", desc: "Siphon mead to a clean vessel." },
-            { title: "Stabilization", desc: "Add K-Meta & K-Sorbate if backsweetening." },
-            { title: "Backsweetening", desc: "Add honey/fruit/spices now." },
-            { title: "Clarification", desc: "Wait for clearing." },
-            { title: "Bottling", desc: "Bottle when crystal clear." }
+            { title: "Racking", desc: "Transfer to secondary vessel." },
+            { title: "Stabilization", desc: "Add K-Meta & Sorbate." },
+            { title: "Clearing", desc: "Wait for clarity." },
+            { title: "Bottling", desc: "Package your mead." }
         ];
-        source = "Standard Protocol";
     }
 
     const checklist = brew.checklist || {};
 
-    // 2. HTML Genereren (Exacte kopie van Day 1 stijl)
     const stepsHtml = steps.map((step, idx) => {
         const key = `sec-step-${idx}`;
         const isChecked = checklist[key] === true;
         
-        // De knop stijl van Day 1
         const buttonHtml = isChecked 
             ? `<span class="text-xs font-bold text-green-600 border border-green-600 px-2 py-0.5 rounded">DONE</span>`
             : `<button onclick="window.toggleSecondaryStep('${brew.id}', '${key}')" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase tracking-wide">Check</button>`;
@@ -1474,18 +1547,21 @@ window.renderBrewDay2 = async function() {
                     <p class="step-title font-bold text-sm text-app-header leading-tight">${idx + 1}. ${step.title}</p>
                     <p class="text-xs text-app-secondary mt-1 leading-snug">${step.desc || step.description}</p>
                 </div>
-                <div class="flex-shrink-0 pt-1">
-                    ${buttonHtml}
-                </div>
+                <div class="flex-shrink-0 pt-1">${buttonHtml}</div>
             </div>
         </div>`;
     }).join('');
 
-    // 3. Container renderen
     container.innerHTML = `
         <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
-            <h2 class="text-2xl font-header font-bold mb-1 text-center text-app-brand">${brew.recipeName}</h2>
-            <p class="text-center text-[10px] font-bold uppercase tracking-widest text-app-secondary mb-6 opacity-60">Phase 2: Aging & Packaging</p>
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-app-brand/10">
+                <button onclick="window.closeSecondaryDetail()" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1">
+                    &larr; Back to List
+                </button>
+                <span class="text-[10px] font-bold uppercase tracking-widest text-app-brand opacity-60">Phase 2</span>
+            </div>
+
+            <h2 class="text-2xl font-header font-bold mb-6 text-center text-app-brand">${brew.recipeName}</h2>
             
             <div class="mb-6 bg-app-secondary rounded-lg shadow-sm border border-app-brand/10 divide-y divide-app-brand/10">
                 ${stepsHtml}
@@ -1496,12 +1572,32 @@ window.renderBrewDay2 = async function() {
             <div class="mt-6 space-y-3">
                 <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn font-bold text-sm shadow-md">Save Log Notes</button>
                 <button onclick="window.showBottlingModal('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn flex items-center justify-center gap-2 font-bold text-sm shadow-md">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                     Proceed to Bottling
                 </button>
             </div>
         </div>
     `;
+}
+
+// --- HELPER: OPEN SPECIFIEKE BATCH IN DAY 2 ---
+window.openSecondaryDetail = function(brewId) {
+    // Zet de focus op deze batch
+    currentBrewDay = { brewId: brewId };
+    
+    // Herlaad het scherm (nu zal hij de detail weergave kiezen)
+    renderBrewDay2();
+    
+    // Scroll naar boven
+    document.getElementById('brewing-main-view').scrollIntoView({ behavior: 'smooth' });
+}
+
+// --- HELPER: TERUG NAAR LIJST ---
+window.closeSecondaryDetail = function() {
+    // Haal de focus weg (zodat de render functie de lijst laat zien)
+    currentBrewDay = { brewId: null };
+    
+    // Herlaad het scherm
+    renderBrewDay2();
 }
 
 // --- FUNCTIE: SAVE SECONDARY CHECKLIST ---

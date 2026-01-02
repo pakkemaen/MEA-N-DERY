@@ -1633,18 +1633,43 @@ function skipTimer(stepIndex) {
 }
 
 async function resetBrewDay() {
-    if (!confirm("Reset progress?")) return;
+    if (!confirm("Are you sure you want to reset your progress for this brew day?")) return;
+    
     const brewId = currentBrewDay.brewId;
+    if (!brewId) return;
+
     const brewIndex = brews.findIndex(b => b.id === brewId);
     if (brewIndex === -1) return;
-    
+
+    // 1. Update de lokale cache (brews array)
     brews[brewIndex].checklist = {};
+
+    // 2. CRUCIAAL: Update de actieve sessie pointer DIRECT!
+    // Dit ontbrak: hierdoor bleef de UI denken dat de stappen nog afgevinkt waren.
+    if (currentBrewDay.brewId === brewId) {
+        currentBrewDay.checklist = {};
+    }
+
+    // 3. Reset de timer staat
+    if (stepTimerInterval) clearInterval(stepTimerInterval);
+    stepTimerInterval = null;
+    remainingTime = 0;
+    localStorage.removeItem('activeBrewDayTimer');
+    currentStepIndex = 0; // Zet de index hard terug naar 0
+
+    // 4. Update Database
     try {
-        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId), { checklist: {} });
-        clearInterval(stepTimerInterval); stepTimerInterval = null; remainingTime = 0;
-        localStorage.removeItem('activeBrewDayTimer');
+        const appId = 'meandery-aa05e';
+        const brewDocRef = doc(db, 'artifacts', appId, 'users', userId, 'brews', brewId);
+        await updateDoc(brewDocRef, { checklist: {} });
+        
+        // 5. Her-render het scherm met de lege checklist
         renderBrewDay(brewId);
-    } catch (e) { console.error(e); }
+        showToast("Progress reset.", "success");
+    } catch (error) {
+        console.error("Error resetting checklist:", error);
+        showToast("Could not reset progress.", "error");
+    }
 }
 
 async function completeStep(stepIndex, isSkipping = false) {

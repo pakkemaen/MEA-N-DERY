@@ -1149,23 +1149,45 @@ window.startActualBrewDay = async function(brewId) {
     renderBrewDay(brewId);
 }
 
-// --- SMART PARSER: Haalt stappen uit receptteksten ---
+// --- SMART PARSER V3: Sectie-bewust (Fix voor stats in stappen) ---
 function extractStepsFromMarkdown(markdown) {
     if (!markdown) return { day1: [], day2: [] };
 
-    const lines = markdown.split('\n');
+    // 1. ZOEK NAAR HET BEGIN VAN DE INSTRUCTIES
+    // We negeren alles vóór het kopje "Instructions", "Steps" of "Method"
+    // Dit voorkomt dat Stats (ABV, OG) en Ingredients (Buy x) als stappen worden gezien.
+    let instructionText = markdown;
+    
+    // Regex zoekt naar: # Instructions, ## Instructions, **Instructions**, etc.
+    const headerRegex = /(?:^|\n)(?:#+|__|\*\*)\s*(?:Instructions|Steps|Method|Procedure|Bereiding)(?:__|\*\*|:)?/i;
+    const splitMatch = markdown.match(headerRegex);
+
+    if (splitMatch) {
+        // We pakken alleen de tekst NA de header
+        instructionText = markdown.substring(splitMatch.index + splitMatch[0].length);
+    }
+
+    const lines = instructionText.split('\n');
     const day1 = [];
     const day2 = [];
     
-    // VERBETERDE REGEX: 
-    // Accepteert nu "1.", "1)", en "1 " (flexibeler met leestekens)
-    const stepRegex = /^(\d+)[\.\)\s]\s+(.*)/;
-    
-    // Backup: Bullet points (voor als de AI vergeet te nummeren)
+    // Regex voor stappen: "1.", "1)", "1 "
+    const stepRegex = /(?:^|\s)(\d+)[\.\)\s]\s+(.*)/;
     const bulletRegex = /^[-*•]\s+(.*)/;
+
+    // 2. EXTRA FILTER: Zwarte lijst voor woorden die GEEN stap zijn
+    // Mocht de header-split falen, dan vangen we hier alsnog de fouten af.
+    const blackList = ['abv:', 'batch size:', 'style:', 'sweetness:', 'og:', 'fg:', 'buy ', 'target '];
 
     lines.forEach(line => {
         const cleanLine = line.trim();
+        
+        // Sla headers (#) en lege regels over
+        if (!cleanLine || cleanLine.startsWith('#')) return;
+
+        // CHECK OP ZWARTE LIJST (Is dit per ongeluk een stat?)
+        if (blackList.some(badWord => cleanLine.toLowerCase().includes(badWord))) return;
+
         let match = cleanLine.match(stepRegex);
         let text = "";
         let stepNum = 0;
@@ -1174,33 +1196,43 @@ function extractStepsFromMarkdown(markdown) {
             stepNum = parseInt(match[1]);
             text = match[2];
         } else {
-            // Als geen nummer, probeer bullet point
-            match = cleanLine.match(bulletRegex);
-            if (match) {
-                text = match[1];
-                stepNum = day1.length + day2.length + 1; // Genereer zelf een nummer
+            // Bullet points accepteren we alleen als we zeker weten dat we in de instructie-sectie zitten (splitMatch is true)
+            // Anders is het risico te groot dat we de ingrediëntenlijst pakken.
+            if (splitMatch) {
+                match = cleanLine.match(bulletRegex);
+                if (match) {
+                    text = match[1];
+                    stepNum = day1.length + day2.length + 1; 
+                }
             }
         }
 
-        // Alleen doorgaan als we tekst hebben én het geen header is (geen ## of **)
-        if (text && !cleanLine.startsWith('#') && !cleanLine.startsWith('**')) {
+        if (text) {
+            // Schoonmaak: haal bold/italic weg aan begin/eind
+            text = text.replace(/^\*\*|\*\*$/g, '').replace(/^\*|\*$/g, '').trim();
             const lower = text.toLowerCase();
 
-            // KEYWORDS: Wat hoort écht bij Fase 2?
-            // We zijn iets strenger zodat "Prepare bottles" in stap 1 niet per ongeluk naar dag 2 gaat.
+            // KEYWORDS: Fase 2 detectie
             const isSecondary = (
                 lower.includes('rack into') || 
                 lower.includes('siphon') || 
                 (lower.includes('secondary') && !lower.includes('primary')) || 
                 lower.includes('stabiliz') || 
                 lower.includes('backsweeten') || 
-                (lower.includes('bottle') && !lower.includes('clean') && !lower.includes('sanitize')) || 
+                (lower.includes('bottle') && !lower.includes('clean') && !lower.includes('sanitize') && !lower.includes('prepare')) || 
                 lower.includes('bottling') || 
                 (lower.includes('aging') && !lower.includes('yeast')) || 
                 lower.includes('wait for clear')
             );
 
             const stepObj = { title: `Step ${stepNum}`, description: text, duration: 0 };
+
+            // Timer detectie
+            const timerMatch = text.match(/\[TIMER:(\d{2}):(\d{2}):(\d{2})\]/);
+            if (timerMatch) {
+                stepObj.duration = (parseInt(timerMatch[1])*3600) + (parseInt(timerMatch[2])*60) + parseInt(timerMatch[3]);
+                stepObj.description = text.replace(timerMatch[0], '').trim();
+            }
 
             if (isSecondary) {
                 day2.push(stepObj);
@@ -1210,19 +1242,19 @@ function extractStepsFromMarkdown(markdown) {
         }
     });
 
-    // FALLBACK: Als alles in Day 2 is beland (foutje), gooi de eerste helft terug naar Day 1
+    // FALLBACK: Als alles in Day 2 zit, herstel naar Day 1
     if (day1.length === 0 && day2.length > 0) {
-        // Als we stap 1 zien in de 'day2' lijst, is er iets misgegaan.
-        // We verplaatsen alles tot aan de eerste echte 'racking/bottling' stap terug naar day1.
-        // Voor nu: simpele split als noodoplossing.
-        const firstRealSecondaryIndex = day2.findIndex(s => 
+        const splitIndex = day2.findIndex(s => 
             s.description.toLowerCase().includes('rack') || 
-            s.description.toLowerCase().includes('bottle')
+            s.description.toLowerCase().includes('siphon')
         );
         
-        if (firstRealSecondaryIndex > 0) {
-            const stepsToMove = day2.splice(0, firstRealSecondaryIndex);
+        if (splitIndex > 0) {
+            const stepsToMove = day2.splice(0, splitIndex);
             day1.push(...stepsToMove);
+        } else if (splitIndex === -1) {
+            day1.push(...day2);
+            day2.length = 0;
         }
     }
 

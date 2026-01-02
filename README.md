@@ -36,26 +36,14 @@ This project is built using a modern serverless stack:
 * **AI Engine:** Google Gemini Pro & Flash (Text Logic), Imagen 3 (Image Generation).
 * **PWA:** Fully installable on iOS and Android with Service Worker support.
 
-## 🔒 Setup & Configuration
+## 🔒 Configuration & Security
 
-*Note: This project cannot be run without a valid `secrets.js` file containing specific Firebase credentials and Google Cloud API keys.*
+This repository is configured for automated deployment via GitHub Pages.
 
-1.  **Repository Structure:**
-    * `app.js`: Core logic (State management, Firebase interactions, UI rendering).
-    * `index.html`: Main UI structure using Tailwind classes.
-    * `service-worker.js`: Handles caching and PWA functionality.
-
-2.  **Configuration:**
-    The app requires a `secrets.js` file in the root directory (not included in repo):
-    ```javascript
-    export default {
-        firebase: {
-            apiKey: "PRIVATE_KEY",
-            authDomain: "PRIVATE_PROJECT.firebaseapp.com",
-            // ... other firebase config
-        }
-    };
-    ```
+* **Credentials:** The application loads its configuration from `secrets.js`.
+* **Security Note:** The API keys included in this repository are **restricted** via Google Cloud Console. They are whitelisted to run *only* on the official domain of this web app.
+    * Cloning this repo or running it locally without providing your own keys will result in API errors.
+    * This setup allows the PWA to function on my personal devices while preventing unauthorized usage of my quotas.
 
 ## 📸 Gallery
 

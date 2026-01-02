@@ -2153,8 +2153,12 @@ window.resumeBrew = async function(brewId) {
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    // 1. Zet de globale pointer
-    currentBrewDay = { brewId: brewId };
+    // 1. Zet de globale pointer EN laad de checklist
+    // FIX: We voegen 'checklist' toe aan het object, anders crasht de app
+    currentBrewDay = { 
+        brewId: brewId,
+        checklist: brew.checklist || {} // Laad bestaande vinkjes of start leeg
+    };
     
     // 2. Sla op in database zodat de app het onthoudt bij herladen
     await saveUserSettings(); 

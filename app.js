@@ -1125,8 +1125,8 @@ window.startActualBrewDay = async function(brewId) {
         }
     }
 
-    // Globale pointer instellen
-    currentBrewDay = { brewId: brewId };
+    // Globale pointer instellen MET lege checklist (voorkomt crash)
+    currentBrewDay = { brewId: brewId, checklist: {} };
     saveUserSettings(); 
 
     // Checklist reset check
@@ -1597,7 +1597,11 @@ window.startStepTimer = function(stepIndex, resumeTime = null) {
 
     const timerDisplay = document.getElementById(`timer-${stepIndex}`);
     const controlsDiv = document.getElementById(`controls-${stepIndex}`);
-    controlsDiv.innerHTML = `<button data-action="pauseTimer" data-step="${stepIndex}" class="text-sm bg-yellow-500 text-white py-1 px-3 rounded-lg hover:bg-yellow-600 btn">Pause</button><button data-action="skipTimer" data-step="${stepIndex}" class="text-sm bg-gray-500 text-white py-1 px-3 rounded-lg hover:bg-gray-600 btn">Skip</button>`;
+    // We gebruiken nu onclick handlers die verwijzen naar window functies
+    controlsDiv.innerHTML = `
+        <button onclick="window.pauseStepTimer(${stepIndex})" class="text-xs bg-yellow-500 text-white py-1.5 px-3 rounded shadow hover:bg-yellow-600 btn uppercase tracking-wide font-bold">Pause</button>
+        <button onclick="window.skipTimer(${stepIndex})" class="text-xs bg-gray-500 text-white py-1.5 px-3 rounded shadow hover:bg-gray-600 btn uppercase tracking-wide font-bold">Skip</button>
+    `;
     
     stepTimerInterval = setInterval(() => {
         remainingTime = 0; timeLeft--;
@@ -1613,22 +1617,35 @@ window.startStepTimer = function(stepIndex, resumeTime = null) {
     }, 1000);
 }
 
-function pauseStepTimer(stepIndex) {
+// --- PAUSE TIMER (Globaal) ---
+window.pauseStepTimer = function(stepIndex) {
     clearInterval(stepTimerInterval);
     stepTimerInterval = null;
+    
     const timerDisplay = document.getElementById(`timer-${stepIndex}`);
     localStorage.removeItem('activeBrewDayTimer');
+    
+    // Tijd opslaan
     const timeParts = timerDisplay.textContent.split(':');
-    remainingTime = (timeParts.length === 2) ? parseInt(timeParts[0]) * 60 + parseInt(timeParts[1]) : parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseInt(timeParts[2]);
-    document.getElementById(`controls-${stepIndex}`).innerHTML = `<button data-action="startTimer" data-step="${stepIndex}" class="text-sm bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 btn">Resume</button>`;
+    remainingTime = (timeParts.length === 2) 
+        ? parseInt(timeParts[0]) * 60 + parseInt(timeParts[1]) 
+        : parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseInt(timeParts[2]);
+    
+    // Knop terugzetten naar Resume
+    document.getElementById(`controls-${stepIndex}`).innerHTML = `
+        <button onclick="window.startStepTimer(${stepIndex})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn uppercase tracking-wide font-bold">Resume</button>
+    `;
 }
 
-function skipTimer(stepIndex) {
+// --- SKIP TIMER (Globaal) ---
+window.skipTimer = function(stepIndex) {
     clearInterval(stepTimerInterval);
     stepTimerInterval = null;
     remainingTime = 0;
     localStorage.removeItem('activeBrewDayTimer');
-    completeStep(stepIndex, true);
+    
+    // Stap afronden
+    window.completeStep(stepIndex, true);
 }
 
 async function resetBrewDay() {

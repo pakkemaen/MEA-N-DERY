@@ -1398,9 +1398,6 @@ function renderBrewDay(brewId) {
                 <span class="text-xs font-bold text-app-secondary uppercase tracking-wider">Protocol Progress</span>
                 <button onclick="window.resetBrewDay()" class="text-[10px] text-red-500 hover:text-red-700 hover:underline font-bold uppercase tracking-wider transition-colors">Reset Day</button>
             </div>
-            <div class="mb-6 bg-app-tertiary rounded-full h-1.5 overflow-hidden">
-                <div id="brew-day-progress" class="bg-app-brand h-1.5 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(217,119,6,0.5)]" style="width: 0%;"></div>
-            </div>
             
             <div id="brew-day-steps-container" class="bg-app-secondary rounded-xl shadow-sm border border-app-brand/10 overflow-hidden mb-8">
                 ${stepsHtml}
@@ -1757,52 +1754,26 @@ window.completeStep = async function(stepIndex, isSkipping = false) {
     }
 }
 
-// --- UPDATE UI (PROGRESS BAR FIX) ---
+// --- UPDATE UI (CLEAN VERSION: NO PROGRESS BAR) ---
 function updateUI() {
-    // 1. Find the active brew to get the correct step count
-    const activeBrew = brews.find(b => b.id === currentBrewDay.brewId);
-    
-    // Fallback: If no active brew found, stop
-    if (!activeBrew) return;
+    // We hebben de progress bar verwijderd, dus deze functie hoeft
+    // alleen nog maar de visuele status van de stappen bij te werken
+    // (bijv. actief / completed classes).
 
-    // 2. Combine Primary and Secondary steps to get the TOTAL count
-    // (Or just Primary if we are only tracking Day 1 progress)
-    // For the Brew Day 1 screen, we usually track only Primary steps.
-    // Let's grab the steps currently in memory for this brew.
-    const steps = activeBrew.brewDaySteps || brewDaySteps || [];
+    if (!brewDaySteps || brewDaySteps.length === 0) return;
 
-    const total = steps.length;
-    
-    // Calculate progress based on the current step index
-    // Safety check: divide by 0 protection
-    const progress = total > 0 ? (currentStepIndex / total) * 100 : 0;
-    
-    // 3. Update the bar width
-    const bar = document.getElementById('brew-day-progress');
-    if (bar) {
-        bar.style.width = `${progress}%`;
-        
-        // Optional: Green color when 100% complete
-        if (progress >= 100) {
-            bar.classList.add('bg-green-500');
-            bar.classList.remove('bg-app-brand');
-        } else {
-            bar.classList.add('bg-app-brand');
-            bar.classList.remove('bg-green-500');
-        }
-    }
-
-    // 4. Update individual step visual states
-    steps.forEach((step, index) => {
+    brewDaySteps.forEach((step, index) => {
         const div = document.getElementById(`step-${index}`);
         if (!div) return;
         
+        // Reset classes
         div.classList.remove('active', 'completed');
-        const controls = document.getElementById(`controls-${index}`);
         
+        // Bepaal status
         if (index < currentStepIndex) {
             div.classList.add('completed');
-            // Ensure the button shows "DONE"
+            // Zorg dat de knop op "DONE" staat
+            const controls = document.getElementById(`controls-${index}`);
             if(controls && !controls.innerHTML.includes('DONE')) {
                 controls.innerHTML = `<span class="text-[10px] font-bold text-white bg-green-600 px-2 py-1 rounded shadow-sm tracking-wide">DONE</span>`;
             }

@@ -1345,7 +1345,7 @@ function renderBrewDay(brewId) {
             : '';
         
         const buttonsHtml = step.duration > 0 
-            ? `<button onclick="window.startStepTimer(${index})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn uppercase tracking-wide font-bold">Start Timer</button>` 
+            ? `<button onclick="window.startStepTimer('${brew.id}', ${index})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn uppercase tracking-wide font-bold">Start Timer</button>` 
             : `<button onclick="window.completeStep(${index})" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1.5 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase tracking-wide">Check</button>`;
 
         let descHtml = '';
@@ -1568,7 +1568,7 @@ function initializeBrewDayState(steps) {
             const now = Date.now();
             if (endTime > now) {
                 currentStepIndex = stepIndex;
-                startStepTimer(stepIndex, Math.round((endTime - now) / 1000));
+                startStepTimer(brewId, stepIndex, Math.round((endTime - now) / 1000));
                 return;
             } else {
                 localStorage.removeItem('activeBrewDayTimer');
@@ -1583,62 +1583,87 @@ function initializeBrewDayState(steps) {
     updateUI();
 }
 
-window.startStepTimer = function(stepIndex, resumeTime = null) {
-    if (stepTimerInterval) return;
-    const activeBrew = brews.find(b => b.id === currentBrewDay.brewId);
-    if (!activeBrew) return;
+// --- TIMER FUNCTIES (BULLETPROOF V2) ---
+
+window.startStepTimer = function(brewId, stepIndex, resumeTime = null) {
+    // 1. VEILIGHEID: Stop ALTIJD eventuele lopende timers (voorkomt vastlopen)
+    if (stepTimerInterval) {
+        clearInterval(stepTimerInterval);
+        stepTimerInterval = null;
+    }
+
+    // 2. Zoek het juiste recept (op basis van ID, niet globaal geheugen)
+    const activeBrew = brews.find(b => b.id === brewId);
+    if (!activeBrew) return console.error("Brew not found for timer");
+
+    // 3. Zoek de stap
+    // (We voegen primary en secondary samen om de juiste index te vinden)
     const allSteps = [...(activeBrew.brewDaySteps || []), ...(activeBrew.secondarySteps || [])];
     const step = allSteps[stepIndex];
-    if (!step) return;
+    if (!step) return console.error("Step not found");
 
-    let timeLeft = resumeTime !== null ? resumeTime : (remainingTime > 0 ? remainingTime : allSteps[stepIndex].duration);
+    // 4. Bepaal de tijd
+    let timeLeft = resumeTime !== null ? resumeTime : (remainingTime > 0 ? remainingTime : step.duration);
+    
+    // Sla op voor als we de pagina herladen
     const endTime = Date.now() + timeLeft * 1000;
-    localStorage.setItem('activeBrewDayTimer', JSON.stringify({ brewId: currentBrewDay.brewId, stepIndex: stepIndex, endTime: endTime }));
+    localStorage.setItem('activeBrewDayTimer', JSON.stringify({ brewId: brewId, stepIndex: stepIndex, endTime: endTime }));
 
     const timerDisplay = document.getElementById(`timer-${stepIndex}`);
     const controlsDiv = document.getElementById(`controls-${stepIndex}`);
-    // We gebruiken nu onclick handlers die verwijzen naar window functies
-    controlsDiv.innerHTML = `
-        <button onclick="window.pauseStepTimer(${stepIndex})" class="text-xs bg-yellow-500 text-white py-1.5 px-3 rounded shadow hover:bg-yellow-600 btn uppercase tracking-wide font-bold">Pause</button>
-        <button onclick="window.skipTimer(${stepIndex})" class="text-xs bg-gray-500 text-white py-1.5 px-3 rounded shadow hover:bg-gray-600 btn uppercase tracking-wide font-bold">Skip</button>
-    `;
+
+    // Update de knoppen (Pause / Skip)
+    if (controlsDiv) {
+        controlsDiv.innerHTML = `
+            <button onclick="window.pauseStepTimer('${brewId}', ${stepIndex})" class="text-xs bg-yellow-500 text-white py-1.5 px-3 rounded shadow hover:bg-yellow-600 btn uppercase tracking-wide font-bold">Pause</button>
+            <button onclick="window.skipTimer('${brewId}', ${stepIndex})" class="text-xs bg-gray-500 text-white py-1.5 px-3 rounded shadow hover:bg-gray-600 btn uppercase tracking-wide font-bold">Skip</button>
+        `;
+    }
     
+    // Start de interval
     stepTimerInterval = setInterval(() => {
-        remainingTime = 0; timeLeft--;
-        timerDisplay.textContent = formatTime(timeLeft);
+        remainingTime = 0; 
+        timeLeft--;
+        
+        if (timerDisplay) timerDisplay.textContent = formatTime(timeLeft);
+        
         if (timeLeft <= 0) {
             clearInterval(stepTimerInterval);
             stepTimerInterval = null;
-            timerDisplay.textContent = "Done!";
+            if (timerDisplay) timerDisplay.textContent = "Done!";
             if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            
             localStorage.removeItem('activeBrewDayTimer');
-            completeStep(stepIndex, true);
+            window.completeStep(stepIndex, true); // Stap afronden
         }
     }, 1000);
 }
 
-// --- PAUSE TIMER (Globaal) ---
-window.pauseStepTimer = function(stepIndex) {
+window.pauseStepTimer = function(brewId, stepIndex) {
     clearInterval(stepTimerInterval);
     stepTimerInterval = null;
     
     const timerDisplay = document.getElementById(`timer-${stepIndex}`);
     localStorage.removeItem('activeBrewDayTimer');
     
-    // Tijd opslaan
-    const timeParts = timerDisplay.textContent.split(':');
-    remainingTime = (timeParts.length === 2) 
-        ? parseInt(timeParts[0]) * 60 + parseInt(timeParts[1]) 
-        : parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseInt(timeParts[2]);
+    // Huidige tijd uitlezen en opslaan
+    if (timerDisplay) {
+        const timeParts = timerDisplay.textContent.split(':');
+        remainingTime = (timeParts.length === 2) 
+            ? parseInt(timeParts[0]) * 60 + parseInt(timeParts[1]) 
+            : parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseInt(timeParts[2]);
+    }
     
     // Knop terugzetten naar Resume
-    document.getElementById(`controls-${stepIndex}`).innerHTML = `
-        <button onclick="window.startStepTimer(${stepIndex})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn uppercase tracking-wide font-bold">Resume</button>
-    `;
+    const controlsDiv = document.getElementById(`controls-${stepIndex}`);
+    if (controlsDiv) {
+        controlsDiv.innerHTML = `
+            <button onclick="window.startStepTimer('${brewId}', ${stepIndex})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn uppercase tracking-wide font-bold">Resume</button>
+        `;
+    }
 }
 
-// --- SKIP TIMER (Globaal) ---
-window.skipTimer = function(stepIndex) {
+window.skipTimer = function(brewId, stepIndex) {
     clearInterval(stepTimerInterval);
     stepTimerInterval = null;
     remainingTime = 0;

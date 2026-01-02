@@ -5586,7 +5586,7 @@ window.analyzeAgingPotential = async function() {
     }
 }
 
-// --- BOTTLE BATCH (SMARTER CLOSURE LOGIC) ---
+// --- BOTTLE BATCH (SMARTER CLOSURE LOGIC V2 - FIX POTASSIUM CARBONATE BUG) ---
 window.bottleBatch = async function(e) {
     e.preventDefault();
     if (!currentBrewToBottleId) return;
@@ -5650,24 +5650,32 @@ window.bottleBatch = async function(e) {
         if (closureType === 'auto') {
             const closuresNeeded = { cork: 0, crown_cap_26: 0, crown_cap_29: 0 };
             
-            // Determine if Sparkling or Still based on Recipe Data
-            // We assume "Still" unless the recipe explicitly mentions carbonation/sparkling/pet-nat
+            // --- FIX: SLIMMERE DETECTIE ---
             const recipeText = (originalBrew.recipeMarkdown || "").toLowerCase();
-            const isCarbonated = recipeText.includes('carbonat') || recipeText.includes('sparkling') || recipeText.includes('pet-nat');
+            
+            // Check op échte bubbel-termen, en negeer chemische stoffen
+            const isSparkling = recipeText.includes('sparkling') || 
+                                recipeText.includes('pet-nat') || 
+                                recipeText.includes('bottle carbonat') || // Specifiek 'bottle carbonation'
+                                recipeText.includes('priming sugar') ||
+                                recipeText.includes('force carbonat');
+
+            // Debug log om te checken wat hij beslist (zie je in F12 console)
+            console.log("Auto-Closure Logic | Sparkling detected?", isSparkling);
 
             bottlesData.forEach(b => {
                 if (b.size >= 750) {
-                    // 750ml: Cork for Still, 29mm Cap for Sparkling
-                    if (isCarbonated) closuresNeeded.crown_cap_29 += b.quantity;
+                    // 750ml: Kurk (Stil) of 29mm Dop (Bruisend)
+                    if (isSparkling) closuresNeeded.crown_cap_29 += b.quantity;
                     else closuresNeeded.cork += b.quantity;
                 } 
                 else if (b.size === 500) {
-                    // 500ml: Often takes 26mm cap, but let's stick to cork for still
-                    if (isCarbonated) closuresNeeded.crown_cap_26 += b.quantity;
+                    // 500ml: Kurk (Stil) of 26mm Dop (Bruisend - standaard biermaat)
+                    if (isSparkling) closuresNeeded.crown_cap_26 += b.quantity;
                     else closuresNeeded.cork += b.quantity;
                 }
                 else {
-                    // Small bottles (330/250): Always 26mm Cap (Beer style)
+                    // Klein (330/250): Altijd 26mm Kroonkurk (Bierflesje)
                     closuresNeeded.crown_cap_26 += b.quantity;
                 }
             });
@@ -5688,17 +5696,20 @@ window.bottleBatch = async function(e) {
         if (outOfStockItems.length > 0) throw new Error(`Stock missing:\n- ${outOfStockItems.join('\n- ')}`);
 
         // --- 4. CALCULATE COSTS ---
-        // (Cost calculation logic remains similar but simplified for brevity in this fix)
-        // ... [Standard cost calculation code here] ...
-        // For now, we proceed to save to allow the flow to continue.
-        
         const packCosts = (typeof getPackagingCosts === 'function') ? getPackagingCosts() : {};
         let totalPackagingCost = 0;
-        // Simple cost calc for now
+        
         bottlesData.forEach(b => {
-             // Basic estimation logic
              const bCost = b.price !== null ? b.price : (packCosts[b.size] || 0);
-             totalPackagingCost += b.quantity * bCost;
+             // Simpele schatting closure kosten voor totaalberekening
+             let closureCost = 0;
+             if (closureType === 'auto') {
+                 // We nemen gemiddelde kosten of specifiek als we exact weten
+                 closureCost = packCosts.cork || 0.10; 
+             } else {
+                 closureCost = packCosts[closureType] || 0;
+             }
+             totalPackagingCost += b.quantity * (bCost + closureCost + (packCosts.label || 0));
         });
         
         const finalTotalCost = (originalBrew.totalCost || 0) + totalPackagingCost;
@@ -5706,12 +5717,32 @@ window.bottleBatch = async function(e) {
         // --- 5. SAVE ---
         if (confirm(`Total Cost (with packaging): €${finalTotalCost.toFixed(2)}. Proceed?`)) {
             
-            // Deduct Stock (Simplified for readability)
+            // Deduct Stock
             const deduct = (id, qty) => {
                 if (packagingCosts[id]) packagingCosts[id].qty = Math.max(0, packagingCosts[id].qty - qty);
             };
             
             bottlesData.forEach(b => { if(b.price === null) deduct(`bottle_${b.size}`, b.quantity); });
+            
+            // Deduct Closures Correctly
+            if (closureType === 'auto') {
+                // Herbereken de exacte aantallen om af te boeken (kopie van logica boven)
+                const isSparkling = (originalBrew.recipeMarkdown || "").toLowerCase().includes('sparkling') || (originalBrew.recipeMarkdown || "").toLowerCase().includes('bottle carbonat');
+                
+                bottlesData.forEach(b => {
+                    if (b.size >= 750) {
+                        if (isSparkling) deduct('crown_cap_29', b.quantity);
+                        else deduct('cork', b.quantity);
+                    } else if (b.size === 500) {
+                        if (isSparkling) deduct('crown_cap_26', b.quantity);
+                        else deduct('cork', b.quantity);
+                    } else {
+                        deduct('crown_cap_26', b.quantity);
+                    }
+                });
+            } else {
+                deduct(closureType, totalBottles);
+            }
             deduct('label', totalBottles);
             
             // Save updates
@@ -5735,14 +5766,12 @@ window.bottleBatch = async function(e) {
 
             await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar'), cellarData);
 
-            // Update Brew Status
             await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', currentBrewToBottleId), {
                 isBottled: true,
                 peakFlavorDate: peakDate,
                 ...volumeUpdatePayload
             });
 
-            // UI Reset
             if (currentBrewDay.brewId === currentBrewToBottleId) {
                 currentBrewDay = { brewId: null };
                 await saveUserSettings();

@@ -1149,44 +1149,54 @@ window.startActualBrewDay = async function(brewId) {
     renderBrewDay(brewId);
 }
 
-// --- SMART PARSER V3: Sectie-bewust (Fix voor stats in stappen) ---
+// --- SMART PARSER V4: Strict Boundaries (Stop bij Notes) ---
 function extractStepsFromMarkdown(markdown) {
     if (!markdown) return { day1: [], day2: [] };
 
-    // 1. ZOEK NAAR HET BEGIN VAN DE INSTRUCTIES
-    // We negeren alles vóór het kopje "Instructions", "Steps" of "Method"
-    // Dit voorkomt dat Stats (ABV, OG) en Ingredients (Buy x) als stappen worden gezien.
-    let instructionText = markdown;
-    
-    // Regex zoekt naar: # Instructions, ## Instructions, **Instructions**, etc.
-    const headerRegex = /(?:^|\n)(?:#+|__|\*\*)\s*(?:Instructions|Steps|Method|Procedure|Bereiding)(?:__|\*\*|:)?/i;
-    const splitMatch = markdown.match(headerRegex);
-
-    if (splitMatch) {
-        // We pakken alleen de tekst NA de header
-        instructionText = markdown.substring(splitMatch.index + splitMatch[0].length);
-    }
-
-    const lines = instructionText.split('\n');
+    const lines = markdown.split('\n');
     const day1 = [];
     const day2 = [];
     
-    // Regex voor stappen: "1.", "1)", "1 "
+    let isParsingInstructions = false;
+
+    // Regex om te zien of een regel een Header is (# Title of **Title**)
+    // We kijken specifiek naar Instructions om te starten, en ELKE andere header om te stoppen.
+    const instructionHeaderRegex = /^(?:#+|__|\*\*)\s*(?:Instructions|Steps|Method|Procedure|Bereiding)(?:__|\*\*|:)?/i;
+    const anyHeaderRegex = /^(?:#+|__|\*\*)\s*([a-zA-Z].*)/; // Pakt regels die beginnen met # of ** en tekst bevatten
+
+    // Regex voor stappen
     const stepRegex = /(?:^|\s)(\d+)[\.\)\s]\s+(.*)/;
     const bulletRegex = /^[-*•]\s+(.*)/;
-
-    // 2. EXTRA FILTER: Zwarte lijst voor woorden die GEEN stap zijn
-    // Mocht de header-split falen, dan vangen we hier alsnog de fouten af.
     const blackList = ['abv:', 'batch size:', 'style:', 'sweetness:', 'og:', 'fg:', 'buy ', 'target '];
 
-    lines.forEach(line => {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         const cleanLine = line.trim();
         
-        // Sla headers (#) en lege regels over
-        if (!cleanLine || cleanLine.startsWith('#')) return;
+        if (!cleanLine) continue;
 
-        // CHECK OP ZWARTE LIJST (Is dit per ongeluk een stat?)
-        if (blackList.some(badWord => cleanLine.toLowerCase().includes(badWord))) return;
+        // 1. STATUS CHECK: Zitten we in de instructie-sectie?
+        if (cleanLine.match(instructionHeaderRegex)) {
+            isParsingInstructions = true;
+            continue; // Sla de header zelf over
+        }
+
+        // 2. STOPBORD: Als we al aan het parsen zijn, en we zien een NIEUWE Header... STOP!
+        // Dit voorkomt dat "Brewer's Notes", "Water Profile" etc. worden meegenomen.
+        if (isParsingInstructions && cleanLine.match(anyHeaderRegex)) {
+            // We controleren even of het geen sub-stap is die per ongeluk dikgedrukt is.
+            // Als het begint met #, ##, ### -> Zeker stoppen.
+            if (cleanLine.startsWith('#')) break; 
+            
+            // Als het "Notes", "Tips", "Profile" bevat -> Stoppen.
+            if (cleanLine.match(/(Note|Tip|Profile|Summary|Data)/i)) break;
+        }
+
+        // Als we nog niet bij de instructies zijn, negeer deze regel
+        if (!isParsingInstructions) continue;
+
+        // 3. STAPPEN VERWERKEN (Alleen als we in de sectie zitten)
+        if (blackList.some(badWord => cleanLine.toLowerCase().includes(badWord))) continue;
 
         let match = cleanLine.match(stepRegex);
         let text = "";
@@ -1196,23 +1206,23 @@ function extractStepsFromMarkdown(markdown) {
             stepNum = parseInt(match[1]);
             text = match[2];
         } else {
-            // Bullet points accepteren we alleen als we zeker weten dat we in de instructie-sectie zitten (splitMatch is true)
-            // Anders is het risico te groot dat we de ingrediëntenlijst pakken.
-            if (splitMatch) {
-                match = cleanLine.match(bulletRegex);
-                if (match) {
-                    text = match[1];
-                    stepNum = day1.length + day2.length + 1; 
-                }
+            // Bullet points
+            match = cleanLine.match(bulletRegex);
+            if (match) {
+                text = match[1];
+                stepNum = day1.length + day2.length + 1; 
             }
         }
 
         if (text) {
-            // Schoonmaak: haal bold/italic weg aan begin/eind
+            // Schoonmaak
             text = text.replace(/^\*\*|\*\*$/g, '').replace(/^\*|\*$/g, '').trim();
             const lower = text.toLowerCase();
 
-            // KEYWORDS: Fase 2 detectie
+            // Soms zet de AI "Step 1:" in de tekst, dat halen we weg
+            text = text.replace(/^Step \d+:\s*/i, '');
+
+            // KEYWORDS voor Fase 2
             const isSecondary = (
                 lower.includes('rack into') || 
                 lower.includes('siphon') || 
@@ -1240,18 +1250,16 @@ function extractStepsFromMarkdown(markdown) {
                 day1.push(stepObj);
             }
         }
-    });
+    }
 
-    // FALLBACK: Als alles in Day 2 zit, herstel naar Day 1
+    // FALLBACK
     if (day1.length === 0 && day2.length > 0) {
         const splitIndex = day2.findIndex(s => 
             s.description.toLowerCase().includes('rack') || 
             s.description.toLowerCase().includes('siphon')
         );
-        
         if (splitIndex > 0) {
-            const stepsToMove = day2.splice(0, splitIndex);
-            day1.push(...stepsToMove);
+            day1.push(...day2.splice(0, splitIndex));
         } else if (splitIndex === -1) {
             day1.push(...day2);
             day2.length = 0;
@@ -1360,7 +1368,7 @@ function renderBrewDay(brewId) {
     initializeBrewDayState(primarySteps);
 }
 
-// --- BREW DAY 2 (SMART & INTERACTIVE) ---
+// --- BREW DAY 2 (VISUAL UPDATE: MATCHING DAY 1 STYLE) ---
 window.renderBrewDay2 = async function() {
     const container = document.getElementById('brew-day-2-view');
     if (!container) return;
@@ -1373,6 +1381,7 @@ window.renderBrewDay2 = async function() {
     const brew = brews.find(b => b.id === currentBrewDay.brewId);
     if (!brew) return;
 
+    // 1. Stappen bepalen
     let steps = brew.secondarySteps || [];
     let source = "Custom Recipe Steps";
 
@@ -1381,6 +1390,7 @@ window.renderBrewDay2 = async function() {
         if (extracted.day2.length > 0) { steps = extracted.day2; source = "Extracted from Recipe"; }
     }
 
+    // Fallback als er echt niets is
     if (steps.length === 0) {
         steps = [
             { title: "Stability Check", desc: "Ensure SG is stable (measure 3 days apart)." },
@@ -1395,31 +1405,37 @@ window.renderBrewDay2 = async function() {
 
     const checklist = brew.checklist || {};
 
-    // Compactere Lijst voor Day 2
+    // 2. HTML Genereren (Exacte kopie van Day 1 stijl)
     const stepsHtml = steps.map((step, idx) => {
         const key = `sec-step-${idx}`;
         const isChecked = checklist[key] === true;
         
+        // De knop stijl van Day 1
+        const buttonHtml = isChecked 
+            ? `<span class="text-xs font-bold text-green-600 border border-green-600 px-2 py-0.5 rounded">DONE</span>`
+            : `<button onclick="window.toggleSecondaryStep('${brew.id}', '${key}')" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase tracking-wide">Check</button>`;
+
         return `
-        <div class="flex items-start gap-3 p-3 cursor-pointer hover:bg-app-tertiary/30 transition-colors group" onclick="window.toggleSecondaryStep('${brew.id}', '${key}')">
-            <div class="pt-0.5">
-                <div class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked ? 'bg-green-600 border-green-600' : 'border-app-brand/40 bg-app-tertiary group-hover:border-app-brand'}">
-                    ${isChecked ? '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+        <div id="${key}" class="step-item p-3 border-b border-app-brand/10 last:border-0 ${isChecked ? 'opacity-60 grayscale' : ''}">
+            <div class="flex justify-between items-start gap-3">
+                <div class="flex-grow">
+                    <p class="step-title font-bold text-sm text-app-header leading-tight">${idx + 1}. ${step.title}</p>
+                    <p class="text-xs text-app-secondary mt-1 leading-snug">${step.desc || step.description}</p>
                 </div>
-            </div>
-            <div>
-                <h4 class="font-bold text-sm leading-tight ${isChecked ? 'text-green-600 line-through decoration-2 opacity-70' : 'text-app-header'}">${step.title}</h4>
-                <p class="text-xs text-app-secondary mt-0.5 leading-snug ${isChecked ? 'line-through opacity-50' : ''}">${step.desc || step.description}</p>
+                <div class="flex-shrink-0 pt-1">
+                    ${buttonHtml}
+                </div>
             </div>
         </div>`;
     }).join('');
 
+    // 3. Container renderen
     container.innerHTML = `
         <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
             <h2 class="text-2xl font-header font-bold mb-1 text-center text-app-brand">${brew.recipeName}</h2>
             <p class="text-center text-[10px] font-bold uppercase tracking-widest text-app-secondary mb-6 opacity-60">Phase 2: Aging & Packaging</p>
             
-            <div class="mb-6 bg-app-primary/30 rounded-lg border border-app-brand/10 divide-y divide-app-brand/5">
+            <div class="mb-6 bg-app-secondary rounded-lg shadow-sm border border-app-brand/10 divide-y divide-app-brand/10">
                 ${stepsHtml}
             </div>
 

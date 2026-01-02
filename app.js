@@ -2171,25 +2171,60 @@ window.saveNewTitle = async function(brewId) {
     }
 }
 
-// --- DELETE RECIPE FUNCTIE ---
+// --- FUNCTIE: VERWIJDER RECEPT (MET AUTO-RESET VAN BREW DAY) ---
 window.deleteBrew = async function(brewId) {
     if (!userId) return;
-    
-    if (!confirm("Are you sure you want to delete this recipe permanently?")) return;
+
+    if (!confirm("Weet je zeker dat je dit recept definitief wilt verwijderen? Dit kan niet ongedaan worden gemaakt.")) {
+        return;
+    }
 
     try {
-        // Verwijder uit Firestore
-        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId));
-        
-        showToast("Recipe deleted.", "success");
-        
-        // Ga terug naar de lijstweergave
-        if(typeof window.goBackToHistoryList === 'function') {
-            window.goBackToHistoryList();
+        // 1. Verwijder uit de Database
+        const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
+        await deleteDoc(brewDocRef);
+
+        // 2. CRUCIAAL: Check of dit recept toevallig actief staat in Brew Day 1
+        // Zo ja: Schoon de brouwdag op!
+        if (currentBrewDay && currentBrewDay.brewId === brewId) {
+            console.log("Actieve batch verwijderd. Brew Day wordt gereset.");
+            
+            // Reset het lokale geheugen
+            currentBrewDay = { brewId: null, checklist: {} };
+            
+            // Update de Database Instellingen (zodat hij niet terugkomt na verversen)
+            const settingsRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'settings', 'main');
+            await setDoc(settingsRef, { currentBrewDay: { brewId: null } }, { merge: true });
+
+            // Reset de UI van Brew Day 1 (Toon "Select a recipe")
+            if (typeof renderBrewDay === 'function') {
+                renderBrewDay('none');
+            }
+            
+            // Stop timers als die liepen voor deze batch
+            if (typeof stepTimerInterval !== 'undefined' && stepTimerInterval) {
+                clearInterval(stepTimerInterval);
+                stepTimerInterval = null;
+                localStorage.removeItem('activeBrewDayTimer');
+            }
         }
+
+        // 3. Feedback en Navigatie
+        showToast("Recept succesvol verwijderd.", "success");
+
+        if (typeof window.goBackToHistoryList === 'function') {
+            window.goBackToHistoryList();
+        } else {
+            // Fallback navigatie
+            const detailContainer = document.getElementById('history-detail-container');
+            const listContainer = document.getElementById('history-list-container');
+            if(detailContainer) detailContainer.classList.add('hidden');
+            if(listContainer) listContainer.classList.remove('hidden');
+        }
+
     } catch (error) {
-        console.error("Error deleting brew:", error);
-        showToast("Could not delete recipe.", "error");
+        console.error("Fout bij verwijderen:", error);
+        showToast("Kon het recept niet verwijderen.", "error");
     }
 }
 
@@ -3159,21 +3194,22 @@ window.saveCellarTemp = async function(temp) {
     showToast(`Cellar temperature set to ${temp}°C`, "success");
 }
 
-// --- AGING MANAGER MODAL ---
+// --- AGING MANAGER MODAL (MET HISTORIE) ---
 window.openAgingModal = function(cellarId) {
     const item = cellar.find(c => c.id === cellarId);
     if (!item) return;
 
-    // Verwijder oude modal indien aanwezig
     const oldModal = document.getElementById('aging-modal');
     if (oldModal) oldModal.remove();
 
     const currentReason = item.peakFlavorJustification || "No analysis yet.";
     const currentDate = item.peakFlavorDate || "";
+    // Nieuw: We laden de opgeslagen geschiedenis of geven een placeholder
+    const currentHistory = item.agingHistory || ""; 
 
     const html = `
     <div id="aging-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] backdrop-blur-sm p-4">
-        <div class="bg-app-secondary w-full max-w-md p-6 rounded-xl shadow-2xl border border-purple-500/30 animate-fade-in">
+        <div class="bg-app-secondary w-full max-w-md p-6 rounded-xl shadow-2xl border border-purple-500/30 animate-fade-in max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-header font-bold text-purple-600">Aging Profile</h3>
                 <button onclick="document.getElementById('aging-modal').remove()" class="text-gray-500 hover:text-gray-300 text-2xl">&times;</button>
@@ -3184,7 +3220,12 @@ window.openAgingModal = function(cellarId) {
 
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold uppercase text-app-secondary mb-1">Peak Date</label>
+                    <label class="block text-xs font-bold uppercase text-app-secondary mb-1">Aging History / Conditions</label>
+                    <textarea id="aging-history" rows="2" class="w-full p-2 rounded bg-app-tertiary border border-app-brand/20 text-xs text-app-header placeholder-gray-500" placeholder="e.g. Stored at 20°C for the first 3 months...">${currentHistory}</textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-app-secondary mb-1">Estimated Peak Date</label>
                     <input type="date" id="edit-peak-date" value="${currentDate}" class="w-full p-2 rounded bg-app-primary border border-app-brand/20 text-app-header">
                 </div>
                 <div>
@@ -3196,7 +3237,7 @@ window.openAgingModal = function(cellarId) {
             <div class="mt-6 flex flex-col gap-2">
                 <button onclick="window.runAgingAnalysis('${cellarId}')" id="btn-recalc-aging" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                    AI Recalculate (Uses Temp)
+                    Recalculate (With History)
                 </button>
                 <button onclick="window.saveAgingUpdate('${cellarId}')" class="w-full bg-app-tertiary text-app-header font-bold py-3 rounded-lg hover:bg-green-600 hover:text-white transition-colors border border-app-brand/20">
                     Save Changes
@@ -3216,30 +3257,32 @@ window.runAgingAnalysis = async function(cellarId) {
 
     const item = cellar.find(c => c.id === cellarId);
     const temp = userSettings.cellarTemp || 18;
+    const history = document.getElementById('aging-history').value; // We lezen jouw input
     const today = new Date().toISOString().split('T')[0];
 
-    // Haal origineel recept op (als we dat nog hebben in de cache, anders uit item naam gokken)
-    // We kunnen de brewId gebruiken om de originele brew op te zoeken in 'brews' array
     const originalBrew = brews.find(b => b.id === item.brewId);
     const recipeContext = originalBrew ? originalBrew.recipeMarkdown.substring(0, 500) : "No full recipe data.";
 
-    const prompt = `You are a Mead Cellarmaster. Recalculate the aging potential.
+    const prompt = `You are a Mead Cellarmaster. Recalculate the aging potential based on specific conditions.
     
-    **DATA:**
+    **BATCH DATA:**
     - Name: ${item.recipeName}
     - Current Date: ${today}
     - Bottled Date: ${item.bottlingDate ? new Date(item.bottles ? item.bottlingDate.toDate() : item.bottlingDate).toLocaleDateString() : 'Unknown'}
-    - Cellar Temp: ${temp}°C
-    - Recipe Context: ${recipeContext}
+    
+    **CONDITIONS:**
+    1. **CURRENT TEMP:** ${temp}°C (The cellar right now).
+    2. **HISTORY / CONTEXT:** "${history}" (User provided history of storage).
+    3. **RECIPE:** ${recipeContext}
 
-    **TEMPERATURE PHYSICS (ARRHENIUS):**
-    - High Temp (>20°C): Aging is 2x faster, but risk of oxidation/off-flavors. Peak is SOONER.
-    - Low Temp (<12°C): Aging is slow and clean. Peak is LATER.
-    - Standard (13-18°C): Normal timeline.
+    **CALCULATION RULES (ARRHENIUS):**
+    - You MUST account for the history provided. 
+    - Example: If user says "Stored at 25C for 3 months", that counts as ~6-9 months of standard aging. DEDUCT this "accelerated aging" from the remaining time needed.
+    - If current temp is high (>20°C), remaining time is shorter but risk of oxidation increases.
 
     **OUTPUT:** JSON with:
     - "date": (YYYY-MM-DD) The new optimal drinking date.
-    - "reason": (Max 15 words) Explain why based on the temperature.
+    - "reason": (Max 20 words) Explain logic: e.g. "Accelerated due to 3 months at 25°C, ready sooner."
     `;
 
     const schema = {
@@ -3266,17 +3309,21 @@ window.runAgingAnalysis = async function(cellarId) {
 window.saveAgingUpdate = async function(cellarId) {
     const date = document.getElementById('edit-peak-date').value;
     const reason = document.getElementById('edit-peak-reason').value;
+    const history = document.getElementById('aging-history').value; // Opslaan!
 
     if (!date) return showToast("Pick a date first.", "error");
 
     try {
         await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar', cellarId), {
             peakFlavorDate: date,
-            peakFlavorJustification: reason
+            peakFlavorJustification: reason,
+            agingHistory: history // Nieuw veld in de database
         });
         
         document.getElementById('aging-modal').remove();
         showToast("Aging profile updated!", "success");
+        // Herlaad de kelder om de 'Peak Date' label te updaten
+        renderCellar(); 
     } catch (e) {
         console.error(e);
         showToast("Save failed.", "error");

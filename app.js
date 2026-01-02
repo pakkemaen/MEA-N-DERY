@@ -5400,35 +5400,35 @@ function populateEquipmentProfilesDropdown() {
 
 let currentBrewToBottleId = null; 
 
-// --- TOON BOTTLING MODAL (VEILIGE VERSIE) ---
+// --- TOON BOTTLING MODAL (TELEPORT FIX) ---
 window.showBottlingModal = function(brewId) {
     console.log("Probeer modal te openen voor:", brewId);
 
-    // STAP 1: Open de modal DIRECT (Geforceerd)
     const modal = document.getElementById('bottling-modal');
+    
     if (modal) {
-        // Verwijder de hidden class
+        // STAP 1: DE "TELEPORTATIE" (CRUCIAAL)
+        // We verplaatsen de modal naar de <body> tag.
+        // Hierdoor heeft hij geen last meer van verborgen tabbladen.
+        if (modal.parentNode !== document.body) {
+            document.body.appendChild(modal);
+        }
+
+        // STAP 2: Zichtbaar maken
         modal.classList.remove('hidden');
+        modal.style.display = 'flex'; // Forceer flexbox
+        modal.style.zIndex = '9999';  // Bovenop alles
         
-        // Forceer display flex via inline styles
-        modal.style.display = 'flex';
-        
-        // Forceer Z-Index naar extreem hoog (boven alles)
-        modal.style.zIndex = '9999'; 
-        
-        // Zorg dat de achtergrond ook goed staat
-        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
     } else {
-        alert("Fout: Kan 'bottling-modal' element niet vinden in de HTML.");
+        alert("CRITICAL ERROR: 'bottling-modal' niet gevonden in HTML!");
         return;
     }
 
-    // STAP 2: Vul de data in (veilig ingepakt)
+    // STAP 3: Data laden
     try {
         currentBrewToBottleId = brewId;
-        customBottles = []; // Reset lijst
+        customBottles = []; 
         
-        // Check of de render functie bestaat voordat we hem aanroepen
         if (typeof window.renderCustomBottlesList === 'function') {
             window.renderCustomBottlesList(); 
         }
@@ -5437,10 +5437,22 @@ window.showBottlingModal = function(brewId) {
         if (bottlingForm) bottlingForm.reset();
         
         const dateInput = document.getElementById('bottlingDate');
-        if (dateInput) dateInput.valueAsDate = new Date();
+        if (dateInput) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+
+        // Velden leegmaken voor de zekerheid
+        const peakDate = document.getElementById('peakFlavorDate');
+        const peakReason = document.getElementById('peakFlavorReason');
+        if(peakDate) peakDate.value = "";
+        if(peakReason) peakReason.value = "";
 
     } catch (error) {
-        console.error("Kleine fout bij laden data in modal (maar hij is wel open):", error);
+        console.error("Fout bij laden data in modal:", error);
     }
 }
 

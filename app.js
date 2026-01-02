@@ -1269,6 +1269,7 @@ function extractStepsFromMarkdown(markdown) {
     return { day1, day2 };
 }
 
+// --- RENDER BREW DAY 1 (MET VERFIJNDE ACTUAL UI) ---
 function renderBrewDay(brewId) {
     if (brewId === 'none') {
         document.getElementById('brew-day-content').innerHTML = `<h2 class="text-3xl font-header font-bold mb-4 text-center">Brew Day 1</h2><p class="text-center text-app-secondary/80">Select a new recipe to start.</p>`;
@@ -1281,6 +1282,7 @@ function renderBrewDay(brewId) {
 
     let primarySteps = brew.brewDaySteps || [];
     
+    // Fallback als steps nog niet geparsed zijn
     if (primarySteps.length === 0 && brew.recipeMarkdown) {
         const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
         primarySteps = extracted.day1;
@@ -1289,8 +1291,9 @@ function renderBrewDay(brewId) {
         }
     }
 
-    // --- STAPPEN RENDERING MET SLIMME DESCRIPTION CHECK ---
+    // --- STAPPEN RENDERING ---
     let stepsHtml = primarySteps.map((step, index) => {
+        // Zoek naar getallen + eenheid (bv 1.5 kg)
         const amountMatch = (step.title + " " + step.description).match(/(\d+[.,]?\d*)\s*(kg|g|l|ml|oz|lbs)/i);
         let inputHtml = '';
         let detectedAmount = '';
@@ -1300,42 +1303,69 @@ function renderBrewDay(brewId) {
         const isCompleted = stepState === true || (stepState && stepState.completed);
         const savedAmount = (stepState && stepState.actualAmount) ? stepState.actualAmount : '';
 
-        // Input veld logica
+        // --- 1. VISUELE UPDATE: DE ACTUAL INPUT ---
         if (amountMatch && !isCompleted) {
             detectedAmount = amountMatch[1];
             detectedUnit = amountMatch[2].toLowerCase();
-            inputHtml = `<div class="mt-1 flex items-center gap-2 bg-app-tertiary/50 p-1 rounded border border-app-brand/10"><label class="text-[10px] font-bold text-app-secondary uppercase">Actual:</label><input type="number" step="0.01" id="step-input-${index}" class="w-20 p-0.5 text-xs border rounded bg-app-secondary border-app text-app-header text-center" placeholder="${detectedAmount}" value="${detectedAmount}"><span class="text-xs font-bold text-app-secondary">${detectedUnit}</span></div>`;
+            
+            inputHtml = `
+            <div class="mt-2 w-full max-w-[200px]">
+                <div class="flex items-center bg-app-primary rounded border border-app-brand/20 shadow-sm focus-within:border-app-brand focus-within:ring-1 focus-within:ring-app-brand/50 transition-all overflow-hidden">
+                    
+                    <div class="bg-app-tertiary/50 px-2 py-1.5 border-r border-app-brand/10">
+                        <span class="text-[9px] font-bold text-app-secondary uppercase tracking-wider">Actual</span>
+                    </div>
+                    
+                    <input type="number" step="0.01" id="step-input-${index}" 
+                           class="w-full bg-transparent border-none p-1.5 text-right font-mono font-bold text-app-header focus:ring-0 sm:text-sm placeholder-gray-500" 
+                           placeholder="${detectedAmount}" value="${detectedAmount}">
+                    
+                    <div class="pr-2 pl-1">
+                        <span class="text-xs font-bold text-app-brand">${detectedUnit}</span>
+                    </div>
+                </div>
+            </div>`;
+            
         } else if (isCompleted && savedAmount) {
-             inputHtml = `<div class="mt-1 text-[10px] text-green-600 font-mono">✓ Added: ${savedAmount} ${detectedUnit || ''}</div>`;
+             // --- 2. VISUELE UPDATE: HET RESULTAAT (READ-ONLY) ---
+             inputHtml = `
+             <div class="mt-2 inline-flex items-center gap-2 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                <span class="text-[9px] font-bold text-green-700 dark:text-green-400 uppercase tracking-wider">Recorded:</span>
+                <span class="font-mono font-bold text-green-800 dark:text-green-300 text-xs">${savedAmount} ${detectedUnit || ''}</span>
+             </div>`;
         }
 
-        const timerHtml = step.duration > 0 ? `<div class="timer-display my-1 text-sm font-mono font-bold text-app-brand" id="timer-${index}">${formatTime(step.duration)}</div>` : '';
+        // Timer Stijl
+        const timerHtml = step.duration > 0 
+            ? `<div class="timer-display my-2 text-sm font-mono font-bold text-app-brand bg-app-primary inline-block px-2 py-1 rounded border border-app-brand/20" id="timer-${index}">${formatTime(step.duration)}</div>` 
+            : '';
         
+        // Knoppen Stijl
         const buttonsHtml = step.duration > 0 
-            ? `<button data-action="startTimer" data-step="${index}" class="text-xs bg-green-600 text-white py-1 px-3 rounded shadow hover:bg-green-700 btn uppercase tracking-wide">Start Timer</button>` 
-            : `<button data-action="completeStep" data-step="${index}" data-unit="${detectedUnit}" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase tracking-wide">Check</button>`;
+            ? `<button data-action="startTimer" data-step="${index}" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn uppercase tracking-wide font-bold">Start Timer</button>` 
+            : `<button data-action="completeStep" data-step="${index}" data-unit="${detectedUnit}" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1.5 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase tracking-wide">Check</button>`;
 
-        // --- HIER ZIT DE FIX: Check of de beschrijving nuttig is ---
-        // We tonen het ALLEEN als het bestaat, niet leeg is, en niet de standaardzin is.
+        // Beschrijving (alleen tonen als nuttig)
         let descHtml = '';
-        if (step.description && 
-            step.description.trim() !== '' && 
-            !step.description.toLowerCase().includes('follow the instruction')) {
-            
-            descHtml = `<p class="text-xs text-app-secondary mt-1 leading-snug">${step.description}</p>`;
+        if (step.description && step.description.trim() !== '' && !step.description.toLowerCase().includes('follow the instruction')) {
+            descHtml = `<p class="text-xs text-app-secondary mt-1 leading-relaxed opacity-90">${step.description}</p>`;
         }
 
         return `
-        <div id="step-${index}" class="step-item p-3 border-b border-app-brand/10 last:border-0 ${isCompleted ? 'opacity-60 grayscale' : ''}">
-            <div class="flex justify-between items-start gap-3">
+        <div id="step-${index}" class="step-item p-4 border-b border-app-brand/10 last:border-0 hover:bg-app-tertiary/20 transition-colors ${isCompleted ? 'opacity-60 grayscale' : ''}">
+            <div class="flex justify-between items-start gap-4">
                 <div class="flex-grow">
-                    <p class="step-title font-bold text-sm text-app-header leading-tight">${index + 1}. ${step.title}</p>
-                    ${descHtml}
-                    ${inputHtml}
-                    ${timerHtml}
+                    <p class="step-title font-bold text-sm text-app-header leading-tight flex items-center gap-2">
+                        <span class="flex items-center justify-center w-5 h-5 rounded-full bg-app-tertiary text-[10px] text-app-secondary border border-app-brand/20 font-mono">${index + 1}</span>
+                        ${step.title}
+                    </p>
+                    <div class="pl-7"> ${descHtml}
+                        ${inputHtml}
+                        ${timerHtml}
+                    </div>
                 </div>
                 <div class="flex-shrink-0 pt-1" id="controls-${index}">
-                    ${isCompleted ? '<span class="text-xs font-bold text-green-600 border border-green-600 px-2 py-0.5 rounded">DONE</span>' : buttonsHtml}
+                    ${isCompleted ? '<span class="text-[10px] font-bold text-white bg-green-600 px-2 py-1 rounded shadow-sm tracking-wide">DONE</span>' : buttonsHtml}
                 </div>
             </div>
         </div>`;
@@ -1346,22 +1376,38 @@ function renderBrewDay(brewId) {
     const logHtml = getBrewLogHtml(combinedLogData, brew.id); 
 
     brewDayContent.innerHTML = `
-        <div class="flex justify-between items-end mb-4">
-            <h2 class="text-2xl font-header font-bold text-app-brand">${brew.recipeName}</h2>
-            <button data-action="resetBrewDay" class="text-[10px] text-red-500 hover:underline">Reset</button>
+        <div class="flex justify-between items-end mb-4 sticky top-0 bg-app-secondary z-10 py-2 border-b border-app-brand/10">
+            <h2 class="text-2xl font-header font-bold text-app-brand truncate pr-2">${brew.recipeName}</h2>
+            <button data-action="resetBrewDay" class="text-[10px] text-red-500 hover:text-red-700 hover:underline flex-shrink-0 uppercase font-bold tracking-wider">Reset Day</button>
         </div>
         
-        <div class="mb-4 bg-app-tertiary rounded-full h-1.5"><div id="brew-day-progress" class="bg-app-brand h-1.5 rounded-full transition-all duration-500" style="width: 0%;"></div></div>
+        <div class="mb-4 bg-app-tertiary rounded-full h-1.5 overflow-hidden">
+            <div id="brew-day-progress" class="bg-app-brand h-1.5 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(217,119,6,0.5)]" style="width: 0%;"></div>
+        </div>
         
-        <div id="brew-day-steps-container" class="bg-app-secondary rounded-lg shadow-sm border border-app-brand/10 divide-y divide-app-brand/10">
+        <div id="brew-day-steps-container" class="bg-app-secondary rounded-xl shadow-sm border border-app-brand/10 overflow-hidden">
             ${stepsHtml}
         </div>
         
-        <hr class="my-6 border-app-brand/10">
+        <div class="my-8 relative">
+            <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                <div class="w-full border-t border-app-brand/10"></div>
+            </div>
+            <div class="relative flex justify-center">
+                <span class="px-3 bg-app-secondary text-xs font-bold text-app-secondary uppercase tracking-widest">Logs</span>
+            </div>
+        </div>
+
         ${logHtml}
-        <div class="mt-4 no-print space-y-2">
-            <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn text-sm font-bold shadow-md">Save Log Changes</button>
-            <button onclick="window.deductActualsFromInventory('${brew.id}')" class="w-full bg-app-tertiary text-app-secondary border border-app-brand/20 py-2 px-4 rounded-lg hover:bg-app-secondary btn text-xs">Deduct from Inventory</button>
+        
+        <div class="mt-4 no-print space-y-3 pb-8">
+            <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn text-sm font-bold shadow-md uppercase tracking-wider flex justify-center items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                Save Log Changes
+            </button>
+            <button onclick="window.deductActualsFromInventory('${brew.id}')" class="w-full bg-app-tertiary text-app-secondary border border-app-brand/20 py-3 px-4 rounded-lg hover:bg-app-primary btn text-xs font-bold uppercase tracking-wider transition-colors">
+                Deduct Actuals from Inventory
+            </button>
         </div>
     `;
 

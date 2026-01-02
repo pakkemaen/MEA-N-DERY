@@ -3071,21 +3071,216 @@ function loadCellar() {
     });
 }
 
+// --- RENDER CELLAR (MET TEMPERATUUR & AGING UPDATE) ---
 window.renderCellar = function() {
     const listDiv = document.getElementById('cellar-list');
     if (!listDiv) return;
-    if (cellar.length === 0) { listDiv.innerHTML = '<p class="text-center text-app-secondary/80">Empty cellar.</p>'; return; }
     
-    listDiv.innerHTML = cellar.map(item => `
-        <div class="p-4 card rounded-lg mb-2">
-            <h4 class="font-bold text-lg font-header">${item.recipeName}</h4>
-            <p class="text-sm text-app-secondary">Bottled: ${item.bottlingDate ? new Date(item.bottles ? item.bottlingDate.toDate() : item.bottlingDate).toLocaleDateString() : '?'}</p>
-            <div class="mt-2 space-y-1">
-                ${(item.bottles || []).map(b => `<div class="text-sm flex justify-between"><span>${b.quantity} x ${b.size}ml</span><button onclick="window.consumeBottle('${item.id}', ${b.size})" class="text-xs bg-app-action text-white px-2 rounded">Drink</button></div>`).join('')}
+    // 1. Header met Temperatuur Input
+    const currentTemp = userSettings.cellarTemp || 18; // Default 18 graden
+    const headerHtml = `
+        <div class="mb-6 p-4 bg-app-tertiary rounded-lg border border-app-brand/20 flex justify-between items-center shadow-sm">
+            <div>
+                <h3 class="text-sm font-bold text-app-header uppercase tracking-wider">Cellar Conditions</h3>
+                <p class="text-xs text-app-secondary">Temperature affects aging speed.</p>
             </div>
-            <button onclick="window.deleteCellarItem('${item.id}', '${item.recipeName.replace(/'/g, "\\'")}')" class="text-red-500 text-xs mt-2 underline">Remove Batch</button>
+            <div class="flex items-center gap-2">
+                <input type="number" id="cellar-temp-input" value="${currentTemp}" onchange="window.saveCellarTemp(this.value)" 
+                       class="w-16 p-2 text-center font-bold text-app-brand bg-app-primary border rounded-md focus:ring-2 focus:ring-app-brand">
+                <span class="text-sm font-bold text-app-header">°C</span>
+            </div>
         </div>
-    `).join('');
+    `;
+
+    if (cellar.length === 0) { 
+        listDiv.innerHTML = headerHtml + '<p class="text-center text-app-secondary/80 mt-8">Your cellar is empty. Time to brew!</p>'; 
+        return; 
+    }
+    
+    // 2. De Lijst
+    const itemsHtml = cellar.map(item => {
+        const bottledDate = item.bottlingDate ? new Date(item.bottles ? item.bottlingDate.toDate() : item.bottlingDate).toLocaleDateString() : '?';
+        
+        // Peak Date Logica
+        let peakHtml = '';
+        if (item.peakFlavorDate) {
+            const today = new Date();
+            const peak = new Date(item.peakFlavorDate);
+            const isReady = today >= peak;
+            const colorClass = isReady ? 'text-green-600 bg-green-100 border-green-200' : 'text-purple-600 bg-purple-100 border-purple-200';
+            const statusText = isReady ? 'READY TO DRINK' : `PEAK: ${peak.toLocaleDateString()}`;
+            
+            peakHtml = `
+            <div class="mt-3 p-2 rounded border ${colorClass} text-xs font-bold flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity" onclick="window.openAgingModal('${item.id}')">
+                <span>${statusText}</span>
+                <span class="text-[10px] opacity-70">Tap to update</span>
+            </div>`;
+        } else {
+            peakHtml = `
+            <button onclick="window.openAgingModal('${item.id}')" class="mt-3 w-full py-2 border border-dashed border-purple-400 text-purple-600 text-xs font-bold rounded hover:bg-purple-50 transition-colors uppercase tracking-wide">
+                + Add Aging Advice
+            </button>`;
+        }
+
+        return `
+        <div class="p-4 card rounded-lg mb-4 border-l-4 border-app-brand shadow-sm bg-app-secondary">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h4 class="font-bold text-lg font-header text-app-header leading-tight">${item.recipeName}</h4>
+                    <p class="text-xs text-app-secondary mt-1">Bottled: ${bottledDate}</p>
+                </div>
+                <button onclick="window.deleteCellarItem('${item.id}', '${item.recipeName.replace(/'/g, "\\'")}')" class="text-gray-400 hover:text-red-500 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            </div>
+            
+            <div class="mt-3 space-y-1 pl-2 border-l-2 border-app-brand/10">
+                ${(item.bottles || []).map(b => `
+                    <div class="text-sm flex justify-between items-center">
+                        <span class="text-app-header font-mono">${b.quantity} x ${b.size}ml</span>
+                        <button onclick="window.consumeBottle('${item.id}', ${b.size})" class="text-[10px] bg-app-action text-white px-2 py-1 rounded shadow hover:opacity-90 font-bold uppercase tracking-wider">Drink</button>
+                    </div>`).join('')}
+            </div>
+            
+            ${peakHtml}
+        </div>
+    `;
+    }).join('');
+
+    listDiv.innerHTML = headerHtml + itemsHtml;
+}
+
+window.saveCellarTemp = async function(temp) {
+    if (!userId) return;
+    userSettings.cellarTemp = temp;
+    // Sla op in Firestore (in settings doc)
+    const settingsRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'settings', 'main');
+    await updateDoc(settingsRef, { cellarTemp: temp });
+    showToast(`Cellar temperature set to ${temp}°C`, "success");
+}
+
+// --- AGING MANAGER MODAL ---
+window.openAgingModal = function(cellarId) {
+    const item = cellar.find(c => c.id === cellarId);
+    if (!item) return;
+
+    // Verwijder oude modal indien aanwezig
+    const oldModal = document.getElementById('aging-modal');
+    if (oldModal) oldModal.remove();
+
+    const currentReason = item.peakFlavorJustification || "No analysis yet.";
+    const currentDate = item.peakFlavorDate || "";
+
+    const html = `
+    <div id="aging-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] backdrop-blur-sm p-4">
+        <div class="bg-app-secondary w-full max-w-md p-6 rounded-xl shadow-2xl border border-purple-500/30 animate-fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-header font-bold text-purple-600">Aging Profile</h3>
+                <button onclick="document.getElementById('aging-modal').remove()" class="text-gray-500 hover:text-gray-300 text-2xl">&times;</button>
+            </div>
+            
+            <p class="text-sm font-bold text-app-header mb-1">${item.recipeName}</p>
+            <p class="text-xs text-app-secondary mb-4">Current Cellar Temp: <strong>${userSettings.cellarTemp || 18}°C</strong></p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-app-secondary mb-1">Peak Date</label>
+                    <input type="date" id="edit-peak-date" value="${currentDate}" class="w-full p-2 rounded bg-app-primary border border-app-brand/20 text-app-header">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-app-secondary mb-1">AI Reasoning</label>
+                    <textarea id="edit-peak-reason" rows="3" class="w-full p-2 rounded bg-app-primary border border-app-brand/20 text-xs text-app-header">${currentReason}</textarea>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-col gap-2">
+                <button onclick="window.runAgingAnalysis('${cellarId}')" id="btn-recalc-aging" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    AI Recalculate (Uses Temp)
+                </button>
+                <button onclick="window.saveAgingUpdate('${cellarId}')" class="w-full bg-app-tertiary text-app-header font-bold py-3 rounded-lg hover:bg-green-600 hover:text-white transition-colors border border-app-brand/20">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+window.runAgingAnalysis = async function(cellarId) {
+    const btn = document.getElementById('btn-recalc-aging');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Thinking...';
+    btn.disabled = true;
+
+    const item = cellar.find(c => c.id === cellarId);
+    const temp = userSettings.cellarTemp || 18;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Haal origineel recept op (als we dat nog hebben in de cache, anders uit item naam gokken)
+    // We kunnen de brewId gebruiken om de originele brew op te zoeken in 'brews' array
+    const originalBrew = brews.find(b => b.id === item.brewId);
+    const recipeContext = originalBrew ? originalBrew.recipeMarkdown.substring(0, 500) : "No full recipe data.";
+
+    const prompt = `You are a Mead Cellarmaster. Recalculate the aging potential.
+    
+    **DATA:**
+    - Name: ${item.recipeName}
+    - Current Date: ${today}
+    - Bottled Date: ${item.bottlingDate ? new Date(item.bottles ? item.bottlingDate.toDate() : item.bottlingDate).toLocaleDateString() : 'Unknown'}
+    - Cellar Temp: ${temp}°C
+    - Recipe Context: ${recipeContext}
+
+    **TEMPERATURE PHYSICS (ARRHENIUS):**
+    - High Temp (>20°C): Aging is 2x faster, but risk of oxidation/off-flavors. Peak is SOONER.
+    - Low Temp (<12°C): Aging is slow and clean. Peak is LATER.
+    - Standard (13-18°C): Normal timeline.
+
+    **OUTPUT:** JSON with:
+    - "date": (YYYY-MM-DD) The new optimal drinking date.
+    - "reason": (Max 15 words) Explain why based on the temperature.
+    `;
+
+    const schema = {
+        type: "OBJECT",
+        properties: { "date": { "type": "STRING" }, "reason": { "type": "STRING" } },
+        required: ["date", "reason"]
+    };
+
+    try {
+        const jsonResponse = await performApiCall(prompt, schema);
+        const result = JSON.parse(jsonResponse);
+        
+        document.getElementById('edit-peak-date').value = result.date;
+        document.getElementById('edit-peak-reason').value = result.reason;
+        
+    } catch (error) {
+        showToast("Analysis failed: " + error.message, "error");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+window.saveAgingUpdate = async function(cellarId) {
+    const date = document.getElementById('edit-peak-date').value;
+    const reason = document.getElementById('edit-peak-reason').value;
+
+    if (!date) return showToast("Pick a date first.", "error");
+
+    try {
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'cellar', cellarId), {
+            peakFlavorDate: date,
+            peakFlavorJustification: reason
+        });
+        
+        document.getElementById('aging-modal').remove();
+        showToast("Aging profile updated!", "success");
+    } catch (e) {
+        console.error(e);
+        showToast("Save failed.", "error");
+    }
 }
 
 window.consumeBottle = async function(cellarId, size) {

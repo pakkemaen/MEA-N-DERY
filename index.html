@@ -1266,6 +1266,83 @@
             </div>
 
         </div> 
+
+        <div class="mt-10 mb-6">
+                <h3 class="text-xl font-header font-bold text-center mb-6 border-b pb-2 border-app-brand/20">App Feature Manual</h3>
+                
+                <div class="space-y-3">
+                    
+                    <details class="group bg-app-tertiary p-4 rounded-lg open:ring-2 open:ring-app-brand/20">
+                        <summary class="font-bold text-app-header cursor-pointer flex justify-between items-center select-none">
+                            <span class="flex items-center gap-2">🍺 The Brewing Engine</span>
+                            <svg class="w-5 h-5 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </summary>
+                        <div class="mt-3 text-sm text-app-secondary space-y-2 border-t border-app-brand/10 pt-2 leading-relaxed">
+                            <p><strong class="text-app-brand">Creator:</strong> The heart of the app. Enter a description (e.g., "Spiced cherry mead") or use the dropdowns. The AI generates a full recipe, including specific gravity targets and a step-by-step plan.</p>
+                            <p><strong class="text-app-brand">Shopping List:</strong> Automatically extracted from the generated recipe. You can check off items before you start.</p>
+                            <p><strong class="text-app-brand">Brew Day 1 (Primary):</strong> Your active brew dashboard. 
+                                <ul class="list-disc pl-5 mt-1">
+                                    <li><strong>Smart Timers:</strong> Click 'Start Timer' for steps like rehydration.</li>
+                                    <li><strong>Logs:</strong> Record your OG (Original Gravity) here.</li>
+                                    <li><strong>Completion:</strong> When finished, click the green "Finish Primary" button to move the batch to the Aging phase.</li>
+                                </ul>
+                            </p>
+                            <p><strong class="text-app-brand">Brew Day 2 (Aging):</strong> Shows a list of all batches currently in secondary fermentation. Select a batch to view steps like Racking, Stabilization, and Bottling.</p>
+                        </div>
+                    </details>
+
+                    <details class="group bg-app-tertiary p-4 rounded-lg open:ring-2 open:ring-app-brand/20">
+                        <summary class="font-bold text-app-header cursor-pointer flex justify-between items-center select-none">
+                            <span class="flex items-center gap-2">📦 Inventory & Cellar</span>
+                            <svg class="w-5 h-5 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </summary>
+                        <div class="mt-3 text-sm text-app-secondary space-y-2 border-t border-app-brand/10 pt-2 leading-relaxed">
+                            <p><strong class="text-app-brand">Inventory:</strong> Track your ingredients. Use the <strong>Barcode Scanner</strong> to quickly find or add items. When brewing, use the "Deduct from Inventory" button to auto-update stock.</p>
+                            <p><strong class="text-app-brand">Equipment:</strong> Define your fermenters and kettles. This helps with tracking capacity and cleaning.</p>
+                            <p><strong class="text-app-brand">Packaging:</strong> Manage stock of bottles, corks, and labels.</p>
+                            <p><strong class="text-app-brand">Cellar (The Vault):</strong> Your finished bottles live here.
+                                <ul class="list-disc pl-5 mt-1">
+                                    <li><strong>Drink:</strong> Click 'Drink' to remove a bottle from stock.</li>
+                                    <li><strong>Aging Manager:</strong> Click the status label to open the AI Aging Manager. Input your cellar temp and history to get a predicted "Peak Flavor Date".</li>
+                                </ul>
+                            </p>
+                            <p><strong class="text-app-brand">Financials:</strong> A realtime dashboard showing the total value of your inventory, active batches, and cellar.</p>
+                        </div>
+                    </details>
+
+                    <details class="group bg-app-tertiary p-4 rounded-lg open:ring-2 open:ring-app-brand/20">
+                        <summary class="font-bold text-app-header cursor-pointer flex justify-between items-center select-none">
+                            <span class="flex items-center gap-2">🛠️ Tools Suite</span>
+                            <svg class="w-5 h-5 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </summary>
+                        <div class="mt-3 text-sm text-app-secondary space-y-2 border-t border-app-brand/10 pt-2 leading-relaxed">
+                            <p><strong class="text-app-brand">Calculators:</strong> Built-in math for ABV, Hydrometer correction, Refractometer (Brix to FG), Dilution, and TOSNA nutrient schedules.</p>
+                            <p><strong class="text-app-brand">Label Forge:</strong> Design printable labels for your bottles.
+                                <ul class="list-disc pl-5 mt-1">
+                                    <li><strong>AI Art:</strong> Generate unique artwork based on your recipe name.</li>
+                                    <li><strong>Auto-Data:</strong> Pulls ABV, date, and ingredients directly from the batch history.</li>
+                                </ul>
+                            </p>
+                            <p><strong class="text-app-brand">Water Sommelier:</strong> Analyze your water profile. The AI will tell you if your tap/bottled water is suitable for your specific mead style.</p>
+                            <p><strong class="text-app-brand">Mead Medic:</strong> An AI Chatbot. Upload a photo of your brew or describe a problem (e.g., "It smells like eggs") to get a scientific diagnosis and fix.</p>
+                            <p><strong class="text-app-brand">Social Studio:</strong> Generate Instagram captions or Untappd descriptions based on your recipe, in different personas (e.g., Ryan Reynolds style).</p>
+                        </div>
+                    </details>
+
+                    <details class="group bg-app-tertiary p-4 rounded-lg open:ring-2 open:ring-app-brand/20">
+                        <summary class="font-bold text-app-header cursor-pointer flex justify-between items-center select-none">
+                            <span class="flex items-center gap-2">⚙️ System & AI</span>
+                            <svg class="w-5 h-5 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </summary>
+                        <div class="mt-3 text-sm text-app-secondary space-y-2 border-t border-app-brand/10 pt-2 leading-relaxed">
+                            <p><strong class="text-app-brand">AI Models:</strong> Switch between different Google Gemini models. Use "Flash" for speed/vision and "Pro" for complex reasoning.</p>
+                            <p><strong class="text-app-brand">Data Management:</strong> Export your entire history or inventory to a JSON file for backup. You can also clear data here if you want a fresh start.</p>
+                            <p><strong class="text-app-brand">Theme:</strong> Toggle between Light and Dark mode.</p>
+                        </div>
+                    </details>
+
+                </div>
+            </div>
         
         <p class="text-center text-sm text-app-secondary/60 mt-8">
             MEA(N)DERY - V2.1 Dual Engine - © 2025

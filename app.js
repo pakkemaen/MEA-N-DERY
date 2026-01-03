@@ -4334,14 +4334,19 @@ function initLabelForge() {
     populateLabelRecipeDropdown();
     loadUserLabelFormats(); 
 
-    // Live Preview Listeners (Tekst)
+    // Live Preview Listeners (Tekst invoer)
     ['labelTitle', 'labelSubtitle', 'labelAbv', 'labelFg', 'labelVol', 'labelDate', 'labelDescription', 'labelDetails'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', updateLabelPreviewText);
     });
-    document.getElementById('labelWarning')?.addEventListener('change', updateLabelPreviewText);
-    document.getElementById('labelShowDetails')?.addEventListener('change', () => {
-        const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
-        setLabelTheme(activeTheme);
+
+    // --- FIX: CHECKBOX LISTENERS TOEVOEGEN ---
+    // Zonder dit gebeurt er niets als je op de vinkjes klikt!
+    ['labelWarning', 'labelShowDetails', 'labelShowYeast', 'labelShowHoney', 'labelShowSulfites'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', () => {
+            // Forceer een volledige her-render van het thema
+            const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
+            setLabelTheme(activeTheme);
+        });
     });
     
     // Recept laden
@@ -4357,8 +4362,8 @@ function initLabelForge() {
     document.getElementById('ai-label-desc-btn')?.addEventListener('click', generateLabelDescription);
     
     // Label Manager Listeners
-    document.getElementById('labelPaper')?.addEventListener('change', updateLabelPreviewDimensions); // Als formaat wijzigt
-    document.getElementById('printLabelsBtn')?.addEventListener('click', printLabelsSheet); // Print
+    document.getElementById('labelPaper')?.addEventListener('change', updateLabelPreviewDimensions); 
+    document.getElementById('printLabelsBtn')?.addEventListener('click', printLabelsSheet); 
     
     // Custom Label Modal Listeners
     document.getElementById('lf-lookup-btn')?.addEventListener('click', autoDetectLabelFormat);
@@ -4593,10 +4598,10 @@ function loadLabelFromBrew(e) {
     updateLabelPreviewText();
 }
 
-// --- LABEL THEMA FUNCTIE (AANGEPAST VOOR PERFECTE UITLIJNING) ---
+// --- LABEL THEMA FUNCTIE (FIXED ALIGNMENT & CHECKBOXES) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
-    if (!container) return; // Stop als we niet op de label pagina zijn
+    if (!container) return; 
 
     // 1. DATA OPHALEN
     const title = document.getElementById('labelTitle').value || 'MEAD NAME';
@@ -4611,7 +4616,7 @@ function setLabelTheme(theme) {
     // Checkboxes
     const showWarning = document.getElementById('labelWarning')?.checked;
     const showDetails = document.getElementById('labelShowDetails')?.checked; 
-
+    
     // 2. AFBEELDING CHECK
     let imgSrc = window.currentLabelImageSrc || '';
     const imgElement = document.getElementById('label-img-display');
@@ -4627,19 +4632,19 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (UITLIJNING GEFIXED)
+    // THEMA 1: STANDAARD (PERFECT BOTTOM ALIGN)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
-        // 1. HAAL TUNING WAARDES OP
+        // Tuning waardes
         const titleSizeMax = document.getElementById('tuneTitleSize')?.value || 100;
         const titleX = document.getElementById('tuneTitleX')?.value || 0;
         const styleSize = document.getElementById('tuneStyleSize')?.value || 14;
         const styleGap = document.getElementById('tuneStyleGap')?.value || 5;
 
-        // Logo
+        // Logo Logic
         let logoHtml = '';
         if (hasImage) {
             logoHtml = `<img id="label-logo-img" src="${imgSrc}" class="w-32 h-32 object-contain object-center rounded-full border-4 border-white shadow-sm">`;
@@ -4647,16 +4652,23 @@ function setLabelTheme(theme) {
             logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-center opacity-90">`;
         }
 
-        // Info string opbouwen
+        // --- INFO STRING SAMENSTELLEN (YEAST/HONEY FIX) ---
         const showYeast = document.getElementById('labelShowYeast')?.checked;
         const showHoney = document.getElementById('labelShowHoney')?.checked;
-        const showDetails = document.getElementById('labelShowDetails')?.checked;
         const showSulfites = document.getElementById('labelShowSulfites')?.checked;
 
         let infoParts = [];
-        if (showYeast) infoParts.push(`Yeast: ${document.getElementById('displayLabelYeast').textContent}`);
-        if (showHoney) infoParts.push(`Honey: ${document.getElementById('displayLabelHoney').textContent}`);
-        if (showDetails) infoParts.push(details);
+        // We gebruiken .innerText omdat .textContent soms verborgen tekst pakt
+        if (showYeast) {
+            const y = document.getElementById('displayLabelYeast').innerText;
+            if(y && y !== '--') infoParts.push(`Yeast: ${y}`);
+        }
+        if (showHoney) {
+            const h = document.getElementById('displayLabelHoney').innerText;
+            if(h && h !== '--') infoParts.push(`Honey: ${h}`);
+        }
+        if (showDetails) infoParts.push(details); // Full ingredients list
+        
         const infoString = infoParts.join(' • ');
 
         // Peak Date Logic
@@ -4665,29 +4677,22 @@ function setLabelTheme(theme) {
         const selectedBrew = brews.find(b => b.id === selectEl.value);
 
         if (selectedBrew && selectedBrew.peakFlavorDate) {
-            try {
-                const pd = new Date(selectedBrew.peakFlavorDate);
-                peakDateVal = pd.toLocaleDateString('nl-NL'); 
-            } catch(e) { console.error(e); }
+            try { peakDateVal = new Date(selectedBrew.peakFlavorDate).toLocaleDateString('nl-NL'); } catch(e){}
         } else if (dateVal) {
             try { 
                 const d = new Date(dateVal); 
                 const abvNum = parseFloat(abv);
-                let monthsToAdd = 6;
-                if (!isNaN(abvNum)) {
-                    if (abvNum < 8) monthsToAdd = 3;
-                    else if (abvNum > 14) monthsToAdd = 12;
-                }
-                d.setMonth(d.getMonth() + monthsToAdd); 
+                let months = (abvNum < 8) ? 3 : (abvNum > 14 ? 12 : 6);
+                d.setMonth(d.getMonth() + months); 
                 peakDateVal = d.toLocaleDateString('nl-NL'); 
             } catch(e) {}
         }
 
-        // --- HIER ZIT DE FIX VOOR DE UITLIJNING ---
-        // Verandering 1: 'justify-between' verwijderd uit de parent div
-        // Verandering 2: 'mt-auto' zorgt dat het onderste blok naar de bodem wordt gedrukt
+        // --- DE UI ---
+        // AANPASSING 1: 'py-3' vervangen door 'pt-3 pb-1' om ruimte onderaan te minimaliseren
+        // AANPASSING 2: 'justify-between' WEGGEHAALD bij parent div
         container.innerHTML = `
-            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-3 px-3 flex flex-col text-right z-20 relative">
+            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-3 pb-1 px-3 flex flex-col text-right z-20 relative">
                 
                 <div class="flex flex-col gap-2 overflow-hidden">
                     <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-500 italic font-serif text-justify">
@@ -4704,6 +4709,7 @@ function setLabelTheme(theme) {
                         ${dateVal ? `<div class="text-gray-400">Bottled</div> <div class="text-black text-right"><span id="prev-date">${dateVal}</span></div>` : ''}
                         ${peakDateVal ? `<div class="text-gray-400">Peak</div> <div class="text-black text-right">${peakDateVal}</div>` : ''}
                     </div>
+                    
                     <div style="min-height: 8px;"> 
                         <p style="display: ${showSulfites ? 'block' : 'none'}" class="text-[5px] uppercase opacity-50 leading-tight">
                             Contains Sulfites
@@ -4713,26 +4719,20 @@ function setLabelTheme(theme) {
             </div>
 
             <div class="h-full w-[65%] relative p-2 overflow-hidden">
-                
-                <div id="text-group" class="absolute top-0 bottom-0 flex flex-row items-end" 
-                     style="left: ${titleX}px; padding-left: 2px;">
-                    
+                <div id="text-group" class="absolute top-0 bottom-0 flex flex-row items-end" style="left: ${titleX}px; padding-left: 2px;">
                     <div id="title-container" class="h-full flex flex-col justify-end">
                         <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-hidden" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
                     </div>
-
                     <div id="style-container" class="h-[50%] flex flex-col justify-end overflow-hidden" style="margin-left: ${styleGap}px;">
                          <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: ${styleSize}px;">
                             ${sub}
                         </p>
                     </div>
-
                 </div>
-
                 <div class="absolute -top-6 -right-6 z-10">
                     ${logoHtml}
                 </div>

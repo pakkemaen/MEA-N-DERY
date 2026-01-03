@@ -4339,14 +4339,16 @@ function initLabelForge() {
         document.getElementById(id)?.addEventListener('input', updateLabelPreviewText);
     });
 
-    // --- FIX: CHECKBOX LISTENERS TOEVOEGEN ---
-    // Zonder dit gebeurt er niets als je op de vinkjes klikt!
+    // --- FIX: CHECKBOX LISTENERS (Zodat ze reageren bij klikken) ---
     ['labelWarning', 'labelShowDetails', 'labelShowYeast', 'labelShowHoney', 'labelShowSulfites'].forEach(id => {
-        document.getElementById(id)?.addEventListener('change', () => {
-            // Forceer een volledige her-render van het thema
-            const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
-            setLabelTheme(activeTheme);
-        });
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', () => {
+                // Forceer een update van het thema
+                const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
+                setLabelTheme(activeTheme);
+            });
+        }
     });
     
     // Recept laden
@@ -4632,7 +4634,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (PERFECT BOTTOM ALIGN)
+    // THEMA 1: STANDAARD (MET UI FIXES)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -4652,30 +4654,29 @@ function setLabelTheme(theme) {
             logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-center opacity-90">`;
         }
 
-        // --- INFO STRING SAMENSTELLEN (YEAST/HONEY FIX) ---
+        // Info string
         const showYeast = document.getElementById('labelShowYeast')?.checked;
         const showHoney = document.getElementById('labelShowHoney')?.checked;
         const showSulfites = document.getElementById('labelShowSulfites')?.checked;
+        const showDetails = document.getElementById('labelShowDetails')?.checked; // Ook ophalen
 
         let infoParts = [];
-        // We gebruiken .innerText omdat .textContent soms verborgen tekst pakt
         if (showYeast) {
-            const y = document.getElementById('displayLabelYeast').innerText;
-            if(y && y !== '--') infoParts.push(`Yeast: ${y}`);
+            const y = document.getElementById('displayLabelYeast').textContent; 
+            if(y && y.trim() !== '--') infoParts.push(`Yeast: ${y.trim()}`);
         }
         if (showHoney) {
-            const h = document.getElementById('displayLabelHoney').innerText;
-            if(h && h !== '--') infoParts.push(`Honey: ${h}`);
+            const h = document.getElementById('displayLabelHoney').textContent;
+            if(h && h.trim() !== '--') infoParts.push(`Honey: ${h.trim()}`);
         }
-        if (showDetails) infoParts.push(details); // Full ingredients list
+        if (showDetails) infoParts.push(details); 
         
         const infoString = infoParts.join(' • ');
 
-        // Peak Date Logic
+        // Peak Date
         let peakDateVal = "";
         const selectEl = document.getElementById('labelRecipeSelect');
         const selectedBrew = brews.find(b => b.id === selectEl.value);
-
         if (selectedBrew && selectedBrew.peakFlavorDate) {
             try { peakDateVal = new Date(selectedBrew.peakFlavorDate).toLocaleDateString('nl-NL'); } catch(e){}
         } else if (dateVal) {
@@ -4688,9 +4689,10 @@ function setLabelTheme(theme) {
             } catch(e) {}
         }
 
-        // --- DE UI ---
-        // AANPASSING 1: 'py-3' vervangen door 'pt-3 pb-1' om ruimte onderaan te minimaliseren
-        // AANPASSING 2: 'justify-between' WEGGEHAALD bij parent div
+        // --- DE UI HTML (AANGEPAST) ---
+        // 1. Linker kolom: 'pt-3 pb-1' (weinig ruimte onderaan) en GEEN 'justify-between'.
+        // 2. Sulfites: Direct in de HTML met een check, geen aparte div die ruimte inneemt als hij leeg is.
+        
         container.innerHTML = `
             <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-3 pb-1 px-3 flex flex-col text-right z-20 relative">
                 
@@ -4710,11 +4712,10 @@ function setLabelTheme(theme) {
                         ${peakDateVal ? `<div class="text-gray-400">Peak</div> <div class="text-black text-right">${peakDateVal}</div>` : ''}
                     </div>
                     
-                    <div style="min-height: 8px;"> 
-                        <p style="display: ${showSulfites ? 'block' : 'none'}" class="text-[5px] uppercase opacity-50 leading-tight">
-                            Contains Sulfites
-                        </p>
-                    </div>
+                    ${showSulfites ? `
+                    <p class="text-[5px] uppercase opacity-50 leading-tight">
+                        Contains Sulfites
+                    </p>` : ''}
                 </div>
             </div>
 

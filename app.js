@@ -4543,7 +4543,7 @@ function updateLabelPreviewText() {
     }
 }
 
-// Data uit recept laden
+// Data uit recept laden (NU MET QUOTE EXTRACTIE)
 function loadLabelFromBrew(e) {
     const brewId = e.target.value;
     if (!brewId) return;
@@ -4556,32 +4556,40 @@ function loadLabelFromBrew(e) {
     if (brew.recipeMarkdown.toLowerCase().includes('melomel')) style = "Melomel (Fruit Mead)";
     if (brew.recipeMarkdown.toLowerCase().includes('bochet')) style = "Bochet (Caramelized)";
     if (brew.recipeMarkdown.toLowerCase().includes('metheglin')) style = "Metheglin (Spiced)";
+    if (brew.recipeMarkdown.toLowerCase().includes('braggot')) style = "Braggot (Malt & Honey)";
     document.getElementById('labelSubtitle').value = style;
 
     // ABV, FG laden...
     document.getElementById('labelAbv').value = brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '';
     document.getElementById('labelFg').value = brew.logData?.actualFG || brew.logData?.targetFG || '';
-    
-    // 1. VOLUME FIX: Standaard naar 330ml (of wat er in de log staat), niet 5000ml
-    document.getElementById('labelVol').value = '330'; 
-    
-    // Datum
+    document.getElementById('labelVol').value = '330'; // Standaard klein flesje
     document.getElementById('labelDate').value = brew.logData?.brewDate || new Date().toISOString().split('T')[0];
 
-    // 3. YEAST FIX: Betere detectie
+    // --- 1. SLIMME QUOTE EXTRACTIE ---
+    // We zoeken naar regels die beginnen met '>' (Markdown quotes)
+    // Of we zoeken naar tekst tussen aanhalingstekens in de eerste paar regels.
+    let foundQuote = "";
+    
+    // Probeer Markdown blockquote
+    const quoteMatch = brew.recipeMarkdown.match(/^>\s*(["']?)(.*?)\1\s*$/m);
+    
+    if (quoteMatch && quoteMatch[2]) {
+        foundQuote = quoteMatch[2].trim();
+    } else {
+        // Fallback: Als er geen blockquote is, pakken we de eerste zin die "logisch" klinkt als beschrijving
+        // (Dit is optioneel, maar handig voor oude recepten)
+        foundQuote = `A handcrafted ${style.toLowerCase()}, brewed on ${new Date().getFullYear()}.`;
+    }
+
+    // Zet de quote in het veld
+    document.getElementById('labelDescription').value = foundQuote;
+
+    // --- 2. YEAST & HONEY DETECTIE ---
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
     
-    // Zoek Gist in JSON
-    let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist') || i.name.toLowerCase().includes('lalvin') || i.name.toLowerCase().includes('wyeast') || i.name.toLowerCase().includes('mangrove'));
-    let yeastName = 'Unknown';
-
-    if (yeastItem) {
-        yeastName = yeastItem.name.replace(/yeast/gi, '').trim();
-    } else {
-        // Fallback: Zoek in de tekst als JSON faalt
-        const match = brew.recipeMarkdown.match(/(?:Yeast|Gist):\s*([^\n\r]+)/i);
-        if (match && match[1]) yeastName = match[1].trim();
-    }
+    // Zoek Gist
+    let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist') || i.name.toLowerCase().includes('lalvin') || i.name.toLowerCase().includes('safale') || i.name.toLowerCase().includes('wyeast') || i.name.toLowerCase().includes('mangrove'));
+    let yeastName = yeastItem ? yeastItem.name.replace(/yeast|gist/gi, '').trim() : 'Unknown';
     document.getElementById('displayLabelYeast').textContent = yeastName;
 
     // Zoek Honing
@@ -4589,11 +4597,10 @@ function loadLabelFromBrew(e) {
     const honeyName = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
     document.getElementById('displayLabelHoney').textContent = honeyName;
 
-    // Zet details
+    // Details & Sulfiet
     const fullList = ings.map(i => i.name).join(' • ');
     document.getElementById('labelDetails').value = fullList;
 
-    // Auto-detect sulfiet
     const needsWarning = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
     document.getElementById('labelShowSulfites').checked = needsWarning;
 
@@ -5014,16 +5021,31 @@ async function generateLabelArt() {
     }
 }
 
+// AI Label Schrijver (Slimme Versie)
 async function generateLabelDescription() {
     const title = document.getElementById('labelTitle').value;
     const style = document.getElementById('labelSubtitle').value;
+    const ingredients = document.getElementById('labelDetails').value; // We geven nu de ingrediënten mee!
     
     if (!title) return showToast("Enter a title first.", "error");
     
     const btn = document.getElementById('ai-label-desc-btn');
+    const originalText = btn.textContent;
     btn.textContent = "Writing...";
+    btn.disabled = true;
     
-    const prompt = `Write a short, poetic "back-of-bottle" description (max 25 words) for a Mead called "${title}". Style: ${style}. Make it sound enticing and handcrafted.`;
+    // De nieuwe prompt: We vragen specifiek om de "Ryan Reynolds / Cynical Branding" stijl
+    const prompt = `Write a short, witty, and slightly cynical "back-of-bottle" description (max 20 words) for a Mead called "${title}".
+    
+    **CONTEXT:**
+    - Style: ${style}
+    - Ingredients: ${ingredients}
+    
+    **TONE:** - Don't be boring or overly romantic. 
+    - Be punchy, modern, perhaps a bit self-deprecating or dark humor (like "Liquid decay" or "Yeast worked hard so you don't have to").
+    - Focus on the specific ingredients (e.g. if it has chili, mention the burn).
+    
+    Output ONLY the text. No quotes.`;
     
     try {
         const text = await performApiCall(prompt);
@@ -5032,7 +5054,8 @@ async function generateLabelDescription() {
     } catch (e) {
         showToast("AI Writer failed.", "error");
     } finally {
-        btn.textContent = "✨ Write for me";
+        btn.textContent = originalText;
+        btn.disabled = false;
     }
 }
 

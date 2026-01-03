@@ -4593,7 +4593,7 @@ function loadLabelFromBrew(e) {
     updateLabelPreviewText();
 }
 
-// --- LABEL THEMA FUNCTIE ---
+// --- LABEL THEMA FUNCTIE (AANGEPAST VOOR PERFECTE UITLIJNING) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; // Stop als we niet op de label pagina zijn
@@ -4627,7 +4627,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (Final Fixes: Date, Vol, Sulfites, Alignment)
+    // THEMA 1: STANDAARD (UITLIJNING GEFIXED)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -4659,40 +4659,35 @@ function setLabelTheme(theme) {
         if (showDetails) infoParts.push(details);
         const infoString = infoParts.join(' • ');
 
-        // --- 4. PEAK DATE LOGIC (SLIMME VERSIE V3.0) ---
-        // We proberen eerst de 'echte' berekende datum uit de database te halen
-        let peakDateVal = "Unknown";
-        
-        // Haal het geselecteerde brew object op
+        // Peak Date Logic
+        let peakDateVal = "";
         const selectEl = document.getElementById('labelRecipeSelect');
         const selectedBrew = brews.find(b => b.id === selectEl.value);
 
         if (selectedBrew && selectedBrew.peakFlavorDate) {
-            // SCENARIO 1: DE WAARHEID (Datum opgeslagen tijdens bottelen)
             try {
                 const pd = new Date(selectedBrew.peakFlavorDate);
-                peakDateVal = pd.toLocaleDateString('nl-NL'); // Of 'en-GB' als je dat liever hebt
+                peakDateVal = pd.toLocaleDateString('nl-NL'); 
             } catch(e) { console.error(e); }
         } else if (dateVal) {
-            // SCENARIO 2: SCHATTING (Nog niet gebotteld, bereken op basis van ABV)
             try { 
                 const d = new Date(dateVal); 
                 const abvNum = parseFloat(abv);
-                
-                // Logic: Hydromel (<8%) = 3 mnd, Standaard = 6 mnd, Zwaar (>14%) = 12 mnd
                 let monthsToAdd = 6;
                 if (!isNaN(abvNum)) {
                     if (abvNum < 8) monthsToAdd = 3;
                     else if (abvNum > 14) monthsToAdd = 12;
                 }
-                
                 d.setMonth(d.getMonth() + monthsToAdd); 
                 peakDateVal = d.toLocaleDateString('nl-NL'); 
             } catch(e) {}
         }
 
+        // --- HIER ZIT DE FIX VOOR DE UITLIJNING ---
+        // Verandering 1: 'justify-between' verwijderd uit de parent div
+        // Verandering 2: 'mt-auto' zorgt dat het onderste blok naar de bodem wordt gedrukt
         container.innerHTML = `
-            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-3 px-3 flex flex-col justify-between text-right z-20 relative">
+            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-3 px-3 flex flex-col text-right z-20 relative">
                 
                 <div class="flex flex-col gap-2 overflow-hidden">
                     <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-500 italic font-serif text-justify">
@@ -4749,7 +4744,7 @@ function setLabelTheme(theme) {
     }
 
     // =================================================================
-    // THEMA 2: SPECIAL (Foto Achtergrond, Wit Logo)
+    // THEMA 2: SPECIAL (Ongewijzigd)
     // =================================================================
     else if (theme === 'special') {
         container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;

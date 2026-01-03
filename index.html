@@ -712,25 +712,30 @@
                     </div>
                 </div>
                 <div>
-                    <div class="flex flex-wrap justify-between items-end mb-2 gap-2">
+                    <div class="flex justify-between items-end mb-2">
     <label class="block text-xs font-bold uppercase text-app-secondary">Back Label Story</label>
     
-    <div class="flex items-center gap-1">
-        <select id="label-persona-select" class="text-[10px] p-1.5 rounded border border-app-brand/20 bg-app-primary text-app-header font-bold uppercase focus:ring-1 focus:ring-app-brand">
-            <option value="Witty">Cynical / Witty (Default)</option>
-            <option value="Ryan Reynolds">Ryan Reynolds (Sarcastic)</option>
-            <option value="The Sommelier">The Sommelier (Elegant)</option>
-            <option value="Dry British">Dry British (Understated)</option>
-            <option value="The Viking">The Viking (Bold/Loud)</option>
-        </select>
+    <div class="flex items-center gap-2">
+        <div class="relative group">
+            <select id="label-persona-select" class="appearance-none bg-app-tertiary hover:bg-white transition-colors border border-app-brand/20 text-app-header text-[10px] font-bold uppercase rounded-lg py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-purple-500/50 cursor-pointer shadow-sm">
+                <option value="Witty">✨ Witty (Default)</option>
+                <option value="Ryan Reynolds">🎬 Ryan Reynolds</option>
+                <option value="The Sommelier">🍷 The Sommelier</option>
+                <option value="Dry British">🇬🇧 Dry British</option>
+                <option value="The Viking">🪓 The Viking</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-app-secondary group-hover:text-purple-600 transition-colors">
+                <svg class="h-3 w-3 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+            </div>
+        </div>
 
-        <button id="ai-label-desc-btn" class="text-[10px] bg-purple-100 text-purple-700 px-2 py-1.5 rounded border border-purple-200 hover:bg-purple-200 transition-colors font-bold uppercase flex items-center gap-1">
+        <button id="ai-label-desc-btn" class="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold uppercase py-2 px-3 rounded-lg shadow-sm transition-all active:scale-95">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
             Write
         </button>
     </div>
 </div>
-<textarea id="labelDescription" rows="3" class="w-full p-2 rounded bg-app-tertiary border-app text-app-header text-xs placeholder-gray-400 focus:ring-1 focus:ring-app-brand mb-4" placeholder="e.g. A rich, dark bochet with notes of caramel..."></textarea>
+<textarea id="labelDescription" rows="3" class="w-full p-3 rounded-lg bg-app-tertiary border border-app-brand/10 text-app-header text-sm placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all shadow-inner mb-6" placeholder="e.g. A rich, dark bochet with notes of caramel..."></textarea>
                 </div>
 
                 <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">

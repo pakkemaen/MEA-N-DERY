@@ -836,20 +836,22 @@
                 
                 <div id="label-content" class="relative w-full h-full bg-white overflow-hidden flex font-sans">
     
-    <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-3 pb-2 px-3 flex flex-col text-right z-20 relative">
+    <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-4 pb-2 px-3 flex flex-col text-right z-20 relative">
         
-        <div class="flex flex-col gap-2 overflow-hidden mb-2">
-            <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-500 italic font-serif text-justify">
+        <div class="flex flex-col gap-1 overflow-hidden">
+            <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">
                 </p>
-            <p id="prev-details" class="hidden text-[5px] font-bold uppercase tracking-wider text-gray-400 leading-tight border-t border-gray-200 pt-1">
+            <p id="prev-details" class="hidden text-[4px] text-gray-400 leading-tight text-justify mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">
             </p>
         </div>
 
-        <div id="label-specs-container" class="my-auto py-2 border-t border-b border-gray-200 space-y-1 hidden">
-            </div>
-        
-        <div class="text-[#8F8C79] mt-auto">
-            <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider border-t-2 border-gray-200 pt-2 mb-1">
+        <div class="flex-grow"></div>
+
+        <div class="text-[#8F8C79]">
+            
+            <div id="label-specs-container"></div>
+
+            <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider">
                 <div class="text-gray-400">ABV</div> 
                 <div class="text-black text-right"><span id="prev-abv">12</span>%</div>
                 
@@ -866,32 +868,27 @@
                 <div class="text-black text-right"><span id="prev-peak">--</span></div>
             </div>
             
-            <p id="prev-warning" class="hidden text-[5px] uppercase opacity-50 leading-tight">
+            <p id="prev-warning" class="hidden text-[4px] uppercase opacity-40 leading-tight mt-1">
                 Contains Sulfites
             </p>
         </div>
     </div>
 
     <div class="h-full w-[65%] relative p-2 overflow-hidden">
-        
         <div id="text-group" class="absolute top-0 bottom-0 flex flex-row items-end" style="left: 0px; padding-left: 2px;">
-            
             <div id="title-container" class="h-full flex flex-col justify-end">
                 <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-hidden" 
                     style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: 100px;">
                     MEAD NAME
                 </h1>
             </div>
-
             <div id="style-container" class="h-[50%] flex flex-col justify-end overflow-hidden" style="margin-left: 5px;">
                  <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" 
                     style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: 14px;">
                     STYLE DESCRIPTION
                 </p>
             </div>
-
         </div>
-
         <div class="absolute -top-6 -right-6 z-10">
             <img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-center opacity-90">
             <img id="label-img-display" src="" class="hidden w-full h-full object-cover">

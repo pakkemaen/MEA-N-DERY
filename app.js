@@ -4600,7 +4600,7 @@ function loadLabelFromBrew(e) {
     updateLabelPreviewText();
 }
 
-// --- LABEL THEMA FUNCTIE (DESIGN UPDATE: GIST & HONING MIDDEN) ---
+// --- LABEL THEMA FUNCTIE (FINAL DESIGN: STORY VS SPECS) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; 
@@ -4612,7 +4612,7 @@ function setLabelTheme(theme) {
     const fg = document.getElementById('labelFg')?.value || '';
     const vol = document.getElementById('labelVol').value || '750';
     const desc = document.getElementById('labelDescription').value || '';
-    const details = document.getElementById('labelDetails').value || ''; // Full ingredients
+    const details = document.getElementById('labelDetails').value || ''; 
     const dateVal = document.getElementById('labelDate')?.value || new Date().toLocaleDateString();
     
     // Checkboxes
@@ -4634,7 +4634,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (MET NIEUWE INDELING)
+    // THEMA 1: STANDAARD (STORY TOP / SPECS BOTTOM)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -4654,7 +4654,7 @@ function setLabelTheme(theme) {
             logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-center opacity-90">`;
         }
 
-        // --- SPECIFIEKE DATA OPHALEN ---
+        // --- DATA OPHALEN ---
         const showYeast = document.getElementById('labelShowYeast')?.checked;
         const showHoney = document.getElementById('labelShowHoney')?.checked;
         const showSulfites = document.getElementById('labelShowSulfites')?.checked;
@@ -4687,40 +4687,38 @@ function setLabelTheme(theme) {
             } catch(e) {}
         }
 
-        // --- DE NIEUWE UI ---
-        // We verdelen de linkerkolom in 3 delen:
-        // 1. Top: Beschrijving
-        // 2. Midden: Ingrediënten (Nieuw!)
-        // 3. Bodem: Technische Data
-        
+        // --- DE UI LAYOUT ---
         container.innerHTML = `
-            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-3 pb-2 px-3 flex flex-col text-right z-20 relative">
+            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-4 pb-2 px-3 flex flex-col text-right z-20 relative">
                 
-                <div class="flex flex-col gap-2 overflow-hidden mb-2">
-                    <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-500 italic font-serif text-justify">
+                <div class="flex flex-col gap-1 overflow-hidden">
+                    <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">
                         ${desc}
                     </p>
-                    ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-justify border-t border-gray-100 pt-1">${details}</p>` : ''}
+                    ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-justify mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">${details}</p>` : ''}
                 </div>
 
-                ${(yeastText || honeyText) ? `
-                <div class="my-auto py-2 border-t border-b border-gray-200 space-y-1">
-                    ${honeyText ? `
-                    <div class="flex justify-between items-baseline text-[5px]">
-                        <span class="text-gray-400 font-bold uppercase tracking-wider">Honey</span>
-                        <span class="text-black font-bold truncate max-w-[60%]">${honeyText}</span>
-                    </div>` : ''}
+                <div class="flex-grow"></div>
+
+                <div class="text-[#8F8C79]">
                     
-                    ${yeastText ? `
-                    <div class="flex justify-between items-baseline text-[5px]">
-                        <span class="text-gray-400 font-bold uppercase tracking-wider">Yeast</span>
-                        <span class="text-black font-bold truncate max-w-[60%]">${yeastText}</span>
-                    </div>` : ''}
-                </div>
-                ` : ''}
-                
-                <div class="text-[#8F8C79] mt-auto">
-                    <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider border-t-2 border-gray-200 pt-2 mb-1">
+                    ${(yeastText || honeyText) ? `
+                    <div class="py-1 mb-1 border-b border-gray-300 space-y-0.5">
+                        ${honeyText ? `
+                        <div class="flex flex-col">
+                            <span class="text-[4px] text-gray-400 font-bold uppercase tracking-widest">Honey Source</span>
+                            <span class="text-[5px] text-black font-bold uppercase truncate">${honeyText}</span>
+                        </div>` : ''}
+                        
+                        ${yeastText ? `
+                        <div class="flex flex-col mt-1">
+                            <span class="text-[4px] text-gray-400 font-bold uppercase tracking-widest">Yeast Strain</span>
+                            <span class="text-[5px] text-black font-bold uppercase truncate">${yeastText}</span>
+                        </div>` : ''}
+                    </div>
+                    ` : ''}
+
+                    <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider">
                         ${abv ? `<div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>` : ''}
                         ${fg ? `<div class="text-gray-400">FG</div> <div class="text-black text-right"><span id="prev-fg">${fg}</span></div>` : ''}
                         ${vol ? `<div class="text-gray-400">Vol</div> <div class="text-black text-right"><span id="prev-vol">${vol}</span>ml</div>` : ''}
@@ -4729,7 +4727,7 @@ function setLabelTheme(theme) {
                     </div>
                     
                     ${showSulfites ? `
-                    <p class="text-[5px] uppercase opacity-50 leading-tight">
+                    <p class="text-[4px] uppercase opacity-40 leading-tight mt-1">
                         Contains Sulfites
                     </p>` : ''}
                 </div>

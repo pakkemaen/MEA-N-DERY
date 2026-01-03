@@ -5021,40 +5021,62 @@ async function generateLabelArt() {
     }
 }
 
-// AI Label Schrijver (Slimme Versie)
+// AI Label Schrijver (Met Persona Selectie)
 async function generateLabelDescription() {
     const title = document.getElementById('labelTitle').value;
     const style = document.getElementById('labelSubtitle').value;
-    const ingredients = document.getElementById('labelDetails').value; // We geven nu de ingrediënten mee!
+    const ingredients = document.getElementById('labelDetails').value; // Ingrediënten meenemen
+    const persona = document.getElementById('label-persona-select').value; // De nieuwe keuze
     
     if (!title) return showToast("Enter a title first.", "error");
     
     const btn = document.getElementById('ai-label-desc-btn');
-    const originalText = btn.textContent;
-    btn.textContent = "Writing...";
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "Thinking...";
     btn.disabled = true;
     
-    // De nieuwe prompt: We vragen specifiek om de "Ryan Reynolds / Cynical Branding" stijl
-    const prompt = `Write a short, witty, and slightly cynical "back-of-bottle" description (max 20 words) for a Mead called "${title}".
+    // --- PERSONA DEFINITIES (Gelijk aan Social Media Tab) ---
+    let toneInstruction = "";
+    
+    switch (persona) {
+        case 'Ryan Reynolds':
+            toneInstruction = `**TONE: RYAN REYNOLDS.** High energy, witty, sarcastic, meta-humor. Break the fourth wall. Make fun of the brewing effort but praise the result.`;
+            break;
+        case 'The Sommelier':
+            toneInstruction = `**TONE: THE SOMMELIER.** Elegant, sophisticated, sensory-focused. Use words like "bouquet", "finish", "notes of", "structure". No slang. Premium feel.`;
+            break;
+        case 'Dry British':
+            toneInstruction = `**TONE: DRY BRITISH.** Understated, deadpan, cynical but charming. Use words like "splendid", "rather nice", "not half bad".`;
+            break;
+        case 'The Viking':
+            toneInstruction = `**TONE: THE VIKING.** Bold, loud, archaic, enthusiastic. Talk about feasts, gods, glory, and blood (metaphorically).`;
+            break;
+        default: // Witty / Default
+            toneInstruction = `**TONE: MODERN CRAFT.** Punchy, witty, slightly cynical/dark humor (e.g. "Liquid decay"). Modern branding style. Short sentences.`;
+            break;
+    }
+
+    // De Prompt
+    const prompt = `Write a short "back-of-bottle" description (max 25 words) for a Mead called "${title}".
     
     **CONTEXT:**
     - Style: ${style}
-    - Ingredients: ${ingredients}
+    - Key Ingredients: ${ingredients}
     
-    **TONE:** - Don't be boring or overly romantic. 
-    - Be punchy, modern, perhaps a bit self-deprecating or dark humor (like "Liquid decay" or "Yeast worked hard so you don't have to").
-    - Focus on the specific ingredients (e.g. if it has chili, mention the burn).
+    ${toneInstruction}
     
+    **CONSTRAINT:** Max 25 words. Make it fit on a small label.
     Output ONLY the text. No quotes.`;
     
     try {
         const text = await performApiCall(prompt);
-        document.getElementById('labelDescription').value = text.replace(/"/g, '').trim();
+        // Schoonmaakactie (soms geeft AI quotes mee)
+        document.getElementById('labelDescription').value = text.replace(/^["']|["']$/g, '').trim();
         updateLabelPreviewText();
     } catch (e) {
         showToast("AI Writer failed.", "error");
     } finally {
-        btn.textContent = originalText;
+        btn.innerHTML = originalText;
         btn.disabled = false;
     }
 }

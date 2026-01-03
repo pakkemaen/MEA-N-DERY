@@ -712,11 +712,25 @@
                     </div>
                 </div>
                 <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="text-xs">Back Label Story</label>
-                        <button id="ai-label-desc-btn" class="text-[10px] text-blue-500 hover:underline">✨ Write for me</button>
-                    </div>
-                    <textarea id="labelDescription" rows="3" class="w-full p-2 border rounded bg-app-tertiary text-xs" placeholder="A dry traditional mead..."></textarea>
+                    <div class="flex flex-wrap justify-between items-end mb-2 gap-2">
+    <label class="block text-xs font-bold uppercase text-app-secondary">Back Label Story</label>
+    
+    <div class="flex items-center gap-1">
+        <select id="label-persona-select" class="text-[10px] p-1.5 rounded border border-app-brand/20 bg-app-primary text-app-header font-bold uppercase focus:ring-1 focus:ring-app-brand">
+            <option value="Witty">Cynical / Witty (Default)</option>
+            <option value="Ryan Reynolds">Ryan Reynolds (Sarcastic)</option>
+            <option value="The Sommelier">The Sommelier (Elegant)</option>
+            <option value="Dry British">Dry British (Understated)</option>
+            <option value="The Viking">The Viking (Bold/Loud)</option>
+        </select>
+
+        <button id="ai-label-desc-btn" class="text-[10px] bg-purple-100 text-purple-700 px-2 py-1.5 rounded border border-purple-200 hover:bg-purple-200 transition-colors font-bold uppercase flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            Write
+        </button>
+    </div>
+</div>
+<textarea id="labelDescription" rows="3" class="w-full p-2 rounded bg-app-tertiary border-app text-app-header text-xs placeholder-gray-400 focus:ring-1 focus:ring-app-brand mb-4" placeholder="e.g. A rich, dark bochet with notes of caramel..."></textarea>
                 </div>
 
                 <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">

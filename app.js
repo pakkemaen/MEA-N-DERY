@@ -4600,7 +4600,7 @@ function loadLabelFromBrew(e) {
     updateLabelPreviewText();
 }
 
-// --- LABEL THEMA FUNCTIE (FIXED ALIGNMENT & CHECKBOXES) ---
+// --- LABEL THEMA FUNCTIE (DESIGN UPDATE: GIST & HONING MIDDEN) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; 
@@ -4612,7 +4612,7 @@ function setLabelTheme(theme) {
     const fg = document.getElementById('labelFg')?.value || '';
     const vol = document.getElementById('labelVol').value || '750';
     const desc = document.getElementById('labelDescription').value || '';
-    const details = document.getElementById('labelDetails').value || '';
+    const details = document.getElementById('labelDetails').value || ''; // Full ingredients
     const dateVal = document.getElementById('labelDate')?.value || new Date().toLocaleDateString();
     
     // Checkboxes
@@ -4627,26 +4627,26 @@ function setLabelTheme(theme) {
     }
     const hasImage = imgSrc && imgSrc.length > 10;
 
-    // 3. KNOPPEN STATUS UPDATEN
+    // 3. KNOPPEN STATUS
     document.querySelectorAll('.label-theme-btn').forEach(b => {
         b.classList.remove('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
         if(b.dataset.theme === theme) b.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (MET UI FIXES)
+    // THEMA 1: STANDAARD (MET NIEUWE INDELING)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
-        // Tuning waardes
+        // Tuning
         const titleSizeMax = document.getElementById('tuneTitleSize')?.value || 100;
         const titleX = document.getElementById('tuneTitleX')?.value || 0;
         const styleSize = document.getElementById('tuneStyleSize')?.value || 14;
         const styleGap = document.getElementById('tuneStyleGap')?.value || 5;
 
-        // Logo Logic
+        // Logo
         let logoHtml = '';
         if (hasImage) {
             logoHtml = `<img id="label-logo-img" src="${imgSrc}" class="w-32 h-32 object-contain object-center rounded-full border-4 border-white shadow-sm">`;
@@ -4654,24 +4654,22 @@ function setLabelTheme(theme) {
             logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-center opacity-90">`;
         }
 
-        // Info string
+        // --- SPECIFIEKE DATA OPHALEN ---
         const showYeast = document.getElementById('labelShowYeast')?.checked;
         const showHoney = document.getElementById('labelShowHoney')?.checked;
         const showSulfites = document.getElementById('labelShowSulfites')?.checked;
-        const showDetails = document.getElementById('labelShowDetails')?.checked; // Ook ophalen
 
-        let infoParts = [];
+        let yeastText = "";
+        let honeyText = "";
+
         if (showYeast) {
             const y = document.getElementById('displayLabelYeast').textContent; 
-            if(y && y.trim() !== '--') infoParts.push(`Yeast: ${y.trim()}`);
+            if(y && y.trim() !== '--') yeastText = y.trim();
         }
         if (showHoney) {
             const h = document.getElementById('displayLabelHoney').textContent;
-            if(h && h.trim() !== '--') infoParts.push(`Honey: ${h.trim()}`);
+            if(h && h.trim() !== '--') honeyText = h.trim();
         }
-        if (showDetails) infoParts.push(details); 
-        
-        const infoString = infoParts.join(' • ');
 
         // Peak Date
         let peakDateVal = "";
@@ -4689,19 +4687,37 @@ function setLabelTheme(theme) {
             } catch(e) {}
         }
 
-        // --- DE UI HTML (AANGEPAST) ---
-        // 1. Linker kolom: 'pt-3 pb-1' (weinig ruimte onderaan) en GEEN 'justify-between'.
-        // 2. Sulfites: Direct in de HTML met een check, geen aparte div die ruimte inneemt als hij leeg is.
+        // --- DE NIEUWE UI ---
+        // We verdelen de linkerkolom in 3 delen:
+        // 1. Top: Beschrijving
+        // 2. Midden: Ingrediënten (Nieuw!)
+        // 3. Bodem: Technische Data
         
         container.innerHTML = `
-            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-3 pb-1 px-3 flex flex-col text-right z-20 relative">
+            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-3 pb-2 px-3 flex flex-col text-right z-20 relative">
                 
-                <div class="flex flex-col gap-2 overflow-hidden">
+                <div class="flex flex-col gap-2 overflow-hidden mb-2">
                     <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-500 italic font-serif text-justify">
                         ${desc}
                     </p>
-                    ${infoString ? `<p class="text-[5px] font-bold uppercase tracking-wider text-gray-400 leading-tight border-t border-gray-200 pt-1">${infoString}</p>` : ''}
+                    ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-justify border-t border-gray-100 pt-1">${details}</p>` : ''}
                 </div>
+
+                ${(yeastText || honeyText) ? `
+                <div class="my-auto py-2 border-t border-b border-gray-200 space-y-1">
+                    ${honeyText ? `
+                    <div class="flex justify-between items-baseline text-[5px]">
+                        <span class="text-gray-400 font-bold uppercase tracking-wider">Honey</span>
+                        <span class="text-black font-bold truncate max-w-[60%]">${honeyText}</span>
+                    </div>` : ''}
+                    
+                    ${yeastText ? `
+                    <div class="flex justify-between items-baseline text-[5px]">
+                        <span class="text-gray-400 font-bold uppercase tracking-wider">Yeast</span>
+                        <span class="text-black font-bold truncate max-w-[60%]">${yeastText}</span>
+                    </div>` : ''}
+                </div>
+                ` : ''}
                 
                 <div class="text-[#8F8C79] mt-auto">
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider border-t-2 border-gray-200 pt-2 mb-1">

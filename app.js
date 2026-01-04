@@ -4330,48 +4330,48 @@ let userLabelFormats = {}; // Wordt gevuld vanuit Firestore
 
 // 2. INITIALISATIE
 function initLabelForge() {
-    // Data laden
     populateLabelRecipeDropdown();
     loadUserLabelFormats(); 
 
-    // Live Preview Listeners (Tekst invoer)
-    ['labelTitle', 'labelSubtitle', 'labelAbv', 'labelFg', 'labelVol', 'labelDate', 'labelDescription', 'labelDetails'].forEach(id => {
+    // Live Preview Listeners (Tekst)
+    ['labelTitle', 'labelSubtitle', 'labelAbv', 'labelFg', 'labelVol', 'labelDate', 'labelDescription', 'labelDetails', 'labelAllergens'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', updateLabelPreviewText);
     });
 
-    // --- FIX: CHECKBOX LISTENERS (Zodat ze reageren bij klikken) ---
-    ['labelWarning', 'labelShowDetails', 'labelShowYeast', 'labelShowHoney', 'labelShowSulfites'].forEach(id => {
+    // Checkbox & Select Listeners
+    ['labelShowDetails', 'labelShowYeast', 'labelShowHoney', 'label-persona-select'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('change', () => {
-                // Forceer een update van het thema
+        if (el) el.addEventListener('change', () => {
+            const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
+            setLabelTheme(activeTheme);
+        });
+    });
+    
+    // Tuning Listeners (Inclusief de nieuwe specs slider)
+    ['tuneTitleSize', 'tuneTitleX', 'tuneStyleSize', 'tuneStyleGap', 'tuneLogoGap', 'tuneSpecsSize'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) {
+            el.addEventListener('input', (e) => {
+                // Update getalletjes display (als die bestaat)
+                const disp = document.getElementById(id.replace('tune', 'disp-').replace(/([A-Z])/g, '-$1').toLowerCase());
+                if(disp) disp.textContent = e.target.value + 'px';
+                
+                // Update label
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
                 setLabelTheme(activeTheme);
             });
         }
     });
-    
-    // Recept laden
-    document.getElementById('labelRecipeSelect')?.addEventListener('change', loadLabelFromBrew);
-    
-    // Thema Knoppen
-    document.querySelectorAll('.label-theme-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => setLabelTheme(e.target.dataset.theme));
-    });
 
-    // AI Knoppen
+    // Overige Listeners
+    document.getElementById('labelRecipeSelect')?.addEventListener('change', loadLabelFromBrew);
+    document.querySelectorAll('.label-theme-btn').forEach(btn => btn.addEventListener('click', (e) => setLabelTheme(e.target.dataset.theme)));
     document.getElementById('ai-label-art-btn')?.addEventListener('click', generateLabelArt);
     document.getElementById('ai-label-desc-btn')?.addEventListener('click', generateLabelDescription);
-    
-    // Label Manager Listeners
     document.getElementById('labelPaper')?.addEventListener('change', updateLabelPreviewDimensions); 
     document.getElementById('printLabelsBtn')?.addEventListener('click', printLabelsSheet); 
-    
-    // Custom Label Modal Listeners
     document.getElementById('lf-lookup-btn')?.addEventListener('click', autoDetectLabelFormat);
     document.getElementById('label-format-form')?.addEventListener('submit', saveCustomLabelFormat);
-    
-    // Logo Upload
     document.getElementById('logoUpload')?.addEventListener('change', handleLogoUpload);
 }
 
@@ -4598,7 +4598,7 @@ function loadLabelFromBrew(e) {
     setLabelTheme(activeTheme);
 }
 
-// --- LABEL THEMA FUNCTIE (DESIGN UPDATE: SULFIET BIJ SPECS) ---
+// --- LABEL THEMA FUNCTIE (ALLERGENEN UPDATE & CLEANER SPECS) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; 
@@ -4613,9 +4613,9 @@ function setLabelTheme(theme) {
     const details = document.getElementById('labelDetails').value || ''; 
     const dateVal = document.getElementById('labelDate')?.value || new Date().toLocaleDateString();
     
-    // Checkboxes
-    const showWarning = document.getElementById('labelWarning')?.checked; // Oude warning (optioneel)
+    // Checkboxes & Inputs
     const showDetails = document.getElementById('labelShowDetails')?.checked; 
+    const allergenText = document.getElementById('labelAllergens')?.value || ''; // NIEUW: Vrije tekst
     
     // 2. AFBEELDING CHECK
     let imgSrc = window.currentLabelImageSrc || '';
@@ -4632,7 +4632,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (SULFIET VERPLAATST)
+    // THEMA 1: STANDAARD (CLEANER SPECS LAYOUT)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -4643,6 +4643,7 @@ function setLabelTheme(theme) {
         const titleX = document.getElementById('tuneTitleX')?.value || 0;
         const styleSize = document.getElementById('tuneStyleSize')?.value || 14;
         const styleGap = document.getElementById('tuneStyleGap')?.value || 5;
+        const specsFontSize = document.getElementById('tuneSpecsSize')?.value || 5; // NIEUW
 
         // Logo
         let logoHtml = '';
@@ -4655,7 +4656,6 @@ function setLabelTheme(theme) {
         // --- DATA VOOR SPECS BLOK ---
         const showYeast = document.getElementById('labelShowYeast')?.checked;
         const showHoney = document.getElementById('labelShowHoney')?.checked;
-        const showSulfites = document.getElementById('labelShowSulfites')?.checked;
 
         let yeastText = "";
         let honeyText = "";
@@ -4669,8 +4669,7 @@ function setLabelTheme(theme) {
             if(h && h.trim() !== '--') honeyText = h.trim();
         }
 
-        // Bepaal of we het middenblok moeten tonen (als er IETS is om te tonen)
-        const showSpecsBlock = yeastText || honeyText || showSulfites;
+        const showSpecsBlock = yeastText || honeyText || allergenText;
 
         // Peak Date
         let peakDateVal = "";
@@ -4704,21 +4703,21 @@ function setLabelTheme(theme) {
                 ${showSpecsBlock ? `
                 <div class="py-2 border-b border-gray-300 space-y-1 mb-2">
                     ${honeyText ? `
-                    <div class="flex flex-col">
-                        <span class="text-[4px] text-gray-400 font-bold uppercase tracking-widest">Honey Source</span>
-                        <span class="text-[5px] text-black font-bold uppercase truncate">${honeyText}</span>
+                    <div class="flex flex-col leading-tight">
+                        <span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Honey Source</span>
+                        <span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${honeyText}</span>
                     </div>` : ''}
                     
                     ${yeastText ? `
-                    <div class="flex flex-col mt-0.5">
-                        <span class="text-[4px] text-gray-400 font-bold uppercase tracking-widest">Yeast Strain</span>
-                        <span class="text-[5px] text-black font-bold uppercase truncate">${yeastText}</span>
+                    <div class="flex flex-col leading-tight mt-0.5">
+                        <span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Yeast Strain</span>
+                        <span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${yeastText}</span>
                     </div>` : ''}
 
-                    ${showSulfites ? `
-                    <div class="flex flex-col mt-1 pt-1 border-t border-gray-200 border-dashed">
-                        <span class="text-[4px] text-gray-400 font-bold uppercase tracking-widest">Allergens</span>
-                        <span class="text-[5px] text-black font-bold uppercase">Contains Sulfites</span>
+                    ${allergenText ? `
+                    <div class="flex flex-col leading-tight mt-1.5 pt-1">
+                        <span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Allergens</span>
+                        <span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${allergenText}</span>
                     </div>` : ''}
                 </div>
                 ` : ''}
@@ -4759,51 +4758,32 @@ function setLabelTheme(theme) {
         setTimeout(window.autoFitLabelText, 300);
     }
 
-    // =================================================================
-    // THEMA 2: SPECIAL (SULFIET OOK HIER NETJES TOEVOEGEN)
-    // =================================================================
+    // THEMA 2: SPECIAL (Ook hier allergenen tekst gebruiken)
     else if (theme === 'special') {
         container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
         container.style = ""; 
 
-        let bgHtml = '';
-        if (hasImage) {
-            bgHtml = `<div class="absolute inset-0 z-0"><img src="${imgSrc}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div></div>`;
-        } else {
-            bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
-        }
-
+        let bgHtml = hasImage ? `<div class="absolute inset-0 z-0"><img src="${imgSrc}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div></div>` : `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
         const logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain p-2 filter invert drop-shadow-md">`;
 
         container.innerHTML = `
             ${bgHtml}
             <div class="relative z-10 w-full h-full flex p-6 text-white">
                 <div class="h-full flex flex-row-reverse items-end justify-end gap-3 flex-grow">
-                    <h1 id="prev-title" style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="text-6xl font-header font-bold uppercase tracking-widest leading-none drop-shadow-lg whitespace-nowrap max-h-full overflow-hidden text-ellipsis">
-                        ${title}
-                    </h1>
-                    <p id="prev-subtitle" style="writing-mode: vertical-rl; transform: rotate(180deg);" class="text-xs font-bold uppercase tracking-[0.4em] opacity-90 whitespace-nowrap max-h-[80%] border-l-2 border-white/50 pl-2">
-                        ${sub}
-                    </p>
+                    <h1 id="prev-title" style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="text-6xl font-header font-bold uppercase tracking-widest leading-none drop-shadow-lg whitespace-nowrap max-h-full overflow-hidden text-ellipsis">${title}</h1>
+                    <p id="prev-subtitle" style="writing-mode: vertical-rl; transform: rotate(180deg);" class="text-xs font-bold uppercase tracking-[0.4em] opacity-90 whitespace-nowrap max-h-[80%] border-l-2 border-white/50 pl-2">${sub}</p>
                 </div>
                 <div class="flex flex-col justify-between items-end pl-4 h-full">
-                    <div class="w-36 h-36 rounded-full border-2 border-white flex items-center justify-center backdrop-blur-sm bg-white/10 shadow-lg">
-                        ${logoHtml}
-                    </div>
+                    <div class="w-36 h-36 rounded-full border-2 border-white flex items-center justify-center backdrop-blur-sm bg-white/10 shadow-lg">${logoHtml}</div>
                     <div class="text-right drop-shadow-md">
-                        <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-2 text-gray-200 max-w-[150px] ml-auto leading-tight">
-                            ${details}
-                        </p>
+                        <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-2 text-gray-200 max-w-[150px] ml-auto leading-tight">${details}</p>
                         ${fg ? `<p class="text-xl font-header font-normal leading-none mb-1 opacity-80">FG ${fg}</p>` : ''}
                         <p class="text-4xl font-header font-bold leading-none mb-3">${abv}% <span class="text-lg font-normal">ABV</span></p>
-                        <div class="text-[10px] font-mono uppercase tracking-widest opacity-70">
-                            <p>${vol}ML • ${dateVal}</p>
-                        </div>
-                        ${showSulfites ? `<p class="text-[6px] uppercase mt-2 opacity-50 max-w-[80px] ml-auto">Contains Sulfites</p>` : ''}
+                        <div class="text-[10px] font-mono uppercase tracking-widest opacity-70"><p>${vol}ML • ${dateVal}</p></div>
+                        ${allergenText ? `<p class="text-[6px] uppercase mt-2 opacity-50 max-w-[80px] ml-auto">${allergenText}</p>` : ''}
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }
 }
 

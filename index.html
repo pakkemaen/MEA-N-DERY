@@ -745,32 +745,25 @@
             <svg class="w-4 h-4 transition-transform duration-200 group-open:rotate-180 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
         </summary>
         
-        <div class="pt-3 pb-1 space-y-2 pl-1">
-            <label class="flex items-center cursor-pointer group">
-                <input type="checkbox" id="labelShowSulfites" class="rounded text-app-brand focus:ring-app-brand h-3 w-3 border-gray-300">
-                <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors">Contains Sulfites</span>
-            </label>
-
-            <label class="flex items-center cursor-pointer group">
-                <input type="checkbox" id="labelShowYeast" class="rounded text-app-brand focus:ring-app-brand h-3 w-3 border-gray-300">
-                <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors truncate">
-                    Yeast: <span id="displayLabelYeast" class="text-app-secondary font-normal">--</span>
-                </span>
-            </label>
-
-            <label class="flex items-center cursor-pointer group">
-                <input type="checkbox" id="labelShowHoney" class="rounded text-app-brand focus:ring-app-brand h-3 w-3 border-gray-300">
-                <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors truncate">
-                    Honey: <span id="displayLabelHoney" class="text-app-secondary font-normal">--</span>
-                </span>
-            </label>
-
-            <label class="flex items-center cursor-pointer group">
-                <input type="checkbox" id="labelShowDetails" class="rounded text-app-brand focus:ring-app-brand h-3 w-3 border-gray-300">
-                <span class="ml-2 text-xs text-app-header group-hover:text-app-brand transition-colors">Full Ingredients List</span>
-            </label>
-            <input type="hidden" id="labelDetails">
-        </div>
+        <div class="space-y-3 mb-4">
+    <div class="flex items-center gap-2">
+        <input type="checkbox" id="labelShowYeast" checked class="rounded text-app-brand focus:ring-app-brand">
+        <label for="labelShowYeast" class="text-xs text-app-header">Yeast Strain</label>
+    </div>
+    <div class="flex items-center gap-2">
+        <input type="checkbox" id="labelShowHoney" checked class="rounded text-app-brand focus:ring-app-brand">
+        <label for="labelShowHoney" class="text-xs text-app-header">Honey Source</label>
+    </div>
+    <div class="flex items-center gap-2">
+        <input type="checkbox" id="labelShowDetails" class="rounded text-app-brand focus:ring-app-brand">
+        <label for="labelShowDetails" class="text-xs text-app-header">Full Ingredients List</label>
+    </div>
+    
+    <div>
+        <label class="block text-[10px] font-bold uppercase text-app-secondary mb-1">Allergens / Warnings</label>
+        <input type="text" id="labelAllergens" class="w-full p-2 text-xs border rounded bg-app-tertiary border-app-brand/20 text-app-header" placeholder="e.g. Contains Sulfites, Lactose">
+    </div>
+</div>
     </details>
 </div>
 
@@ -782,46 +775,56 @@
         </summary>
         
         <div class="pt-4 space-y-5 px-1">
-            <div>
-                <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Title Font Size</label>
-                    <span id="disp-title-size" class="font-mono text-xs text-gray-400">100px</span>
-                </div>
-                <input type="range" id="tuneTitleSize" min="5" max="180" value="100" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-            </div>
-
-            <div>
-                <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Group Alignment (Left)</label>
-                    <span id="disp-title-x" class="font-mono text-xs text-gray-400">0px</span>
-                </div>
-                <input type="range" id="tuneTitleX" min="0" max="100" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-            </div>
-
-            <div>
-                <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Style Font Size</label>
-                    <span id="disp-style-size" class="font-mono text-xs text-gray-400">14px</span>
-                </div>
-                <input type="range" id="tuneStyleSize" min="6" max="40" value="14" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-            </div>
-
-            <div>
-                <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Style Gap</label>
-                    <span id="disp-style-gap" class="font-mono text-xs text-gray-400">5px</span>
-                </div>
-                <input type="range" id="tuneStyleGap" min="0" max="50" value="5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-            </div>
-
-            <div>
-                <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Logo Safe Zone</label>
-                    <span id="disp-logo-gap" class="font-mono text-xs text-gray-400">10px</span>
-                </div>
-                <input type="range" id="tuneLogoGap" min="0" max="100" value="10" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-            </div>
+    
+    <div>
+        <div class="flex justify-between text-xs mb-1">
+            <label class="font-semibold text-app-header">Title Font Size</label>
+            <span id="disp-title-size" class="font-mono text-xs text-gray-400">100px</span>
         </div>
+        <input type="range" id="tuneTitleSize" min="5" max="180" value="100" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+    </div>
+
+    <div>
+        <div class="flex justify-between text-xs mb-1">
+            <label class="font-semibold text-app-header">Group Alignment (Left)</label>
+            <span id="disp-title-x" class="font-mono text-xs text-gray-400">0px</span>
+        </div>
+        <input type="range" id="tuneTitleX" min="0" max="100" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+    </div>
+
+    <div>
+        <div class="flex justify-between text-xs mb-1">
+            <label class="font-semibold text-app-header">Style Font Size</label>
+            <span id="disp-style-size" class="font-mono text-xs text-gray-400">14px</span>
+        </div>
+        <input type="range" id="tuneStyleSize" min="6" max="40" value="14" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+    </div>
+
+    <div>
+        <div class="flex justify-between text-xs mb-1">
+            <label class="font-semibold text-app-header">Style Gap</label>
+            <span id="disp-style-gap" class="font-mono text-xs text-gray-400">5px</span>
+        </div>
+        <input type="range" id="tuneStyleGap" min="0" max="50" value="5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+    </div>
+
+    <div>
+        <div class="flex justify-between text-xs mb-1">
+            <label class="font-semibold text-app-header">Logo Safe Zone</label>
+            <span id="disp-logo-gap" class="font-mono text-xs text-gray-400">10px</span>
+        </div>
+        <input type="range" id="tuneLogoGap" min="0" max="100" value="10" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+    </div>
+
+    <div>
+        <div class="flex justify-between text-xs mb-1">
+            <label class="font-semibold text-app-header">Specs Font Size</label>
+            <span id="disp-specs-size" class="font-mono text-xs text-gray-400">5px</span>
+        </div>
+        <input type="range" id="tuneSpecsSize" min="3" max="8" value="5" step="0.5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+    </div>
+
+</div>
     </details>
 </div>
 

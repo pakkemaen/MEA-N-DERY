@@ -4732,7 +4732,7 @@ function loadLabelFromBrew(e) {
     if(typeof setLabelTheme === 'function') setLabelTheme(activeTheme);
 }
 
-// --- LABEL THEMA FUNCTIE (MET BODEM UITLIJNING & DATUM SLASHES) ---
+// --- LABEL THEMA FUNCTIE (MET DATUM FIX) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; 
@@ -4750,20 +4750,20 @@ function setLabelTheme(theme) {
     const desc = getVal('labelDescription');
     const details = getVal('labelDetails'); 
     
-    // --- DATUM FORMATTERING (MET SLASHES /) ---
+    // --- DATUM FORMATTERING FIX ---
     const rawDate = getVal('labelDate');
     let dateVal = rawDate; 
-    
+    // Probeer de datum om te zetten naar DD-MM-YYYY (of lokaal formaat)
     if (rawDate) {
         try {
             const d = new Date(rawDate);
             if (!isNaN(d.getTime())) {
-                // Forceer DD/MM/YYYY met slashes
-                dateVal = d.toLocaleDateString('nl-NL').replace(/-/g, '/'); 
+                // 'nl-NL' zorgt voor dag-maand-jaar volgorde (bv. 14-04-2025)
+                dateVal = d.toLocaleDateString('nl-NL'); 
             }
-        } catch(e) { }
+        } catch(e) { /* fallback naar input waarde */ }
     } else {
-        dateVal = new Date().toLocaleDateString('nl-NL').replace(/-/g, '/');
+        dateVal = new Date().toLocaleDateString('nl-NL');
     }
     
     const showDetails = getCheck('labelShowDetails'); 
@@ -4790,12 +4790,13 @@ function setLabelTheme(theme) {
         // --- TUNING VALUES ---
         const titleSize1 = getVal('tuneTitleSize') || 100;
         const titleScale2 = getVal('tuneTitleSize2') || 1.0; 
-        const titleSize2 = Math.round(titleSize1 * titleScale2);
+        const titleSize2 = getVal('tuneTitleSize2') || 60; 
         const titleX = getVal('tuneTitleX') || 0;
 
         const styleSize1 = getVal('tuneStyleSize') || 14;
         const styleScale2 = getVal('tuneStyleSize2') || 1.0; 
-        const styleSize2 = Math.round(styleSize1 * styleScale2);
+        const styleSize2 = getVal('tuneStyleSize2') || 10;
+        
         const styleGap = getVal('tuneStyleGap') || 5;
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
 
@@ -4837,26 +4838,23 @@ function setLabelTheme(theme) {
         if (showHoney) { const h = document.getElementById('displayLabelHoney')?.textContent; if(h && h.trim() !== '--') honeyText = h.trim(); }
         const showSpecsBlock = yeastText || honeyText || allergenText;
 
-        // Peak Date Logic (Ook met slashes!)
+        // Peak Date Logic
         let peakDateVal = "";
         const selectEl = document.getElementById('labelRecipeSelect');
         const selectedBrew = brews.find(b => b.id === selectEl?.value);
         if (selectedBrew && selectedBrew.peakFlavorDate) {
-            try { 
-                peakDateVal = new Date(selectedBrew.peakFlavorDate).toLocaleDateString('nl-NL').replace(/-/g, '/'); 
-            } catch(e){}
-        } else if (rawDate) { 
+            try { peakDateVal = new Date(selectedBrew.peakFlavorDate).toLocaleDateString('nl-NL'); } catch(e){}
+        } else if (rawDate) { // Gebruik rawDate voor berekening
             try { 
                 const d = new Date(rawDate); 
                 const abvNum = parseFloat(abv);
                 let months = (abvNum < 8) ? 3 : (abvNum > 14 ? 12 : 6);
                 d.setMonth(d.getMonth() + months); 
-                peakDateVal = d.toLocaleDateString('nl-NL').replace(/-/g, '/'); 
+                peakDateVal = d.toLocaleDateString('nl-NL'); 
             } catch(e) {}
         }
 
         // --- UI GENERATIE ---
-        // AANPASSING: pb-2 veranderd naar pb-1 in de linkerkolom div voor strakkere uitlijning onderaan
         container.innerHTML = `
             <style>
                 #prev-title { font-size: ${titleSize2}px !important; line-height: 0.85; }
@@ -4865,7 +4863,7 @@ function setLabelTheme(theme) {
                 #prev-subtitle::first-line { font-size: ${styleSize1}px !important; }
             </style>
 
-            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-4 pb-1 px-3 flex flex-col text-right z-20 relative">
+            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-4 pb-2 px-3 flex flex-col text-right z-20 relative">
                 <div class="flex flex-col gap-1 overflow-hidden">
                     <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">${desc}</p>
                     ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-justify mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">${details}</p>` : ''}

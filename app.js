@@ -5069,24 +5069,30 @@ async function generateLabelArt() {
     btn.innerHTML = "🎨 Painting...";
     btn.disabled = true;
 
-    // Prompt logica (hetzelfde als voorheen, maar even ingekort voor de veiligheid)
-    let artPrompt = `Label design for mead called "${title}". Subject: ${style}. High quality.`;
-    if (theme === 'special') artPrompt += " Dark, premium, gold accents, mystical, minimal.";
-    else artPrompt += " Clean, modern vector art, white background, bold typography.";
+    // --- DE AANGEPASTE PROMPT LOGICA ---
+    // 1. We vragen om een "Background illustration" i.p.v. "Label design".
+    // 2. We voegen een harde "NO TEXT" regel toe.
+    let artPrompt = `Artistic background illustration for a mead called "${title}". Subject: ${style}. 
+    CRITICAL CONSTRAINT: NO TEXT. Do not write the name. Do not use letters, words, or typography. Create a text-free illustration only.`;
+
+    if (theme === 'special') artPrompt += " Style: Dark, premium, gold accents, mystical, minimal, high quality.";
+    else artPrompt += " Style: Clean, modern vector art, white background, vibrant colors, high contrast.";
 
     try {
-        // ... (API Keys logica blijft hetzelfde, we focussen op het resultaat) ...
         let apiKey = userSettings.imageApiKey || userSettings.apiKey;
         if (!apiKey) throw new Error("No API Key found.");
 
-        // Hier gebruiken we de nieuwe Imagen 4.0 logica (of oudere fallback)
+        // We gebruiken de instelling uit Settings, of de default Google Imagen
         const model = userSettings.imageModel || "imagen-3.0-generate-001";
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
         
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ instances: [{ prompt: artPrompt }], parameters: { sampleCount: 1, aspectRatio: "1:1" } })
+            body: JSON.stringify({ 
+                instances: [{ prompt: artPrompt }], 
+                parameters: { sampleCount: 1, aspectRatio: "1:1" } 
+            })
         });
 
         if (!response.ok) throw new Error("AI Error");
@@ -5105,11 +5111,14 @@ async function generateLabelArt() {
                 imgDisplay.src = finalSrc;
                 imgDisplay.classList.remove('hidden');
             }
+            // Verberg de "upload" knop placeholder als die er is (afhankelijk van je CSS)
             const placeholder = document.getElementById('label-img-placeholder');
             if(placeholder) placeholder.classList.add('hidden');
 
-            // Forceer refresh van het label
+            // Forceer refresh van het label thema zodat de afbeelding goed in de lagen komt
             setLabelTheme(theme);
+            
+            showToast("Artwork created (Text-free)!", "success");
         }
     } catch (error) {
         console.error(error);

@@ -4363,12 +4363,11 @@ function initLabelForge() {
         });
     });
     
-    // D. TUNING & SLIDERS (UPDATED)
+    // D. TUNING & SLIDERS (MET FIX VOOR LIJN 2 WEERGAVE)
     const sliders = [
         'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 
         'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 
         'tuneSpecsSize',
-        // NIEUW:
         'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity',
         'tuneLogoSize', 'tuneLogoX', 'tuneLogoY'
     ];
@@ -4377,18 +4376,26 @@ function initLabelForge() {
         const el = document.getElementById(id);
         if(el) {
             el.addEventListener('input', (e) => {
-                let dispId = id.replace('tune', 'disp'); 
-                dispId = dispId.replace(/([A-Z])/g, '-$1').toLowerCase();
+                // 1. Slimme ID berekening
+                let dispId = id.replace('tune', 'disp')
+                               .replace(/([A-Z])/g, '-$1')
+                               .toLowerCase();
+                
+                // FIX: Zorg dat 'size2' verandert in 'size-2' zodat het matcht met de HTML
+                if (id.endsWith('Size2')) {
+                    dispId = dispId.replace('size2', 'size-2');
+                }
+
                 const disp = document.getElementById(dispId);
                 
                 if(disp) {
-                    // AANGEPAST: Size2 verwijderd uit deze check, want dat zijn nu pixels
+                    // 2. Eenheden bepalen
                     if(id.includes('Opacity')) {
                         disp.textContent = Math.round(e.target.value * 100) + '%';
                     } else if(id.includes('Zoom')) {
                         disp.textContent = parseFloat(e.target.value).toFixed(1) + 'x';
                     } else {
-                        // Alle andere sliders (inclusief Size2) zijn nu pixels
+                        // Alle andere sliders (Inclusief Size2) zijn nu pixels
                         disp.textContent = e.target.value + 'px';
                     }
                 }
@@ -4725,7 +4732,7 @@ function loadLabelFromBrew(e) {
     if(typeof setLabelTheme === 'function') setLabelTheme(activeTheme);
 }
 
-// --- LABEL THEMA FUNCTIE (MET DATUM FIX) ---
+// --- LABEL THEMA FUNCTIE (MET BODEM UITLIJNING & DATUM SLASHES) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; 
@@ -4743,20 +4750,20 @@ function setLabelTheme(theme) {
     const desc = getVal('labelDescription');
     const details = getVal('labelDetails'); 
     
-    // --- DATUM FORMATTERING FIX ---
+    // --- DATUM FORMATTERING (MET SLASHES /) ---
     const rawDate = getVal('labelDate');
     let dateVal = rawDate; 
-    // Probeer de datum om te zetten naar DD-MM-YYYY (of lokaal formaat)
+    
     if (rawDate) {
         try {
             const d = new Date(rawDate);
             if (!isNaN(d.getTime())) {
-                // 'nl-NL' zorgt voor dag-maand-jaar volgorde (bv. 14-04-2025)
-                dateVal = d.toLocaleDateString('nl-NL'); 
+                // Forceer DD/MM/YYYY met slashes
+                dateVal = d.toLocaleDateString('nl-NL').replace(/-/g, '/'); 
             }
-        } catch(e) { /* fallback naar input waarde */ }
+        } catch(e) { }
     } else {
-        dateVal = new Date().toLocaleDateString('nl-NL');
+        dateVal = new Date().toLocaleDateString('nl-NL').replace(/-/g, '/');
     }
     
     const showDetails = getCheck('labelShowDetails'); 
@@ -4783,13 +4790,12 @@ function setLabelTheme(theme) {
         // --- TUNING VALUES ---
         const titleSize1 = getVal('tuneTitleSize') || 100;
         const titleScale2 = getVal('tuneTitleSize2') || 1.0; 
-        const titleSize2 = getVal('tuneTitleSize2') || 60; 
+        const titleSize2 = Math.round(titleSize1 * titleScale2);
         const titleX = getVal('tuneTitleX') || 0;
 
         const styleSize1 = getVal('tuneStyleSize') || 14;
         const styleScale2 = getVal('tuneStyleSize2') || 1.0; 
-        const styleSize2 = getVal('tuneStyleSize2') || 10;
-        
+        const styleSize2 = Math.round(styleSize1 * styleScale2);
         const styleGap = getVal('tuneStyleGap') || 5;
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
 
@@ -4831,23 +4837,27 @@ function setLabelTheme(theme) {
         if (showHoney) { const h = document.getElementById('displayLabelHoney')?.textContent; if(h && h.trim() !== '--') honeyText = h.trim(); }
         const showSpecsBlock = yeastText || honeyText || allergenText;
 
-        // Peak Date Logic
+        // Peak Date Logic (Ook met slashes!)
         let peakDateVal = "";
         const selectEl = document.getElementById('labelRecipeSelect');
         const selectedBrew = brews.find(b => b.id === selectEl?.value);
         if (selectedBrew && selectedBrew.peakFlavorDate) {
-            try { peakDateVal = new Date(selectedBrew.peakFlavorDate).toLocaleDateString('nl-NL'); } catch(e){}
-        } else if (rawDate) { // Gebruik rawDate voor berekening
+            try { 
+                peakDateVal = new Date(selectedBrew.peakFlavorDate).toLocaleDateString('nl-NL').replace(/-/g, '/'); 
+            } catch(e){}
+        } else if (rawDate) { 
             try { 
                 const d = new Date(rawDate); 
                 const abvNum = parseFloat(abv);
                 let months = (abvNum < 8) ? 3 : (abvNum > 14 ? 12 : 6);
                 d.setMonth(d.getMonth() + months); 
-                peakDateVal = d.toLocaleDateString('nl-NL'); 
+                peakDateVal = d.toLocaleDateString('nl-NL').replace(/-/g, '/'); 
             } catch(e) {}
         }
 
         // --- UI GENERATIE ---
+        // AANPASSING: 'pt-4 pb-1' vervangen door 'py-2'. 
+        // Hierdoor wordt de groene padding rand veel kleiner en vult de tekst het hele vlak.
         container.innerHTML = `
             <style>
                 #prev-title { font-size: ${titleSize2}px !important; line-height: 0.85; }
@@ -4856,7 +4866,7 @@ function setLabelTheme(theme) {
                 #prev-subtitle::first-line { font-size: ${styleSize1}px !important; }
             </style>
 
-            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-4 pb-2 px-3 flex flex-col text-right z-20 relative">
+            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-2 px-3 flex flex-col text-right z-20 relative">
                 <div class="flex flex-col gap-1 overflow-hidden">
                     <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">${desc}</p>
                     ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-justify mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">${details}</p>` : ''}
@@ -4902,8 +4912,7 @@ function setLabelTheme(theme) {
 
                 ${logoHtml}
             </div>
-        `;
-    } 
+        `; 
     
     // =================================================================
     // THEMA 2: SPECIAL

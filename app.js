@@ -4363,17 +4363,20 @@ function initLabelForge() {
         });
     });
     
-    // D. TUNING & SLIDERS
+    // D. TUNING & SLIDERS (UPDATED WITH CORRECT UNITS)
     ['tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneLogoGap', 'tuneSpecsSize'].forEach(id => {
         const el = document.getElementById(id);
         if(el) {
             el.addEventListener('input', (e) => {
+                // Vind het display elementje
                 let dispId = id.replace('tune', 'disp'); 
                 dispId = dispId.replace(/([A-Z])/g, '-$1').toLowerCase();
                 const disp = document.getElementById(dispId);
                 
                 if(disp) {
-                    // Percentage weergave voor de "Size2" sliders
+                    // Logic voor eenheden:
+                    // Size2 sliders zijn percentages (0.2 tot 1.0) -> Toon %
+                    // Alle andere sliders zijn pixels -> Toon px
                     if(id === 'tuneTitleSize2' || id === 'tuneStyleSize2') {
                         const pct = Math.round(e.target.value * 100);
                         disp.textContent = pct + '%';
@@ -4382,6 +4385,7 @@ function initLabelForge() {
                     }
                 }
                 
+                // Update het label direct
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
                 setLabelTheme(activeTheme);
             });

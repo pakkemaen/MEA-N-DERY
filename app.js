@@ -4856,8 +4856,8 @@ function setLabelTheme(theme) {
         }
 
         // --- UI GENERATIE ---
-        // AANPASSING: 'pt-4 pb-1' vervangen door 'py-2'. 
-        // Hierdoor wordt de groene padding rand veel kleiner en vult de tekst het hele vlak.
+        // AANPASSING: De klassen 'border-r border-dashed border-gray-300' zijn verwijderd 
+        // uit de eerste <div> hieronder. De stippellijn is nu weg.
         container.innerHTML = `
             <style>
                 #prev-title { font-size: ${titleSize2}px !important; line-height: 0.85; }
@@ -4866,7 +4866,7 @@ function setLabelTheme(theme) {
                 #prev-subtitle::first-line { font-size: ${styleSize1}px !important; }
             </style>
 
-            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 py-2 px-3 flex flex-col text-right z-20 relative">
+            <div class="h-full w-[35%] bg-gray-50/80 py-2 px-3 flex flex-col text-right z-20 relative">
                 <div class="flex flex-col gap-1 overflow-hidden">
                     <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">${desc}</p>
                     ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-justify mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">${details}</p>` : ''}

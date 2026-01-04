@@ -5219,76 +5219,78 @@ function printLabelsSheet() {
     win.document.close();
 }
 
-// --- LABEL OPSLAAN FUNCTIE ---
+// --- LABEL OPSLAAN FUNCTIE (CRASH PROOF) ---
 window.saveLabelToBrew = async function() {
     const select = document.getElementById('labelRecipeSelect');
-    const brewId = select.value;
+    const brewId = select?.value; 
     
     if (!brewId) return showToast("Select a recipe first.", "error");
     if (!userId) return;
 
     const btn = document.querySelector('button[onclick="window.saveLabelToBrew()"]');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = "Saving...";
-    btn.disabled = true;
+    const originalText = btn ? btn.innerHTML : 'Save';
+    if(btn) {
+        btn.innerHTML = "Saving...";
+        btn.disabled = true;
+    }
 
-    // 1. Verzamel alle data
+    // VEILIGE HELPERS: Dit voorkomt jouw foutmelding!
+    // Als getElementById 'null' teruggeeft, pakt hij de fallback ('' of false)
+    const getVal = (id) => document.getElementById(id)?.value || '';
+    const getCheck = (id) => document.getElementById(id)?.checked || false;
+    const getText = (id) => document.getElementById(id)?.textContent || '';
+
     const labelSettings = {
-        // Content
-        title: document.getElementById('labelTitle').value,
-        subtitle: document.getElementById('labelSubtitle').value,
-        abv: document.getElementById('labelAbv').value,
-        fg: document.getElementById('labelFg').value,
-        vol: document.getElementById('labelVol').value,
-        date: document.getElementById('labelDate').value,
-        desc: document.getElementById('labelDescription').value,
-        details: document.getElementById('labelDetails').value,
-        persona: document.getElementById('label-persona-select').value,
-        allergens: document.getElementById('labelAllergens').value,
+        title: getVal('labelTitle'),
+        subtitle: getVal('labelSubtitle'),
+        abv: getVal('labelAbv'),
+        fg: getVal('labelFg'),
+        vol: getVal('labelVol'),
+        date: getVal('labelDate'),
+        desc: getVal('labelDescription'),
+        details: getVal('labelDetails'),
+        persona: getVal('label-persona-select'),
+        allergens: getVal('labelAllergens'),
         
-        // Toggles
-        showYeast: document.getElementById('labelShowYeast').checked,
-        showHoney: document.getElementById('labelShowHoney').checked,
-        showDetails: document.getElementById('labelShowDetails').checked,
+        showYeast: getCheck('labelShowYeast'),
+        showHoney: getCheck('labelShowHoney'),
+        showDetails: getCheck('labelShowDetails'),
         
-        // Verborgen data (Yeast/Honey names)
-        yeastName: document.getElementById('displayLabelYeast').textContent,
-        honeyName: document.getElementById('displayLabelHoney').textContent,
+        yeastName: getText('displayLabelYeast'),
+        honeyName: getText('displayLabelHoney'),
 
-        // Sliders (Tuning)
-        tuneTitleSize: document.getElementById('tuneTitleSize').value,
-        tuneTitleSize2: document.getElementById('tuneTitleSize2').value,
-        tuneTitleX: document.getElementById('tuneTitleX').value,
+        tuneTitleSize: getVal('tuneTitleSize'),
+        tuneTitleSize2: getVal('tuneTitleSize2'), // Hier ging het mis zonder update
+        tuneTitleX: getVal('tuneTitleX'),
         
-        tuneStyleSize: document.getElementById('tuneStyleSize').value,
-        tuneStyleSize2: document.getElementById('tuneStyleSize2').value,
-        tuneStyleGap: document.getElementById('tuneStyleGap').value,
+        tuneStyleSize: getVal('tuneStyleSize'),
+        tuneStyleSize2: getVal('tuneStyleSize2'), // Hier ook
+        tuneStyleGap: getVal('tuneStyleGap'),
         
-        tuneLogoGap: document.getElementById('tuneLogoGap').value,
-        tuneSpecsSize: document.getElementById('tuneSpecsSize').value,
+        tuneLogoGap: getVal('tuneLogoGap'),
+        tuneSpecsSize: getVal('tuneSpecsSize'),
         
-        // Afbeelding (Base64 string)
         imageSrc: window.currentLabelImageSrc || ''
     };
 
     try {
-        // 2. Update Firestore
         const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
         await updateDoc(docRef, { labelSettings: labelSettings });
         
-        // 3. Update lokale cache
         const brewIndex = brews.findIndex(b => b.id === brewId);
         if(brewIndex > -1) {
             brews[brewIndex].labelSettings = labelSettings;
         }
 
-        showToast("Label design saved to recipe!", "success");
+        showToast("Label design saved!", "success");
     } catch (e) {
-        console.error(e);
+        console.error("Save Error:", e);
         showToast("Could not save label.", "error");
     } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        if(btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
     }
 }
 

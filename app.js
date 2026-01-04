@@ -4576,64 +4576,128 @@ function updateLabelPreviewText() {
     }
 }
 
-// Data uit recept laden (CRASH PROOF VERSION)
+// Data uit recept laden (MET SAVED SETTINGS SUPPORT)
 function loadLabelFromBrew(e) {
     const brewId = e.target.value;
     if (!brewId) return;
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    // Veilige setters (voorkomt errors als element niet bestaat)
+    // Helpers
     const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
     const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
     const setCheck = (id, val) => { const el = document.getElementById(id); if(el) el.checked = val; };
 
-    setVal('labelTitle', brew.recipeName);
-    
-    let style = "Traditional Mead";
-    if (brew.recipeMarkdown.toLowerCase().includes('melomel')) style = "Melomel (Fruit Mead)";
-    if (brew.recipeMarkdown.toLowerCase().includes('bochet')) style = "Bochet (Caramelized)";
-    if (brew.recipeMarkdown.toLowerCase().includes('metheglin')) style = "Metheglin (Spiced)";
-    if (brew.recipeMarkdown.toLowerCase().includes('braggot')) style = "Braggot (Malt & Honey)";
-    setVal('labelSubtitle', style);
+    // --- CHECK: ZIJN ER OPGESLAGEN INSTELLINGEN? ---
+    if (brew.labelSettings) {
+        const s = brew.labelSettings;
+        
+        // 1. Content herstellen
+        setVal('labelTitle', s.title);
+        setVal('labelSubtitle', s.subtitle);
+        setVal('labelAbv', s.abv);
+        setVal('labelFg', s.fg);
+        setVal('labelVol', s.vol);
+        setVal('labelDate', s.date);
+        setVal('labelDescription', s.desc);
+        setVal('labelDetails', s.details);
+        setVal('labelAllergens', s.allergens || ''); // Fallback voor oude saves
+        
+        if (s.persona) setVal('label-persona-select', s.persona);
 
-    // Data
-    setVal('labelAbv', brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '');
-    setVal('labelFg', brew.logData?.actualFG || brew.logData?.targetFG || '');
-    setVal('labelVol', '330');
-    setVal('labelDate', brew.logData?.brewDate || new Date().toISOString().split('T')[0]);
+        // 2. Toggles herstellen
+        setCheck('labelShowYeast', s.showYeast);
+        setCheck('labelShowHoney', s.showHoney);
+        setCheck('labelShowDetails', s.showDetails);
 
-    // Quote
-    let foundQuote = "";
-    const quoteMatch = brew.recipeMarkdown.match(/^>\s*(["']?)(.*?)\1\s*$/m);
-    if (quoteMatch && quoteMatch[2]) {
-        foundQuote = quoteMatch[2].trim();
+        // 3. Verborgen velden herstellen
+        setText('displayLabelYeast', s.yeastName || '');
+        setText('displayLabelHoney', s.honeyName || '');
+
+        // 4. Sliders herstellen & Events triggeren (zodat de getalletjes updaten)
+        const restoreSlider = (id, val) => {
+            const el = document.getElementById(id);
+            if(el && val !== undefined) {
+                el.value = val;
+                el.dispatchEvent(new Event('input')); // Dit update de 'px/%' tekst ernaast
+            }
+        };
+
+        restoreSlider('tuneTitleSize', s.tuneTitleSize);
+        restoreSlider('tuneTitleSize2', s.tuneTitleSize2);
+        restoreSlider('tuneTitleX', s.tuneTitleX);
+        restoreSlider('tuneStyleSize', s.tuneStyleSize);
+        restoreSlider('tuneStyleSize2', s.tuneStyleSize2);
+        restoreSlider('tuneStyleGap', s.tuneStyleGap);
+        restoreSlider('tuneLogoGap', s.tuneLogoGap);
+        restoreSlider('tuneSpecsSize', s.tuneSpecsSize);
+
+        // 5. Afbeelding herstellen
+        if (s.imageSrc) {
+            window.currentLabelImageSrc = s.imageSrc;
+            const imgDisplay = document.getElementById('label-img-display');
+            if(imgDisplay) {
+                imgDisplay.src = s.imageSrc;
+                imgDisplay.classList.remove('hidden');
+            }
+        }
+
+        showToast("Loaded saved label design.", "info");
+
     } else {
-        foundQuote = `A handcrafted ${style.toLowerCase()}, brewed on ${new Date().getFullYear()}.`;
+        // --- GEEN SAVED DATA? GEBRUIK DE STANDAARD LOGICA ---
+        
+        setVal('labelTitle', brew.recipeName);
+        
+        let style = "Traditional Mead";
+        if (brew.recipeMarkdown.toLowerCase().includes('melomel')) style = "Melomel (Fruit Mead)";
+        if (brew.recipeMarkdown.toLowerCase().includes('bochet')) style = "Bochet (Caramelized)";
+        if (brew.recipeMarkdown.toLowerCase().includes('metheglin')) style = "Metheglin (Spiced)";
+        if (brew.recipeMarkdown.toLowerCase().includes('braggot')) style = "Braggot (Malt & Honey)";
+        setVal('labelSubtitle', style);
+
+        // Data
+        setVal('labelAbv', brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '');
+        setVal('labelFg', brew.logData?.actualFG || brew.logData?.targetFG || '');
+        setVal('labelVol', '330');
+        setVal('labelDate', brew.logData?.brewDate || new Date().toISOString().split('T')[0]);
+
+        // Quote
+        let foundQuote = "";
+        const quoteMatch = brew.recipeMarkdown.match(/^>\s*(["']?)(.*?)\1\s*$/m);
+        if (quoteMatch && quoteMatch[2]) {
+            foundQuote = quoteMatch[2].trim();
+        } else {
+            foundQuote = `A handcrafted ${style.toLowerCase()}, brewed on ${new Date().getFullYear()}.`;
+        }
+        setVal('labelDescription', foundQuote);
+
+        // Yeast & Honey Detection
+        const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
+        
+        let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist') || i.name.toLowerCase().includes('lalvin') || i.name.toLowerCase().includes('safale') || i.name.toLowerCase().includes('wyeast') || i.name.toLowerCase().includes('mangrove'));
+        let yeastName = yeastItem ? yeastItem.name.replace(/yeast|gist/gi, '').trim() : 'Unknown';
+        setText('displayLabelYeast', yeastName);
+
+        const honeyItem = ings.find(i => i.name.toLowerCase().includes('honey') || i.name.toLowerCase().includes('honing'));
+        const honeyName = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
+        setText('displayLabelHoney', honeyName);
+
+        const fullList = ings.map(i => i.name).join(' • ');
+        setVal('labelDetails', fullList);
+
+        // Sulfiet Check
+        const hasSulfites = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
+        setVal('labelAllergens', hasSulfites ? 'Contains Sulfites' : '');
+        
+        // Reset Sliders naar defaults (als er geen save is)
+        const resetSlider = (id, val) => { const el = document.getElementById(id); if(el) { el.value = val; el.dispatchEvent(new Event('input')); }};
+        resetSlider('tuneTitleSize', 100);
+        resetSlider('tuneTitleSize2', 1.0);
+        resetSlider('tuneStyleSize', 14);
+        resetSlider('tuneSpecsSize', 5);
+        // ... overige sliders blijven op hun huidige stand staan of je kunt ze hier ook resetten
     }
-    setVal('labelDescription', foundQuote);
-
-    // Yeast & Honey Detection
-    const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
-    
-    let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist') || i.name.toLowerCase().includes('lalvin') || i.name.toLowerCase().includes('safale') || i.name.toLowerCase().includes('wyeast') || i.name.toLowerCase().includes('mangrove'));
-    let yeastName = yeastItem ? yeastItem.name.replace(/yeast|gist/gi, '').trim() : 'Unknown';
-    
-    // HIER GING HET FOUT: Nu gebruiken we de veilige 'setText' helper
-    setText('displayLabelYeast', yeastName);
-
-    const honeyItem = ings.find(i => i.name.toLowerCase().includes('honey') || i.name.toLowerCase().includes('honing'));
-    const honeyName = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
-    
-    // HIER OOK:
-    setText('displayLabelHoney', honeyName);
-
-    const fullList = ings.map(i => i.name).join(' • ');
-    setVal('labelDetails', fullList);
-
-    // Sulfiet Check -> Allergenen Veld
-    const hasSulfites = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
-    setVal('labelAllergens', hasSulfites ? 'Contains Sulfites' : '');
 
     // Forceer update van het thema
     const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
@@ -5153,6 +5217,79 @@ function printLabelsSheet() {
         </body></html>
     `);
     win.document.close();
+}
+
+// --- LABEL OPSLAAN FUNCTIE ---
+window.saveLabelToBrew = async function() {
+    const select = document.getElementById('labelRecipeSelect');
+    const brewId = select.value;
+    
+    if (!brewId) return showToast("Select a recipe first.", "error");
+    if (!userId) return;
+
+    const btn = document.querySelector('button[onclick="window.saveLabelToBrew()"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "Saving...";
+    btn.disabled = true;
+
+    // 1. Verzamel alle data
+    const labelSettings = {
+        // Content
+        title: document.getElementById('labelTitle').value,
+        subtitle: document.getElementById('labelSubtitle').value,
+        abv: document.getElementById('labelAbv').value,
+        fg: document.getElementById('labelFg').value,
+        vol: document.getElementById('labelVol').value,
+        date: document.getElementById('labelDate').value,
+        desc: document.getElementById('labelDescription').value,
+        details: document.getElementById('labelDetails').value,
+        persona: document.getElementById('label-persona-select').value,
+        allergens: document.getElementById('labelAllergens').value,
+        
+        // Toggles
+        showYeast: document.getElementById('labelShowYeast').checked,
+        showHoney: document.getElementById('labelShowHoney').checked,
+        showDetails: document.getElementById('labelShowDetails').checked,
+        
+        // Verborgen data (Yeast/Honey names)
+        yeastName: document.getElementById('displayLabelYeast').textContent,
+        honeyName: document.getElementById('displayLabelHoney').textContent,
+
+        // Sliders (Tuning)
+        tuneTitleSize: document.getElementById('tuneTitleSize').value,
+        tuneTitleSize2: document.getElementById('tuneTitleSize2').value,
+        tuneTitleX: document.getElementById('tuneTitleX').value,
+        
+        tuneStyleSize: document.getElementById('tuneStyleSize').value,
+        tuneStyleSize2: document.getElementById('tuneStyleSize2').value,
+        tuneStyleGap: document.getElementById('tuneStyleGap').value,
+        
+        tuneLogoGap: document.getElementById('tuneLogoGap').value,
+        tuneSpecsSize: document.getElementById('tuneSpecsSize').value,
+        
+        // Afbeelding (Base64 string)
+        imageSrc: window.currentLabelImageSrc || ''
+    };
+
+    try {
+        // 2. Update Firestore
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
+        await updateDoc(docRef, { labelSettings: labelSettings });
+        
+        // 3. Update lokale cache
+        const brewIndex = brews.findIndex(b => b.id === brewId);
+        if(brewIndex > -1) {
+            brews[brewIndex].labelSettings = labelSettings;
+        }
+
+        showToast("Label design saved to recipe!", "success");
+    } catch (e) {
+        console.error(e);
+        showToast("Could not save label.", "error");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }
 
 // --- SOCIAL MEDIA ---

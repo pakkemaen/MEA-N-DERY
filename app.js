@@ -4364,14 +4364,23 @@ function initLabelForge() {
     });
     
     // D. TUNING & SLIDERS
-    ['tuneTitleSize', 'tuneTitleX', 'tuneStyleSize', 'tuneStyleGap', 'tuneLogoGap', 'tuneSpecsSize'].forEach(id => {
+    ['tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneLogoGap', 'tuneSpecsSize'].forEach(id => {
         const el = document.getElementById(id);
         if(el) {
             el.addEventListener('input', (e) => {
                 let dispId = id.replace('tune', 'disp'); 
                 dispId = dispId.replace(/([A-Z])/g, '-$1').toLowerCase();
                 const disp = document.getElementById(dispId);
-                if(disp) disp.textContent = e.target.value + 'px';
+                
+                if(disp) {
+                    // Percentage weergave voor de "Size2" sliders
+                    if(id === 'tuneTitleSize2' || id === 'tuneStyleSize2') {
+                        const pct = Math.round(e.target.value * 100);
+                        disp.textContent = pct + '%';
+                    } else {
+                        disp.textContent = e.target.value + 'px';
+                    }
+                }
                 
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
                 setLabelTheme(activeTheme);
@@ -4627,12 +4636,12 @@ function loadLabelFromBrew(e) {
     if(typeof setLabelTheme === 'function') setLabelTheme(activeTheme);
 }
 
-// --- LABEL THEMA FUNCTIE (VEILIGE VERSIE V3) ---
+// --- LABEL THEMA FUNCTIE (MET DUBBELE LIJN CONTROLE VOOR TITEL ÉN STYLE) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; 
 
-    // 1. DATA OPHALEN (Met veiligheidschecks ?.)
+    // 1. DATA OPHALEN
     const title = document.getElementById('labelTitle')?.value || 'MEAD NAME';
     const sub = document.getElementById('labelSubtitle')?.value || 'Style Description';
     const abv = document.getElementById('labelAbv')?.value || '12';
@@ -4667,11 +4676,21 @@ function setLabelTheme(theme) {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
-        // Tuning (CRUCIAAL: ?.value VOORKOMT DE CRASH HIER)
-        const titleSizeMax = document.getElementById('tuneTitleSize')?.value || 100;
+        // --- TUNING VALUES ---
+        
+        // 1. Titel
+        const titleSize1 = document.getElementById('tuneTitleSize')?.value || 100;
+        const titleScale2 = document.getElementById('tuneTitleSize2')?.value || 1.0; 
+        const titleSize2 = Math.round(titleSize1 * titleScale2);
         const titleX = document.getElementById('tuneTitleX')?.value || 0;
-        const styleSize = document.getElementById('tuneStyleSize')?.value || 14;
+
+        // 2. Stijl (NIEUW)
+        const styleSize1 = document.getElementById('tuneStyleSize')?.value || 14;
+        const styleScale2 = document.getElementById('tuneStyleSize2')?.value || 1.0; // De nieuwe slider
+        const styleSize2 = Math.round(styleSize1 * styleScale2);
         const styleGap = document.getElementById('tuneStyleGap')?.value || 5;
+
+        // 3. Specs
         const specsFontSize = document.getElementById('tuneSpecsSize')?.value || 5; 
 
         // Logo
@@ -4682,22 +4701,12 @@ function setLabelTheme(theme) {
             logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-center opacity-90">`;
         }
 
-        // --- DATA VOOR SPECS BLOK ---
+        // Specs Logic
         const showYeast = document.getElementById('labelShowYeast')?.checked;
         const showHoney = document.getElementById('labelShowHoney')?.checked;
-
-        let yeastText = "";
-        let honeyText = "";
-
-        if (showYeast) {
-            const y = document.getElementById('displayLabelYeast')?.textContent; 
-            if(y && y.trim() !== '--') yeastText = y.trim();
-        }
-        if (showHoney) {
-            const h = document.getElementById('displayLabelHoney')?.textContent;
-            if(h && h.trim() !== '--') honeyText = h.trim();
-        }
-
+        let yeastText = "", honeyText = "";
+        if (showYeast) { const y = document.getElementById('displayLabelYeast')?.textContent; if(y && y.trim() !== '--') yeastText = y.trim(); }
+        if (showHoney) { const h = document.getElementById('displayLabelHoney')?.textContent; if(h && h.trim() !== '--') honeyText = h.trim(); }
         const showSpecsBlock = yeastText || honeyText || allergenText;
 
         // Peak Date
@@ -4718,39 +4727,38 @@ function setLabelTheme(theme) {
 
         // --- UI GENERATIE ---
         container.innerHTML = `
+            <style>
+                /* TITEL LOGICA */
+                #prev-title {
+                    font-size: ${titleSize2}px !important;
+                    line-height: 0.85; 
+                }
+                #prev-title::first-line {
+                    font-size: ${titleSize1}px !important;
+                }
+
+                /* STYLE LOGICA (NIEUW) */
+                #prev-subtitle {
+                    font-size: ${styleSize2}px !important;
+                    line-height: 0.9;
+                }
+                #prev-subtitle::first-line {
+                    font-size: ${styleSize1}px !important;
+                }
+            </style>
+
             <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-4 pb-2 px-3 flex flex-col text-right z-20 relative">
-                
                 <div class="flex flex-col gap-1 overflow-hidden">
-                    <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">
-                        ${desc}
-                    </p>
+                    <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">${desc}</p>
                     ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-justify mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">${details}</p>` : ''}
                 </div>
-
                 <div class="flex-grow"></div>
-
                 ${showSpecsBlock ? `
                 <div class="py-2 border-b border-gray-300 space-y-1 mb-2">
-                    ${honeyText ? `
-                    <div class="flex flex-col leading-tight">
-                        <span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Honey Source</span>
-                        <span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${honeyText}</span>
-                    </div>` : ''}
-                    
-                    ${yeastText ? `
-                    <div class="flex flex-col leading-tight mt-0.5">
-                        <span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Yeast Strain</span>
-                        <span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${yeastText}</span>
-                    </div>` : ''}
-
-                    ${allergenText ? `
-                    <div class="flex flex-col leading-tight mt-0.5">
-                        <span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Allergens</span>
-                        <span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${allergenText}</span>
-                    </div>` : ''}
-                </div>
-                ` : ''}
-
+                    ${honeyText ? `<div class="flex flex-col leading-tight"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Honey Source</span><span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${honeyText}</span></div>` : ''}
+                    ${yeastText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Yeast Strain</span><span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${yeastText}</span></div>` : ''}
+                    ${allergenText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Allergens</span><span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${allergenText}</span></div>` : ''}
+                </div>` : ''}
                 <div class="text-[#8F8C79]">
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider">
                         ${abv ? `<div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>` : ''}
@@ -4772,7 +4780,7 @@ function setLabelTheme(theme) {
                     </div>
                     <div id="style-container" class="h-[50%] flex flex-col justify-end overflow-hidden" style="margin-left: ${styleGap}px;">
                          <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-normal leading-none line-clamp-3 text-ellipsis" 
-                            style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: ${styleSize}px;">
+                            style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${sub}
                         </p>
                     </div>
@@ -4782,18 +4790,14 @@ function setLabelTheme(theme) {
                 </div>
             </div>
         `;
-        
-        setTimeout(window.autoFitLabelText, 50);
-        setTimeout(window.autoFitLabelText, 300);
     }
 
     // =================================================================
-    // THEMA 2: SPECIAL
+    // THEMA 2: SPECIAL (Ongewijzigd)
     // =================================================================
     else if (theme === 'special') {
         container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
         container.style = ""; 
-
         let bgHtml = hasImage ? `<div class="absolute inset-0 z-0"><img src="${imgSrc}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div></div>` : `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
         const logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain p-2 filter invert drop-shadow-md">`;
 
@@ -6846,6 +6850,6 @@ function initApp() {
 // --- APP START ---
 // Dit is het enige startpunt van de applicatie
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("🍀 MEA(N)DERY V2.1 Quadrifoglio Loaded.");
+    console.log("🍀 MEA(N)DERY V2.2 Quadrifoglio Loaded.");
     initApp();
 });

@@ -4367,7 +4367,7 @@ function initLabelForge() {
     const sliders = [
         'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 
         'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 
-        'tuneLogoGap', 'tuneSpecsSize',
+        'tuneSpecsSize',
         // NIEUW:
         'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity',
         'tuneLogoSize', 'tuneLogoX', 'tuneLogoY'
@@ -4635,7 +4635,6 @@ function loadLabelFromBrew(e) {
         restoreSlider('tuneStyleSize', s.tuneStyleSize);
         restoreSlider('tuneStyleSize2', s.tuneStyleSize2);
         restoreSlider('tuneStyleGap', s.tuneStyleGap);
-        restoreSlider('tuneLogoGap', s.tuneLogoGap);
         restoreSlider('tuneSpecsSize', s.tuneSpecsSize);
         
         restoreSlider('tuneArtZoom', s.tuneArtZoom);
@@ -4723,26 +4722,31 @@ function loadLabelFromBrew(e) {
     if(typeof setLabelTheme === 'function') setLabelTheme(activeTheme);
 }
 
-// --- LABEL THEMA FUNCTIE MET LAYERED RENDERING ---
+// --- LABEL THEMA FUNCTIE (MET FG FIX & CLEANUP) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; 
 
+    // Helper om veilig waardes op te halen
+    const getVal = (id) => document.getElementById(id)?.value || '';
+    const getCheck = (id) => document.getElementById(id)?.checked || false;
+    const getText = (id) => document.getElementById(id)?.textContent || '';
+
     // 1. DATA OPHALEN
-    const title = document.getElementById('labelTitle')?.value || 'MEAD NAME';
-    const sub = document.getElementById('labelSubtitle')?.value || 'Style Description';
-    const abv = document.getElementById('labelAbv')?.value || '12';
-    const fg = document.getElementById('labelFg')?.value || '';
-    const vol = document.getElementById('labelVol')?.value || '750';
-    const desc = document.getElementById('labelDescription')?.value || '';
-    const details = document.getElementById('labelDetails')?.value || ''; 
-    const dateVal = document.getElementById('labelDate')?.value || new Date().toLocaleDateString();
+    const title = getVal('labelTitle') || 'MEAD NAME';
+    const sub = getVal('labelSubtitle') || 'Style Description';
+    const abv = getVal('labelAbv');
+    const fg = getVal('labelFg'); // <-- DIT VELD MOET NU ZICHTBAAR WORDEN
+    const vol = getVal('labelVol');
+    const desc = getVal('labelDescription');
+    const details = getVal('labelDetails'); 
+    const dateVal = getVal('labelDate') || new Date().toLocaleDateString();
     
     // Checkboxes & Inputs
-    const showDetails = document.getElementById('labelShowDetails')?.checked; 
-    const allergenText = document.getElementById('labelAllergens')?.value || ''; 
+    const showDetails = getCheck('labelShowDetails'); 
+    const allergenText = getVal('labelAllergens'); 
     
-    // 2. AFBEELDING CHECK
+    // 2. AFBEELDING CHECK (ARTWORK)
     let imgSrc = window.currentLabelImageSrc || '';
     const imgElement = document.getElementById('label-img-display');
     if (!imgSrc && imgElement && !imgElement.classList.contains('hidden') && imgElement.src !== window.location.href) {
@@ -4750,44 +4754,44 @@ function setLabelTheme(theme) {
     }
     const hasImage = imgSrc && imgSrc.length > 10;
 
-    // 3. KNOPPEN STATUS
+    // 3. KNOPPEN STATUS ACTIVE ZETTEN
     document.querySelectorAll('.label-theme-btn').forEach(b => {
         b.classList.remove('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
         if(b.dataset.theme === theme) b.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
     });
 
+    // =================================================================
+    // THEMA 1: STANDAARD
+    // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
         // --- TUNING VALUES ---
-        const titleSize1 = document.getElementById('tuneTitleSize')?.value || 100;
-        const titleScale2 = document.getElementById('tuneTitleSize2')?.value || 1.0; 
+        const titleSize1 = getVal('tuneTitleSize') || 100;
+        const titleScale2 = getVal('tuneTitleSize2') || 1.0; 
         const titleSize2 = Math.round(titleSize1 * titleScale2);
-        const titleX = document.getElementById('tuneTitleX')?.value || 0;
+        const titleX = getVal('tuneTitleX') || 0;
 
-        const styleSize1 = document.getElementById('tuneStyleSize')?.value || 14;
-        const styleScale2 = document.getElementById('tuneStyleSize2')?.value || 1.0; 
+        const styleSize1 = getVal('tuneStyleSize') || 14;
+        const styleScale2 = getVal('tuneStyleSize2') || 1.0; 
         const styleSize2 = Math.round(styleSize1 * styleScale2);
-        const styleGap = document.getElementById('tuneStyleGap')?.value || 5;
-        const specsFontSize = document.getElementById('tuneSpecsSize')?.value || 5; 
+        const styleGap = getVal('tuneStyleGap') || 5;
+        const specsFontSize = getVal('tuneSpecsSize') || 5; 
 
-        // --- NEW: ARTWORK & LOGO TUNING ---
-        const artZoom = document.getElementById('tuneArtZoom')?.value || 1.0;
-        const artX = document.getElementById('tuneArtX')?.value || 0;
-        const artY = document.getElementById('tuneArtY')?.value || 0;
-        const artOpacity = document.getElementById('tuneArtOpacity')?.value || 1.0;
+        // --- ARTWORK & LOGO TUNING ---
+        const artZoom = getVal('tuneArtZoom') || 1.0;
+        const artX = getVal('tuneArtX') || 0;
+        const artY = getVal('tuneArtY') || 0;
+        const artOpacity = getVal('tuneArtOpacity') || 1.0;
 
-        const logoSize = document.getElementById('tuneLogoSize')?.value || 100; // px width
-        const logoX = document.getElementById('tuneLogoX')?.value || 0;
-        const logoY = document.getElementById('tuneLogoY')?.value || 0;
+        const logoSize = getVal('tuneLogoSize') || 100;
+        const logoX = getVal('tuneLogoX') || 0;
+        const logoY = getVal('tuneLogoY') || 0;
 
-        // --- LAYERED RENDERING ---
-        
-        // Laag 1: Artwork (Achtergrond in rechtervak)
+        // --- LAAG 1: ARTWORK ---
         let artHtml = '';
         if (hasImage) {
-            // We gebruiken translate en scale voor positie. Object-cover zorgt dat hij het vak vult.
             artHtml = `
             <div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center pointer-events-none">
                 <img src="${imgSrc}" 
@@ -4796,8 +4800,7 @@ function setLabelTheme(theme) {
             </div>`;
         }
 
-        // Laag 3: Logo (Bovenop alles, verplaatsbaar)
-        // We gebruiken standaard logo.png
+        // --- LAAG 3: LOGO ---
         const logoHtml = `
             <div class="absolute top-0 right-0 z-20 pointer-events-none" 
                  style="transform: translate(${logoX}px, ${logoY}px); width: ${logoSize}px; padding: 10px;">
@@ -4806,15 +4809,15 @@ function setLabelTheme(theme) {
             </div>
         `;
 
-        // Specs Logic (Yeast/Honey/Allergens)
-        const showYeast = document.getElementById('labelShowYeast')?.checked;
-        const showHoney = document.getElementById('labelShowHoney')?.checked;
+        // Specs Logic (Top Block)
+        const showYeast = getCheck('labelShowYeast');
+        const showHoney = getCheck('labelShowHoney');
         let yeastText = "", honeyText = "";
         if (showYeast) { const y = document.getElementById('displayLabelYeast')?.textContent; if(y && y.trim() !== '--') yeastText = y.trim(); }
         if (showHoney) { const h = document.getElementById('displayLabelHoney')?.textContent; if(h && h.trim() !== '--') honeyText = h.trim(); }
         const showSpecsBlock = yeastText || honeyText || allergenText;
 
-        // Peak Date Logic (zelfde als voorheen)
+        // Peak Date Logic (Bottom Block)
         let peakDateVal = "";
         const selectEl = document.getElementById('labelRecipeSelect');
         const selectedBrew = brews.find(b => b.id === selectEl?.value);
@@ -4844,13 +4847,16 @@ function setLabelTheme(theme) {
                     <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">${desc}</p>
                     ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-justify mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">${details}</p>` : ''}
                 </div>
+                
                 <div class="flex-grow"></div>
+                
                 ${showSpecsBlock ? `
                 <div class="py-2 border-b border-gray-300 space-y-1 mb-2">
                     ${honeyText ? `<div class="flex flex-col leading-tight"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Honey Source</span><span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${honeyText}</span></div>` : ''}
                     ${yeastText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Yeast Strain</span><span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${yeastText}</span></div>` : ''}
                     ${allergenText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Allergens</span><span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${allergenText}</span></div>` : ''}
                 </div>` : ''}
+                
                 <div class="text-[#8F8C79]">
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider">
                         ${abv ? `<div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>` : ''}
@@ -4885,9 +4891,10 @@ function setLabelTheme(theme) {
         `;
     } 
     
-    // THEMA 2 (Special) laten we intact (die is full-bleed)
+    // =================================================================
+    // THEMA 2: SPECIAL (OOK HIER FG TOEVOEGEN ALS HIJ ER NIET WAS)
+    // =================================================================
     else if (theme === 'special') {
-       // ... bestaande code voor special theme (geen wijzigingen nodig, die vervangt al de hele achtergrond) ...
        container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
        container.style = ""; 
        let bgHtml = hasImage ? `<div class="absolute inset-0 z-0"><img src="${imgSrc}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div></div>` : `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
@@ -5310,7 +5317,6 @@ window.saveLabelToBrew = async function() {
         tuneStyleSize2: getVal('tuneStyleSize2'),
         tuneStyleGap: getVal('tuneStyleGap'),
         
-        tuneLogoGap: getVal('tuneLogoGap'),
         tuneSpecsSize: getVal('tuneSpecsSize'),
         
         // NIEUW: Artwork & Logo instellingen
@@ -6837,10 +6843,10 @@ window.autoFitLabelText = function() {
     const logoEl = document.getElementById('label-logo-img');
     
     // Sliders ophalen
-    const gapSlider = document.getElementById('tuneLogoGap');
     const sizeSlider = document.getElementById('tuneTitleSize');
     
-    const safeZone = gapSlider ? parseInt(gapSlider.value) : 10;
+    // We gebruiken nu een vaste veilige afstand van 5px, omdat de slider weg is.
+    const safeZone = 5; 
     const startFontSize = sizeSlider ? parseInt(sizeSlider.value) : 100;
 
     if (!titleEl || !groupEl) return;
@@ -6857,7 +6863,7 @@ window.autoFitLabelText = function() {
 
     if (!container || container.offsetWidth === 0) return;
 
-    // Collision Logic
+    // Collision Logic (kijkt of tekst en logo botsen)
     const checkCollision = () => {
         if (!logoEl) return false;
         const gRect = groupEl.getBoundingClientRect(); 
@@ -6874,13 +6880,12 @@ window.autoFitLabelText = function() {
         return (groupEl.offsetWidth + groupEl.offsetLeft > container.offsetWidth);
     }
 
-    // Verklein lus: AANGEPAST NAAR > 5 (zodat je kleiner kan gaan)
+    // Verklein lus
     while ( (checkCollision() || checkOverflow()) && fontSize > 5 ) {
         fontSize--; 
         titleEl.style.fontSize = fontSize + 'px';
     }
     
-    // Veiligheidsgrens verlaagd naar 5px
     if (fontSize <= 5) titleEl.style.fontSize = '5px';
 }
 
@@ -7024,7 +7029,7 @@ function initApp() {
     // (Optioneel: handleStyleChange aanroep hier)
 
     // --- LAYOUT TUNING LISTENERS ---
-    ['tuneTitleSize', 'tuneTitleX', 'tuneStyleSize', 'tuneStyleGap', 'tuneLogoGap'].forEach(id => {
+    ['tuneTitleSize', 'tuneTitleX', 'tuneStyleSize', 'tuneStyleGap'].forEach(id => {
         const el = document.getElementById(id);
         if(el) {
             el.addEventListener('input', (e) => {
@@ -7033,7 +7038,6 @@ function initApp() {
                 if(id === 'tuneTitleX') document.getElementById('disp-title-x').textContent = e.target.value + 'px';
                 if(id === 'tuneStyleSize') document.getElementById('disp-style-size').textContent = e.target.value + 'px';
                 if(id === 'tuneStyleGap') document.getElementById('disp-style-gap').textContent = e.target.value + 'px';
-                if(id === 'tuneLogoGap') document.getElementById('disp-logo-gap').textContent = e.target.value + 'px';
                 
                 // Update label
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';

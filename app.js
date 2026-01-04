@@ -4771,7 +4771,7 @@ function setLabelTheme(theme) {
                         </h1>
                     </div>
                     <div id="style-container" class="h-[50%] flex flex-col justify-end overflow-hidden" style="margin-left: ${styleGap}px;">
-                         <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" 
+                         <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-normal leading-none line-clamp-3 text-ellipsis" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: ${styleSize}px;">
                             ${sub}
                         </p>

@@ -4328,17 +4328,30 @@ const builtInLabelFormats = {
 };
 let userLabelFormats = {}; // Wordt gevuld vanuit Firestore
 
-// 2. INITIALISATIE
+// 2. INITIALISATIE (MET ALLERGENEN FIX)
 function initLabelForge() {
     populateLabelRecipeDropdown();
     loadUserLabelFormats(); 
 
-    // Live Preview Listeners (Tekst)
-    ['labelTitle', 'labelSubtitle', 'labelAbv', 'labelFg', 'labelVol', 'labelDate', 'labelDescription', 'labelDetails', 'labelAllergens'].forEach(id => {
+    // A. LIVE TEKST (Update bestaande elementen - SNEL)
+    // 'labelAllergens' is HIER WEGGEHAALD
+    ['labelTitle', 'labelSubtitle', 'labelAbv', 'labelFg', 'labelVol', 'labelDate', 'labelDescription', 'labelDetails'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', updateLabelPreviewText);
     });
 
-    // Checkbox & Select Listeners
+    // B. LAYOUT TRIGGERS (Herteken het hele label - NODIG VOOR STRUCTUUR)
+    // HIER TOEGEVOEGD: Zodra je typt in Allergenen, wordt de structuur opnieuw berekend
+    ['labelAllergens'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', () => {
+                const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
+                setLabelTheme(activeTheme);
+            });
+        }
+    });
+
+    // C. CHECKBOXES & SELECTS (Hertekenen)
     ['labelShowDetails', 'labelShowYeast', 'labelShowHoney', 'label-persona-select'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', () => {
@@ -4347,16 +4360,21 @@ function initLabelForge() {
         });
     });
     
-    // Tuning Listeners (Inclusief de nieuwe specs slider)
+    // D. TUNING & SLIDERS (GECORRIGEERDE ID LOGICA)
     ['tuneTitleSize', 'tuneTitleX', 'tuneStyleSize', 'tuneStyleGap', 'tuneLogoGap', 'tuneSpecsSize'].forEach(id => {
         const el = document.getElementById(id);
         if(el) {
             el.addEventListener('input', (e) => {
-                // Update getalletjes display (als die bestaat)
-                const disp = document.getElementById(id.replace('tune', 'disp-').replace(/([A-Z])/g, '-$1').toLowerCase());
+                // 1. FIX: Bepaal de juiste ID voor het display element
+                // We veranderen 'tuneTitleSize' naar 'disp-title-size'
+                // Oude fout: id.replace('tune', 'disp-') zorgde voor een dubbele streep.
+                let dispId = id.replace('tune', 'disp'); 
+                dispId = dispId.replace(/([A-Z])/g, '-$1').toLowerCase();
+                
+                const disp = document.getElementById(dispId);
                 if(disp) disp.textContent = e.target.value + 'px';
                 
-                // Update label
+                // 2. Update het label
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
                 setLabelTheme(activeTheme);
             });
@@ -4724,7 +4742,7 @@ function setLabelTheme(theme) {
                     </div>` : ''}
 
                     ${allergenText ? `
-                    <div class="flex flex-col leading-tight mt-1.5 pt-1">
+                    <div class="flex flex-col leading-tight mt-0.5">
                         <span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Allergens</span>
                         <span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${allergenText}</span>
                     </div>` : ''}

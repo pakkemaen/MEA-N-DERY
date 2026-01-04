@@ -5096,12 +5096,15 @@ async function generateLabelArt() {
     }
 }
 
-// AI Label Schrijver (Met Persona Selectie)
+// AI Label Schrijver (CRASH PROOF & MET PERSONA)
 async function generateLabelDescription() {
-    const title = document.getElementById('labelTitle').value;
-    const style = document.getElementById('labelSubtitle').value;
-    const ingredients = document.getElementById('labelDetails').value; // Ingrediënten meenemen
-    const persona = document.getElementById('label-persona-select').value; // De nieuwe keuze
+    // Veilige getters (voorkomt crash als element niet bestaat)
+    const getVal = (id) => document.getElementById(id)?.value || '';
+    
+    const title = getVal('labelTitle');
+    const style = getVal('labelSubtitle');
+    const ingredients = getVal('labelDetails'); // Dit veroorzaakte de crash
+    const persona = getVal('label-persona-select');
     
     if (!title) return showToast("Enter a title first.", "error");
     
@@ -5110,7 +5113,7 @@ async function generateLabelDescription() {
     btn.innerHTML = "Thinking...";
     btn.disabled = true;
     
-    // --- PERSONA DEFINITIES (Gelijk aan Social Media Tab) ---
+    // --- PERSONA DEFINITIES ---
     let toneInstruction = "";
     
     switch (persona) {
@@ -5132,7 +5135,7 @@ async function generateLabelDescription() {
     }
 
     // De Prompt
-    const prompt = `Write a short "back-of-bottle" description (max 25 words) for a Mead called "${title}".
+    const prompt = `Write a short "back-of-bottle" description (max 30 words) for a Mead called "${title}".
     
     **CONTEXT:**
     - Style: ${style}
@@ -5145,14 +5148,23 @@ async function generateLabelDescription() {
     
     try {
         const text = await performApiCall(prompt);
-        // Schoonmaakactie (soms geeft AI quotes mee)
-        document.getElementById('labelDescription').value = text.replace(/^["']|["']$/g, '').trim();
-        updateLabelPreviewText();
+        
+        // Update het tekstvak (veilig)
+        const descField = document.getElementById('labelDescription');
+        if(descField) {
+            descField.value = text.replace(/^["']|["']$/g, '').trim();
+            // Trigger update voor preview
+            updateLabelPreviewText();
+        }
+        
     } catch (e) {
+        console.error(e);
         showToast("AI Writer failed.", "error");
     } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        if(btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
     }
 }
 

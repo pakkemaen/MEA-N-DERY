@@ -4598,24 +4598,24 @@ function loadLabelFromBrew(e) {
     setLabelTheme(activeTheme);
 }
 
-// --- LABEL THEMA FUNCTIE (ALLERGENEN UPDATE & CLEANER SPECS) ---
+// --- LABEL THEMA FUNCTIE (VEILIGE VERSIE V3) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; 
 
-    // 1. DATA OPHALEN
-    const title = document.getElementById('labelTitle').value || 'MEAD NAME';
-    const sub = document.getElementById('labelSubtitle').value || 'Style Description';
-    const abv = document.getElementById('labelAbv').value || '12';
+    // 1. DATA OPHALEN (Met veiligheidschecks ?.)
+    const title = document.getElementById('labelTitle')?.value || 'MEAD NAME';
+    const sub = document.getElementById('labelSubtitle')?.value || 'Style Description';
+    const abv = document.getElementById('labelAbv')?.value || '12';
     const fg = document.getElementById('labelFg')?.value || '';
-    const vol = document.getElementById('labelVol').value || '750';
-    const desc = document.getElementById('labelDescription').value || '';
-    const details = document.getElementById('labelDetails').value || ''; 
+    const vol = document.getElementById('labelVol')?.value || '750';
+    const desc = document.getElementById('labelDescription')?.value || '';
+    const details = document.getElementById('labelDetails')?.value || ''; 
     const dateVal = document.getElementById('labelDate')?.value || new Date().toLocaleDateString();
     
     // Checkboxes & Inputs
     const showDetails = document.getElementById('labelShowDetails')?.checked; 
-    const allergenText = document.getElementById('labelAllergens')?.value || ''; // NIEUW: Vrije tekst
+    const allergenText = document.getElementById('labelAllergens')?.value || ''; 
     
     // 2. AFBEELDING CHECK
     let imgSrc = window.currentLabelImageSrc || '';
@@ -4632,18 +4632,18 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (CLEANER SPECS LAYOUT)
+    // THEMA 1: STANDAARD
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
-        // Tuning
+        // Tuning (CRUCIAAL: ?.value VOORKOMT DE CRASH HIER)
         const titleSizeMax = document.getElementById('tuneTitleSize')?.value || 100;
         const titleX = document.getElementById('tuneTitleX')?.value || 0;
         const styleSize = document.getElementById('tuneStyleSize')?.value || 14;
         const styleGap = document.getElementById('tuneStyleGap')?.value || 5;
-        const specsFontSize = document.getElementById('tuneSpecsSize')?.value || 5; // NIEUW
+        const specsFontSize = document.getElementById('tuneSpecsSize')?.value || 5; 
 
         // Logo
         let logoHtml = '';
@@ -4661,11 +4661,11 @@ function setLabelTheme(theme) {
         let honeyText = "";
 
         if (showYeast) {
-            const y = document.getElementById('displayLabelYeast').textContent; 
+            const y = document.getElementById('displayLabelYeast')?.textContent; 
             if(y && y.trim() !== '--') yeastText = y.trim();
         }
         if (showHoney) {
-            const h = document.getElementById('displayLabelHoney').textContent;
+            const h = document.getElementById('displayLabelHoney')?.textContent;
             if(h && h.trim() !== '--') honeyText = h.trim();
         }
 
@@ -4674,7 +4674,7 @@ function setLabelTheme(theme) {
         // Peak Date
         let peakDateVal = "";
         const selectEl = document.getElementById('labelRecipeSelect');
-        const selectedBrew = brews.find(b => b.id === selectEl.value);
+        const selectedBrew = brews.find(b => b.id === selectEl?.value);
         if (selectedBrew && selectedBrew.peakFlavorDate) {
             try { peakDateVal = new Date(selectedBrew.peakFlavorDate).toLocaleDateString('nl-NL'); } catch(e){}
         } else if (dateVal) {
@@ -4758,7 +4758,9 @@ function setLabelTheme(theme) {
         setTimeout(window.autoFitLabelText, 300);
     }
 
-    // THEMA 2: SPECIAL (Ook hier allergenen tekst gebruiken)
+    // =================================================================
+    // THEMA 2: SPECIAL
+    // =================================================================
     else if (theme === 'special') {
         container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
         container.style = ""; 

@@ -645,6 +645,7 @@
     <div id="labels-view" class="hidden mt-4">
     <span id="displayLabelYeast" class="hidden"></span>
     <span id="displayLabelHoney" class="hidden"></span>
+
     <div class="flex flex-col lg:flex-row gap-8 h-full">
         <aside class="lg:w-1/3 bg-app-secondary p-6 rounded-lg shadow-lg overflow-y-auto" style="max-height: 85vh;">
             <h2 class="text-2xl font-header font-bold mb-6 border-b pb-4 border-app flex items-center gap-2">
@@ -669,7 +670,6 @@
                         <button class="label-theme-btn active btn border border-app-brand text-app-brand text-xs py-2 font-bold uppercase tracking-wider" data-theme="standard">
                             Standard
                         </button>
-                        
                         <button class="label-theme-btn btn border border-gray-400 text-gray-500 text-xs py-2 font-bold uppercase tracking-wider hover:bg-gray-100 dark:hover:bg-gray-700" data-theme="special">
                             Special
                         </button>
@@ -713,219 +713,167 @@
                         <input type="text" id="labelDate" class="w-full p-1 border rounded bg-app-tertiary text-sm">
                     </div>
                 </div>
+                
                 <div>
                     <div class="flex justify-between items-end mb-2">
-    <label class="block text-xs font-bold uppercase text-app-secondary">Back Label Story</label>
-    
-    <div class="flex items-center gap-2">
-        <div class="relative group">
-            <select id="label-persona-select" class="appearance-none bg-app-tertiary hover:bg-white transition-colors border border-app-brand/20 text-app-header text-[10px] font-bold uppercase rounded-lg py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-purple-500/50 cursor-pointer shadow-sm">
-                <option value="Witty">✨ Witty (Default)</option>
-                <option value="Ryan Reynolds">🎬 Ryan Reynolds</option>
-                <option value="The Sommelier">🍷 The Sommelier</option>
-                <option value="Dry British">🇬🇧 Dry British</option>
-                <option value="The Viking">🪓 The Viking</option>
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-app-secondary group-hover:text-purple-600 transition-colors">
-                <svg class="h-3 w-3 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-            </div>
-        </div>
-
-        <button id="ai-label-desc-btn" class="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold uppercase py-2 px-3 rounded-lg shadow-sm transition-all active:scale-95">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-            Write
-        </button>
-    </div>
-</div>
-<textarea id="labelDescription" rows="3" class="w-full p-3 rounded-lg bg-app-tertiary border border-app-brand/10 text-app-header text-sm placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all shadow-inner mb-6" placeholder="e.g. A rich, dark bochet with notes of caramel..."></textarea>
+                        <label class="block text-xs font-bold uppercase text-app-secondary">Back Label Story</label>
+                        <div class="flex items-center gap-2">
+                            <div class="relative group">
+                                <select id="label-persona-select" class="appearance-none bg-app-tertiary hover:bg-white transition-colors border border-app-brand/20 text-app-header text-[10px] font-bold uppercase rounded-lg py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-purple-500/50 cursor-pointer shadow-sm">
+                                    <option value="Witty">✨ Witty (Default)</option>
+                                    <option value="Ryan Reynolds">🎬 Ryan Reynolds</option>
+                                    <option value="The Sommelier">🍷 The Sommelier</option>
+                                    <option value="Dry British">🇬🇧 Dry British</option>
+                                    <option value="The Viking">🪓 The Viking</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-app-secondary group-hover:text-purple-600 transition-colors">
+                                    <svg class="h-3 w-3 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                                </div>
+                            </div>
+                            <button id="ai-label-desc-btn" class="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold uppercase py-2 px-3 rounded-lg shadow-sm transition-all active:scale-95">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                Write
+                            </button>
+                        </div>
+                    </div>
+                    <textarea id="labelDescription" rows="3" class="w-full p-3 rounded-lg bg-app-tertiary border border-app-brand/10 text-app-header text-sm placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all shadow-inner mb-2" placeholder="e.g. A rich, dark bochet with notes of caramel..."></textarea>
                 </div>
 
                 <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-    <details class="group">
-        <summary class="flex justify-between items-center cursor-pointer text-xs font-bold text-app-brand uppercase tracking-wider select-none list-none outline-none">
-            <span>Extra Info on Label</span>
-            <svg class="w-4 h-4 transition-transform duration-200 group-open:rotate-180 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-        </summary>
-        
-        <div class="space-y-3 mb-4">
-    <div class="flex items-center gap-2">
-        <input type="checkbox" id="labelShowYeast" checked class="rounded text-app-brand focus:ring-app-brand">
-        <label for="labelShowYeast" class="text-xs text-app-header">Yeast Strain</label>
-    </div>
-    <div class="flex items-center gap-2">
-        <input type="checkbox" id="labelShowHoney" checked class="rounded text-app-brand focus:ring-app-brand">
-        <label for="labelShowHoney" class="text-xs text-app-header">Honey Source</label>
-    </div>
-    <div class="flex items-center gap-2">
-        <input type="checkbox" id="labelShowDetails" class="rounded text-app-brand focus:ring-app-brand">
-        <label for="labelShowDetails" class="text-xs text-app-header">Full Ingredients List</label>
-    </div>
-    
-    <div>
-        <label class="block text-[10px] font-bold uppercase text-app-secondary mb-1">Allergens / Warnings</label>
-        <input type="text" id="labelAllergens" class="w-full p-2 text-xs border rounded bg-app-tertiary border-app-brand/20 text-app-header" placeholder="e.g. Contains Sulfites, Lactose">
-    </div>
-</div>
-    </details>
-</div>
+                    <details class="group">
+                        <summary class="flex justify-between items-center cursor-pointer text-xs font-bold text-app-brand uppercase tracking-wider select-none list-none outline-none">
+                            <span>Extra Info on Label</span>
+                            <svg class="w-4 h-4 transition-transform duration-200 group-open:rotate-180 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </summary>
+                        
+                        <div class="space-y-3 mb-4 mt-2">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="labelShowYeast" checked class="rounded text-app-brand focus:ring-app-brand">
+                                <label for="labelShowYeast" class="text-xs text-app-header">Yeast Strain</label>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="labelShowHoney" checked class="rounded text-app-brand focus:ring-app-brand">
+                                <label for="labelShowHoney" class="text-xs text-app-header">Honey Source</label>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="labelShowDetails" class="rounded text-app-brand focus:ring-app-brand">
+                                <label for="labelShowDetails" class="text-xs text-app-header">Full Ingredients List</label>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase text-app-secondary mb-1">Allergens / Warnings</label>
+                                <input type="text" id="labelAllergens" class="w-full p-2 text-xs border rounded bg-app-tertiary border-app-brand/20 text-app-header" placeholder="e.g. Contains Sulfites, Lactose">
+                            </div>
+                        </div>
+                    </details>
+                </div>
 
-<div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-    <details class="group">
-        <summary class="flex justify-between items-center cursor-pointer text-xs font-bold text-app-brand uppercase tracking-wider select-none list-none outline-none">
-            <span>Fine-Tune Layout</span>
-            <svg class="w-4 h-4 transition-transform duration-200 group-open:rotate-180 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-        </summary>
-        
-        <div class="pt-4 space-y-5 px-1">
-    
-    <div>
-        <div class="flex justify-between text-xs mb-1">
-            <label class="font-semibold text-app-header">Title Font Size</label>
-            <span id="disp-title-size" class="font-mono text-xs text-gray-400">100px</span>
-        </div>
-        <input type="range" id="tuneTitleSize" min="5" max="180" value="100" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-    </div>
-
-    <div>
-        <div class="flex justify-between text-xs mb-1">
-            <label class="font-semibold text-app-header">Group Alignment (Left)</label>
-            <span id="disp-title-x" class="font-mono text-xs text-gray-400">0px</span>
-        </div>
-        <input type="range" id="tuneTitleX" min="0" max="100" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-    </div>
-
-    <div>
-        <div class="flex justify-between text-xs mb-1">
-            <label class="font-semibold text-app-header">Style Font Size</label>
-            <span id="disp-style-size" class="font-mono text-xs text-gray-400">14px</span>
-        </div>
-        <input type="range" id="tuneStyleSize" min="6" max="40" value="14" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-    </div>
-
-    <div>
-        <div class="flex justify-between text-xs mb-1">
-            <label class="font-semibold text-app-header">Style Gap</label>
-            <span id="disp-style-gap" class="font-mono text-xs text-gray-400">5px</span>
-        </div>
-        <input type="range" id="tuneStyleGap" min="0" max="50" value="5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-    </div>
-
-    <div>
-        <div class="flex justify-between text-xs mb-1">
-            <label class="font-semibold text-app-header">Logo Safe Zone</label>
-            <span id="disp-logo-gap" class="font-mono text-xs text-gray-400">10px</span>
-        </div>
-        <input type="range" id="tuneLogoGap" min="0" max="100" value="10" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-    </div>
-
-    <div>
-        <div class="flex justify-between text-xs mb-1">
-            <label class="font-semibold text-app-header">Specs Font Size</label>
-            <span id="disp-specs-size" class="font-mono text-xs text-gray-400">5px</span>
-        </div>
-        <input type="range" id="tuneSpecsSize" min="0" max="6" value="6" step="0.5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-    </div>
-
-</div>
-    </details>
-</div>
+                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <details class="group">
+                        <summary class="flex justify-between items-center cursor-pointer text-xs font-bold text-app-brand uppercase tracking-wider select-none list-none outline-none">
+                            <span>Fine-Tune Layout</span>
+                            <svg class="w-4 h-4 transition-transform duration-200 group-open:rotate-180 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </summary>
+                        
+                        <div class="pt-4 space-y-5 px-1">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <label class="font-semibold text-app-header">Title Font Size</label>
+                                    <span id="disp-title-size" class="font-mono text-xs text-gray-400">100px</span>
+                                </div>
+                                <input type="range" id="tuneTitleSize" min="5" max="180" value="100" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <label class="font-semibold text-app-header">Group Alignment (Left)</label>
+                                    <span id="disp-title-x" class="font-mono text-xs text-gray-400">0px</span>
+                                </div>
+                                <input type="range" id="tuneTitleX" min="0" max="100" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <label class="font-semibold text-app-header">Style Font Size</label>
+                                    <span id="disp-style-size" class="font-mono text-xs text-gray-400">14px</span>
+                                </div>
+                                <input type="range" id="tuneStyleSize" min="6" max="40" value="14" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <label class="font-semibold text-app-header">Style Gap</label>
+                                    <span id="disp-style-gap" class="font-mono text-xs text-gray-400">5px</span>
+                                </div>
+                                <input type="range" id="tuneStyleGap" min="0" max="50" value="5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <label class="font-semibold text-app-header">Logo Safe Zone</label>
+                                    <span id="disp-logo-gap" class="font-mono text-xs text-gray-400">10px</span>
+                                </div>
+                                <input type="range" id="tuneLogoGap" min="0" max="100" value="10" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <label class="font-semibold text-app-header">Specs Font Size</label>
+                                    <span id="disp-specs-size" class="font-mono text-xs text-gray-400">5px</span>
+                                </div>
+                                <input type="range" id="tuneSpecsSize" min="3" max="6" value="5" step="0.5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
 
             <div class="pt-4 border-t border-app">
-    <div class="flex justify-between items-end mb-2">
-        <h3 class="text-sm font-bold text-app-brand uppercase tracking-wider">4. Print Layout</h3>
-        <button onclick="window.openLabelFormatModal()" class="text-[10px] text-blue-600 hover:underline flex items-center gap-1">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            Add Custom Size
-        </button>
-    </div>
-    
-    <div class="grid grid-cols-2 gap-2 mb-4 items-end">
-        <div>
-            <label class="block text-xs font-bold text-app-secondary mb-1">Paper Format</label>
-            <div class="flex gap-1">
-                <select id="labelPaper" class="w-full p-2 border rounded bg-app-tertiary text-sm text-app-header focus:ring-1 focus:ring-app-brand">
-                    </select>
-                <button onclick="window.deleteCustomLabelFormat()" id="deleteLabelFormatBtn" class="hidden text-red-500 hover:text-red-700 px-1 font-bold text-lg" title="Delete selected format">&times;</button>
+                <div class="flex justify-between items-end mb-2">
+                    <h3 class="text-sm font-bold text-app-brand uppercase tracking-wider">4. Print Layout</h3>
+                    <button onclick="window.openLabelFormatModal()" class="text-[10px] text-blue-600 hover:underline flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Add Custom Size
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 mb-4 items-end">
+                    <div>
+                        <label class="block text-xs font-bold text-app-secondary mb-1">Paper Format</label>
+                        <div class="flex gap-1">
+                            <select id="labelPaper" class="h-10 w-full p-2 border rounded bg-app-tertiary text-sm text-app-header focus:ring-1 focus:ring-app-brand">
+                                </select>
+                            <button onclick="window.deleteCustomLabelFormat()" id="deleteLabelFormatBtn" class="hidden h-10 w-8 flex items-center justify-center text-red-500 hover:text-red-700 font-bold text-lg border rounded bg-app-tertiary hover:bg-red-50" title="Delete selected format">&times;</button>
+                        </div>
+                    </div>
+                    <div>
+                        <button id="printLabelsBtn" class="h-10 w-full bg-app-action text-white text-xs font-bold rounded hover:opacity-90 btn shadow-sm flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            Print Sheet
+                        </button>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div>
-            <button id="printLabelsBtn" class="w-full bg-app-action text-white text-xs font-bold py-2.5 rounded hover:opacity-90 btn shadow-sm flex items-center justify-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                Print Sheet
-            </button>
-        </div>
-    </div>
-</div>
         </aside>
         
         <main class="lg:w-2/3 bg-gray-200 dark:bg-gray-800 p-8 rounded-lg shadow-inner flex flex-col items-center justify-center relative">
             <p class="absolute top-4 left-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Live Preview</p>
             
             <div id="label-preview-container" class="bg-white text-black shadow-2xl relative overflow-hidden transition-all duration-300 transform hover:scale-105" 
-                 style="width: 99.1mm; height: 67.7mm; padding: 5mm;">
+                 style="width: 99.1mm; height: 67.7mm; padding: 0;">
                 
                 <div id="label-content" class="relative w-full h-full bg-white overflow-hidden flex font-sans">
-    
-    <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-4 pb-2 px-3 flex flex-col text-right z-20 relative">
-        
-        <div class="flex flex-col gap-1 overflow-hidden">
-            <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">
-                </p>
-            <p id="prev-details" class="hidden text-[4px] text-gray-400 leading-tight text-justify mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">
-            </p>
-        </div>
+                    <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-4 pb-2 px-3 flex flex-col text-right z-20 relative">
+                        <div class="flex-grow"></div>
+                        <div class="text-[#8F8C79] mt-auto">
+                            <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider border-t-2 border-gray-200 pt-2 mb-1">
+                                <div class="text-gray-400">ABV</div><div class="text-black text-right">12%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="h-full w-[65%] relative p-2 overflow-hidden">
+                        <div class="absolute -top-6 -right-6 z-10">
+                            <img src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain opacity-90">
+                        </div>
+                    </div>
+                </div>
 
-        <div class="flex-grow"></div>
-
-        <div class="text-[#8F8C79]">
-            
-            <div id="label-specs-container"></div>
-
-            <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider">
-                <div class="text-gray-400">ABV</div> 
-                <div class="text-black text-right"><span id="prev-abv">12</span>%</div>
-                
-                <div class="text-gray-400">FG</div> 
-                <div class="text-black text-right"><span id="prev-fg">1.000</span></div>
-                
-                <div class="text-gray-400">Vol</div> 
-                <div class="text-black text-right"><span id="prev-vol">750</span>ml</div>
-                
-                <div class="text-gray-400">Bottled</div> 
-                <div class="text-black text-right"><span id="prev-date">2025</span></div>
-                
-                <div class="text-gray-400">Peak</div> 
-                <div class="text-black text-right"><span id="prev-peak">--</span></div>
             </div>
-            
-            <p id="prev-warning" class="hidden text-[4px] uppercase opacity-40 leading-tight mt-1">
-                Contains Sulfites
-            </p>
-        </div>
-    </div>
-
-    <div class="h-full w-[65%] relative p-2 overflow-hidden">
-        <div id="text-group" class="absolute top-0 bottom-0 flex flex-row items-end" style="left: 0px; padding-left: 2px;">
-            <div id="title-container" class="h-full flex flex-col justify-end">
-                <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-hidden" 
-                    style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: 100px;">
-                    MEAD NAME
-                </h1>
-            </div>
-            <div id="style-container" class="h-[50%] flex flex-col justify-end overflow-hidden" style="margin-left: 5px;">
-                 <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-nowrap" 
-                    style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: 14px;">
-                    STYLE DESCRIPTION
-                </p>
-            </div>
-        </div>
-        <div class="absolute -top-6 -right-6 z-10">
-            <img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-center opacity-90">
-            <img id="label-img-display" src="" class="hidden w-full h-full object-cover">
-        </div>
-    </div>
-</div>
-     
         </main>
     </div>
 </div>

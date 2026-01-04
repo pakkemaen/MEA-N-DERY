@@ -4382,12 +4382,13 @@ function initLabelForge() {
                 const disp = document.getElementById(dispId);
                 
                 if(disp) {
-                    if(id.includes('Size2') || id.includes('Opacity') || id.includes('Zoom')) {
-                        // Percentages of Zoom factor
-                        if(id.includes('Opacity')) disp.textContent = Math.round(e.target.value * 100) + '%';
-                        else if(id.includes('Zoom')) disp.textContent = e.target.value + 'x';
-                        else disp.textContent = Math.round(e.target.value * 100) + '%';
+                    // AANGEPAST: Size2 verwijderd uit deze check, want dat zijn nu pixels
+                    if(id.includes('Opacity')) {
+                        disp.textContent = Math.round(e.target.value * 100) + '%';
+                    } else if(id.includes('Zoom')) {
+                        disp.textContent = parseFloat(e.target.value).toFixed(1) + 'x';
                     } else {
+                        // Alle andere sliders (inclusief Size2) zijn nu pixels
                         disp.textContent = e.target.value + 'px';
                     }
                 }
@@ -4706,9 +4707,11 @@ function loadLabelFromBrew(e) {
         
         // Reset Sliders naar defaults (als er geen save is)
         const resetSlider = (id, val) => { const el = document.getElementById(id); if(el) { el.value = val; el.dispatchEvent(new Event('input')); }};
+        
         resetSlider('tuneTitleSize', 100);
-        resetSlider('tuneTitleSize2', 1.0);
+        resetSlider('tuneTitleSize2', 60); // Nieuwe default (px)
         resetSlider('tuneStyleSize', 14);
+        resetSlider('tuneStyleSize2', 10); // Nieuwe default (px)
         resetSlider('tuneSpecsSize', 5);
 
         resetSlider('tuneArtZoom', 1.0);
@@ -4722,12 +4725,11 @@ function loadLabelFromBrew(e) {
     if(typeof setLabelTheme === 'function') setLabelTheme(activeTheme);
 }
 
-// --- LABEL THEMA FUNCTIE (MET FG FIX & CLEANUP) ---
+// --- LABEL THEMA FUNCTIE (MET DATUM FIX) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; 
 
-    // Helper om veilig waardes op te halen
     const getVal = (id) => document.getElementById(id)?.value || '';
     const getCheck = (id) => document.getElementById(id)?.checked || false;
     const getText = (id) => document.getElementById(id)?.textContent || '';
@@ -4736,17 +4738,31 @@ function setLabelTheme(theme) {
     const title = getVal('labelTitle') || 'MEAD NAME';
     const sub = getVal('labelSubtitle') || 'Style Description';
     const abv = getVal('labelAbv');
-    const fg = getVal('labelFg'); // <-- DIT VELD MOET NU ZICHTBAAR WORDEN
+    const fg = getVal('labelFg');
     const vol = getVal('labelVol');
     const desc = getVal('labelDescription');
     const details = getVal('labelDetails'); 
-    const dateVal = getVal('labelDate') || new Date().toLocaleDateString();
     
-    // Checkboxes & Inputs
+    // --- DATUM FORMATTERING FIX ---
+    const rawDate = getVal('labelDate');
+    let dateVal = rawDate; 
+    // Probeer de datum om te zetten naar DD-MM-YYYY (of lokaal formaat)
+    if (rawDate) {
+        try {
+            const d = new Date(rawDate);
+            if (!isNaN(d.getTime())) {
+                // 'nl-NL' zorgt voor dag-maand-jaar volgorde (bv. 14-04-2025)
+                dateVal = d.toLocaleDateString('nl-NL'); 
+            }
+        } catch(e) { /* fallback naar input waarde */ }
+    } else {
+        dateVal = new Date().toLocaleDateString('nl-NL');
+    }
+    
     const showDetails = getCheck('labelShowDetails'); 
     const allergenText = getVal('labelAllergens'); 
     
-    // 2. AFBEELDING CHECK (ARTWORK)
+    // 2. AFBEELDING CHECK
     let imgSrc = window.currentLabelImageSrc || '';
     const imgElement = document.getElementById('label-img-display');
     if (!imgSrc && imgElement && !imgElement.classList.contains('hidden') && imgElement.src !== window.location.href) {
@@ -4754,15 +4770,12 @@ function setLabelTheme(theme) {
     }
     const hasImage = imgSrc && imgSrc.length > 10;
 
-    // 3. KNOPPEN STATUS ACTIVE ZETTEN
+    // 3. KNOPPEN STATUS
     document.querySelectorAll('.label-theme-btn').forEach(b => {
         b.classList.remove('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
         if(b.dataset.theme === theme) b.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
     });
 
-    // =================================================================
-    // THEMA 1: STANDAARD
-    // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
@@ -4770,12 +4783,13 @@ function setLabelTheme(theme) {
         // --- TUNING VALUES ---
         const titleSize1 = getVal('tuneTitleSize') || 100;
         const titleScale2 = getVal('tuneTitleSize2') || 1.0; 
-        const titleSize2 = Math.round(titleSize1 * titleScale2);
+        const titleSize2 = getVal('tuneTitleSize2') || 60; 
         const titleX = getVal('tuneTitleX') || 0;
 
         const styleSize1 = getVal('tuneStyleSize') || 14;
         const styleScale2 = getVal('tuneStyleSize2') || 1.0; 
-        const styleSize2 = Math.round(styleSize1 * styleScale2);
+        const styleSize2 = getVal('tuneStyleSize2') || 10;
+        
         const styleGap = getVal('tuneStyleGap') || 5;
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
 
@@ -4809,7 +4823,7 @@ function setLabelTheme(theme) {
             </div>
         `;
 
-        // Specs Logic (Top Block)
+        // Specs Logic
         const showYeast = getCheck('labelShowYeast');
         const showHoney = getCheck('labelShowHoney');
         let yeastText = "", honeyText = "";
@@ -4817,15 +4831,15 @@ function setLabelTheme(theme) {
         if (showHoney) { const h = document.getElementById('displayLabelHoney')?.textContent; if(h && h.trim() !== '--') honeyText = h.trim(); }
         const showSpecsBlock = yeastText || honeyText || allergenText;
 
-        // Peak Date Logic (Bottom Block)
+        // Peak Date Logic
         let peakDateVal = "";
         const selectEl = document.getElementById('labelRecipeSelect');
         const selectedBrew = brews.find(b => b.id === selectEl?.value);
         if (selectedBrew && selectedBrew.peakFlavorDate) {
             try { peakDateVal = new Date(selectedBrew.peakFlavorDate).toLocaleDateString('nl-NL'); } catch(e){}
-        } else if (dateVal) {
+        } else if (rawDate) { // Gebruik rawDate voor berekening
             try { 
-                const d = new Date(dateVal); 
+                const d = new Date(rawDate); 
                 const abvNum = parseFloat(abv);
                 let months = (abvNum < 8) ? 3 : (abvNum > 14 ? 12 : 6);
                 d.setMonth(d.getMonth() + months); 
@@ -4892,7 +4906,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (OOK HIER FG TOEVOEGEN ALS HIJ ER NIET WAS)
+    // THEMA 2: SPECIAL
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;

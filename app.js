@@ -4328,19 +4328,22 @@ const builtInLabelFormats = {
 };
 let userLabelFormats = {}; // Wordt gevuld vanuit Firestore
 
-// 2. INITIALISATIE (MET ALLERGENEN FIX)
+// 2. INITIALISATIE
 function initLabelForge() {
+    // 1. VUL DE DROPDOWN DIRECT (Met de standaard formaten Avery etc.)
+    // Dit lost het probleem op dat de lijst leeg blijft.
+    populateLabelPaperDropdown(); 
+
+    // 2. Haal recepten en custom formaten op
     populateLabelRecipeDropdown();
     loadUserLabelFormats(); 
 
-    // A. LIVE TEKST (Update bestaande elementen - SNEL)
-    // 'labelAllergens' is HIER WEGGEHAALD
+    // A. LIVE TEKST (Update bestaande elementen)
     ['labelTitle', 'labelSubtitle', 'labelAbv', 'labelFg', 'labelVol', 'labelDate', 'labelDescription', 'labelDetails'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', updateLabelPreviewText);
     });
 
-    // B. LAYOUT TRIGGERS (Herteken het hele label - NODIG VOOR STRUCTUUR)
-    // HIER TOEGEVOEGD: Zodra je typt in Allergenen, wordt de structuur opnieuw berekend
+    // B. LAYOUT TRIGGERS (Hertekenen)
     ['labelAllergens'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -4351,7 +4354,7 @@ function initLabelForge() {
         }
     });
 
-    // C. CHECKBOXES & SELECTS (Hertekenen)
+    // C. CHECKBOXES & SELECTS
     ['labelShowDetails', 'labelShowYeast', 'labelShowHoney', 'label-persona-select'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', () => {
@@ -4360,21 +4363,16 @@ function initLabelForge() {
         });
     });
     
-    // D. TUNING & SLIDERS (GECORRIGEERDE ID LOGICA)
+    // D. TUNING & SLIDERS
     ['tuneTitleSize', 'tuneTitleX', 'tuneStyleSize', 'tuneStyleGap', 'tuneLogoGap', 'tuneSpecsSize'].forEach(id => {
         const el = document.getElementById(id);
         if(el) {
             el.addEventListener('input', (e) => {
-                // 1. FIX: Bepaal de juiste ID voor het display element
-                // We veranderen 'tuneTitleSize' naar 'disp-title-size'
-                // Oude fout: id.replace('tune', 'disp-') zorgde voor een dubbele streep.
                 let dispId = id.replace('tune', 'disp'); 
                 dispId = dispId.replace(/([A-Z])/g, '-$1').toLowerCase();
-                
                 const disp = document.getElementById(dispId);
                 if(disp) disp.textContent = e.target.value + 'px';
                 
-                // 2. Update het label
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
                 setLabelTheme(activeTheme);
             });
@@ -4386,7 +4384,11 @@ function initLabelForge() {
     document.querySelectorAll('.label-theme-btn').forEach(btn => btn.addEventListener('click', (e) => setLabelTheme(e.target.dataset.theme)));
     document.getElementById('ai-label-art-btn')?.addEventListener('click', generateLabelArt);
     document.getElementById('ai-label-desc-btn')?.addEventListener('click', generateLabelDescription);
+    
+    // PAPIER UPDATE LISTENER
+    // Zorgt dat de preview grootte verandert als je een ander papier kiest
     document.getElementById('labelPaper')?.addEventListener('change', updateLabelPreviewDimensions); 
+    
     document.getElementById('printLabelsBtn')?.addEventListener('click', printLabelsSheet); 
     document.getElementById('lf-lookup-btn')?.addEventListener('click', autoDetectLabelFormat);
     document.getElementById('label-format-form')?.addEventListener('submit', saveCustomLabelFormat);

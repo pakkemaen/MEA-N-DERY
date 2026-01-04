@@ -823,7 +823,7 @@
             <label class="font-semibold text-app-header">Specs Font Size</label>
             <span id="disp-specs-size" class="font-mono text-xs text-gray-400">5px</span>
         </div>
-        <input type="range" id="tuneSpecsSize" min="3" max="8" value="5" step="0.5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+        <input type="range" id="tuneSpecsSize" min="0" max="6" value="6" step="0.5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
     </div>
 
 </div>
@@ -831,25 +831,31 @@
 </div>
 
             <div class="pt-4 border-t border-app">
-                <div class="flex justify-between items-end mb-2">
-                    <h3 class="text-sm font-bold text-app-brand uppercase tracking-wider">4. Print Layout</h3>
-                    <button onclick="window.openLabelFormatModal()" class="text-[10px] text-blue-600 hover:underline flex items-center gap-1">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        Add Custom Size
-                    </button>
-                </div>
-                <div class="grid grid-cols-2 gap-2 mb-4">
-                    <div>
-                        <label class="text-xs">Paper Format</label>
-                        <div class="flex gap-1">
-                            <select id="labelPaper" class="w-full p-1 border rounded bg-app-tertiary text-sm">
-                            </select>
-                            <button onclick="window.deleteCustomLabelFormat()" id="deleteLabelFormatBtn" class="hidden text-red-500 hover:text-red-700 px-1 font-bold text-lg" title="Delete selected format">&times;</button>
-                        </div>
-                    </div>
-                    <div><button id="printLabelsBtn" class="w-full h-full mt-4 bg-app-action text-white font-bold rounded hover:opacity-90 btn">🖨️ Print Sheet</button></div>
-                </div>
+    <div class="flex justify-between items-end mb-2">
+        <h3 class="text-sm font-bold text-app-brand uppercase tracking-wider">4. Print Layout</h3>
+        <button onclick="window.openLabelFormatModal()" class="text-[10px] text-blue-600 hover:underline flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add Custom Size
+        </button>
+    </div>
+    
+    <div class="grid grid-cols-2 gap-2 mb-4 items-end">
+        <div>
+            <label class="block text-xs font-bold text-app-secondary mb-1">Paper Format</label>
+            <div class="flex gap-1">
+                <select id="labelPaper" class="w-full p-2 border rounded bg-app-tertiary text-sm text-app-header focus:ring-1 focus:ring-app-brand">
+                    </select>
+                <button onclick="window.deleteCustomLabelFormat()" id="deleteLabelFormatBtn" class="hidden text-red-500 hover:text-red-700 px-1 font-bold text-lg" title="Delete selected format">&times;</button>
             </div>
+        </div>
+        <div>
+            <button id="printLabelsBtn" class="w-full bg-app-action text-white text-xs font-bold py-2.5 rounded hover:opacity-90 btn shadow-sm flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                Print Sheet
+            </button>
+        </div>
+    </div>
+</div>
         </aside>
         
         <main class="lg:w-2/3 bg-gray-200 dark:bg-gray-800 p-8 rounded-lg shadow-inner flex flex-col items-center justify-center relative">

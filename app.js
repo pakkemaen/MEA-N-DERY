@@ -5255,7 +5255,7 @@ function printLabelsSheet() {
     win.document.close();
 }
 
-// --- LABEL OPSLAAN FUNCTIE (CRASH PROOF) ---
+// --- LABEL OPSLAAN FUNCTIE (CORRECTE VERSIE) ---
 window.saveLabelToBrew = async function() {
     const select = document.getElementById('labelRecipeSelect');
     const brewId = select?.value; 
@@ -5270,8 +5270,6 @@ window.saveLabelToBrew = async function() {
         btn.disabled = true;
     }
 
-    // VEILIGE HELPERS: Dit voorkomt jouw foutmelding!
-    // Als getElementById 'null' teruggeeft, pakt hij de fallback ('' of false)
     const getVal = (id) => document.getElementById(id)?.value || '';
     const getCheck = (id) => document.getElementById(id)?.checked || false;
     const getText = (id) => document.getElementById(id)?.textContent || '';
@@ -5296,16 +5294,17 @@ window.saveLabelToBrew = async function() {
         honeyName: getText('displayLabelHoney'),
 
         tuneTitleSize: getVal('tuneTitleSize'),
-        tuneTitleSize2: getVal('tuneTitleSize2'), // Hier ging het mis zonder update
+        tuneTitleSize2: getVal('tuneTitleSize2'),
         tuneTitleX: getVal('tuneTitleX'),
         
         tuneStyleSize: getVal('tuneStyleSize'),
-        tuneStyleSize2: getVal('tuneStyleSize2'), // Hier ook
+        tuneStyleSize2: getVal('tuneStyleSize2'),
         tuneStyleGap: getVal('tuneStyleGap'),
         
         tuneLogoGap: getVal('tuneLogoGap'),
         tuneSpecsSize: getVal('tuneSpecsSize'),
         
+        // NIEUW: Artwork & Logo instellingen
         tuneArtZoom: getVal('tuneArtZoom'),
         tuneArtX: getVal('tuneArtX'),
         tuneArtY: getVal('tuneArtY'),
@@ -5314,9 +5313,6 @@ window.saveLabelToBrew = async function() {
         tuneLogoSize: getVal('tuneLogoSize'),
         tuneLogoX: getVal('tuneLogoX'),
         tuneLogoY: getVal('tuneLogoY'),
-        
-        imageSrc: window.currentLabelImageSrc || ''
-    };
         
         imageSrc: window.currentLabelImageSrc || ''
     };

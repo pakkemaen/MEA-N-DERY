@@ -4543,27 +4543,32 @@ function updateLabelPreviewText() {
     }
 }
 
-// Data uit recept laden (FIX: DIRECTE RENDER)
+// Data uit recept laden (CRASH PROOF VERSION)
 function loadLabelFromBrew(e) {
     const brewId = e.target.value;
     if (!brewId) return;
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    document.getElementById('labelTitle').value = brew.recipeName;
+    // Veilige setters (voorkomt errors als element niet bestaat)
+    const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+    const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    const setCheck = (id, val) => { const el = document.getElementById(id); if(el) el.checked = val; };
+
+    setVal('labelTitle', brew.recipeName);
     
     let style = "Traditional Mead";
     if (brew.recipeMarkdown.toLowerCase().includes('melomel')) style = "Melomel (Fruit Mead)";
     if (brew.recipeMarkdown.toLowerCase().includes('bochet')) style = "Bochet (Caramelized)";
     if (brew.recipeMarkdown.toLowerCase().includes('metheglin')) style = "Metheglin (Spiced)";
     if (brew.recipeMarkdown.toLowerCase().includes('braggot')) style = "Braggot (Malt & Honey)";
-    document.getElementById('labelSubtitle').value = style;
+    setVal('labelSubtitle', style);
 
     // Data
-    document.getElementById('labelAbv').value = brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '';
-    document.getElementById('labelFg').value = brew.logData?.actualFG || brew.logData?.targetFG || '';
-    document.getElementById('labelVol').value = '330';
-    document.getElementById('labelDate').value = brew.logData?.brewDate || new Date().toISOString().split('T')[0];
+    setVal('labelAbv', brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '');
+    setVal('labelFg', brew.logData?.actualFG || brew.logData?.targetFG || '');
+    setVal('labelVol', '330');
+    setVal('labelDate', brew.logData?.brewDate || new Date().toISOString().split('T')[0]);
 
     // Quote
     let foundQuote = "";
@@ -4573,29 +4578,33 @@ function loadLabelFromBrew(e) {
     } else {
         foundQuote = `A handcrafted ${style.toLowerCase()}, brewed on ${new Date().getFullYear()}.`;
     }
-    document.getElementById('labelDescription').value = foundQuote;
+    setVal('labelDescription', foundQuote);
 
-    // Yeast & Honey
+    // Yeast & Honey Detection
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
     
     let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist') || i.name.toLowerCase().includes('lalvin') || i.name.toLowerCase().includes('safale') || i.name.toLowerCase().includes('wyeast') || i.name.toLowerCase().includes('mangrove'));
     let yeastName = yeastItem ? yeastItem.name.replace(/yeast|gist/gi, '').trim() : 'Unknown';
-    document.getElementById('displayLabelYeast').textContent = yeastName;
+    
+    // HIER GING HET FOUT: Nu gebruiken we de veilige 'setText' helper
+    setText('displayLabelYeast', yeastName);
 
     const honeyItem = ings.find(i => i.name.toLowerCase().includes('honey') || i.name.toLowerCase().includes('honing'));
     const honeyName = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
-    document.getElementById('displayLabelHoney').textContent = honeyName;
+    
+    // HIER OOK:
+    setText('displayLabelHoney', honeyName);
 
     const fullList = ings.map(i => i.name).join(' • ');
-    document.getElementById('labelDetails').value = fullList;
+    setVal('labelDetails', fullList);
 
-    // Sulfiet Check
-    const needsWarning = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
-    document.getElementById('labelShowSulfites').checked = needsWarning;
+    // Sulfiet Check -> Allergenen Veld
+    const hasSulfites = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
+    setVal('labelAllergens', hasSulfites ? 'Contains Sulfites' : '');
 
-    // CRUCIAAL: Roep setLabelTheme aan om de checkboxes direct visueel te maken!
+    // Forceer update van het thema
     const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
-    setLabelTheme(activeTheme);
+    if(typeof setLabelTheme === 'function') setLabelTheme(activeTheme);
 }
 
 // --- LABEL THEMA FUNCTIE (VEILIGE VERSIE V3) ---

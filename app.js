@@ -4543,7 +4543,7 @@ function updateLabelPreviewText() {
     }
 }
 
-// Data uit recept laden (NU MET QUOTE EXTRACTIE)
+// Data uit recept laden (FIX: DIRECTE RENDER)
 function loadLabelFromBrew(e) {
     const brewId = e.target.value;
     if (!brewId) return;
@@ -4559,55 +4559,46 @@ function loadLabelFromBrew(e) {
     if (brew.recipeMarkdown.toLowerCase().includes('braggot')) style = "Braggot (Malt & Honey)";
     document.getElementById('labelSubtitle').value = style;
 
-    // ABV, FG laden...
+    // Data
     document.getElementById('labelAbv').value = brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '';
     document.getElementById('labelFg').value = brew.logData?.actualFG || brew.logData?.targetFG || '';
-    document.getElementById('labelVol').value = '330'; // Standaard klein flesje
+    document.getElementById('labelVol').value = '330';
     document.getElementById('labelDate').value = brew.logData?.brewDate || new Date().toISOString().split('T')[0];
 
-    // --- 1. SLIMME QUOTE EXTRACTIE ---
-    // We zoeken naar regels die beginnen met '>' (Markdown quotes)
-    // Of we zoeken naar tekst tussen aanhalingstekens in de eerste paar regels.
+    // Quote
     let foundQuote = "";
-    
-    // Probeer Markdown blockquote
     const quoteMatch = brew.recipeMarkdown.match(/^>\s*(["']?)(.*?)\1\s*$/m);
-    
     if (quoteMatch && quoteMatch[2]) {
         foundQuote = quoteMatch[2].trim();
     } else {
-        // Fallback: Als er geen blockquote is, pakken we de eerste zin die "logisch" klinkt als beschrijving
-        // (Dit is optioneel, maar handig voor oude recepten)
         foundQuote = `A handcrafted ${style.toLowerCase()}, brewed on ${new Date().getFullYear()}.`;
     }
-
-    // Zet de quote in het veld
     document.getElementById('labelDescription').value = foundQuote;
 
-    // --- 2. YEAST & HONEY DETECTIE ---
+    // Yeast & Honey
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
     
-    // Zoek Gist
     let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist') || i.name.toLowerCase().includes('lalvin') || i.name.toLowerCase().includes('safale') || i.name.toLowerCase().includes('wyeast') || i.name.toLowerCase().includes('mangrove'));
     let yeastName = yeastItem ? yeastItem.name.replace(/yeast|gist/gi, '').trim() : 'Unknown';
     document.getElementById('displayLabelYeast').textContent = yeastName;
 
-    // Zoek Honing
     const honeyItem = ings.find(i => i.name.toLowerCase().includes('honey') || i.name.toLowerCase().includes('honing'));
     const honeyName = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
     document.getElementById('displayLabelHoney').textContent = honeyName;
 
-    // Details & Sulfiet
     const fullList = ings.map(i => i.name).join(' • ');
     document.getElementById('labelDetails').value = fullList;
 
+    // Sulfiet Check
     const needsWarning = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
     document.getElementById('labelShowSulfites').checked = needsWarning;
 
-    updateLabelPreviewText();
+    // CRUCIAAL: Roep setLabelTheme aan om de checkboxes direct visueel te maken!
+    const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
+    setLabelTheme(activeTheme);
 }
 
-// --- LABEL THEMA FUNCTIE (FINAL DESIGN: STORY VS SPECS) ---
+// --- LABEL THEMA FUNCTIE (DESIGN UPDATE: SULFIET BIJ SPECS) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; 
@@ -4623,7 +4614,7 @@ function setLabelTheme(theme) {
     const dateVal = document.getElementById('labelDate')?.value || new Date().toLocaleDateString();
     
     // Checkboxes
-    const showWarning = document.getElementById('labelWarning')?.checked;
+    const showWarning = document.getElementById('labelWarning')?.checked; // Oude warning (optioneel)
     const showDetails = document.getElementById('labelShowDetails')?.checked; 
     
     // 2. AFBEELDING CHECK
@@ -4641,7 +4632,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA 1: STANDAARD (STORY TOP / SPECS BOTTOM)
+    // THEMA 1: STANDAARD (SULFIET VERPLAATST)
     // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
@@ -4661,7 +4652,7 @@ function setLabelTheme(theme) {
             logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-center opacity-90">`;
         }
 
-        // --- DATA OPHALEN ---
+        // --- DATA VOOR SPECS BLOK ---
         const showYeast = document.getElementById('labelShowYeast')?.checked;
         const showHoney = document.getElementById('labelShowHoney')?.checked;
         const showSulfites = document.getElementById('labelShowSulfites')?.checked;
@@ -4677,6 +4668,9 @@ function setLabelTheme(theme) {
             const h = document.getElementById('displayLabelHoney').textContent;
             if(h && h.trim() !== '--') honeyText = h.trim();
         }
+
+        // Bepaal of we het middenblok moeten tonen (als er IETS is om te tonen)
+        const showSpecsBlock = yeastText || honeyText || showSulfites;
 
         // Peak Date
         let peakDateVal = "";
@@ -4694,7 +4688,7 @@ function setLabelTheme(theme) {
             } catch(e) {}
         }
 
-        // --- DE UI LAYOUT ---
+        // --- UI GENERATIE ---
         container.innerHTML = `
             <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-4 pb-2 px-3 flex flex-col text-right z-20 relative">
                 
@@ -4707,24 +4701,29 @@ function setLabelTheme(theme) {
 
                 <div class="flex-grow"></div>
 
-                <div class="text-[#8F8C79]">
+                ${showSpecsBlock ? `
+                <div class="py-2 border-b border-gray-300 space-y-1 mb-2">
+                    ${honeyText ? `
+                    <div class="flex flex-col">
+                        <span class="text-[4px] text-gray-400 font-bold uppercase tracking-widest">Honey Source</span>
+                        <span class="text-[5px] text-black font-bold uppercase truncate">${honeyText}</span>
+                    </div>` : ''}
                     
-                    ${(yeastText || honeyText) ? `
-                    <div class="py-1 mb-1 border-b border-gray-300 space-y-0.5">
-                        ${honeyText ? `
-                        <div class="flex flex-col">
-                            <span class="text-[4px] text-gray-400 font-bold uppercase tracking-widest">Honey Source</span>
-                            <span class="text-[5px] text-black font-bold uppercase truncate">${honeyText}</span>
-                        </div>` : ''}
-                        
-                        ${yeastText ? `
-                        <div class="flex flex-col mt-1">
-                            <span class="text-[4px] text-gray-400 font-bold uppercase tracking-widest">Yeast Strain</span>
-                            <span class="text-[5px] text-black font-bold uppercase truncate">${yeastText}</span>
-                        </div>` : ''}
-                    </div>
-                    ` : ''}
+                    ${yeastText ? `
+                    <div class="flex flex-col mt-0.5">
+                        <span class="text-[4px] text-gray-400 font-bold uppercase tracking-widest">Yeast Strain</span>
+                        <span class="text-[5px] text-black font-bold uppercase truncate">${yeastText}</span>
+                    </div>` : ''}
 
+                    ${showSulfites ? `
+                    <div class="flex flex-col mt-1 pt-1 border-t border-gray-200 border-dashed">
+                        <span class="text-[4px] text-gray-400 font-bold uppercase tracking-widest">Allergens</span>
+                        <span class="text-[5px] text-black font-bold uppercase">Contains Sulfites</span>
+                    </div>` : ''}
+                </div>
+                ` : ''}
+
+                <div class="text-[#8F8C79]">
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider">
                         ${abv ? `<div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>` : ''}
                         ${fg ? `<div class="text-gray-400">FG</div> <div class="text-black text-right"><span id="prev-fg">${fg}</span></div>` : ''}
@@ -4732,11 +4731,6 @@ function setLabelTheme(theme) {
                         ${dateVal ? `<div class="text-gray-400">Bottled</div> <div class="text-black text-right"><span id="prev-date">${dateVal}</span></div>` : ''}
                         ${peakDateVal ? `<div class="text-gray-400">Peak</div> <div class="text-black text-right">${peakDateVal}</div>` : ''}
                     </div>
-                    
-                    ${showSulfites ? `
-                    <p class="text-[4px] uppercase opacity-40 leading-tight mt-1">
-                        Contains Sulfites
-                    </p>` : ''}
                 </div>
             </div>
 
@@ -4766,7 +4760,7 @@ function setLabelTheme(theme) {
     }
 
     // =================================================================
-    // THEMA 2: SPECIAL (Ongewijzigd)
+    // THEMA 2: SPECIAL (SULFIET OOK HIER NETJES TOEVOEGEN)
     // =================================================================
     else if (theme === 'special') {
         container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
@@ -4805,9 +4799,7 @@ function setLabelTheme(theme) {
                         <div class="text-[10px] font-mono uppercase tracking-widest opacity-70">
                             <p>${vol}ML • ${dateVal}</p>
                         </div>
-                        <p id="prev-warning" style="display: ${showWarning ? 'block' : 'none'}" class="text-[6px] uppercase mt-2 opacity-50 max-w-[80px] ml-auto">
-                            Contains Sulfites
-                        </p>
+                        ${showSulfites ? `<p class="text-[6px] uppercase mt-2 opacity-50 max-w-[80px] ml-auto">Contains Sulfites</p>` : ''}
                     </div>
                 </div>
             </div>

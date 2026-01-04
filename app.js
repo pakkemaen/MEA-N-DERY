@@ -4363,29 +4363,35 @@ function initLabelForge() {
         });
     });
     
-    // D. TUNING & SLIDERS (UPDATED WITH CORRECT UNITS)
-    ['tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneLogoGap', 'tuneSpecsSize'].forEach(id => {
+    // D. TUNING & SLIDERS (UPDATED)
+    const sliders = [
+        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 
+        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 
+        'tuneLogoGap', 'tuneSpecsSize',
+        // NIEUW:
+        'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity',
+        'tuneLogoSize', 'tuneLogoX', 'tuneLogoY'
+    ];
+
+    sliders.forEach(id => {
         const el = document.getElementById(id);
         if(el) {
             el.addEventListener('input', (e) => {
-                // Vind het display elementje
                 let dispId = id.replace('tune', 'disp'); 
                 dispId = dispId.replace(/([A-Z])/g, '-$1').toLowerCase();
                 const disp = document.getElementById(dispId);
                 
                 if(disp) {
-                    // Logic voor eenheden:
-                    // Size2 sliders zijn percentages (0.2 tot 1.0) -> Toon %
-                    // Alle andere sliders zijn pixels -> Toon px
-                    if(id === 'tuneTitleSize2' || id === 'tuneStyleSize2') {
-                        const pct = Math.round(e.target.value * 100);
-                        disp.textContent = pct + '%';
+                    if(id.includes('Size2') || id.includes('Opacity') || id.includes('Zoom')) {
+                        // Percentages of Zoom factor
+                        if(id.includes('Opacity')) disp.textContent = Math.round(e.target.value * 100) + '%';
+                        else if(id.includes('Zoom')) disp.textContent = e.target.value + 'x';
+                        else disp.textContent = Math.round(e.target.value * 100) + '%';
                     } else {
                         disp.textContent = e.target.value + 'px';
                     }
                 }
                 
-                // Update het label direct
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
                 setLabelTheme(activeTheme);
             });
@@ -4631,6 +4637,15 @@ function loadLabelFromBrew(e) {
         restoreSlider('tuneStyleGap', s.tuneStyleGap);
         restoreSlider('tuneLogoGap', s.tuneLogoGap);
         restoreSlider('tuneSpecsSize', s.tuneSpecsSize);
+        
+        restoreSlider('tuneArtZoom', s.tuneArtZoom);
+        restoreSlider('tuneArtX', s.tuneArtX);
+        restoreSlider('tuneArtY', s.tuneArtY);
+        restoreSlider('tuneArtOpacity', s.tuneArtOpacity);
+        
+        restoreSlider('tuneLogoSize', s.tuneLogoSize);
+        restoreSlider('tuneLogoX', s.tuneLogoX);
+        restoreSlider('tuneLogoY', s.tuneLogoY);
 
         // 5. Afbeelding herstellen
         if (s.imageSrc) {
@@ -4696,6 +4711,10 @@ function loadLabelFromBrew(e) {
         resetSlider('tuneTitleSize2', 1.0);
         resetSlider('tuneStyleSize', 14);
         resetSlider('tuneSpecsSize', 5);
+
+        resetSlider('tuneArtZoom', 1.0);
+        resetSlider('tuneArtOpacity', 1.0);
+        resetSlider('tuneLogoSize', 100);
         // ... overige sliders blijven op hun huidige stand staan of je kunt ze hier ook resetten
     }
 
@@ -4704,7 +4723,7 @@ function loadLabelFromBrew(e) {
     if(typeof setLabelTheme === 'function') setLabelTheme(activeTheme);
 }
 
-// --- LABEL THEMA FUNCTIE (MET DUBBELE LIJN CONTROLE VOOR TITEL ÉN STYLE) ---
+// --- LABEL THEMA FUNCTIE MET LAYERED RENDERING ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; 
@@ -4737,39 +4756,57 @@ function setLabelTheme(theme) {
         if(b.dataset.theme === theme) b.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
     });
 
-    // =================================================================
-    // THEMA 1: STANDAARD
-    // =================================================================
     if (theme === 'standard') {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
         // --- TUNING VALUES ---
-        
-        // 1. Titel
         const titleSize1 = document.getElementById('tuneTitleSize')?.value || 100;
         const titleScale2 = document.getElementById('tuneTitleSize2')?.value || 1.0; 
         const titleSize2 = Math.round(titleSize1 * titleScale2);
         const titleX = document.getElementById('tuneTitleX')?.value || 0;
 
-        // 2. Stijl (NIEUW)
         const styleSize1 = document.getElementById('tuneStyleSize')?.value || 14;
-        const styleScale2 = document.getElementById('tuneStyleSize2')?.value || 1.0; // De nieuwe slider
+        const styleScale2 = document.getElementById('tuneStyleSize2')?.value || 1.0; 
         const styleSize2 = Math.round(styleSize1 * styleScale2);
         const styleGap = document.getElementById('tuneStyleGap')?.value || 5;
-
-        // 3. Specs
         const specsFontSize = document.getElementById('tuneSpecsSize')?.value || 5; 
 
-        // Logo
-        let logoHtml = '';
+        // --- NEW: ARTWORK & LOGO TUNING ---
+        const artZoom = document.getElementById('tuneArtZoom')?.value || 1.0;
+        const artX = document.getElementById('tuneArtX')?.value || 0;
+        const artY = document.getElementById('tuneArtY')?.value || 0;
+        const artOpacity = document.getElementById('tuneArtOpacity')?.value || 1.0;
+
+        const logoSize = document.getElementById('tuneLogoSize')?.value || 100; // px width
+        const logoX = document.getElementById('tuneLogoX')?.value || 0;
+        const logoY = document.getElementById('tuneLogoY')?.value || 0;
+
+        // --- LAYERED RENDERING ---
+        
+        // Laag 1: Artwork (Achtergrond in rechtervak)
+        let artHtml = '';
         if (hasImage) {
-            logoHtml = `<img id="label-logo-img" src="${imgSrc}" class="w-32 h-32 object-contain object-center rounded-full border-4 border-white shadow-sm">`;
-        } else {
-            logoHtml = `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-32 h-32 object-contain object-center opacity-90">`;
+            // We gebruiken translate en scale voor positie. Object-cover zorgt dat hij het vak vult.
+            artHtml = `
+            <div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center pointer-events-none">
+                <img src="${imgSrc}" 
+                     style="transform: translate(${artX}px, ${artY}px) scale(${artZoom}); opacity: ${artOpacity}; transform-origin: center;" 
+                     class="w-full h-full object-cover transition-transform duration-75">
+            </div>`;
         }
 
-        // Specs Logic
+        // Laag 3: Logo (Bovenop alles, verplaatsbaar)
+        // We gebruiken standaard logo.png
+        const logoHtml = `
+            <div class="absolute top-0 right-0 z-20 pointer-events-none" 
+                 style="transform: translate(${logoX}px, ${logoY}px); width: ${logoSize}px; padding: 10px;">
+                <img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" 
+                     class="w-full h-auto object-contain drop-shadow-md">
+            </div>
+        `;
+
+        // Specs Logic (Yeast/Honey/Allergens)
         const showYeast = document.getElementById('labelShowYeast')?.checked;
         const showHoney = document.getElementById('labelShowHoney')?.checked;
         let yeastText = "", honeyText = "";
@@ -4777,7 +4814,7 @@ function setLabelTheme(theme) {
         if (showHoney) { const h = document.getElementById('displayLabelHoney')?.textContent; if(h && h.trim() !== '--') honeyText = h.trim(); }
         const showSpecsBlock = yeastText || honeyText || allergenText;
 
-        // Peak Date
+        // Peak Date Logic (zelfde als voorheen)
         let peakDateVal = "";
         const selectEl = document.getElementById('labelRecipeSelect');
         const selectedBrew = brews.find(b => b.id === selectEl?.value);
@@ -4796,23 +4833,10 @@ function setLabelTheme(theme) {
         // --- UI GENERATIE ---
         container.innerHTML = `
             <style>
-                /* TITEL LOGICA */
-                #prev-title {
-                    font-size: ${titleSize2}px !important;
-                    line-height: 0.85; 
-                }
-                #prev-title::first-line {
-                    font-size: ${titleSize1}px !important;
-                }
-
-                /* STYLE LOGICA (NIEUW) */
-                #prev-subtitle {
-                    font-size: ${styleSize2}px !important;
-                    line-height: 0.9;
-                }
-                #prev-subtitle::first-line {
-                    font-size: ${styleSize1}px !important;
-                }
+                #prev-title { font-size: ${titleSize2}px !important; line-height: 0.85; }
+                #prev-title::first-line { font-size: ${titleSize1}px !important; }
+                #prev-subtitle { font-size: ${styleSize2}px !important; line-height: 0.9; }
+                #prev-subtitle::first-line { font-size: ${styleSize1}px !important; }
             </style>
 
             <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-4 pb-2 px-3 flex flex-col text-right z-20 relative">
@@ -4838,8 +4862,10 @@ function setLabelTheme(theme) {
                 </div>
             </div>
 
-            <div class="h-full w-[65%] relative p-2 overflow-hidden">
-                <div id="text-group" class="absolute top-0 bottom-0 flex flex-row items-end" style="left: ${titleX}px; padding-left: 2px;">
+            <div class="h-full w-[65%] relative p-2 overflow-hidden bg-gray-50/20">
+                ${artHtml}
+
+                <div id="text-group" class="absolute top-0 bottom-0 z-10 flex flex-row items-end pointer-events-none" style="left: ${titleX}px; padding-left: 2px;">
                     <div id="title-container" class="h-full flex flex-col justify-end">
                         <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-hidden" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg);">
@@ -4853,40 +4879,38 @@ function setLabelTheme(theme) {
                         </p>
                     </div>
                 </div>
-                <div class="absolute -top-6 -right-6 z-10">
-                    ${logoHtml}
-                </div>
+
+                ${logoHtml}
             </div>
         `;
-    }
-
-    // =================================================================
-    // THEMA 2: SPECIAL (Ongewijzigd)
-    // =================================================================
+    } 
+    
+    // THEMA 2 (Special) laten we intact (die is full-bleed)
     else if (theme === 'special') {
-        container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
-        container.style = ""; 
-        let bgHtml = hasImage ? `<div class="absolute inset-0 z-0"><img src="${imgSrc}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div></div>` : `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
-        const logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain p-2 filter invert drop-shadow-md">`;
+       // ... bestaande code voor special theme (geen wijzigingen nodig, die vervangt al de hele achtergrond) ...
+       container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
+       container.style = ""; 
+       let bgHtml = hasImage ? `<div class="absolute inset-0 z-0"><img src="${imgSrc}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div></div>` : `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
+       const logoHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain p-2 filter invert drop-shadow-md">`;
 
-        container.innerHTML = `
-            ${bgHtml}
-            <div class="relative z-10 w-full h-full flex p-6 text-white">
-                <div class="h-full flex flex-row-reverse items-end justify-end gap-3 flex-grow">
-                    <h1 id="prev-title" style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="text-6xl font-header font-bold uppercase tracking-widest leading-none drop-shadow-lg whitespace-nowrap max-h-full overflow-hidden text-ellipsis">${title}</h1>
-                    <p id="prev-subtitle" style="writing-mode: vertical-rl; transform: rotate(180deg);" class="text-xs font-bold uppercase tracking-[0.4em] opacity-90 whitespace-nowrap max-h-[80%] border-l-2 border-white/50 pl-2">${sub}</p>
-                </div>
-                <div class="flex flex-col justify-between items-end pl-4 h-full">
-                    <div class="w-36 h-36 rounded-full border-2 border-white flex items-center justify-center backdrop-blur-sm bg-white/10 shadow-lg">${logoHtml}</div>
-                    <div class="text-right drop-shadow-md">
-                        <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-2 text-gray-200 max-w-[150px] ml-auto leading-tight">${details}</p>
-                        ${fg ? `<p class="text-xl font-header font-normal leading-none mb-1 opacity-80">FG ${fg}</p>` : ''}
-                        <p class="text-4xl font-header font-bold leading-none mb-3">${abv}% <span class="text-lg font-normal">ABV</span></p>
-                        <div class="text-[10px] font-mono uppercase tracking-widest opacity-70"><p>${vol}ML • ${dateVal}</p></div>
-                        ${allergenText ? `<p class="text-[6px] uppercase mt-2 opacity-50 max-w-[80px] ml-auto">${allergenText}</p>` : ''}
-                    </div>
-                </div>
-            </div>`;
+       container.innerHTML = `
+           ${bgHtml}
+           <div class="relative z-10 w-full h-full flex p-6 text-white">
+               <div class="h-full flex flex-row-reverse items-end justify-end gap-3 flex-grow">
+                   <h1 id="prev-title" style="writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed;" class="text-6xl font-header font-bold uppercase tracking-widest leading-none drop-shadow-lg whitespace-nowrap max-h-full overflow-hidden text-ellipsis">${title}</h1>
+                   <p id="prev-subtitle" style="writing-mode: vertical-rl; transform: rotate(180deg);" class="text-xs font-bold uppercase tracking-[0.4em] opacity-90 whitespace-nowrap max-h-[80%] border-l-2 border-white/50 pl-2">${sub}</p>
+               </div>
+               <div class="flex flex-col justify-between items-end pl-4 h-full">
+                   <div class="w-36 h-36 rounded-full border-2 border-white flex items-center justify-center backdrop-blur-sm bg-white/10 shadow-lg">${logoHtml}</div>
+                   <div class="text-right drop-shadow-md">
+                       <p id="prev-details" style="display: ${showDetails ? 'block' : 'none'}" class="text-[8px] font-mono uppercase mb-2 text-gray-200 max-w-[150px] ml-auto leading-tight">${details}</p>
+                       ${fg ? `<p class="text-xl font-header font-normal leading-none mb-1 opacity-80">FG ${fg}</p>` : ''}
+                       <p class="text-4xl font-header font-bold leading-none mb-3">${abv}% <span class="text-lg font-normal">ABV</span></p>
+                       <div class="text-[10px] font-mono uppercase tracking-widest opacity-70"><p>${vol}ML • ${dateVal}</p></div>
+                       ${allergenText ? `<p class="text-[6px] uppercase mt-2 opacity-50 max-w-[80px] ml-auto">${allergenText}</p>` : ''}
+                   </div>
+               </div>
+           </div>`;
     }
 }
 
@@ -5281,6 +5305,18 @@ window.saveLabelToBrew = async function() {
         
         tuneLogoGap: getVal('tuneLogoGap'),
         tuneSpecsSize: getVal('tuneSpecsSize'),
+        
+        tuneArtZoom: getVal('tuneArtZoom'),
+        tuneArtX: getVal('tuneArtX'),
+        tuneArtY: getVal('tuneArtY'),
+        tuneArtOpacity: getVal('tuneArtOpacity'),
+        
+        tuneLogoSize: getVal('tuneLogoSize'),
+        tuneLogoX: getVal('tuneLogoX'),
+        tuneLogoY: getVal('tuneLogoY'),
+        
+        imageSrc: window.currentLabelImageSrc || ''
+    };
         
         imageSrc: window.currentLabelImageSrc || ''
     };

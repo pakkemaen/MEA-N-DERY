@@ -4844,20 +4844,20 @@ function setLabelTheme(theme) {
         // --- TUNING VALUES ---
         const titleSize1 = getVal('tuneTitleSize') || 100;
         const titleScale2 = getVal('tuneTitleSize2') || 1.0; 
-        const titleSize2 = getVal('tuneTitleSize2') || 60; 
+        const titleSize2 = getVal('tuneTitleSize2') || 60; // Direct pixels
         const titleX = getVal('tuneTitleX') || 0;
 
+        // KLEUREN OPHALEN
         const titleColor = getVal('tuneTitleColor') || '#8F8C79';
         const styleColor = getVal('tuneStyleColor') || '#9ca3af';
 
         const styleSize1 = getVal('tuneStyleSize') || 14;
-        const styleScale2 = getVal('tuneStyleSize2') || 1.0; 
-        const styleSize2 = getVal('tuneStyleSize2') || 10;
+        const styleSize2 = getVal('tuneStyleSize2') || 10; // Direct pixels
         
         const styleGap = getVal('tuneStyleGap') || 5;
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
 
-        // --- ARTWORK & LOGO TUNING ---
+        // ... (rest van je variabelen zoals artZoom, logoSize blijven hier staan) ...
         const artZoom = getVal('tuneArtZoom') || 1.0;
         const artX = getVal('tuneArtX') || 0;
         const artY = getVal('tuneArtY') || 0;
@@ -4867,63 +4867,51 @@ function setLabelTheme(theme) {
         const logoX = getVal('tuneLogoX') || 0;
         const logoY = getVal('tuneLogoY') || 0;
 
-        // --- LAAG 1: ARTWORK ---
+        // ... (Laag 1 en Laag 3 logica blijft hier staan) ...
         let artHtml = '';
         if (hasImage) {
-            artHtml = `
-            <div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center pointer-events-none">
-                <img src="${imgSrc}" 
-                     style="transform: translate(${artX}px, ${artY}px) scale(${artZoom}); opacity: ${artOpacity}; transform-origin: center;" 
-                     class="w-full h-full object-cover transition-transform duration-75">
-            </div>`;
+             artHtml = `<div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center pointer-events-none"><img src="${imgSrc}" style="transform: translate(${artX}px, ${artY}px) scale(${artZoom}); opacity: ${artOpacity}; transform-origin: center;" class="w-full h-full object-cover transition-transform duration-75"></div>`;
         }
-
-        // --- LAAG 3: LOGO ---
-        const logoHtml = `
-            <div class="absolute top-0 right-0 z-20 pointer-events-none" 
-                 style="transform: translate(${logoX}px, ${logoY}px); width: ${logoSize}px; padding: 10px;">
-                <img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" 
-                     class="w-full h-auto object-contain drop-shadow-md">
-            </div>
-        `;
-
-        // Specs Logic
+        const logoHtml = `<div class="absolute top-0 right-0 z-20 pointer-events-none" style="transform: translate(${logoX}px, ${logoY}px); width: ${logoSize}px; padding: 10px;"><img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-full h-auto object-contain drop-shadow-md"></div>`;
+        
+        // Specs & Date Logic (Hetzelfde laten)
         const showYeast = getCheck('labelShowYeast');
         const showHoney = getCheck('labelShowHoney');
         let yeastText = "", honeyText = "";
         if (showYeast) { const y = document.getElementById('displayLabelYeast')?.textContent; if(y && y.trim() !== '--') yeastText = y.trim(); }
         if (showHoney) { const h = document.getElementById('displayLabelHoney')?.textContent; if(h && h.trim() !== '--') honeyText = h.trim(); }
         const showSpecsBlock = yeastText || honeyText || allergenText;
-
-        // Peak Date Logic
+        
         let peakDateVal = "";
         const selectEl = document.getElementById('labelRecipeSelect');
         const selectedBrew = brews.find(b => b.id === selectEl?.value);
-        if (selectedBrew && selectedBrew.peakFlavorDate) {
-            try { peakDateVal = new Date(selectedBrew.peakFlavorDate).toLocaleDateString('nl-NL'); } catch(e){}
-        } else if (rawDate) { // Gebruik rawDate voor berekening
-            try { 
-                const d = new Date(rawDate); 
-                const abvNum = parseFloat(abv);
-                let months = (abvNum < 8) ? 3 : (abvNum > 14 ? 12 : 6);
-                d.setMonth(d.getMonth() + months); 
-                peakDateVal = d.toLocaleDateString('nl-NL'); 
-            } catch(e) {}
-        }
+        if (selectedBrew && selectedBrew.peakFlavorDate) { try { peakDateVal = new Date(selectedBrew.peakFlavorDate).toLocaleDateString('nl-NL').replace(/-/g, '/'); } catch(e){} } 
+        else if (rawDate) { try { const d = new Date(rawDate); const abvNum = parseFloat(abv); let months = (abvNum < 8) ? 3 : (abvNum > 14 ? 12 : 6); d.setMonth(d.getMonth() + months); peakDateVal = d.toLocaleDateString('nl-NL').replace(/-/g, '/'); } catch(e) {} }
 
-        // --- UI GENERATIE ---
+
+        // --- UI GENERATIE (HIER ZIT DE KLEUR FIX) ---
         container.innerHTML = `
             <style>
-                #prev-title { font-size: ${titleSize2}px !important; line-height: 0.85; }
+                /* !important zorgt dat deze kleur wint van de standaard CSS classes */
+                #prev-title { 
+                    font-size: ${titleSize2}px !important; 
+                    line-height: 0.85; 
+                    color: ${titleColor} !important; 
+                }
                 #prev-title::first-line { font-size: ${titleSize1}px !important; }
-                #prev-subtitle { font-size: ${styleSize2}px !important; line-height: 0.9; }
+                
+                #prev-subtitle { 
+                    font-size: ${styleSize2}px !important; 
+                    line-height: 0.9; 
+                    color: ${styleColor} !important; 
+                }
                 #prev-subtitle::first-line { font-size: ${styleSize1}px !important; }
             </style>
 
             <div class="h-full w-[30%] bg-gray-50/80 pt-0.5 pb-0 pl-0 pr-2 flex flex-col text-right z-20 relative">
                 <div class="flex flex-col gap-1 overflow-hidden">
                     <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">${desc}</p>
-                    ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-justify mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">${details}</p>` : ''}
+                    ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-right mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">${details}</p>` : ''}
                 </div>
                 
                 <div class="flex-grow"></div>
@@ -4951,13 +4939,13 @@ function setLabelTheme(theme) {
 
                 <div id="text-group" class="absolute top-0 bottom-0 z-10 flex flex-row items-end pointer-events-none" style="left: ${titleX}px; padding-left: 2px;">
                     <div id="title-container" class="h-full flex flex-col justify-end">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-[#8F8C79] text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-hidden" 
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-hidden" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
                     </div>
                     <div id="style-container" class="h-[50%] flex flex-col justify-end overflow-hidden" style="margin-left: ${styleGap}px;">
-                         <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] text-gray-400 whitespace-normal leading-none line-clamp-3 text-ellipsis" 
+                         <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-normal leading-none line-clamp-3 text-ellipsis" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${sub}
                         </p>
@@ -5390,16 +5378,15 @@ window.saveLabelToBrew = async function() {
         tuneTitleSize: getVal('tuneTitleSize'),
         tuneTitleSize2: getVal('tuneTitleSize2'),
         tuneTitleX: getVal('tuneTitleX'),
-        tuneTitleColor: getVal('tuneTitleColor'), 
+        tuneTitleColor: getVal('tuneTitleColor'), // <--- DEZE IS NIEUW
         
         tuneStyleSize: getVal('tuneStyleSize'),
         tuneStyleSize2: getVal('tuneStyleSize2'),
         tuneStyleGap: getVal('tuneStyleGap'),
-        tuneStyleColor: getVal('tuneStyleColor'),
+        tuneStyleColor: getVal('tuneStyleColor'), // <--- DEZE IS NIEUW
         
         tuneSpecsSize: getVal('tuneSpecsSize'),
         
-        // NIEUW: Artwork & Logo instellingen
         tuneArtZoom: getVal('tuneArtZoom'),
         tuneArtX: getVal('tuneArtX'),
         tuneArtY: getVal('tuneArtY'),
@@ -7107,24 +7094,6 @@ function initApp() {
     // Start
     setupBrewDayEventListeners();
     // (Optioneel: handleStyleChange aanroep hier)
-
-    // --- LAYOUT TUNING LISTENERS ---
-    ['tuneTitleSize', 'tuneTitleX', 'tuneStyleSize', 'tuneStyleGap'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) {
-            el.addEventListener('input', (e) => {
-                // Update getalletjes
-                if(id === 'tuneTitleSize') document.getElementById('disp-title-size').textContent = e.target.value + 'px';
-                if(id === 'tuneTitleX') document.getElementById('disp-title-x').textContent = e.target.value + 'px';
-                if(id === 'tuneStyleSize') document.getElementById('disp-style-size').textContent = e.target.value + 'px';
-                if(id === 'tuneStyleGap') document.getElementById('disp-style-gap').textContent = e.target.value + 'px';
-                
-                // Update label
-                const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
-                if(typeof setLabelTheme === 'function') setLabelTheme(activeTheme);
-            });
-        }
-    });
 }
 
 // --- APP START ---

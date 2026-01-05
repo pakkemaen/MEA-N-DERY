@@ -4410,10 +4410,10 @@ function initLabelForge() {
         });
     });
     
-    // D. TUNING & SLIDERS (MET FIX VOOR LIJN 2 WEERGAVE)
+    // D. TUNING & SLIDERS (MET KLEUREN)
     const sliders = [
-        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 
-        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 
+        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleColor', // <-- Kleur toegevoegd
+        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleColor', // <-- Kleur toegevoegd
         'tuneSpecsSize',
         'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity',
         'tuneLogoSize', 'tuneLogoX', 'tuneLogoY'
@@ -4666,6 +4666,9 @@ function loadLabelFromBrew(e) {
         // 1. Content herstellen
         setVal('labelTitle', s.title);
         setVal('labelSubtitle', s.subtitle);
+        // Kleuren herstellen
+        setVal('tuneTitleColor', s.tuneTitleColor || '#8F8C79');
+        setVal('tuneStyleColor', s.tuneStyleColor || '#9ca3af');
         setVal('labelAbv', s.abv);
         setVal('labelFg', s.fg);
         setVal('labelVol', s.vol);
@@ -4758,6 +4761,9 @@ function loadLabelFromBrew(e) {
         setText('displayLabelHoney', generatedHoney);
         setVal('labelDetails', generatedDetails);
 
+        setVal('tuneTitleColor', '#8F8C79');
+        setVal('tuneStyleColor', '#9ca3af');
+
         // Sulfiet Check
         const hasSulfites = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
         setVal('labelAllergens', hasSulfites ? 'Contains Sulfites' : '');
@@ -4840,6 +4846,9 @@ function setLabelTheme(theme) {
         const titleScale2 = getVal('tuneTitleSize2') || 1.0; 
         const titleSize2 = getVal('tuneTitleSize2') || 60; 
         const titleX = getVal('tuneTitleX') || 0;
+
+        const titleColor = getVal('tuneTitleColor') || '#8F8C79';
+        const styleColor = getVal('tuneStyleColor') || '#9ca3af';
 
         const styleSize1 = getVal('tuneStyleSize') || 14;
         const styleScale2 = getVal('tuneStyleSize2') || 1.0; 
@@ -5381,10 +5390,12 @@ window.saveLabelToBrew = async function() {
         tuneTitleSize: getVal('tuneTitleSize'),
         tuneTitleSize2: getVal('tuneTitleSize2'),
         tuneTitleX: getVal('tuneTitleX'),
+        tuneTitleColor: getVal('tuneTitleColor'), 
         
         tuneStyleSize: getVal('tuneStyleSize'),
         tuneStyleSize2: getVal('tuneStyleSize2'),
         tuneStyleGap: getVal('tuneStyleGap'),
+        tuneStyleColor: getVal('tuneStyleColor'),
         
         tuneSpecsSize: getVal('tuneSpecsSize'),
         

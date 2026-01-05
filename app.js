@@ -2947,8 +2947,12 @@ window.syncLogToFinal = function(idSuffix) {
     }
 };
 
+// --- VERBETERDE INGREDIËNTEN LEZER (Vangt JSON, Tabellen en Lijsten) ---
 function parseIngredientsFromMarkdown(markdown) {
-    const ingredients = [];
+    let ingredients = [];
+    if (!markdown) return ingredients;
+
+    // 1. POGING 1: JSON BLOK (De standaard)
     const jsonRegex = /(?:```json\s*)?(\[\s*\{[\s\S]*?\}\s*\])(?:\s*```)?/;
     const jsonMatch = markdown.match(jsonRegex);
 
@@ -2957,9 +2961,52 @@ function parseIngredientsFromMarkdown(markdown) {
             let safeJson = jsonMatch[1].replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
             const arr = JSON.parse(safeJson);
             return arr.map(i => ({ name: (i.ingredient||'').trim(), quantity: parseFloat(i.quantity)||0, unit: (i.unit||'').trim() }));
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.warn("JSON parse mislukt, we proberen de tabel...", e); 
+        }
     }
-    // Fallback voor oude tabellen... (ingekort voor overzicht, maar functioneel gelijk aan V3.5)
+
+    // 2. POGING 2: MARKDOWN TABEL (Fallback)
+    // Zoekt naar regels zoals: | Honing | 3 | kg |
+    const lines = markdown.split('\n');
+    let insideTable = false;
+
+    for (let line of lines) {
+        // Tabel header detectie
+        if (line.includes('|---')) { insideTable = true; continue; }
+        
+        if (insideTable && line.trim().startsWith('|')) {
+            const cols = line.split('|').map(c => c.trim()).filter(c => c);
+            // We verwachten minstens 2 kolommen (Naam en Hoeveelheid)
+            if (cols.length >= 2) {
+                // Check of de eerste kolom geen "Ingredient" heet (header)
+                if (cols[0].toLowerCase().includes('ingredient')) continue;
+
+                ingredients.push({
+                    name: cols[0], // Kolom 1 is naam
+                    quantity: parseFloat(cols[1]) || 0, // Kolom 2 is getal
+                    unit: cols[2] || '' // Kolom 3 is eenheid (optioneel)
+                });
+            }
+        } else if (insideTable && line.trim() === '') {
+            insideTable = false; // Lege regel stopt de tabel
+        }
+    }
+
+    // 3. POGING 3: SIMPELE LIJST (Laatste redmiddel)
+    // Zoekt naar: - 3kg Honing OF - Honing: 3kg
+    if (ingredients.length === 0) {
+        const listRegex = /^[-*]\s+(\d+[.,]?\d*)\s*([a-zA-Z]+)\s+(.*)$/gm;
+        let match;
+        while ((match = listRegex.exec(markdown)) !== null) {
+            ingredients.push({
+                quantity: parseFloat(match[1]),
+                unit: match[2],
+                name: match[3]
+            });
+        }
+    }
+
     return ingredients;
 }
 

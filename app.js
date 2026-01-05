@@ -4412,8 +4412,8 @@ function initLabelForge() {
     
     // D. TUNING & SLIDERS (MET KLEUREN)
     const sliders = [
-        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleColor', // <-- Kleur toegevoegd
-        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleColor', // <-- Kleur toegevoegd
+        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleColor', // <--- Y toegevoegd
+        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleColor', // <--- Y toegevoegd
         'tuneSpecsSize',
         'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity',
         'tuneLogoSize', 'tuneLogoX', 'tuneLogoY'
@@ -4703,9 +4703,13 @@ function loadLabelFromBrew(e) {
         restoreSlider('tuneTitleSize', s.tuneTitleSize);
         restoreSlider('tuneTitleSize2', s.tuneTitleSize2);
         restoreSlider('tuneTitleX', s.tuneTitleX);
+        restoreSlider('tuneTitleY', s.tuneTitleY);
+
+        restoreSlider('tuneStyleY', s.tuneStyleY);
         restoreSlider('tuneStyleSize', s.tuneStyleSize);
         restoreSlider('tuneStyleSize2', s.tuneStyleSize2);
         restoreSlider('tuneStyleGap', s.tuneStyleGap);
+
         restoreSlider('tuneSpecsSize', s.tuneSpecsSize);
         
         restoreSlider('tuneArtZoom', s.tuneArtZoom);
@@ -4843,18 +4847,19 @@ function setLabelTheme(theme) {
 
         // --- TUNING VALUES ---
         const titleSize1 = getVal('tuneTitleSize') || 100;
-        const titleScale2 = getVal('tuneTitleSize2') || 1.0; 
-        const titleSize2 = getVal('tuneTitleSize2') || 60; // Direct pixels
+        const titleSize2 = getVal('tuneTitleSize2') || 60;
         const titleX = getVal('tuneTitleX') || 0;
+        const titleY = getVal('tuneTitleY') || 0; // <--- NIEUW
 
-        // KLEUREN OPHALEN
         const titleColor = getVal('tuneTitleColor') || '#8F8C79';
         const styleColor = getVal('tuneStyleColor') || '#9ca3af';
 
         const styleSize1 = getVal('tuneStyleSize') || 14;
-        const styleSize2 = getVal('tuneStyleSize2') || 10; // Direct pixels
+        const styleSize2 = getVal('tuneStyleSize2') || 10;
         
         const styleGap = getVal('tuneStyleGap') || 5;
+        const styleY = getVal('tuneStyleY') || 0; // <--- NIEUW
+        
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
 
         // ... (rest van je variabelen zoals artZoom, logoSize blijven hier staan) ...
@@ -4938,13 +4943,14 @@ function setLabelTheme(theme) {
                 ${artHtml}
 
                 <div id="text-group" class="absolute top-0 bottom-0 z-10 flex flex-row items-end pointer-events-none" style="left: ${titleX}px; padding-left: 2px;">
-                    <div id="title-container" class="h-full flex flex-col justify-end">
+                    <div id="title-container" class="h-full flex flex-col justify-end" style="padding-bottom: ${titleY}px;">
                         <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-hidden" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${title}
                         </h1>
                     </div>
-                    <div id="style-container" class="h-[50%] flex flex-col justify-end overflow-hidden" style="margin-left: ${styleGap}px;">
+                    
+                    <div id="style-container" class="h-[50%] flex flex-col justify-end overflow-hidden" style="margin-left: ${styleGap}px; padding-bottom: ${styleY}px;">
                          <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-normal leading-none line-clamp-3 text-ellipsis" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg);">
                             ${sub}
@@ -5378,8 +5384,10 @@ window.saveLabelToBrew = async function() {
         tuneTitleSize: getVal('tuneTitleSize'),
         tuneTitleSize2: getVal('tuneTitleSize2'),
         tuneTitleX: getVal('tuneTitleX'),
+        tuneTitleY: getVal('tuneTitleY'),
         tuneTitleColor: getVal('tuneTitleColor'), // <--- DEZE IS NIEUW
-        
+
+        tuneStyleY: getVal('tuneStyleY'),
         tuneStyleSize: getVal('tuneStyleSize'),
         tuneStyleSize2: getVal('tuneStyleSize2'),
         tuneStyleGap: getVal('tuneStyleGap'),

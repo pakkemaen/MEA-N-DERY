@@ -4863,7 +4863,7 @@ function setLabelTheme(theme) {
                 #prev-subtitle::first-line { font-size: ${styleSize1}px !important; }
             </style>
 
-            <div class="h-full w-[35%] bg-gray-50/80 border-r border-dashed border-gray-300 pt-4 pb-2 px-3 flex flex-col text-right z-20 relative">
+            <div class="h-full w-[30%] bg-gray-50/80 pt-0.5 pb-0 pl-0 pr-2 flex flex-col text-right z-20 relative">
                 <div class="flex flex-col gap-1 overflow-hidden">
                     <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">${desc}</p>
                     ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-justify mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">${details}</p>` : ''}
@@ -4879,7 +4879,7 @@ function setLabelTheme(theme) {
                 </div>` : ''}
                 
                 <div class="text-[#8F8C79]">
-                    <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider">
+                    <div class="grid grid-cols-2 gap-x-0 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider">
                         ${abv ? `<div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>` : ''}
                         ${fg ? `<div class="text-gray-400">FG</div> <div class="text-black text-right"><span id="prev-fg">${fg}</span></div>` : ''}
                         ${vol ? `<div class="text-gray-400">Vol</div> <div class="text-black text-right"><span id="prev-vol">${vol}</span>ml</div>` : ''}
@@ -4889,7 +4889,7 @@ function setLabelTheme(theme) {
                 </div>
             </div>
 
-            <div class="h-full w-[65%] relative p-2 overflow-hidden bg-gray-50/20">
+            <div class="h-full w-[70%] relative p-2 overflow-hidden bg-gray-50/20">
                 ${artHtml}
 
                 <div id="text-group" class="absolute top-0 bottom-0 z-10 flex flex-row items-end pointer-events-none" style="left: ${titleX}px; padding-left: 2px;">

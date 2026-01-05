@@ -4637,7 +4637,7 @@ function updateLabelPreviewText() {
     }
 }
 
-// Data uit recept laden (MET SAVED SETTINGS SUPPORT)
+// Data uit recept laden (MET SMART RECOVERY)
 function loadLabelFromBrew(e) {
     const brewId = e.target.value;
     if (!brewId) return;
@@ -4648,6 +4648,16 @@ function loadLabelFromBrew(e) {
     const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
     const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
     const setCheck = (id, val) => { const el = document.getElementById(id); if(el) el.checked = val; };
+
+    // 1. STANDAARD WAARDEN BEREKENEN (Als fallback)
+    const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
+    const generatedDetails = ings.map(i => i.name).join(' • ');
+    
+    let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist') || i.name.toLowerCase().includes('lalvin') || i.name.toLowerCase().includes('safale'));
+    let generatedYeast = yeastItem ? yeastItem.name.replace(/yeast|gist/gi, '').trim() : 'Unknown';
+
+    let honeyItem = ings.find(i => i.name.toLowerCase().includes('honey') || i.name.toLowerCase().includes('honing'));
+    let generatedHoney = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
 
     // --- CHECK: ZIJN ER OPGESLAGEN INSTELLINGEN? ---
     if (brew.labelSettings) {
@@ -4661,8 +4671,11 @@ function loadLabelFromBrew(e) {
         setVal('labelVol', s.vol);
         setVal('labelDate', s.date);
         setVal('labelDescription', s.desc);
-        setVal('labelDetails', s.details);
-        setVal('labelAllergens', s.allergens || ''); // Fallback voor oude saves
+        
+        // *** DE FIX: Als opgeslagen lijst leeg is, gebruik de nieuwe scan ***
+        setVal('labelDetails', s.details || generatedDetails); 
+        
+        setVal('labelAllergens', s.allergens || ''); 
         
         if (s.persona) setVal('label-persona-select', s.persona);
 
@@ -4671,16 +4684,16 @@ function loadLabelFromBrew(e) {
         setCheck('labelShowHoney', s.showHoney);
         setCheck('labelShowDetails', s.showDetails);
 
-        // 3. Verborgen velden herstellen
-        setText('displayLabelYeast', s.yeastName || '');
-        setText('displayLabelHoney', s.honeyName || '');
+        // 3. Verborgen velden herstellen (ook hier fallback gebruiken)
+        setText('displayLabelYeast', s.yeastName || generatedYeast);
+        setText('displayLabelHoney', s.honeyName || generatedHoney);
 
-        // 4. Sliders herstellen & Events triggeren (zodat de getalletjes updaten)
+        // 4. Sliders herstellen
         const restoreSlider = (id, val) => {
             const el = document.getElementById(id);
             if(el && val !== undefined) {
                 el.value = val;
-                el.dispatchEvent(new Event('input')); // Dit update de 'px/%' tekst ernaast
+                el.dispatchEvent(new Event('input')); 
             }
         };
 
@@ -4741,37 +4754,25 @@ function loadLabelFromBrew(e) {
         }
         setVal('labelDescription', foundQuote);
 
-        // Yeast & Honey Detection
-        const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
-        
-        let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist') || i.name.toLowerCase().includes('lalvin') || i.name.toLowerCase().includes('safale') || i.name.toLowerCase().includes('wyeast') || i.name.toLowerCase().includes('mangrove'));
-        let yeastName = yeastItem ? yeastItem.name.replace(/yeast|gist/gi, '').trim() : 'Unknown';
-        setText('displayLabelYeast', yeastName);
-
-        const honeyItem = ings.find(i => i.name.toLowerCase().includes('honey') || i.name.toLowerCase().includes('honing'));
-        const honeyName = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
-        setText('displayLabelHoney', honeyName);
-
-        const fullList = ings.map(i => i.name).join(' • ');
-        setVal('labelDetails', fullList);
+        setText('displayLabelYeast', generatedYeast);
+        setText('displayLabelHoney', generatedHoney);
+        setVal('labelDetails', generatedDetails);
 
         // Sulfiet Check
         const hasSulfites = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
         setVal('labelAllergens', hasSulfites ? 'Contains Sulfites' : '');
         
-        // Reset Sliders naar defaults (als er geen save is)
+        // Reset Sliders naar defaults
         const resetSlider = (id, val) => { const el = document.getElementById(id); if(el) { el.value = val; el.dispatchEvent(new Event('input')); }};
         
         resetSlider('tuneTitleSize', 100);
-        resetSlider('tuneTitleSize2', 60); // Nieuwe default (px)
+        resetSlider('tuneTitleSize2', 60);
         resetSlider('tuneStyleSize', 14);
-        resetSlider('tuneStyleSize2', 10); // Nieuwe default (px)
+        resetSlider('tuneStyleSize2', 10);
         resetSlider('tuneSpecsSize', 5);
-
         resetSlider('tuneArtZoom', 1.0);
         resetSlider('tuneArtOpacity', 1.0);
         resetSlider('tuneLogoSize', 100);
-        // ... overige sliders blijven op hun huidige stand staan of je kunt ze hier ook resetten
     }
 
     // Forceer update van het thema

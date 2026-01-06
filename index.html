@@ -913,6 +913,11 @@
     <div class="p-2 bg-app-tertiary/50 rounded-lg border border-app-brand/5 space-y-3 mt-4">
         <p class="text-[10px] font-bold uppercase text-app-secondary">Artwork Adjustment</p>
         
+        <div class="flex justify-between items-center mb-2">
+            <label class="font-semibold text-app-header text-xs">Show White Border</label>
+            <input type="checkbox" id="labelShowBorder" checked class="rounded text-app-brand focus:ring-app-brand">
+        </div>
+
         <div>
             <div class="flex justify-between text-xs mb-1">
                 <label class="font-semibold text-app-header">Zoom</label>
@@ -940,12 +945,21 @@
             <input type="range" id="tuneArtRotate" min="-180" max="180" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
         </div>
 
-        <div>
-            <div class="flex justify-between text-xs mb-1">
-                <label class="font-semibold text-app-header">Opacity</label>
-                <span id="disp-art-opacity" class="font-mono text-xs text-gray-400">100%</span>
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <label class="font-semibold text-app-header">Transparency</label>
+                    <span id="disp-art-opacity" class="font-mono text-[10px] text-gray-400">100%</span>
+                </div>
+                <input type="range" id="tuneArtOpacity" min="0" max="1.0" value="1.0" step="0.05" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
-            <input type="range" id="tuneArtOpacity" min="0" max="1.0" value="1.0" step="0.05" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <label class="font-semibold text-app-header">Dimmer (Black)</label>
+                    <span id="disp-art-overlay" class="font-mono text-[10px] text-gray-400">20%</span>
+                </div>
+                <input type="range" id="tuneArtOverlay" min="0" max="1.0" value="0.2" step="0.05" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            </div>
         </div>
     </div>
 
@@ -968,6 +982,34 @@
             <div>
                 <label class="block text-[10px] font-semibold text-app-header mb-1">Move Y (0-100%)</label>
                 <input type="range" id="tuneLogoY" min="0" max="100" value="5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <label class="font-semibold text-app-header">Rotation</label>
+                    <span id="disp-logo-rotate" class="font-mono text-[10px] text-gray-400">0°</span>
+                </div>
+                <input type="range" id="tuneLogoRotate" min="-180" max="180" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            </div>
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <label class="font-semibold text-app-header">Opacity</label>
+                    <span id="disp-logo-opacity" class="font-mono text-[10px] text-gray-400">100%</span>
+                </div>
+                <input type="range" id="tuneLogoOpacity" min="0" max="1.0" value="1.0" step="0.1" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            </div>
+        </div>
+
+        <div class="border-t border-app-brand/10 pt-2 mt-1">
+            <div class="flex justify-between items-center mb-2">
+                <label class="font-semibold text-app-header text-xs">Flat Color Mode</label>
+                <input type="checkbox" id="logoColorMode" class="rounded text-app-brand focus:ring-app-brand">
+            </div>
+            <div class="flex justify-between items-center">
+                <label class="font-semibold text-app-header text-[10px] text-app-secondary">Pick Color</label>
+                <input type="color" id="tuneLogoColor" value="#ffffff" class="w-6 h-6 p-0 border-0 rounded cursor-pointer">
             </div>
         </div>
     </div>
@@ -1466,7 +1508,6 @@
             </div> 
         </div>
     </div> 
-        
         <p class="text-center text-sm text-app-secondary/60 mt-8">
             MEA(N)DERY - V2.2 Dual Engine - © 2025 - 2026
         </p>

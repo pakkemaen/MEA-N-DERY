@@ -4542,11 +4542,20 @@ function initLabelForge() {
     // D. TUNING & SLIDERS (MET KLEUREN)
     const sliders = [
         'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleColor', 'tuneTitleRotate',
-        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleColor', 'tuneStyleRotate', // <--- NIEUW
-        'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsColor', 'tuneSpecsRotate', 'tuneAllergenColor', // <--- NIEUW
-        'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity', 'tuneArtRotate',
-        'tuneLogoSize', 'tuneLogoX', 'tuneLogoY'
+        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleColor', 'tuneStyleRotate',
+        'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsColor', 'tuneSpecsRotate', 'tuneAllergenColor',
+        'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity', 'tuneArtRotate', 'tuneArtOverlay',
+        'tuneLogoSize', 'tuneLogoX', 'tuneLogoY', 'tuneLogoRotate', 'tuneLogoOpacity'
     ];
+
+    // Voeg listeners toe voor de niet-sliders (checkboxes en colors)
+    ['labelShowBorder', 'logoColorMode', 'tuneLogoColor'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('input', () => {
+            const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
+            setLabelTheme(activeTheme);
+        });
+    });
 
     sliders.forEach(id => {
         const el = document.getElementById(id);
@@ -4841,8 +4850,7 @@ function loadLabelFromBrew(e) {
         restoreSlider('tuneStyleGap', s.tuneStyleGap);
         restoreSlider('tuneStyleRotate', s.tuneStyleRotate);
 
-        setVal('tuneAllergenColor', s.tuneAllergenColor || '#ffffff');
-
+        
         restoreSlider('tuneSpecsSize', s.tuneSpecsSize);
         restoreSlider('tuneSpecsX', s.tuneSpecsX);
         restoreSlider('tuneSpecsY', s.tuneSpecsY);
@@ -4854,10 +4862,19 @@ function loadLabelFromBrew(e) {
         restoreSlider('tuneArtY', s.tuneArtY);
         restoreSlider('tuneArtOpacity', s.tuneArtOpacity);
         restoreSlider('tuneArtRotate', s.tuneArtRotate);
+        restoreSlider('tuneArtOverlay', s.tuneArtOverlay);
         
         restoreSlider('tuneLogoSize', s.tuneLogoSize);
         restoreSlider('tuneLogoX', s.tuneLogoX);
         restoreSlider('tuneLogoY', s.tuneLogoY);
+        restoreSlider('tuneLogoRotate', s.tuneLogoRotate);
+        restoreSlider('tuneLogoOpacity', s.tuneLogoOpacity);
+        setCheck('logoColorMode', s.logoColorMode);
+        setVal('tuneLogoColor', s.tuneLogoColor || '#ffffff');
+
+        setCheck('labelShowBorder', s.labelShowBorder !== undefined ? s.labelShowBorder : true); // Default true
+
+        setVal('tuneAllergenColor', s.tuneAllergenColor || '#ffffff');
 
         // 5. Afbeelding herstellen
         if (s.imageSrc) {
@@ -5102,119 +5119,143 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (FULL CANVAS V3 - WRAPPING & CALIBRATED)
+    // THEMA 2: SPECIAL (FULL CANVAS V4 - L2 FIX, DIMMER & LOGO COLOR)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
        container.style = ""; 
        
-       // --- TUNING VALUES (Alles is nu 0-100% positionering) ---
+       // --- PADDING LOGICA (BORDER) ---
+       const showBorder = getCheck('labelShowBorder');
+       const previewContainer = document.getElementById('label-preview-container');
+       if(previewContainer) {
+           previewContainer.style.padding = showBorder ? '5mm' : '0';
+       }
+
+       // --- TUNING VALUES ---
        const titleX = getVal('tuneTitleX') || 5; 
        const titleY = getVal('tuneTitleY') || 10;
        const titleRot = getVal('tuneTitleRotate') || 0;
        const titleColor = getVal('tuneTitleColor') || '#ffffff';
-       const titleSize1 = getVal('tuneTitleSize') || 60;
+       const titleSize1 = getVal('tuneTitleSize') || 100; // Line 1 Size
+       const titleSize2 = getVal('tuneTitleSize2') || 60; // Line 2 Size
        
-       // Style is nu OOK absoluut gepositioneerd (StyleGap = X, StyleY = Y)
        const subX = getVal('tuneStyleGap') || 5; 
        const subY = getVal('tuneStyleY') || 30;   
        const subColor = getVal('tuneStyleColor') || '#cccccc';
-       const subSize = getVal('tuneStyleSize') || 12;
-       const subRot = getVal('tuneStyleRotate') || 0; // NIEUW
+       const subSize1 = getVal('tuneStyleSize') || 14; // Line 1
+       const subSize2 = getVal('tuneStyleSize2') || 10; // Line 2
+       const subRot = getVal('tuneStyleRotate') || 0;
 
        const specsX = getVal('tuneSpecsX') || 5; 
        const specsY = getVal('tuneSpecsY') || 80; 
        const specsRot = getVal('tuneSpecsRotate') || 0;
        const specsColor = getVal('tuneSpecsColor') || '#ffffff';
-       const allergenColor = getVal('tuneAllergenColor') || specsColor; // NIEUW
+       const allergenColor = getVal('tuneAllergenColor') || specsColor;
        const specsSize = getVal('tuneSpecsSize') || 4;
 
        // Artwork
        const artZoom = getVal('tuneArtZoom') || 1.0;
-       const artX = getVal('tuneArtX') || 50; // Center default
-       const artY = getVal('tuneArtY') || 50; // Center default
+       const artX = getVal('tuneArtX') || 50; 
+       const artY = getVal('tuneArtY') || 50; 
        const artRot = getVal('tuneArtRotate') || 0;
        const artOpacity = getVal('tuneArtOpacity') || 1.0;
+       const artOverlay = getVal('tuneArtOverlay') || 0.2; // De Dimmer
 
        // Logo
        const logoSize = getVal('tuneLogoSize') || 100;
        const logoX = getVal('tuneLogoX') || 95;
        const logoY = getVal('tuneLogoY') || 5;
+       const logoRot = getVal('tuneLogoRotate') || 0; // NIEUW
+       const logoOp = getVal('tuneLogoOpacity') || 1.0; // NIEUW
+       
+       // Logo Kleur Modus
+       const logoFlat = getCheck('logoColorMode');
+       const logoColor = getVal('tuneLogoColor') || '#ffffff';
 
-       // --- DATA VOORBEREIDING ---
+       // --- DATA ---
        const showYeast = getCheck('labelShowYeast');
        const showHoney = getCheck('labelShowHoney');
-
        let yeastText = "", honeyText = "";
        const yVal = document.getElementById('displayLabelYeast')?.textContent; 
        if (yVal && yVal.trim() !== '--') yeastText = yVal.trim();
-       
        const hVal = document.getElementById('displayLabelHoney')?.textContent; 
        if (hVal && hVal.trim() !== '--') honeyText = hVal.trim();
        
        let extraInfoHtml = '';
        if (showHoney && honeyText) extraInfoHtml += `<div><span class="opacity-60">Honey:</span> <span class="font-bold">${honeyText}</span></div>`;
        if (showYeast && yeastText) extraInfoHtml += `<div><span class="opacity-60">Yeast:</span> <span class="font-bold">${yeastText}</span></div>`;
-       
-       // Allergenen nu in eigen kleur (of specs kleur)
        if (allergenText) extraInfoHtml += `<div class="mt-1 font-bold uppercase" style="font-size: 0.9em; color: ${allergenColor}">${allergenText}</div>`;
 
-       // Achtergrond Laag (Center Origin for Artwork is usually better)
+       // Achtergrond Laag
        let bgHtml = '';
        if (hasImage) {
            bgHtml = `
            <div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center">
                 <img src="${imgSrc}" 
                      style="transform: translate(${artX-50}%, ${artY-50}%) rotate(${artRot}deg) scale(${artZoom}); opacity: ${artOpacity}; width: 100%; height: 100%; object-fit: cover; transform-origin: center;">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none"></div>
+                <div class="absolute inset-0 pointer-events-none" style="background-color: black; opacity: ${artOverlay};"></div>
            </div>`;
        } else {
            bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
        }
 
-       // Specs Blok
-       const specsBlock = `
-           <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
-               <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-mono">
-                   <span class="opacity-70">ABV</span> <span class="font-bold">${abv}%</span>
-                   ${fg ? `<span class="opacity-70">FG</span> <span class="font-bold">${fg}</span>` : ''}
-                   <span class="opacity-70">Vol</span> <span class="font-bold">${vol}ml</span>
-                   <span class="opacity-70">Date</span> <span class="font-bold">${dateVal}</span>
-               </div>
-               ${extraInfoHtml ? `<div class="mb-2 border-t border-white/20 pt-1 space-y-0.5">${extraInfoHtml}</div>` : ''}
-               ${showDetails && details ? `<p class="opacity-90 max-w-[200px] leading-tight font-serif italic border-t border-white/20 pt-1">${details}</p>` : ''}
-           </div>
-       `;
+       // Logo HTML Generatie (Flat vs Original)
+       let logoInnerHtml = '';
+       if (logoFlat) {
+           // Masking truc voor vlakke kleur
+           logoInnerHtml = `<div style="width: 100%; height: 100%; background-color: ${logoColor}; -webkit-mask-image: url(logo.png); mask-image: url(logo.png); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; mask-position: center; -webkit-mask-origin: content-box;"></div>`;
+       } else {
+           // Normaal plaatje
+           logoInnerHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
+       }
 
+       // --- GENERATE HTML ---
        container.innerHTML = `
+           <style>
+               /* CSS INJECTION VOOR LIJN 1 / LIJN 2 GROOTTE */
+               #prev-title { font-size: ${titleSize2}px !important; color: ${titleColor} !important; line-height: 0.85; }
+               #prev-title::first-line { font-size: ${titleSize1}px !important; }
+               
+               #prev-subtitle { font-size: ${subSize2}px !important; color: ${subColor} !important; line-height: 0.9; }
+               #prev-subtitle::first-line { font-size: ${subSize1}px !important; }
+           </style>
+
            ${bgHtml}
 
            <div class="absolute z-10 pointer-events-none origin-top-left" 
                 style="top: ${titleY}%; left: ${titleX}%; width: calc(100% - ${titleX}%); transform: rotate(${titleRot}deg);">
-                
-                <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest leading-none drop-shadow-lg"
-                    style="font-size: ${titleSize1}px; color: ${titleColor}; white-space: normal; overflow-wrap: break-word; line-height: 0.9;">
+                <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest drop-shadow-lg"
+                    style="white-space: normal; overflow-wrap: break-word;">
                     ${title}
                 </h1>
            </div>
 
            <div class="absolute z-10 pointer-events-none origin-top-left" 
                 style="top: ${subY}%; left: ${subX}%; width: calc(100% - ${subX}%); transform: rotate(${subRot}deg);">
-                
                 <p id="prev-subtitle" class="font-bold uppercase tracking-[0.4em] drop-shadow-md"
-                   style="font-size: ${subSize}px; color: ${subColor}; white-space: normal; overflow-wrap: break-word;">
+                   style="white-space: normal; overflow-wrap: break-word;">
                    ${sub}
                 </p>
            </div>
 
            <div class="absolute z-10 pointer-events-none origin-top-left" 
                 style="left: ${specsX}%; top: ${specsY}%; transform: rotate(${specsRot}deg);">
-               ${specsBlock}
+                <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
+                   <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-mono">
+                       <span class="opacity-70">ABV</span> <span class="font-bold">${abv}%</span>
+                       ${fg ? `<span class="opacity-70">FG</span> <span class="font-bold">${fg}</span>` : ''}
+                       <span class="opacity-70">Vol</span> <span class="font-bold">${vol}ml</span>
+                       <span class="opacity-70">Date</span> <span class="font-bold">${dateVal}</span>
+                   </div>
+                   ${extraInfoHtml ? `<div class="mb-2 border-t border-white/20 pt-1 space-y-0.5">${extraInfoHtml}</div>` : ''}
+                   ${showDetails && details ? `<p class="opacity-90 max-w-[200px] leading-tight font-serif italic border-t border-white/20 pt-1">${details}</p>` : ''}
+               </div>
            </div>
 
            <div class="absolute z-20 pointer-events-none origin-top-left" 
-                style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, -50%);">
-                <img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">
+                style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, -50%) rotate(${logoRot}deg); opacity: ${logoOp};">
+                ${logoInnerHtml}
            </div>
        `;
     }
@@ -5612,15 +5653,15 @@ window.saveLabelToBrew = async function() {
         tuneTitleSize2: getVal('tuneTitleSize2'),
         tuneTitleX: getVal('tuneTitleX'),
         tuneTitleY: getVal('tuneTitleY'),
-        tuneTitleColor: getVal('tuneTitleColor'), // <--- DEZE IS NIEUW
+        tuneTitleColor: getVal('tuneTitleColor'), 
         tuneTitleRotate: getVal('tuneTitleRotate'),
         
         tuneStyleY: getVal('tuneStyleY'),
         tuneStyleSize: getVal('tuneStyleSize'),
         tuneStyleSize2: getVal('tuneStyleSize2'),
         tuneStyleGap: getVal('tuneStyleGap'),
-        tuneStyleColor: getVal('tuneStyleColor'), // <--- DEZE IS NIEUW
-        tuneStyleRotate: getVal('tuneStyleRotate'), // <---
+        tuneStyleColor: getVal('tuneStyleColor'),
+        tuneStyleRotate: getVal('tuneStyleRotate'),
         
         tuneSpecsSize: getVal('tuneSpecsSize'),
         tuneSpecsX: getVal('tuneSpecsX'),
@@ -5633,12 +5674,19 @@ window.saveLabelToBrew = async function() {
         tuneArtY: getVal('tuneArtY'),
         tuneArtOpacity: getVal('tuneArtOpacity'),
         tuneArtRotate: getVal('tuneArtRotate'),
+        tuneArtOverlay: getVal('tuneArtOverlay'),
         
         tuneLogoSize: getVal('tuneLogoSize'),
         tuneLogoX: getVal('tuneLogoX'),
         tuneLogoY: getVal('tuneLogoY'),
+        tuneLogoRotate: getVal('tuneLogoRotate'),
+        tuneLogoOpacity: getVal('tuneLogoOpacity'),
+        logoColorMode: getCheck('logoColorMode'),
+        tuneLogoColor: getVal('tuneLogoColor'),
 
-        tuneAllergenColor: getVal('tuneAllergenColor'), // <---
+        labelShowBorder: getCheck('labelShowBorder'),
+
+        tuneAllergenColor: getVal('tuneAllergenColor'),
         
         imageSrc: window.currentLabelImageSrc || ''
     };

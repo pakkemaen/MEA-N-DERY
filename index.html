@@ -1307,223 +1307,121 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> 
 
-        <div id="settings-main-view" class="hidden">
-    <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
-    
-    <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg settings-panel overflow-y-auto" style="max-height: 80vh;">
-        <h2 class="text-3xl font-header font-bold mb-6 text-center">Settings</h2>
+     <div id="settings-main-view" class="hidden">
+        <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
         
-        <div class="max-w-xl mx-auto">
+        <div class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg settings-panel overflow-y-auto" style="max-height: 80vh;">
+            <h2 class="text-3xl font-header font-bold mb-6 text-center">Settings</h2>
             
-            <div class="mb-6 card p-6 rounded-lg">
-                <h3 class="text-xl font-header font-bold mb-4">API Keys</h3>
-                <div class="mb-4">
-                    <label class="block text-sm font-bold mb-2">Google AI Key</label>
-                    <input type="password" id="apiKeyInput" class="w-full p-2 border rounded-md" placeholder="AIza...">
-                </div>
-            </div>
-
-            <div class="mb-6 card p-6 rounded-lg">
-                <div class="flex justify-between items-end mb-4">
-                    <h3 class="text-xl font-header font-bold">AI Models</h3>
-                    <button id="fetchModelsBtn" class="bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-blue-700 btn" title="Scan Google for capabilities">
-                        🔄 Scan & Update Lists
-                    </button>
-                </div>
-
-                <div class="mb-4">
-                    <p class="text-xs text-app-secondary mb-1 font-bold">Recipe & Logic Engine</p>
-                    <div class="relative w-full">
-                        <select id="aiModelInput" class="w-full p-2 border rounded bg-app-tertiary border-app text-app-header appearance-none text-sm focus:ring-2 focus:ring-app-brand">
-                            <option value="gemini-2.5-pro">gemini-2.5-pro (Default)</option>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-app-header">
-                            <svg class="fill-current h-4 w-4" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-4">
-                    <p class="text-xs text-app-secondary mb-1 font-bold">Chat & Troubleshoot Engine</p>
-                    <div class="relative w-full">
-                        <select id="chatModelInput" class="w-full p-2 border rounded bg-app-tertiary border-app text-app-header appearance-none text-sm focus:ring-2 focus:ring-app-brand">
-                            </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-app-header">
-                            <svg class="fill-current h-4 w-4" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                        </div>
-                    </div>
-                    <p class="text-[10px] text-app-secondary mt-1">Recommended: gemini-2.5-flash (Fast & Visual)</p>
-                </div>
-
-                <div class="mb-4">
-                    <p class="text-xs text-app-secondary mb-1 font-bold">Image Generation Engine</p>
-                    <div class="relative w-full">
-                        <select id="imageModelInput" class="w-full p-2 border rounded bg-app-tertiary border-app text-app-header appearance-none text-sm focus:ring-2 focus:ring-app-brand">
-                            <option value="imagen-3.0-generate-001">imagen-3.0-generate-001 (Default)</option>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-app-header">
-                            <svg class="fill-current h-4 w-4" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="mb-6 card p-6 rounded-lg">
-                <h3 class="text-xl font-header font-bold mb-4">Defaults</h3>
-                <div class="mb-4">
-                    <label class="block text-sm font-bold mb-2">Batch Size (L)</label>
-                    <input type="number" id="defaultBatchSizeInput" class="w-full p-2 border rounded-md">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold mb-2">Currency</label>
-                    <input type="text" id="defaultCurrencyInput" class="w-full p-2 border rounded-md">
-                </div>
-            </div>
-
-            <div class="mb-6 card p-6 rounded-lg">
-                <h3 class="text-xl font-header font-bold mb-4">UI</h3>
-                <div class="flex justify-between items-center">
-                    <label class="font-bold">Dark Mode</label>
-                    <label class="theme-switch">
-                        <input type="checkbox" id="theme-toggle-checkbox">
-                        <div class="slider round"></div>
-                    </label>
-                </div>
-            </div>
-
-            <div class="mb-6 card p-6 rounded-lg border-2 border-purple-500/20">
-                <h3 class="text-xl font-header font-bold mb-4 flex items-center gap-2">
-                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    Label Studio Assets
-                </h3>
-
-                <div class="mb-6">
-                    <h4 class="font-bold text-sm text-app-brand uppercase mb-2">A. Art Styles (Prompts)</h4>
-                    <div class="flex gap-2 mb-2">
-                        <input type="text" id="newStyleName" placeholder="Name (e.g. Dark Fantasy)" class="w-1/3 p-2 border rounded bg-app-tertiary text-xs">
-                        <input type="text" id="newStylePrompt" placeholder="Prompt suffix (e.g. oil painting, dark lighting...)" class="flex-grow p-2 border rounded bg-app-tertiary text-xs">
-                        <button id="addStyleBtn" class="bg-purple-600 text-white px-3 rounded text-xs font-bold hover:bg-purple-700">+</button>
-                    </div>
-                    <div id="settings-styles-list" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar bg-app-primary p-2 rounded border border-app-brand/10">
-                        </div>
-                </div>
-
-                <div>
-                    <h4 class="font-bold text-sm text-app-brand uppercase mb-2">B. Typography (Google Fonts)</h4>
-                    <div class="flex gap-2 mb-2">
-                        <input type="text" id="newFontName" placeholder="Google Font Name (e.g. Playfair Display)" class="flex-grow p-2 border rounded bg-app-tertiary text-xs">
-                        <button id="addFontBtn" class="bg-purple-600 text-white px-3 rounded text-xs font-bold hover:bg-purple-700">+</button>
-                    </div>
-                        <p class="text-[10px] text-app-secondary mb-2">Find exact names at <a href="https://fonts.google.com" target="_blank" class="underline">fonts.google.com</a>.</p>
-                        <div id="settings-fonts-list" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar bg-app-primary p-2 rounded border border-app-brand/10">
-                            </div>
-                    </div>
-                </div> 
-
-            <button id="saveSettingsBtn" class="w-full mt-2 bg-blue-700 text-white font-bold py-3 px-4 rounded-lg btn shadow-md hover:bg-blue-800 transition-colors">
-                Save Settings
-            </button>
-
-            <div class="mt-10 mb-6">
-                <h3 class="text-xl font-header font-bold text-center mb-6 border-b pb-2 border-app-brand/20">App Feature Manual</h3>
+            <div class="max-w-xl mx-auto space-y-6">
                 
-                <div class="space-y-3">
-                    
-                    <details class="group bg-app-tertiary p-4 rounded-lg open:ring-2 open:ring-app-brand/20">
-                        <summary class="font-bold text-app-header cursor-pointer flex justify-between items-center select-none">
-                            <span class="flex items-center gap-2">🍺 The Brewing Engine</span>
-                            <svg class="w-5 h-5 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </summary>
-                        <div class="mt-3 text-sm text-app-secondary space-y-2 border-t border-app-brand/10 pt-2 leading-relaxed">
-                            <p><strong class="text-app-brand">Creator:</strong> The heart of the app. Enter a description (e.g., "Spiced cherry mead") or use the dropdowns. The AI generates a full recipe, including specific gravity targets and a step-by-step plan.</p>
-                            <p><strong class="text-app-brand">Shopping List:</strong> Automatically extracted from the generated recipe. You can check off items before you start.</p>
-                            <p><strong class="text-app-brand">Brew Day 1 (Primary):</strong> Your active brew dashboard. 
-                                <ul class="list-disc pl-5 mt-1">
-                                    <li><strong>Smart Timers:</strong> Click 'Start Timer' for steps like rehydration.</li>
-                                    <li><strong>Logs:</strong> Record your OG (Original Gravity) here.</li>
-                                    <li><strong>Completion:</strong> When finished, click the green "Finish Primary" button to move the batch to the Aging phase.</li>
-                                </ul>
-                            </p>
-                            <p><strong class="text-app-brand">Brew Day 2 (Aging):</strong> Shows a list of all batches currently in secondary fermentation. Select a batch to view steps like Racking, Stabilization, and Bottling.</p>
-                        </div>
-                    </details>
-
-                    <details class="group bg-app-tertiary p-4 rounded-lg open:ring-2 open:ring-app-brand/20">
-                        <summary class="font-bold text-app-header cursor-pointer flex justify-between items-center select-none">
-                            <span class="flex items-center gap-2">📦 Inventory & Cellar</span>
-                            <svg class="w-5 h-5 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </summary>
-                        <div class="mt-3 text-sm text-app-secondary space-y-2 border-t border-app-brand/10 pt-2 leading-relaxed">
-                            <p><strong class="text-app-brand">Inventory:</strong> Track your ingredients. Use the <strong>Barcode Scanner</strong> to quickly find or add items. When brewing, use the "Deduct from Inventory" button to auto-update stock.</p>
-                            <p><strong class="text-app-brand">Equipment:</strong> Define your fermenters and kettles. This helps with tracking capacity and cleaning.</p>
-                            <p><strong class="text-app-brand">Packaging:</strong> Manage stock of bottles, corks, and labels.</p>
-                            <p><strong class="text-app-brand">Cellar (The Vault):</strong> Your finished bottles live here.
-                                <ul class="list-disc pl-5 mt-1">
-                                    <li><strong>Drink:</strong> Click 'Drink' to remove a bottle from stock.</li>
-                                    <li><strong>Aging Manager:</strong> Click the status label to open the AI Aging Manager. Input your cellar temp and history to get a predicted "Peak Flavor Date".</li>
-                                </ul>
-                            </p>
-                            <p><strong class="text-app-brand">Financials:</strong> A realtime dashboard showing the total value of your inventory, active batches, and cellar.</p>
-                        </div>
-                    </details>
-
-                    <details class="group bg-app-tertiary p-4 rounded-lg open:ring-2 open:ring-app-brand/20">
-                        <summary class="font-bold text-app-header cursor-pointer flex justify-between items-center select-none">
-                            <span class="flex items-center gap-2">🛠️ Tools Suite</span>
-                            <svg class="w-5 h-5 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </summary>
-                        <div class="mt-3 text-sm text-app-secondary space-y-2 border-t border-app-brand/10 pt-2 leading-relaxed">
-                            <p><strong class="text-app-brand">Calculators:</strong> Built-in math for ABV, Hydrometer correction, Refractometer (Brix to FG), Dilution, and TOSNA nutrient schedules.</p>
-                            <p><strong class="text-app-brand">Label Forge:</strong> Design printable labels for your bottles.
-                                <ul class="list-disc pl-5 mt-1">
-                                    <li><strong>AI Art:</strong> Generate unique artwork based on your recipe name.</li>
-                                    <li><strong>Auto-Data:</strong> Pulls ABV, date, and ingredients directly from the batch history.</li>
-                                </ul>
-                            </p>
-                            <p><strong class="text-app-brand">Water Sommelier:</strong> Analyze your water profile. The AI will tell you if your tap/bottled water is suitable for your specific mead style.</p>
-                            <p><strong class="text-app-brand">Mead Medic:</strong> An AI Chatbot. Upload a photo of your brew or describe a problem (e.g., "It smells like eggs") to get a scientific diagnosis and fix.</p>
-                            <p><strong class="text-app-brand">Social Studio:</strong> Generate Instagram captions or Untappd descriptions based on your recipe, in different personas (e.g., Ryan Reynolds style).</p>
-                        </div>
-                    </details>
-
-                    <details class="group bg-app-tertiary p-4 rounded-lg open:ring-2 open:ring-app-brand/20">
-                        <summary class="font-bold text-app-header cursor-pointer flex justify-between items-center select-none">
-                            <span class="flex items-center gap-2">⚙️ System & AI</span>
-                            <svg class="w-5 h-5 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </summary>
-                        <div class="mt-3 text-sm text-app-secondary space-y-2 border-t border-app-brand/10 pt-2 leading-relaxed">
-                            <p><strong class="text-app-brand">AI Models:</strong> Switch between different Google Gemini models. Use "Flash" for speed/vision and "Pro" for complex reasoning.</p>
-                            <p><strong class="text-app-brand">Data Management:</strong> Export your entire history or inventory to a JSON file for backup. You can also clear data here if you want a fresh start.</p>
-                            <p><strong class="text-app-brand">Theme:</strong> Toggle between Light and Dark mode.</p>
-                        </div>
-                    </details>
-
+                <div class="card p-6 rounded-lg">
+                    <h3 class="text-xl font-header font-bold mb-4">API Keys</h3>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Google AI Key</label>
+                        <input type="password" id="apiKeyInput" class="w-full p-2 border rounded-md bg-app-tertiary text-app-header">
+                    </div>
                 </div>
-            </div>
 
-            <div class="mt-10 p-6 rounded-lg border-2 border-red-400 bg-app-tertiary">
-                <h3 class="text-xl font-header text-red-600 mb-4 font-bold">Data Management</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <button id="exportHistoryBtn" class="btn bg-gray-600 text-white hover:bg-gray-700">Export History</button>
-                    <button id="exportInventoryBtn" class="btn bg-gray-600 text-white hover:bg-gray-700">Export Inv</button>
+                <div class="card p-6 rounded-lg">
+                    <div class="flex justify-between items-end mb-4">
+                        <h3 class="text-xl font-header font-bold">AI Models</h3>
+                        <button id="fetchModelsBtn" class="bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-blue-700 btn">
+                            🔄 Scan & Update
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-xs text-app-secondary mb-1 font-bold">Recipe Engine</p>
+                            <select id="aiModelInput" class="w-full p-2 border rounded bg-app-tertiary text-app-header text-sm">
+                                <option value="gemini-2.5-flash">gemini-2.5-flash (Default)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <p class="text-xs text-app-secondary mb-1 font-bold">Chat Engine</p>
+                            <select id="chatModelInput" class="w-full p-2 border rounded bg-app-tertiary text-app-header text-sm">
+                                <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                            </select>
+                        </div>
+                        <div>
+                            <p class="text-xs text-app-secondary mb-1 font-bold">Image Engine</p>
+                            <select id="imageModelInput" class="w-full p-2 border rounded bg-app-tertiary text-app-header text-sm">
+                                <option value="imagen-3.0-generate-001">imagen-3.0-generate-001</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4 mt-2">
-                    <label class="btn bg-gray-600 text-white text-center cursor-pointer hover:bg-gray-700">
-                        Import History <input type="file" id="importHistoryFile" class="hidden">
-                    </label>
-                    <label class="btn bg-gray-600 text-white text-center cursor-pointer hover:bg-gray-700">
-                        Import Inv <input type="file" id="importInventoryFile" class="hidden">
-                    </label>
-                </div>
-                <div class="mt-4 border-t-2 border-red-400 pt-4 space-y-2">
-                    <button id="clearHistoryBtn" class="w-full bg-red-700 text-white btn hover:bg-red-800">Delete History</button>
-                    <button id="clearInventoryBtn" class="w-full bg-red-700 text-white btn hover:bg-red-800">Delete Inventory</button>
-                </div>
-            </div>
 
-        </div> 
+                <div class="card p-6 rounded-lg">
+                    <h3 class="text-xl font-header font-bold mb-4">Defaults</h3>
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-2">Batch Size (L)</label>
+                        <input type="number" id="defaultBatchSizeInput" class="w-full p-2 border rounded-md bg-app-tertiary text-app-header">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Currency</label>
+                        <input type="text" id="defaultCurrencyInput" class="w-full p-2 border rounded-md bg-app-tertiary text-app-header">
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-lg">
+                    <h3 class="text-xl font-header font-bold mb-4">UI</h3>
+                    <div class="flex justify-between items-center">
+                        <label class="font-bold">Dark Mode</label>
+                        <label class="theme-switch">
+                            <input type="checkbox" id="theme-toggle-checkbox">
+                            <div class="slider round"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-lg border-2 border-purple-500/20">
+                    <h3 class="text-xl font-header font-bold mb-4 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        Label Studio Assets
+                    </h3>
+
+                    <div class="mb-6">
+                        <h4 class="font-bold text-sm text-app-brand uppercase mb-2">A. Art Styles (Prompts)</h4>
+                        <div class="flex gap-2 mb-2">
+                            <input type="text" id="newStyleName" placeholder="Name (e.g. Dark Fantasy)" class="w-1/3 p-2 border rounded bg-app-tertiary text-xs text-app-header">
+                            <input type="text" id="newStylePrompt" placeholder="Prompt suffix..." class="flex-grow p-2 border rounded bg-app-tertiary text-xs text-app-header">
+                            <button id="addStyleBtn" class="bg-purple-600 text-white px-3 rounded text-xs font-bold hover:bg-purple-700">+</button>
+                        </div>
+                        <div id="settings-styles-list" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar bg-app-primary p-2 rounded border border-app-brand/10"></div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-sm text-app-brand uppercase mb-2">B. Typography (Google Fonts)</h4>
+                        <div class="flex gap-2 mb-2">
+                            <input type="text" id="newFontName" placeholder="Font Name (e.g. Playfair Display)" class="flex-grow p-2 border rounded bg-app-tertiary text-xs text-app-header">
+                            <button id="addFontBtn" class="bg-purple-600 text-white px-3 rounded text-xs font-bold hover:bg-purple-700">+</button>
+                        </div>
+                        <div id="settings-fonts-list" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar bg-app-primary p-2 rounded border border-app-brand/10"></div>
+                    </div>
+                </div>
+
+                <button id="saveSettingsBtn" class="w-full bg-blue-700 text-white font-bold py-3 px-4 rounded-lg btn shadow-md hover:bg-blue-800 transition-colors">
+                    Save Settings
+                </button>
+
+                <div class="mt-8 p-6 rounded-lg border-2 border-red-400 bg-app-tertiary">
+                    <h3 class="text-xl font-header text-red-600 mb-4 font-bold">Data Management</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button id="exportHistoryBtn" class="btn bg-gray-600 text-white hover:bg-gray-700">Export History</button>
+                        <button id="exportInventoryBtn" class="btn bg-gray-600 text-white hover:bg-gray-700">Export Inv</button>
+                    </div>
+                    <div class="mt-4 border-t-2 border-red-400 pt-4 space-y-2">
+                        <button id="clearHistoryBtn" class="w-full bg-red-700 text-white btn hover:bg-red-800">Delete History</button>
+                        <button id="clearInventoryBtn" class="w-full bg-red-700 text-white btn hover:bg-red-800">Delete Inventory</button>
+                    </div>
+                </div>
+
+            </div> 
+        </div>
+    </div> 
         
         <p class="text-center text-sm text-app-secondary/60 mt-8">
             MEA(N)DERY - V2.2 Dual Engine - © 2025 - 2026

@@ -876,6 +876,36 @@
     </div>
 
     <div class="p-2 bg-app-tertiary/50 rounded-lg border border-app-brand/5 space-y-3 mt-4">
+        <p class="text-[10px] font-bold uppercase text-app-secondary">Specs / Data Position</p>
+        
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Pos X</label>
+                <input type="range" id="tuneSpecsX" min="0" max="100" value="5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            </div>
+            <div>
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Pos Y</label>
+                <input type="range" id="tuneSpecsY" min="0" max="100" value="80" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            </div>
+        </div>
+
+        <div>
+            <div class="flex justify-between text-xs mb-1">
+                <label class="font-semibold text-app-header">Font Size</label>
+                <span id="disp-specs-size" class="font-mono text-xs text-gray-400">5px</span>
+            </div>
+            <input type="range" id="tuneSpecsSize" min="2" max="12" value="4" step="0.5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+        </div>
+
+        <div class="flex justify-between items-center mb-2">
+            <label class="font-semibold text-app-header text-xs">Text Color</label>
+            <div class="flex items-center gap-2">
+                <input type="color" id="tuneSpecsColor" value="#ffffff" class="w-6 h-6 p-0 border-0 rounded cursor-pointer">
+            </div>
+        </div>
+    </div>
+
+    <div class="p-2 bg-app-tertiary/50 rounded-lg border border-app-brand/5 space-y-3 mt-4">
         <p class="text-[10px] font-bold uppercase text-app-secondary">Artwork Adjustment</p>
         
         <div>

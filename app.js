@@ -3781,7 +3781,7 @@ let labelAssets = {
     fonts: []
 };
 
-// 1. DATA LADEN
+// 1. DATA LADEN (VEILIGE VERSIE)
 async function loadLabelAssets() {
     if (!userId) return;
     try {
@@ -3791,24 +3791,26 @@ async function loadLabelAssets() {
         if (docSnap.exists()) {
             labelAssets = docSnap.data();
         } else {
-            // Initieer met een paar defaults als het leeg is
+            // Initieer met defaults als het leeg is
             labelAssets = {
                 styles: [
                     { id: 'def1', name: 'Modern Vector', prompt: 'clean vector art, flat design, minimalist, vibrant colors, white background' },
-                    { id: 'def2', name: 'Dark Mystical', prompt: 'dark fantasy style, oil painting, dramatic lighting, intricate details, gold accents' },
-                    { id: 'def3', name: 'Vintage Botanical', prompt: 'vintage botanical illustration, etched style, faded paper texture, detailed line work' }
+                    { id: 'def2', name: 'Dark Mystical', prompt: 'dark fantasy style, oil painting, dramatic lighting, intricate details, gold accents' }
                 ],
                 fonts: [
-                    { id: 'f1', name: 'Barlow Semi Condensed' }, // Standaard app font
-                    { id: 'f2', name: 'Playfair Display' },
-                    { id: 'f3', name: 'Cinzel' }
+                    { id: 'f1', name: 'Barlow Semi Condensed' },
+                    { id: 'f2', name: 'Playfair Display' }
                 ]
             };
             await setDoc(docRef, labelAssets);
         }
         
+        // Zorg dat de arrays bestaan voordat we renderen (voorkomt crashes)
+        if (!labelAssets.styles) labelAssets.styles = [];
+        if (!labelAssets.fonts) labelAssets.fonts = [];
+
         renderLabelAssetsSettings();
-        loadGoogleFontsInHeader(); // Fonts direct activeren
+        loadGoogleFontsInHeader(); 
         
     } catch (e) {
         console.error("Error loading label assets:", e);
@@ -7205,8 +7207,11 @@ function initApp() {
     document.getElementById('clearInventoryBtn')?.addEventListener('click', clearInventory);
 
     // Label Assets Listeners
-    document.getElementById('addStyleBtn')?.addEventListener('click', window.addLabelStyle);
-    document.getElementById('addFontBtn')?.addEventListener('click', window.addLabelFont);
+    const styleBtn = document.getElementById('addStyleBtn');
+    if (styleBtn) styleBtn.addEventListener('click', window.addLabelStyle);
+    
+    const fontBtn = document.getElementById('addFontBtn');
+    if (fontBtn) fontBtn.addEventListener('click', window.addLabelFont);
 
     // Labels (V2.0)
     initLabelForge();

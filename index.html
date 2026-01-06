@@ -815,6 +815,14 @@
             </div>
         </div>
 
+        <div>
+            <div class="flex justify-between text-xs mb-1">
+                <label class="font-semibold text-app-header">Rotation</label>
+                <span id="disp-title-rotate" class="font-mono text-xs text-gray-400">0°</span>
+            </div>
+            <input type="range" id="tuneTitleRotate" min="-180" max="180" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+        </div>
+
         <div class="flex justify-between items-center mb-2">
             <label class="font-semibold text-app-header text-xs">Title Color</label>
             <div class="flex items-center gap-2">
@@ -859,20 +867,20 @@
             </div>
         </div>
 
+        <div>
+            <div class="flex justify-between text-xs mb-1">
+                <label class="font-semibold text-app-header">Rotation</label>
+                <span id="disp-specs-rotate" class="font-mono text-xs text-gray-400">0°</span>
+           </div>
+           <input type="range" id="tuneSpecsRotate" min="-180" max="180" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+        </div>
+
         <div class="flex justify-between items-center mb-2">
             <label class="font-semibold text-app-header text-xs">Style Color</label>
             <div class="flex items-center gap-2">
                 <input type="color" id="tuneStyleColor" value="#9ca3af" class="w-6 h-6 p-0 border-0 rounded cursor-pointer">
             </div>
         </div>
-    </div>
-
-    <div>
-        <div class="flex justify-between text-xs mb-1">
-            <label class="font-semibold text-app-header">Specs Font Size</label>
-            <span id="disp-specs-size" class="font-mono text-xs text-gray-400">5px</span>
-        </div>
-        <input type="range" id="tuneSpecsSize" min="3" max="6" value="5" step="0.5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
     </div>
 
     <div class="p-2 bg-app-tertiary/50 rounded-lg border border-app-brand/5 space-y-3 mt-4">
@@ -925,6 +933,14 @@
                 <label class="block text-[10px] font-semibold text-app-header mb-1">Move Y</label>
                 <input type="range" id="tuneArtY" min="-200" max="200" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
+        </div>
+
+        <div>
+            <div class="flex justify-between text-xs mb-1">
+                <label class="font-semibold text-app-header">Rotation</label>
+                <span id="disp-art-rotate" class="font-mono text-xs text-gray-400">0°</span>
+            </div>
+            <input type="range" id="tuneArtRotate" min="-180" max="180" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
         </div>
 
         <div>

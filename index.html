@@ -785,17 +785,18 @@
         <div class="grid grid-cols-2 gap-2">
             <div>
                 <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Size L1</label>
-                    <span id="disp-title-size" class="font-mono text-[10px] text-gray-400">100px</span>
-                </div>
-                <input type="range" id="tuneTitleSize" min="1" max="180" value="100" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                <label class="font-semibold text-app-header">Size L1</label>
+                <span id="disp-title-size" class="font-mono text-[10px] text-gray-400">100px</span>
             </div>
-            <div>
-                <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Size L2</label>
-                    <span id="disp-title-size-2" class="font-mono text-[10px] text-gray-400">60px</span>
-                </div>
-                <input type="range" id="tuneTitleSize2" min="1" max="180" value="60" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                <input type="range" id="tuneTitleSize" min="5" max="180" value="100" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+        </div>
+
+        <div>
+            <div class="flex justify-between text-xs mb-1">
+                <label class="font-semibold text-app-header">Size L2</label>
+                <span id="disp-title-size-2" class="font-mono text-[10px] text-gray-400">60px</span>
+            </div>
+                <input type="range" id="tuneTitleSize2" min="5" max="180" value="60" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
         </div>
 
@@ -828,19 +829,20 @@
         <p class="text-[10px] font-bold uppercase text-app-secondary">Style Tuning</p>
         <div class="grid grid-cols-2 gap-2">
             <div>
-                <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Size L1</label>
-                    <span id="disp-style-size" class="font-mono text-[10px] text-gray-400">14px</span>
-                </div>
-                <input type="range" id="tuneStyleSize" min="1" max="60" value="14" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            <div class="flex justify-between text-xs mb-1">
+                <label class="font-semibold text-app-header">Size L1</label>
+                <span id="disp-style-size" class="font-mono text-[10px] text-gray-400">14px</span>
             </div>
-            <div>
-                <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Size L2</label>
-                    <span id="disp-style-size-2" class="font-mono text-[10px] text-gray-400">10px</span>
-                </div>
-                <input type="range" id="tuneStyleSize2" min="1" max="60" value="10" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            <input type="range" id="tuneStyleSize" min="3" max="60" value="14" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+        </div>
+
+        <div>
+            <div class="flex justify-between text-xs mb-1">
+                <label class="font-semibold text-app-header">Size L2</label>
+                <span id="disp-style-size-2" class="font-mono text-[10px] text-gray-400">10px</span>
             </div>
+            <input type="range" id="tuneStyleSize2" min="3" max="60" value="10" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+        </div>
         </div>
 
         <div class="grid grid-cols-2 gap-2">

@@ -4574,13 +4574,21 @@ function initLabelForge() {
                 const disp = document.getElementById(dispId);
                 
                 if(disp) {
-                    // 2. Eenheden bepalen
-                    if(id.includes('Opacity')) {
+                    // EENHEDEN BEPALEN
+                    if(id.includes('Rotate')) {
+                        // Rotatie in graden
+                        disp.textContent = e.target.value + '°';
+                    } else if(id.includes('Opacity') || id.includes('Overlay')) {
+                        // Opaciteit in procenten
                         disp.textContent = Math.round(e.target.value * 100) + '%';
                     } else if(id.includes('Zoom')) {
+                        // Zoom in factor
                         disp.textContent = parseFloat(e.target.value).toFixed(1) + 'x';
+                    } else if(id.includes('X') || id.includes('Y') || id.includes('Gap')) {
+                        // Positie in procenten (want we gebruiken nu 0-100% systeem)
+                        disp.textContent = e.target.value + '%';
                     } else {
-                        // Alle andere sliders (Inclusief Size2) zijn nu pixels
+                        // Groottes in pixels
                         disp.textContent = e.target.value + 'px';
                     }
                 }
@@ -5211,14 +5219,39 @@ function setLabelTheme(theme) {
        }
 
        // --- GENERATE HTML ---
+       // FIX: We berekenen de line-height in pixels (font size * 0.85). 
+       // Dit voorkomt dat L2 (de parent) de regelhoogte van L1 beïnvloedt.
+       const lhTitle1 = titleSize1 * 0.85;
+       const lhTitle2 = titleSize2 * 0.85;
+       
+       const lhSub1 = subSize1 * 0.9;
+       const lhSub2 = subSize2 * 0.9;
+
        container.innerHTML = `
            <style>
-               /* CSS INJECTION VOOR LIJN 1 / LIJN 2 GROOTTE */
-               #prev-title { font-size: ${titleSize2}px !important; color: ${titleColor} !important; line-height: 0.85; }
-               #prev-title::first-line { font-size: ${titleSize1}px !important; }
+               /* CSS INJECTION VOOR LIJN 1 / LIJN 2 GROOTTE & ISOLATIE */
                
-               #prev-subtitle { font-size: ${subSize2}px !important; color: ${subColor} !important; line-height: 0.9; }
-               #prev-subtitle::first-line { font-size: ${subSize1}px !important; }
+               /* TITEL: Parent is L2, First-line is L1 */
+               #prev-title { 
+                   font-size: ${titleSize2}px !important; 
+                   line-height: ${lhTitle2}px !important; /* Vaste pixel hoogte */
+                   color: ${titleColor} !important; 
+               }
+               #prev-title::first-line { 
+                   font-size: ${titleSize1}px !important; 
+                   line-height: ${lhTitle1}px !important; /* Vaste pixel hoogte */
+               }
+               
+               /* STIJL: Parent is L2, First-line is L1 */
+               #prev-subtitle { 
+                   font-size: ${subSize2}px !important; 
+                   line-height: ${lhSub2}px !important; 
+                   color: ${subColor} !important; 
+               }
+               #prev-subtitle::first-line { 
+                   font-size: ${subSize1}px !important; 
+                   line-height: ${lhSub1}px !important; 
+               }
            </style>
 
            ${bgHtml}

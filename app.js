@@ -5185,6 +5185,7 @@ function setLabelTheme(theme) {
            </div>
        `;
     }
+}
 
 // 5. LABEL MANAGER (ADD / DELETE / AUTO-DETECT)
 

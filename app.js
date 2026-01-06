@@ -5138,6 +5138,14 @@ function setLabelTheme(theme) {
        // --- DATA VOORBEREIDING (EXTRA INFO FIX) ---
        const showYeast = getCheck('labelShowYeast');
        const showHoney = getCheck('labelShowHoney');
+
+       // FIX: Waardes ophalen uit de verborgen velden
+       let yeastText = "", honeyText = "";
+       const yVal = document.getElementById('displayLabelYeast')?.textContent; 
+       if (yVal && yVal.trim() !== '--') yeastText = yVal.trim();
+       
+       const hVal = document.getElementById('displayLabelHoney')?.textContent; 
+       if (hVal && hVal.trim() !== '--') honeyText = hVal.trim();
        
        let extraInfoHtml = '';
        if (showHoney && honeyText) extraInfoHtml += `<div><span class="opacity-60">Honey:</span> <span class="font-bold">${honeyText}</span></div>`;

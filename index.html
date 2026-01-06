@@ -1392,6 +1392,35 @@
                 </div>
             </div>
 
+            <div class="mb-6 card p-6 rounded-lg border-2 border-purple-500/20">
+                <h3 class="text-xl font-header font-bold mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    Label Studio Assets
+                </h3>
+
+                <div class="mb-6">
+                    <h4 class="font-bold text-sm text-app-brand uppercase mb-2">A. Art Styles (Prompts)</h4>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="newStyleName" placeholder="Name (e.g. Dark Fantasy)" class="w-1/3 p-2 border rounded bg-app-tertiary text-xs">
+                        <input type="text" id="newStylePrompt" placeholder="Prompt suffix (e.g. oil painting, dark lighting...)" class="flex-grow p-2 border rounded bg-app-tertiary text-xs">
+                        <button id="addStyleBtn" class="bg-purple-600 text-white px-3 rounded text-xs font-bold hover:bg-purple-700">+</button>
+                    </div>
+                    <div id="settings-styles-list" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar bg-app-primary p-2 rounded border border-app-brand/10">
+                        </div>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-sm text-app-brand uppercase mb-2">B. Typography (Google Fonts)</h4>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="newFontName" placeholder="Google Font Name (e.g. Playfair Display)" class="flex-grow p-2 border rounded bg-app-tertiary text-xs">
+                        <button id="addFontBtn" class="bg-purple-600 text-white px-3 rounded text-xs font-bold hover:bg-purple-700">+</button>
+                    </div>
+                    <p class="text-[10px] text-app-secondary mb-2">Find exact names at <a href="https://fonts.google.com" target="_blank" class="underline">fonts.google.com</a>.</p>
+                    <div id="settings-fonts-list" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar bg-app-primary p-2 rounded border border-app-brand/10">
+                        </div>
+                </div>
+            </div>
+
             <button id="saveSettingsBtn" class="w-full mt-2 bg-blue-700 text-white font-bold py-3 px-4 rounded-lg btn shadow-md hover:bg-blue-800 transition-colors">
                 Save Settings
             </button>

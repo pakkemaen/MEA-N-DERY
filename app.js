@@ -3774,6 +3774,133 @@ function applyTheme(theme) {
     }
 }
 
+// --- DEEL X: LABEL ASSETS MANAGER (STYLES & FONTS) ---
+
+let labelAssets = {
+    styles: [],
+    fonts: []
+};
+
+// 1. DATA LADEN
+async function loadLabelAssets() {
+    if (!userId) return;
+    try {
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'settings', 'labelAssets');
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            labelAssets = docSnap.data();
+        } else {
+            // Initieer met een paar defaults als het leeg is
+            labelAssets = {
+                styles: [
+                    { id: 'def1', name: 'Modern Vector', prompt: 'clean vector art, flat design, minimalist, vibrant colors, white background' },
+                    { id: 'def2', name: 'Dark Mystical', prompt: 'dark fantasy style, oil painting, dramatic lighting, intricate details, gold accents' },
+                    { id: 'def3', name: 'Vintage Botanical', prompt: 'vintage botanical illustration, etched style, faded paper texture, detailed line work' }
+                ],
+                fonts: [
+                    { id: 'f1', name: 'Barlow Semi Condensed' }, // Standaard app font
+                    { id: 'f2', name: 'Playfair Display' },
+                    { id: 'f3', name: 'Cinzel' }
+                ]
+            };
+            await setDoc(docRef, labelAssets);
+        }
+        
+        renderLabelAssetsSettings();
+        loadGoogleFontsInHeader(); // Fonts direct activeren
+        
+    } catch (e) {
+        console.error("Error loading label assets:", e);
+    }
+}
+
+// 2. GOOGLE FONTS INLADEN (Dynamisch)
+function loadGoogleFontsInHeader() {
+    labelAssets.fonts.forEach(font => {
+        const fontName = font.name.replace(/\s+/g, '+'); // Spaties naar +
+        const id = `font-link-${fontName}`;
+        
+        if (!document.getElementById(id)) {
+            const link = document.createElement('link');
+            link.id = id;
+            link.rel = 'stylesheet';
+            link.href = `https://fonts.googleapis.com/css2?family=${fontName}:wght@400;700&display=swap`;
+            document.head.appendChild(link);
+        }
+    });
+}
+
+// 3. UI RENDEREN (In Settings Scherm)
+function renderLabelAssetsSettings() {
+    const stylesList = document.getElementById('settings-styles-list');
+    const fontsList = document.getElementById('settings-fonts-list');
+    
+    if (stylesList) {
+        stylesList.innerHTML = labelAssets.styles.map((s, idx) => `
+            <div class="flex justify-between items-center p-2 bg-app-tertiary rounded border border-app-brand/5 group">
+                <div class="overflow-hidden">
+                    <p class="font-bold text-xs text-app-header">${s.name}</p>
+                    <p class="text-[10px] text-app-secondary truncate">${s.prompt}</p>
+                </div>
+                <button onclick="window.deleteLabelAsset('styles', ${idx})" class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity font-bold px-2">&times;</button>
+            </div>
+        `).join('');
+    }
+
+    if (fontsList) {
+        fontsList.innerHTML = labelAssets.fonts.map((f, idx) => `
+            <div class="flex justify-between items-center p-2 bg-app-tertiary rounded border border-app-brand/5 group">
+                <p class="text-sm text-app-header" style="font-family: '${f.name}', sans-serif;">${f.name} (Preview)</p>
+                <button onclick="window.deleteLabelAsset('fonts', ${idx})" class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity font-bold px-2">&times;</button>
+            </div>
+        `).join('');
+    }
+}
+
+// 4. TOEVOEGEN & VERWIJDEREN
+window.addLabelStyle = async function() {
+    const name = document.getElementById('newStyleName').value.trim();
+    const prompt = document.getElementById('newStylePrompt').value.trim();
+    
+    if (!name || !prompt) return showToast("Vul beide velden in.", "error");
+    
+    labelAssets.styles.push({ id: Date.now().toString(), name, prompt });
+    await saveLabelAssets();
+    
+    document.getElementById('newStyleName').value = '';
+    document.getElementById('newStylePrompt').value = '';
+}
+
+window.addLabelFont = async function() {
+    const name = document.getElementById('newFontName').value.trim();
+    if (!name) return showToast("Vul een font naam in.", "error");
+    
+    labelAssets.fonts.push({ id: Date.now().toString(), name });
+    await saveLabelAssets();
+    
+    loadGoogleFontsInHeader(); // Direct inladen zodat preview werkt
+    document.getElementById('newFontName').value = '';
+}
+
+window.deleteLabelAsset = async function(type, index) {
+    if(!confirm("Verwijderen?")) return;
+    labelAssets[type].splice(index, 1);
+    await saveLabelAssets();
+}
+
+async function saveLabelAssets() {
+    if (!userId) return;
+    try {
+        await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'settings', 'labelAssets'), labelAssets);
+        renderLabelAssetsSettings();
+        showToast("Assets opgeslagen!", "success");
+    } catch (e) {
+        console.error(e);
+        showToast("Fout bij opslaan.", "error");
+    }
+}
+
 // --- DEEL 5: TOOLS, CALCULATORS & UTILITIES ---
 
 // --- UTILITY: KOSTENBEREKENING (CRASH PROOF) ---
@@ -6991,7 +7118,7 @@ function initApp() {
 
                 try {
                     await Promise.all([
-                        loadHistory(), loadInventory(), loadEquipmentProfiles(),
+                        loadHistory(), loadInventory(), loadEquipmentProfiles(), loadLabelAssets(),
                         loadCellar(), loadUserSettings(), loadPackagingCosts(), loadUserWaterProfiles()
                     ]);
                 } catch (error) {
@@ -7076,6 +7203,10 @@ function initApp() {
     document.getElementById('importInventoryFile')?.addEventListener('change', (e) => importData(e, 'inventory'));
     document.getElementById('clearHistoryBtn')?.addEventListener('click', clearHistory);
     document.getElementById('clearInventoryBtn')?.addEventListener('click', clearInventory);
+
+    // Label Assets Listeners
+    document.getElementById('addStyleBtn')?.addEventListener('click', window.addLabelStyle);
+    document.getElementById('addFontBtn')?.addEventListener('click', window.addLabelFont);
 
     // Labels (V2.0)
     initLabelForge();

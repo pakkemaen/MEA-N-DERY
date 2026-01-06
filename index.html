@@ -782,36 +782,31 @@
     
     <div class="p-2 bg-app-tertiary/50 rounded-lg border border-app-brand/5 space-y-3">
         <p class="text-[10px] font-bold uppercase text-app-secondary">Title Tuning</p>
-        <div>
-            <div class="flex justify-between text-xs mb-1">
-                <label class="font-semibold text-app-header">Size Line 1</label>
-                <span id="disp-title-size" class="font-mono text-xs text-gray-400">100px</span>
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <label class="font-semibold text-app-header">Size L1</label>
+                    <span id="disp-title-size" class="font-mono text-[10px] text-gray-400">100px</span>
+                </div>
+                <input type="range" id="tuneTitleSize" min="1" max="180" value="100" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
-            <input type="range" id="tuneTitleSize" min="5" max="180" value="100" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-        </div>
-
-        <div>
-            <div class="flex justify-between text-xs mb-1">
-                <label class="font-semibold text-app-header">Size Line 2</label>
-                <span id="disp-title-size-2" class="font-mono text-xs text-gray-400">60px</span>
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <label class="font-semibold text-app-header">Size L2</label>
+                    <span id="disp-title-size-2" class="font-mono text-[10px] text-gray-400">60px</span>
+                </div>
+                <input type="range" id="tuneTitleSize2" min="1" max="180" value="60" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
-            <input type="range" id="tuneTitleSize2" min="10" max="180" value="60" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
         </div>
 
         <div class="grid grid-cols-2 gap-2">
             <div>
-                <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Pos X (Left/Right)</label>
-                    <span id="disp-title-x" class="font-mono text-[10px] text-gray-400">0px</span>
-                </div>
-                <input type="range" id="tuneTitleX" min="0" max="100" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Pos X (0-100%)</label>
+                <input type="range" id="tuneTitleX" min="0" max="100" value="5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
             <div>
-                <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Pos Y (Up/Down)</label>
-                    <span id="disp-title-y" class="font-mono text-[10px] text-gray-400">0px</span>
-                </div>
-                <input type="range" id="tuneTitleY" min="-50" max="100" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Pos Y (0-100%)</label>
+                <input type="range" id="tuneTitleY" min="0" max="100" value="10" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
         </div>
 
@@ -825,61 +820,51 @@
 
         <div class="flex justify-between items-center mb-2">
             <label class="font-semibold text-app-header text-xs">Title Color</label>
-            <div class="flex items-center gap-2">
-                <input type="color" id="tuneTitleColor" value="#8F8C79" class="w-6 h-6 p-0 border-0 rounded cursor-pointer">
-            </div>
+            <input type="color" id="tuneTitleColor" value="#8F8C79" class="w-6 h-6 p-0 border-0 rounded cursor-pointer">
         </div>
     </div>
 
     <div class="p-2 bg-app-tertiary/50 rounded-lg border border-app-brand/5 space-y-3">
         <p class="text-[10px] font-bold uppercase text-app-secondary">Style Tuning</p>
-        <div>
-            <div class="flex justify-between text-xs mb-1">
-                <label class="font-semibold text-app-header">Size Line 1</label>
-                <span id="disp-style-size" class="font-mono text-xs text-gray-400">14px</span>
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <label class="font-semibold text-app-header">Size L1</label>
+                    <span id="disp-style-size" class="font-mono text-[10px] text-gray-400">14px</span>
+                </div>
+                <input type="range" id="tuneStyleSize" min="1" max="60" value="14" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
-            <input type="range" id="tuneStyleSize" min="6" max="60" value="14" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-        </div>
-
-        <div>
-            <div class="flex justify-between text-xs mb-1">
-                <label class="font-semibold text-app-header">Size Line 2</label>
-                <span id="disp-style-size-2" class="font-mono text-xs text-gray-400">10px</span>
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <label class="font-semibold text-app-header">Size L2</label>
+                    <span id="disp-style-size-2" class="font-mono text-[10px] text-gray-400">10px</span>
+                </div>
+                <input type="range" id="tuneStyleSize2" min="1" max="60" value="10" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
-            <input type="range" id="tuneStyleSize2" min="5" max="60" value="10" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
         </div>
 
         <div class="grid grid-cols-2 gap-2">
             <div>
-                <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Pos X (Left/Right)</label>
-                    <span id="disp-style-gap" class="font-mono text-[10px] text-gray-400">5px</span>
-                </div>
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Pos X (0-100%)</label>
                 <input type="range" id="tuneStyleGap" min="0" max="100" value="5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
-            
             <div>
-                <div class="flex justify-between text-xs mb-1">
-                    <label class="font-semibold text-app-header">Pos Y (Up/Down)</label>
-                    <span id="disp-style-y" class="font-mono text-[10px] text-gray-400">0px</span>
-                </div>
-                <input type="range" id="tuneStyleY" min="-50" max="100" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Pos Y (0-100%)</label>
+                <input type="range" id="tuneStyleY" min="0" max="100" value="30" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
         </div>
 
         <div>
             <div class="flex justify-between text-xs mb-1">
                 <label class="font-semibold text-app-header">Rotation</label>
-                <span id="disp-specs-rotate" class="font-mono text-xs text-gray-400">0°</span>
+                <span id="disp-style-rotate" class="font-mono text-xs text-gray-400">0°</span>
            </div>
-           <input type="range" id="tuneSpecsRotate" min="-180" max="180" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+           <input type="range" id="tuneStyleRotate" min="-180" max="180" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
         </div>
 
         <div class="flex justify-between items-center mb-2">
             <label class="font-semibold text-app-header text-xs">Style Color</label>
-            <div class="flex items-center gap-2">
-                <input type="color" id="tuneStyleColor" value="#9ca3af" class="w-6 h-6 p-0 border-0 rounded cursor-pointer">
-            </div>
+            <input type="color" id="tuneStyleColor" value="#9ca3af" class="w-6 h-6 p-0 border-0 rounded cursor-pointer">
         </div>
     </div>
 
@@ -888,13 +873,21 @@
         
         <div class="grid grid-cols-2 gap-2">
             <div>
-                <label class="block text-[10px] font-semibold text-app-header mb-1">Pos X</label>
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Pos X (0-100%)</label>
                 <input type="range" id="tuneSpecsX" min="0" max="100" value="5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
             <div>
-                <label class="block text-[10px] font-semibold text-app-header mb-1">Pos Y</label>
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Pos Y (0-100%)</label>
                 <input type="range" id="tuneSpecsY" min="0" max="100" value="80" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
+        </div>
+
+        <div>
+            <div class="flex justify-between text-xs mb-1">
+                <label class="font-semibold text-app-header">Rotation</label>
+                <span id="disp-specs-rotate" class="font-mono text-xs text-gray-400">0°</span>
+            </div>
+            <input type="range" id="tuneSpecsRotate" min="-180" max="180" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
         </div>
 
         <div>
@@ -905,10 +898,14 @@
             <input type="range" id="tuneSpecsSize" min="2" max="12" value="4" step="0.5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
         </div>
 
-        <div class="flex justify-between items-center mb-2">
-            <label class="font-semibold text-app-header text-xs">Text Color</label>
-            <div class="flex items-center gap-2">
+        <div class="grid grid-cols-2 gap-2">
+            <div class="flex justify-between items-center mb-2">
+                <label class="font-semibold text-app-header text-[10px]">Text Color</label>
                 <input type="color" id="tuneSpecsColor" value="#ffffff" class="w-6 h-6 p-0 border-0 rounded cursor-pointer">
+            </div>
+            <div class="flex justify-between items-center mb-2">
+                <label class="font-semibold text-app-header text-[10px]">Allergen Color</label>
+                <input type="color" id="tuneAllergenColor" value="#ffffff" class="w-6 h-6 p-0 border-0 rounded cursor-pointer">
             </div>
         </div>
     </div>
@@ -926,12 +923,12 @@
 
         <div class="grid grid-cols-2 gap-2">
             <div>
-                <label class="block text-[10px] font-semibold text-app-header mb-1">Move X</label>
-                <input type="range" id="tuneArtX" min="-200" max="200" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Move X (0-100%)</label>
+                <input type="range" id="tuneArtX" min="0" max="100" value="50" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
             <div>
-                <label class="block text-[10px] font-semibold text-app-header mb-1">Move Y</label>
-                <input type="range" id="tuneArtY" min="-200" max="200" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Move Y (0-100%)</label>
+                <input type="range" id="tuneArtY" min="0" max="100" value="50" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
         </div>
 
@@ -965,12 +962,12 @@
 
         <div class="grid grid-cols-2 gap-2">
             <div>
-                <label class="block text-[10px] font-semibold text-app-header mb-1">Move X</label>
-                <input type="range" id="tuneLogoX" min="-100" max="100" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Move X (0-100%)</label>
+                <input type="range" id="tuneLogoX" min="0" max="100" value="95" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
             <div>
-                <label class="block text-[10px] font-semibold text-app-header mb-1">Move Y</label>
-                <input type="range" id="tuneLogoY" min="-100" max="100" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Move Y (0-100%)</label>
+                <input type="range" id="tuneLogoY" min="0" max="100" value="5" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
         </div>
     </div>

@@ -4541,10 +4541,10 @@ function initLabelForge() {
     
     // D. TUNING & SLIDERS (MET KLEUREN)
     const sliders = [
-        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleColor', 'tuneTitleRotate', // <--- NIEUW
-        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleColor',
-        'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsColor', 'tuneSpecsRotate', // <--- NIEUW
-        'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity', 'tuneArtRotate', // <--- NIEUW
+        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleColor', 'tuneTitleRotate',
+        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleColor', 'tuneStyleRotate', // <--- NIEUW
+        'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsColor', 'tuneSpecsRotate', 'tuneAllergenColor', // <--- NIEUW
+        'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity', 'tuneArtRotate',
         'tuneLogoSize', 'tuneLogoX', 'tuneLogoY'
     ];
 
@@ -4839,11 +4839,14 @@ function loadLabelFromBrew(e) {
         restoreSlider('tuneStyleSize', s.tuneStyleSize);
         restoreSlider('tuneStyleSize2', s.tuneStyleSize2);
         restoreSlider('tuneStyleGap', s.tuneStyleGap);
+        restoreSlider('tuneStyleRotate', s.tuneStyleRotate);
+
+        setVal('tuneAllergenColor', s.tuneAllergenColor || '#ffffff');
 
         restoreSlider('tuneSpecsSize', s.tuneSpecsSize);
         restoreSlider('tuneSpecsX', s.tuneSpecsX);
         restoreSlider('tuneSpecsY', s.tuneSpecsY);
-        setVal('tuneSpecsColor', s.tuneSpecsColor || '#ffffff'); // Kleur is geen slider
+        setVal('tuneSpecsColor', s.tuneSpecsColor || '#ffffff');
         restoreSlider('tuneSpecsRotate', s.tuneSpecsRotate);
 
         restoreSlider('tuneArtZoom', s.tuneArtZoom);
@@ -5099,47 +5102,49 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (FULL CANVAS ENGINE V2 - CALIBRATED)
+    // THEMA 2: SPECIAL (FULL CANVAS V3 - WRAPPING & CALIBRATED)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
        container.style = ""; 
        
-       // --- SPECIAL TUNING VALUES ---
-       const titleX = getVal('tuneTitleX') || 50; 
+       // --- TUNING VALUES (Alles is nu 0-100% positionering) ---
+       const titleX = getVal('tuneTitleX') || 5; 
        const titleY = getVal('tuneTitleY') || 10;
-       const titleRot = getVal('tuneTitleRotate') || 0; // NIEUW
+       const titleRot = getVal('tuneTitleRotate') || 0;
        const titleColor = getVal('tuneTitleColor') || '#ffffff';
        const titleSize1 = getVal('tuneTitleSize') || 60;
        
-       const subX = getVal('tuneStyleGap') || 0; 
-       const subY = getVal('tuneStyleY') || 0;   
+       // Style is nu OOK absoluut gepositioneerd (StyleGap = X, StyleY = Y)
+       const subX = getVal('tuneStyleGap') || 5; 
+       const subY = getVal('tuneStyleY') || 30;   
        const subColor = getVal('tuneStyleColor') || '#cccccc';
        const subSize = getVal('tuneStyleSize') || 12;
+       const subRot = getVal('tuneStyleRotate') || 0; // NIEUW
 
        const specsX = getVal('tuneSpecsX') || 5; 
-       const specsY = getVal('tuneSpecsY') || 85; 
-       const specsRot = getVal('tuneSpecsRotate') || 0; // NIEUW
+       const specsY = getVal('tuneSpecsY') || 80; 
+       const specsRot = getVal('tuneSpecsRotate') || 0;
        const specsColor = getVal('tuneSpecsColor') || '#ffffff';
+       const allergenColor = getVal('tuneAllergenColor') || specsColor; // NIEUW
        const specsSize = getVal('tuneSpecsSize') || 4;
 
        // Artwork
        const artZoom = getVal('tuneArtZoom') || 1.0;
-       const artX = getVal('tuneArtX') || 0;
-       const artY = getVal('tuneArtY') || 0;
-       const artRot = getVal('tuneArtRotate') || 0; // NIEUW
+       const artX = getVal('tuneArtX') || 50; // Center default
+       const artY = getVal('tuneArtY') || 50; // Center default
+       const artRot = getVal('tuneArtRotate') || 0;
        const artOpacity = getVal('tuneArtOpacity') || 1.0;
 
        // Logo
-       const logoSize = getVal('tuneLogoSize') || 80;
-       const logoX = getVal('tuneLogoX') || 0;
-       const logoY = getVal('tuneLogoY') || 0;
+       const logoSize = getVal('tuneLogoSize') || 100;
+       const logoX = getVal('tuneLogoX') || 95;
+       const logoY = getVal('tuneLogoY') || 5;
 
-       // --- DATA VOORBEREIDING (EXTRA INFO FIX) ---
+       // --- DATA VOORBEREIDING ---
        const showYeast = getCheck('labelShowYeast');
        const showHoney = getCheck('labelShowHoney');
 
-       // FIX: Waardes ophalen uit de verborgen velden
        let yeastText = "", honeyText = "";
        const yVal = document.getElementById('displayLabelYeast')?.textContent; 
        if (yVal && yVal.trim() !== '--') yeastText = yVal.trim();
@@ -5150,34 +5155,33 @@ function setLabelTheme(theme) {
        let extraInfoHtml = '';
        if (showHoney && honeyText) extraInfoHtml += `<div><span class="opacity-60">Honey:</span> <span class="font-bold">${honeyText}</span></div>`;
        if (showYeast && yeastText) extraInfoHtml += `<div><span class="opacity-60">Yeast:</span> <span class="font-bold">${yeastText}</span></div>`;
-       if (allergenText) extraInfoHtml += `<div class="mt-1 text-red-400 font-bold uppercase" style="font-size: 0.9em;">${allergenText}</div>`;
+       
+       // Allergenen nu in eigen kleur (of specs kleur)
+       if (allergenText) extraInfoHtml += `<div class="mt-1 font-bold uppercase" style="font-size: 0.9em; color: ${allergenColor}">${allergenText}</div>`;
 
-       // Achtergrond Laag (Met Rotatie)
+       // Achtergrond Laag (Center Origin for Artwork is usually better)
        let bgHtml = '';
        if (hasImage) {
            bgHtml = `
            <div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center">
                 <img src="${imgSrc}" 
-                     style="transform: translate(${artX}px, ${artY}px) rotate(${artRot}deg) scale(${artZoom}); opacity: ${artOpacity}; width: 100%; height: 100%; object-fit: cover; transform-origin: center;">
+                     style="transform: translate(${artX-50}%, ${artY-50}%) rotate(${artRot}deg) scale(${artZoom}); opacity: ${artOpacity}; width: 100%; height: 100%; object-fit: cover; transform-origin: center;">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none"></div>
            </div>`;
        } else {
            bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
        }
 
-       // Specs Blok Opbouw (Met Extra Info)
+       // Specs Blok
        const specsBlock = `
            <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
-               
                <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-mono">
                    <span class="opacity-70">ABV</span> <span class="font-bold">${abv}%</span>
                    ${fg ? `<span class="opacity-70">FG</span> <span class="font-bold">${fg}</span>` : ''}
                    <span class="opacity-70">Vol</span> <span class="font-bold">${vol}ml</span>
                    <span class="opacity-70">Date</span> <span class="font-bold">${dateVal}</span>
                </div>
-
                ${extraInfoHtml ? `<div class="mb-2 border-t border-white/20 pt-1 space-y-0.5">${extraInfoHtml}</div>` : ''}
-
                ${showDetails && details ? `<p class="opacity-90 max-w-[200px] leading-tight font-serif italic border-t border-white/20 pt-1">${details}</p>` : ''}
            </div>
        `;
@@ -5185,16 +5189,20 @@ function setLabelTheme(theme) {
        container.innerHTML = `
            ${bgHtml}
 
-           <div class="absolute z-10 flex flex-col items-center text-center pointer-events-none origin-center" 
-                style="top: ${titleY}%; left: ${titleX}%; transform: translate(-50%, -50%) rotate(${titleRot}deg); width: auto; white-space: nowrap;">
+           <div class="absolute z-10 pointer-events-none origin-top-left" 
+                style="top: ${titleY}%; left: ${titleX}%; width: calc(100% - ${titleX}%); transform: rotate(${titleRot}deg);">
                 
                 <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest leading-none drop-shadow-lg"
-                    style="font-size: ${titleSize1}px; color: ${titleColor};">
+                    style="font-size: ${titleSize1}px; color: ${titleColor}; white-space: normal; overflow-wrap: break-word; line-height: 0.9;">
                     ${title}
                 </h1>
+           </div>
+
+           <div class="absolute z-10 pointer-events-none origin-top-left" 
+                style="top: ${subY}%; left: ${subX}%; width: calc(100% - ${subX}%); transform: rotate(${subRot}deg);">
                 
-                <p id="prev-subtitle" class="font-bold uppercase tracking-[0.4em] drop-shadow-md mt-2"
-                   style="font-size: ${subSize}px; color: ${subColor}; transform: translate(${subX}px, ${subY}px);">
+                <p id="prev-subtitle" class="font-bold uppercase tracking-[0.4em] drop-shadow-md"
+                   style="font-size: ${subSize}px; color: ${subColor}; white-space: normal; overflow-wrap: break-word;">
                    ${sub}
                 </p>
            </div>
@@ -5204,8 +5212,8 @@ function setLabelTheme(theme) {
                ${specsBlock}
            </div>
 
-           <div class="absolute z-20 pointer-events-none origin-center" 
-                style="top: 0; right: 0; transform: translate(${logoX}px, ${logoY}px); width: ${logoSize}px; padding: 10px;">
+           <div class="absolute z-20 pointer-events-none origin-top-left" 
+                style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, -50%);">
                 <img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">
            </div>
        `;
@@ -5612,6 +5620,7 @@ window.saveLabelToBrew = async function() {
         tuneStyleSize2: getVal('tuneStyleSize2'),
         tuneStyleGap: getVal('tuneStyleGap'),
         tuneStyleColor: getVal('tuneStyleColor'), // <--- DEZE IS NIEUW
+        tuneStyleRotate: getVal('tuneStyleRotate'), // <---
         
         tuneSpecsSize: getVal('tuneSpecsSize'),
         tuneSpecsX: getVal('tuneSpecsX'),
@@ -5628,6 +5637,8 @@ window.saveLabelToBrew = async function() {
         tuneLogoSize: getVal('tuneLogoSize'),
         tuneLogoX: getVal('tuneLogoX'),
         tuneLogoY: getVal('tuneLogoY'),
+
+        tuneAllergenColor: getVal('tuneAllergenColor'), // <---
         
         imageSrc: window.currentLabelImageSrc || ''
     };

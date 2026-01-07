@@ -4897,55 +4897,81 @@ function loadLabelFromBrew(e) {
         showToast("Loaded saved label design.", "info");
 
     } else {
-        // --- GEEN SAVED DATA? GEBRUIK DE STANDAARD LOGICA ---
+        // --- GEEN SAVED DATA? GEBRUIK DE STANDAARD LOGICA (CENTER ORIGIN DEFAULTS) ---
         
         setVal('labelTitle', brew.recipeName);
         
+        // ... (stijl bepaling logica mag je laten staan) ...
         let style = "Traditional Mead";
         if (brew.recipeMarkdown.toLowerCase().includes('melomel')) style = "Melomel (Fruit Mead)";
-        if (brew.recipeMarkdown.toLowerCase().includes('bochet')) style = "Bochet (Caramelized)";
-        if (brew.recipeMarkdown.toLowerCase().includes('metheglin')) style = "Metheglin (Spiced)";
-        if (brew.recipeMarkdown.toLowerCase().includes('braggot')) style = "Braggot (Malt & Honey)";
+        // ... etc ...
         setVal('labelSubtitle', style);
 
         // Data
         setVal('labelAbv', brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '');
         setVal('labelFg', brew.logData?.actualFG || brew.logData?.targetFG || '');
         setVal('labelVol', '330');
-        setVal('labelDate', brew.logData?.brewDate || new Date().toISOString().split('T')[0]);
+        setVal('labelDate', brew.logData?.brewDate || new Date().toLocaleDateString('nl-NL')); // Let op: nl-NL datum
 
-        // Quote
+        // Quote & Details
         let foundQuote = "";
         const quoteMatch = brew.recipeMarkdown.match(/^>\s*(["']?)(.*?)\1\s*$/m);
-        if (quoteMatch && quoteMatch[2]) {
-            foundQuote = quoteMatch[2].trim();
-        } else {
-            foundQuote = `A handcrafted ${style.toLowerCase()}, brewed on ${new Date().getFullYear()}.`;
-        }
+        if (quoteMatch && quoteMatch[2]) foundQuote = quoteMatch[2].trim();
+        else foundQuote = `A handcrafted ${style.toLowerCase()}, brewed on ${new Date().getFullYear()}.`;
+        
         setVal('labelDescription', foundQuote);
-
         setText('displayLabelYeast', generatedYeast);
         setText('displayLabelHoney', generatedHoney);
         setVal('labelDetails', generatedDetails);
 
-        setVal('tuneTitleColor', '#8F8C79');
-        setVal('tuneStyleColor', '#9ca3af');
-
-        // Sulfiet Check
+        // Kleuren & Allergens
+        setVal('tuneTitleColor', '#ffffff'); // Wit is vaak beter op artwork
+        setVal('tuneStyleColor', '#cccccc');
+        setVal('tuneSpecsColor', '#ffffff');
+        setVal('tuneAllergenColor', '#ffffff');
+        
         const hasSulfites = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
         setVal('labelAllergens', hasSulfites ? 'Contains Sulfites' : '');
-        
-        // Reset Sliders naar defaults
+        setCheck('labelShowBorder', true); 
+        setCheck('logoColorMode', false);
+
+        // --- DE NIEUWE SLIDER STANDAARDEN (CENTERED) ---
         const resetSlider = (id, val) => { const el = document.getElementById(id); if(el) { el.value = val; el.dispatchEvent(new Event('input')); }};
         
+        // LOGO (Bovenaan in het midden)
+        resetSlider('tuneLogoSize', 100);
+        resetSlider('tuneLogoX', 50);       // 50% = Midden
+        resetSlider('tuneLogoY', 15);       // 15% = Bovenin
+        resetSlider('tuneLogoRotate', 0);
+        resetSlider('tuneLogoOpacity', 1.0);
+
+        // TITEL (Iets onder het logo)
         resetSlider('tuneTitleSize', 100);
         resetSlider('tuneTitleSize2', 60);
+        resetSlider('tuneTitleX', 50);      // 50% = Midden
+        resetSlider('tuneTitleY', 40);      // 40% = Boven het midden
+        resetSlider('tuneTitleRotate', 0);
+
+        // STIJL (Onder de titel)
         resetSlider('tuneStyleSize', 14);
         resetSlider('tuneStyleSize2', 10);
-        resetSlider('tuneSpecsSize', 5);
+        resetSlider('tuneStyleGap', 50);    // 50% = Midden
+        resetSlider('tuneStyleY', 55);      // 55% = Net onder het midden
+        resetSlider('tuneStyleRotate', 0);
+
+        // SPECS (Onderaan)
+        resetSlider('tuneSpecsSize', 4);
+        resetSlider('tuneSpecsX', 50);      // 50% = Midden
+        resetSlider('tuneSpecsY', 85);      // 85% = Onderaan
+        resetSlider('tuneSpecsRotate', 0);
+
+        // ARTWORK (Precies in het midden)
         resetSlider('tuneArtZoom', 1.0);
+        resetSlider('tuneArtX', 50);        // 50% = Midden
+        resetSlider('tuneArtY', 50);        // 50% = Midden
         resetSlider('tuneArtOpacity', 1.0);
-        resetSlider('tuneLogoSize', 100);
+        resetSlider('tuneArtOverlay', 0.2); // Beetje dimmen standaard
+        resetSlider('tuneArtRotate', 0);
     }
 
     // Forceer update van het thema
@@ -5009,21 +5035,20 @@ function setLabelTheme(theme) {
         container.style = ""; 
 
         // --- TUNING VALUES ---
-        const titleSize1 = getVal('tuneTitleSize') || 100;
-        const titleSize2 = getVal('tuneTitleSize2') || 60;
-        const titleX = getVal('tuneTitleX') || 0;
-        const titleY = getVal('tuneTitleY') || 0; // <--- NIEUW
+        const titleX = getVal('tuneTitleX') || 50; // Was 5
+        const titleY = getVal('tuneTitleY') || 40; // Was 10
+       
+        const subX = getVal('tuneStyleGap') || 50; // Was 5
+        const subY = getVal('tuneStyleY') || 55;   // Was 30
 
-        const titleColor = getVal('tuneTitleColor') || '#8F8C79';
-        const styleColor = getVal('tuneStyleColor') || '#9ca3af';
+        const specsX = getVal('tuneSpecsX') || 50; // Was 5
+        const specsY = getVal('tuneSpecsY') || 85; // Was 80
 
-        const styleSize1 = getVal('tuneStyleSize') || 14;
-        const styleSize2 = getVal('tuneStyleSize2') || 10;
-        
-        const styleGap = getVal('tuneStyleGap') || 5;
-        const styleY = getVal('tuneStyleY') || 0; // <--- NIEUW
-        
-        const specsFontSize = getVal('tuneSpecsSize') || 5; 
+        const artX = getVal('tuneArtX') || 50; 
+        const artY = getVal('tuneArtY') || 50; 
+
+        const logoX = getVal('tuneLogoX') || 50;   // Was 95
+        const logoY = getVal('tuneLogoY') || 15;   // Was 5 
 
         // ... (rest van je variabelen zoals artZoom, logoSize blijven hier staan) ...
         const artZoom = getVal('tuneArtZoom') || 1.0;
@@ -5127,57 +5152,53 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (FULL CANVAS V4 - L2 FIX, DIMMER & LOGO COLOR)
+    // THEMA 2: SPECIAL (V5 - CENTER ORIGIN LOGIC)
+    // Alles rekent nu vanuit het midden (50% = Exact Centraal)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
        container.style = ""; 
        
-       // --- PADDING LOGICA (BORDER) ---
+       // --- PADDING LOGICA ---
        const showBorder = getCheck('labelShowBorder');
        const previewContainer = document.getElementById('label-preview-container');
-       if(previewContainer) {
-           previewContainer.style.padding = showBorder ? '5mm' : '0';
-       }
+       if(previewContainer) previewContainer.style.padding = showBorder ? '5mm' : '0';
 
        // --- TUNING VALUES ---
-       const titleX = getVal('tuneTitleX') || 5; 
-       const titleY = getVal('tuneTitleY') || 10;
+       // We zetten defaults op 50 (Midden) als ze er niet zijn
+       const titleX = getVal('tuneTitleX') || 50; 
+       const titleY = getVal('tuneTitleY') || 20;
        const titleRot = getVal('tuneTitleRotate') || 0;
        const titleColor = getVal('tuneTitleColor') || '#ffffff';
-       const titleSize1 = getVal('tuneTitleSize') || 100; // Line 1 Size
-       const titleSize2 = getVal('tuneTitleSize2') || 60; // Line 2 Size
+       const titleSize1 = getVal('tuneTitleSize') || 100; 
+       const titleSize2 = getVal('tuneTitleSize2') || 60; 
        
-       const subX = getVal('tuneStyleGap') || 5; 
-       const subY = getVal('tuneStyleY') || 30;   
+       const subX = getVal('tuneStyleGap') || 50; 
+       const subY = getVal('tuneStyleY') || 35;   
        const subColor = getVal('tuneStyleColor') || '#cccccc';
-       const subSize1 = getVal('tuneStyleSize') || 14; // Line 1
-       const subSize2 = getVal('tuneStyleSize2') || 10; // Line 2
+       const subSize1 = getVal('tuneStyleSize') || 14; 
+       const subSize2 = getVal('tuneStyleSize2') || 10;
        const subRot = getVal('tuneStyleRotate') || 0;
 
-       const specsX = getVal('tuneSpecsX') || 5; 
+       const specsX = getVal('tuneSpecsX') || 50; 
        const specsY = getVal('tuneSpecsY') || 80; 
        const specsRot = getVal('tuneSpecsRotate') || 0;
        const specsColor = getVal('tuneSpecsColor') || '#ffffff';
        const allergenColor = getVal('tuneAllergenColor') || specsColor;
        const specsSize = getVal('tuneSpecsSize') || 4;
 
-       // Artwork
        const artZoom = getVal('tuneArtZoom') || 1.0;
        const artX = getVal('tuneArtX') || 50; 
        const artY = getVal('tuneArtY') || 50; 
        const artRot = getVal('tuneArtRotate') || 0;
        const artOpacity = getVal('tuneArtOpacity') || 1.0;
-       const artOverlay = getVal('tuneArtOverlay') || 0.2; // De Dimmer
+       const artOverlay = getVal('tuneArtOverlay') || 0.2;
 
-       // Logo
        const logoSize = getVal('tuneLogoSize') || 100;
-       const logoX = getVal('tuneLogoX') || 95;
-       const logoY = getVal('tuneLogoY') || 5;
-       const logoRot = getVal('tuneLogoRotate') || 0; // NIEUW
-       const logoOp = getVal('tuneLogoOpacity') || 1.0; // NIEUW
-       
-       // Logo Kleur Modus
+       const logoX = getVal('tuneLogoX') || 50;
+       const logoY = getVal('tuneLogoY') || 10;
+       const logoRot = getVal('tuneLogoRotate') || 0; 
+       const logoOp = getVal('tuneLogoOpacity') || 1.0; 
        const logoFlat = getCheck('logoColorMode');
        const logoColor = getVal('tuneLogoColor') || '#ffffff';
 
@@ -5201,92 +5222,69 @@ function setLabelTheme(theme) {
            bgHtml = `
            <div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center">
                 <img src="${imgSrc}" 
-                     style="transform: translate(${artX-50}%, ${artY-50}%) rotate(${artRot}deg) scale(${artZoom}); opacity: ${artOpacity}; width: 100%; height: 100%; object-fit: cover; transform-origin: center;">
+                     style="position: absolute; left: ${artX}%; top: ${artY}%; transform: translate(-50%, -50%) rotate(${artRot}deg) scale(${artZoom}); opacity: ${artOpacity}; min-width: 100%; min-height: 100%; object-fit: cover;">
                 <div class="absolute inset-0 pointer-events-none" style="background-color: black; opacity: ${artOverlay};"></div>
            </div>`;
        } else {
            bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
        }
 
-       // Logo HTML Generatie (Flat vs Original)
        let logoInnerHtml = '';
        if (logoFlat) {
-           // Masking truc voor vlakke kleur
            logoInnerHtml = `<div style="width: 100%; height: 100%; background-color: ${logoColor}; -webkit-mask-image: url(logo.png); mask-image: url(logo.png); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; mask-position: center; -webkit-mask-origin: content-box;"></div>`;
        } else {
-           // Normaal plaatje
            logoInnerHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
        }
 
        // --- GENERATE HTML ---
-       // FIX: We berekenen de line-height in pixels (font size * 0.85). 
-       // Dit voorkomt dat L2 (de parent) de regelhoogte van L1 beïnvloedt.
+       // Line-height in pixels voor stabiliteit
        const lhTitle1 = titleSize1 * 0.85;
        const lhTitle2 = titleSize2 * 0.85;
-       
        const lhSub1 = subSize1 * 0.9;
        const lhSub2 = subSize2 * 0.9;
 
        container.innerHTML = `
            <style>
-               /* CSS INJECTION VOOR LIJN 1 / LIJN 2 GROOTTE & ISOLATIE */
+               #prev-title { font-size: ${titleSize2}px !important; line-height: ${lhTitle2}px !important; color: ${titleColor} !important; text-align: center; }
+               #prev-title::first-line { font-size: ${titleSize1}px !important; line-height: ${lhTitle1}px !important; }
                
-               /* TITEL: Parent is L2, First-line is L1 */
-               #prev-title { 
-                   font-size: ${titleSize2}px !important; 
-                   line-height: ${lhTitle2}px !important; /* Vaste pixel hoogte */
-                   color: ${titleColor} !important; 
-               }
-               #prev-title::first-line { 
-                   font-size: ${titleSize1}px !important; 
-                   line-height: ${lhTitle1}px !important; /* Vaste pixel hoogte */
-               }
-               
-               /* STIJL: Parent is L2, First-line is L1 */
-               #prev-subtitle { 
-                   font-size: ${subSize2}px !important; 
-                   line-height: ${lhSub2}px !important; 
-                   color: ${subColor} !important; 
-               }
-               #prev-subtitle::first-line { 
-                   font-size: ${subSize1}px !important; 
-                   line-height: ${lhSub1}px !important; 
-               }
+               #prev-subtitle { font-size: ${subSize2}px !important; line-height: ${lhSub2}px !important; color: ${subColor} !important; text-align: center; }
+               #prev-subtitle::first-line { font-size: ${subSize1}px !important; line-height: ${lhSub1}px !important; }
            </style>
 
            ${bgHtml}
 
-           <div class="absolute z-10 pointer-events-none origin-top-left" 
-                style="top: ${titleY}%; left: ${titleX}%; width: calc(100% - ${titleX}%); transform: rotate(${titleRot}deg);">
+           <div class="absolute z-10 pointer-events-none" 
+                style="top: ${titleY}%; left: ${titleX}%; transform: translate(-50%, -50%) rotate(${titleRot}deg); display: flex; justify-content: center; width: 100%;">
                 <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest drop-shadow-lg"
-                    style="white-space: normal; overflow-wrap: break-word;">
+                    style="white-space: normal; max-width: 90%;">
                     ${title}
                 </h1>
            </div>
 
-           <div class="absolute z-10 pointer-events-none origin-top-left" 
-                style="top: ${subY}%; left: ${subX}%; width: calc(100% - ${subX}%); transform: rotate(${subRot}deg);">
+           <div class="absolute z-10 pointer-events-none" 
+                style="top: ${subY}%; left: ${subX}%; transform: translate(-50%, -50%) rotate(${subRot}deg); display: flex; justify-content: center; width: 100%;">
                 <p id="prev-subtitle" class="font-bold uppercase tracking-[0.4em] drop-shadow-md"
-                   style="white-space: normal; overflow-wrap: break-word;">
+                   style="white-space: normal; max-width: 90%;">
                    ${sub}
                 </p>
            </div>
 
-           <div class="absolute z-10 pointer-events-none origin-top-left" 
-                style="left: ${specsX}%; top: ${specsY}%; transform: rotate(${specsRot}deg);">
-                <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
-                   <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-mono">
+           <div class="absolute z-10 pointer-events-none" 
+                style="left: ${specsX}%; top: ${specsY}%; transform: translate(-50%, -50%) rotate(${specsRot}deg);">
+                <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.8); text-align: center;">
+                   <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-mono justify-center">
                        <span class="opacity-70">ABV</span> <span class="font-bold">${abv}%</span>
                        ${fg ? `<span class="opacity-70">FG</span> <span class="font-bold">${fg}</span>` : ''}
                        <span class="opacity-70">Vol</span> <span class="font-bold">${vol}ml</span>
                        <span class="opacity-70">Date</span> <span class="font-bold">${dateVal}</span>
                    </div>
                    ${extraInfoHtml ? `<div class="mb-2 border-t border-white/20 pt-1 space-y-0.5">${extraInfoHtml}</div>` : ''}
-                   ${showDetails && details ? `<p class="opacity-90 max-w-[200px] leading-tight font-serif italic border-t border-white/20 pt-1">${details}</p>` : ''}
+                   ${showDetails && details ? `<p class="opacity-90 max-w-[200px] mx-auto leading-tight font-serif italic border-t border-white/20 pt-1">${details}</p>` : ''}
                </div>
            </div>
 
-           <div class="absolute z-20 pointer-events-none origin-top-left" 
+           <div class="absolute z-20 pointer-events-none" 
                 style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, -50%) rotate(${logoRot}deg); opacity: ${logoOp};">
                 ${logoInnerHtml}
            </div>

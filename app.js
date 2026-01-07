@@ -5169,7 +5169,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V8 - STABILITY FIX & INSET BORDER)
+    // THEMA 2: SPECIAL (V9 - FINAL STABILITY & WIDTH FIX)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
@@ -5212,7 +5212,6 @@ function setLabelTheme(theme) {
        const logoFlat = getCheck('logoColorMode');
        const logoColor = getVal('tuneLogoColor') || '#ffffff';
        
-       // FIX 2: Witte Rand via Box-Shadow (Werkt altijd)
        const borderWidth = getVal('tuneBorderWidth') || 0;
 
        // --- DATA ---
@@ -5251,7 +5250,8 @@ function setLabelTheme(theme) {
 
        // --- GENERATE HTML ---
        
-       // Line-height vastzetten in pixels
+       // CSS Logic: We zetten de line-height hard vast in pixels.
+       // L2 is de 'default' (de H1 zelf), L1 is de ::first-line.
        const lhTitle1 = titleSize1 * 0.85; 
        const lhTitle2 = titleSize2 * 0.85;
        const lhSub1 = subSize1 * 1.1; 
@@ -5259,13 +5259,28 @@ function setLabelTheme(theme) {
 
        container.innerHTML = `
            <style>
-               /* TITEL & STIJL: Forceer block display */
-               #prev-title, #prev-subtitle { 
+               #prev-title { 
+                   font-size: ${titleSize2}px !important; 
+                   line-height: ${lhTitle2}px !important; 
+                   color: ${titleColor} !important; 
                    text-align: center;
-                   display: flex;
-                   flex-direction: column;
-                   align-items: center;
-                   margin: 0; padding: 0;
+                   white-space: pre-wrap; /* Zorgt dat wrapping natuurlijk gebeurt */
+               }
+               #prev-title::first-line { 
+                   font-size: ${titleSize1}px !important; 
+                   line-height: ${lhTitle1}px !important; 
+               }
+               
+               #prev-subtitle { 
+                   font-size: ${subSize2}px !important; 
+                   line-height: ${lhSub2}px !important; 
+                   color: ${subColor} !important; 
+                   text-align: center;
+                   white-space: pre-wrap;
+               }
+               #prev-subtitle::first-line { 
+                   font-size: ${subSize1}px !important; 
+                   line-height: ${lhSub1}px !important; 
                }
            </style>
 
@@ -5279,24 +5294,23 @@ function setLabelTheme(theme) {
                 style="top: ${titleY}%; left: ${titleX}%; 
                        transform: translate(-50%, 0) rotate(${titleRot}deg); 
                        transform-origin: top center;
-                       display: flex; justify-content: center; width: auto; min-width: 200px; max-width: 90%;">
+                       width: 100%; display: flex; justify-content: center;">
                 
                 <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest drop-shadow-lg"
-                    style="white-space: normal; overflow-wrap: break-word; color: ${titleColor};">
-                    <span style="font-size: ${titleSize1}px; line-height: ${lhTitle1}px; display: block;">${title}</span>
-                    <span style="font-size: ${titleSize2}px; line-height: ${lhTitle2}px; display: block;"></span> </h1>
+                    style="width: 100%; padding: 0 10px; overflow-wrap: break-word;">
+                    ${title}
+                </h1>
            </div>
 
            <div class="absolute z-10 pointer-events-none" 
                 style="top: ${subY}%; left: ${subX}%; 
                        transform: translate(-50%, 0) rotate(${subRot}deg); 
                        transform-origin: top center;
-                       display: flex; justify-content: center; width: auto; min-width: 150px; max-width: 80%;">
+                       width: 100%; display: flex; justify-content: center;">
                 
                 <p id="prev-subtitle" class="font-bold uppercase tracking-[0.4em] drop-shadow-md"
-                   style="white-space: normal; overflow-wrap: break-word; color: ${subColor};">
-                   <span style="font-size: ${subSize1}px; line-height: ${lhSub1}px; display: block;">${sub}</span>
-                   <span style="font-size: ${subSize2}px; line-height: ${lhSub2}px; display: block;"></span>
+                   style="width: 100%; padding: 0 10px; overflow-wrap: break-word;">
+                   ${sub}
                 </p>
            </div>
 

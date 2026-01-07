@@ -5046,25 +5046,31 @@ function setLabelTheme(theme) {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
-        // --- TUNING VALUES ---
-        const titleX = getVal('tuneTitleX') || 50; // Was 5
-        const titleY = getVal('tuneTitleY') || 40; // Was 10
-       
-        const subX = getVal('tuneStyleGap') || 50; // Was 5
-        const subY = getVal('tuneStyleY') || 55;   // Was 30
+        // --- TUNING VALUES (STANDARD) ---
+        // Let op: Standard gebruikt pixels en vaste lay-out, geen percentages zoals Special
+        const titleSize1 = getVal('tuneTitleSize') || 100;
+        const titleSize2 = getVal('tuneTitleSize2') || 60;
+        const titleX = getVal('tuneTitleX') || 0;
+        const titleY = getVal('tuneTitleY') || 0;
 
-        const specsX = getVal('tuneSpecsX') || 50; // Was 5
-        const specsY = getVal('tuneSpecsY') || 85; // Was 80
+        const titleColor = getVal('tuneTitleColor') || '#8F8C79';
+        const styleColor = getVal('tuneStyleColor') || '#9ca3af';
 
-        const artX = getVal('tuneArtX') || 50; 
-        const artY = getVal('tuneArtY') || 50; 
+        const styleSize1 = getVal('tuneStyleSize') || 14;
+        const styleSize2 = getVal('tuneStyleSize2') || 10;
+        
+        const styleGap = getVal('tuneStyleGap') || 5;
+        const styleY = getVal('tuneStyleY') || 0;
+        
+        const specsFontSize = getVal('tuneSpecsSize') || 5; 
 
-        const logoX = getVal('tuneLogoX') || 50;   // Was 95
-        const logoY = getVal('tuneLogoY') || 15;   // Was 5 
-
+        // Artwork
         const artZoom = getVal('tuneArtZoom') || 1.0;
+        const artX = getVal('tuneArtX') || 0;
+        const artY = getVal('tuneArtY') || 0;
         const artOpacity = getVal('tuneArtOpacity') || 1.0;
 
+        // Logo
         const logoSize = getVal('tuneLogoSize') || 100;
         const logoX = getVal('tuneLogoX') || 0;
         const logoY = getVal('tuneLogoY') || 0;

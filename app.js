@@ -5169,29 +5169,15 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V5 - CENTER ORIGIN LOGIC)
-    // Alles rekent nu vanuit het midden (50% = Exact Centraal)
+    // THEMA 2: SPECIAL (V6 - BORDER OVERLAY, WHITE BG, FIXED LINE-HEIGHT)
     // =================================================================
     else if (theme === 'special') {
-       container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
+       // FIX 4: Achtergrond wit gemaakt (was bg-black). 
+       // Hierdoor zorgt 'Transparency' voor vervaging naar wit, en 'Dimmer' voor vervaging naar zwart.
+       container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
        container.style = ""; 
        
-       // --- PADDING LOGICA (VARIABELE RAND) ---
-       const borderWidth = getVal('tuneBorderWidth') || 0;
-       const previewContainer = document.getElementById('label-preview-container');
-       
-       if(previewContainer) {
-           // We zetten de padding in millimeters
-           previewContainer.style.padding = `${borderWidth}mm`;
-           
-           // Omdat padding de totale grootte van de div vergroot in standaard CSS box-model,
-           // moeten we zorgen dat de inhoud kleiner wordt, of dat box-sizing goed staat.
-           // Tailwind gebruikt standaard border-box, dus padding duwt de inhoud naar binnen.
-           // Dit is PRECIES wat we willen voor een witte rand.
-       }
-
        // --- TUNING VALUES ---
-       // We zetten defaults op 50 (Midden) als ze er niet zijn
        const titleX = getVal('tuneTitleX') || 50; 
        const titleY = getVal('tuneTitleY') || 20;
        const titleRot = getVal('tuneTitleRotate') || 0;
@@ -5227,6 +5213,9 @@ function setLabelTheme(theme) {
        const logoOp = getVal('tuneLogoOpacity') || 1.0; 
        const logoFlat = getCheck('logoColorMode');
        const logoColor = getVal('tuneLogoColor') || '#ffffff';
+       
+       // FIX 1: Witte Rand via Overlay (De 'window frame' techniek)
+       const borderWidth = getVal('tuneBorderWidth') || 0;
 
        // --- DATA ---
        const showYeast = getCheck('labelShowYeast');
@@ -5263,22 +5252,48 @@ function setLabelTheme(theme) {
        }
 
        // --- GENERATE HTML ---
-       // Line-height in pixels voor stabiliteit
-       const lhTitle1 = titleSize1 * 0.85;
+       
+       // FIX 2 & 4: Line Height Fix (Harde pixels om springen te voorkomen)
+       // We gebruiken 0.85 als factor, maar zetten het vast in px.
+       const lhTitle1 = titleSize1 * 0.85; 
        const lhTitle2 = titleSize2 * 0.85;
-       const lhSub1 = subSize1 * 0.9;
-       const lhSub2 = subSize2 * 0.9;
+       const lhSub1 = subSize1 * 1.0; // Iets ruimer voor leesbaarheid
+       const lhSub2 = subSize2 * 1.0;
 
        container.innerHTML = `
            <style>
-               #prev-title { font-size: ${titleSize2}px !important; line-height: ${lhTitle2}px !important; color: ${titleColor} !important; text-align: center; }
-               #prev-title::first-line { font-size: ${titleSize1}px !important; line-height: ${lhTitle1}px !important; }
+               /* TITEL STIJLEN */
+               #prev-title { 
+                   font-size: ${titleSize2}px !important; 
+                   line-height: ${lhTitle2}px !important; 
+                   color: ${titleColor} !important; 
+                   text-align: center;
+                   display: block; /* Zorgt dat het blok stabiel is */
+               }
+               #prev-title::first-line { 
+                   font-size: ${titleSize1}px !important; 
+                   line-height: ${lhTitle1}px !important; 
+               }
                
-               #prev-subtitle { font-size: ${subSize2}px !important; line-height: ${lhSub2}px !important; color: ${subColor} !important; text-align: center; }
-               #prev-subtitle::first-line { font-size: ${subSize1}px !important; line-height: ${lhSub1}px !important; }
+               /* SUBTITEL STIJLEN */
+               #prev-subtitle { 
+                   font-size: ${subSize2}px !important; 
+                   line-height: ${lhSub2}px !important; 
+                   color: ${subColor} !important; 
+                   text-align: center;
+                   display: block;
+               }
+               #prev-subtitle::first-line { 
+                   font-size: ${subSize1}px !important; 
+                   line-height: ${lhSub1}px !important; 
+               }
            </style>
 
            ${bgHtml}
+
+           <div class="absolute inset-0 pointer-events-none z-50" 
+                style="border: ${borderWidth}mm solid white; box-sizing: border-box;">
+           </div>
 
            <div class="absolute z-10 pointer-events-none" 
                 style="top: ${titleY}%; left: ${titleX}%; transform: translate(-50%, -50%) rotate(${titleRot}deg); display: flex; justify-content: center; width: 100%;">
@@ -5291,7 +5306,7 @@ function setLabelTheme(theme) {
            <div class="absolute z-10 pointer-events-none" 
                 style="top: ${subY}%; left: ${subX}%; transform: translate(-50%, -50%) rotate(${subRot}deg); display: flex; justify-content: center; width: 100%;">
                 <p id="prev-subtitle" class="font-bold uppercase tracking-[0.4em] drop-shadow-md"
-                   style="white-space: normal; max-width: 90%;">
+                   style="white-space: normal; max-width: 50%;">
                    ${sub}
                 </p>
            </div>

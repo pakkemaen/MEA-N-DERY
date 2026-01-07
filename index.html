@@ -915,9 +915,12 @@
     <div class="p-2 bg-app-tertiary/50 rounded-lg border border-app-brand/5 space-y-3 mt-4">
         <p class="text-[10px] font-bold uppercase text-app-secondary">Artwork Adjustment</p>
         
-        <div class="flex justify-between items-center mb-2">
-            <label class="font-semibold text-app-header text-xs">Show White Border</label>
-            <input type="checkbox" id="labelShowBorder" checked class="rounded text-app-brand focus:ring-app-brand">
+        <div>
+            <div class="flex justify-between text-xs mb-1">
+                <label class="font-semibold text-app-header">Border Width</label>
+                <span id="disp-border-width" class="font-mono text-xs text-gray-400">5mm</span>
+            </div>
+            <input type="range" id="tuneBorderWidth" min="0" max="30" value="5" step="1" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
         </div>
 
         <div>

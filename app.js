@@ -4578,6 +4578,8 @@ function initLabelForge() {
                     if(id.includes('Rotate')) {
                         // Rotatie in graden
                         disp.textContent = e.target.value + '°';
+                    } else if(id.includes('Width')) { // <--- NIEUW: Millimeters voor border
+                        disp.textContent = e.target.value + 'mm';
                     } else if(id.includes('Opacity') || id.includes('Overlay')) {
                         // Opaciteit in procenten
                         disp.textContent = Math.round(e.target.value * 100) + '%';
@@ -4880,7 +4882,16 @@ function loadLabelFromBrew(e) {
         setCheck('logoColorMode', s.logoColorMode);
         setVal('tuneLogoColor', s.tuneLogoColor || '#ffffff');
 
-        setCheck('labelShowBorder', s.labelShowBorder !== undefined ? s.labelShowBorder : true); // Default true
+        // BORDER MIGRATIE LOGICA:
+        // 1. Hebben we een nieuwe waarde? Gebruik die.
+        // 2. Geen nieuwe waarde? Check de oude checkbox. True = 5mm, False = 0mm.
+        // 3. Niets? Default 5mm.
+        let savedBorder = s.tuneBorderWidth;
+        if (savedBorder === undefined) {
+            if (s.labelShowBorder === false) savedBorder = 0;
+            else savedBorder = 5; 
+        }
+        restoreSlider('tuneBorderWidth', savedBorder);
 
         setVal('tuneAllergenColor', s.tuneAllergenColor || '#ffffff');
 
@@ -4932,7 +4943,6 @@ function loadLabelFromBrew(e) {
         
         const hasSulfites = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
         setVal('labelAllergens', hasSulfites ? 'Contains Sulfites' : '');
-        setCheck('labelShowBorder', true); 
         setCheck('logoColorMode', false);
 
         // --- DE NIEUWE SLIDER STANDAARDEN (CENTERED) ---
@@ -4972,6 +4982,8 @@ function loadLabelFromBrew(e) {
         resetSlider('tuneArtOpacity', 1.0);
         resetSlider('tuneArtOverlay', 0.2); // Beetje dimmen standaard
         resetSlider('tuneArtRotate', 0);
+
+        resetSlider('tuneBorderWidth', 5); // Standaard 5mm rand
     }
 
     // Forceer update van het thema
@@ -5159,10 +5171,19 @@ function setLabelTheme(theme) {
        container.className = `relative w-full h-full overflow-hidden bg-black font-sans`;
        container.style = ""; 
        
-       // --- PADDING LOGICA ---
-       const showBorder = getCheck('labelShowBorder');
+       // --- PADDING LOGICA (VARIABELE RAND) ---
+       const borderWidth = getVal('tuneBorderWidth') || 0;
        const previewContainer = document.getElementById('label-preview-container');
-       if(previewContainer) previewContainer.style.padding = showBorder ? '5mm' : '0';
+       
+       if(previewContainer) {
+           // We zetten de padding in millimeters
+           previewContainer.style.padding = `${borderWidth}mm`;
+           
+           // Omdat padding de totale grootte van de div vergroot in standaard CSS box-model,
+           // moeten we zorgen dat de inhoud kleiner wordt, of dat box-sizing goed staat.
+           // Tailwind gebruikt standaard border-box, dus padding duwt de inhoud naar binnen.
+           // Dit is PRECIES wat we willen voor een witte rand.
+       }
 
        // --- TUNING VALUES ---
        // We zetten defaults op 50 (Midden) als ze er niet zijn
@@ -5715,7 +5736,7 @@ window.saveLabelToBrew = async function() {
         logoColorMode: getCheck('logoColorMode'),
         tuneLogoColor: getVal('tuneLogoColor'),
 
-        labelShowBorder: getCheck('labelShowBorder'),
+        tuneBorderWidth: getVal('tuneBorderWidth'), // <--- Opslaan als getal
 
         tuneAllergenColor: getVal('tuneAllergenColor'),
         

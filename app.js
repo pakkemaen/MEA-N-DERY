@@ -5169,7 +5169,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V9 - FINAL STABILITY & WIDTH FIX)
+    // THEMA 2: SPECIAL (V10 - TOP ANCHOR STABILITY)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
@@ -5212,6 +5212,7 @@ function setLabelTheme(theme) {
        const logoFlat = getCheck('logoColorMode');
        const logoColor = getVal('tuneLogoColor') || '#ffffff';
        
+       // FIX: Rand via Box Shadow
        const borderWidth = getVal('tuneBorderWidth') || 0;
 
        // --- DATA ---
@@ -5250,10 +5251,9 @@ function setLabelTheme(theme) {
 
        // --- GENERATE HTML ---
        
-       // CSS Logic: We zetten de line-height hard vast in pixels.
-       // L2 is de 'default' (de H1 zelf), L1 is de ::first-line.
-       const lhTitle1 = titleSize1 * 0.85; 
-       const lhTitle2 = titleSize2 * 0.85;
+       // FIX: Bereken Line-Height in Pixels met iets meer ademruimte (1.1 factor)
+       const lhTitle1 = titleSize1 * 1.0; 
+       const lhTitle2 = titleSize2 * 1.0;
        const lhSub1 = subSize1 * 1.1; 
        const lhSub2 = subSize2 * 1.1;
 
@@ -5264,7 +5264,8 @@ function setLabelTheme(theme) {
                    line-height: ${lhTitle2}px !important; 
                    color: ${titleColor} !important; 
                    text-align: center;
-                   white-space: pre-wrap; /* Zorgt dat wrapping natuurlijk gebeurt */
+                   white-space: pre-wrap;
+                   margin: 0; padding: 0;
                }
                #prev-title::first-line { 
                    font-size: ${titleSize1}px !important; 
@@ -5277,6 +5278,7 @@ function setLabelTheme(theme) {
                    color: ${subColor} !important; 
                    text-align: center;
                    white-space: pre-wrap;
+                   margin: 0; padding: 0;
                }
                #prev-subtitle::first-line { 
                    font-size: ${subSize1}px !important; 
@@ -5297,7 +5299,7 @@ function setLabelTheme(theme) {
                        width: 100%; display: flex; justify-content: center;">
                 
                 <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest drop-shadow-lg"
-                    style="width: 100%; padding: 0 10px; overflow-wrap: break-word;">
+                    style="width: 90%; overflow-wrap: break-word;">
                     ${title}
                 </h1>
            </div>
@@ -5309,7 +5311,7 @@ function setLabelTheme(theme) {
                        width: 100%; display: flex; justify-content: center;">
                 
                 <p id="prev-subtitle" class="font-bold uppercase tracking-[0.4em] drop-shadow-md"
-                   style="width: 100%; padding: 0 10px; overflow-wrap: break-word;">
+                   style="width: 90%; overflow-wrap: break-word;">
                    ${sub}
                 </p>
            </div>
@@ -5329,7 +5331,7 @@ function setLabelTheme(theme) {
            </div>
 
            <div class="absolute z-20 pointer-events-none" 
-                style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, -50%) rotate(${logoRot}deg); opacity: ${logoOp};">
+                style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, 0) rotate(${logoRot}deg); opacity: ${logoOp};">
                 ${logoInnerHtml}
            </div>
        `;

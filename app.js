@@ -5043,11 +5043,12 @@ function setLabelTheme(theme) {
     });
 
     if (theme === 'standard') {
+        // CONTAINER SETUP: Flexbox voor de 30/70 verdeling
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
         // --- TUNING VALUES (STANDARD) ---
-        // Let op: Standard gebruikt pixels en vaste lay-out, geen percentages zoals Special
+        // Let op: Standard werkt met vaste blokken, dus X/Y zijn vaak 0 of kleine correcties in pixels
         const titleSize1 = getVal('tuneTitleSize') || 100;
         const titleSize2 = getVal('tuneTitleSize2') || 60;
         const titleX = getVal('tuneTitleX') || 0;
@@ -5064,31 +5065,36 @@ function setLabelTheme(theme) {
         
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
 
-        // Artwork
+        // Artwork (Standaard op 0,0 omdat het de container vult)
         const artZoom = getVal('tuneArtZoom') || 1.0;
         const artX = getVal('tuneArtX') || 0;
         const artY = getVal('tuneArtY') || 0;
         const artOpacity = getVal('tuneArtOpacity') || 1.0;
 
-        // Logo
+        // Logo (Standaard rechtsboven, dus 0,0 offset)
         const logoSize = getVal('tuneLogoSize') || 100;
         const logoX = getVal('tuneLogoX') || 0;
         const logoY = getVal('tuneLogoY') || 0;
 
-        // ... (Laag 1 en Laag 3 logica blijft hier staan) ...
+        // --- HTML GENERATIE (STANDARD) ---
         let artHtml = '';
         if (hasImage) {
+             // Let op: Hier geen rotate of overlay, dat is voor Special
              artHtml = `<div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center pointer-events-none"><img src="${imgSrc}" style="transform: translate(${artX}px, ${artY}px) scale(${artZoom}); opacity: ${artOpacity}; transform-origin: center;" class="w-full h-full object-cover transition-transform duration-75"></div>`;
         }
+        
         const logoHtml = `<div class="absolute top-0 right-0 z-20 pointer-events-none" style="transform: translate(${logoX}px, ${logoY}px); width: ${logoSize}px; padding: 10px;"><img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-full h-auto object-contain drop-shadow-md"></div>`;
         
-        // Specs & Date Logic (Hetzelfde laten)
+        // Specs & Date Logic
         const showYeast = getCheck('labelShowYeast');
         const showHoney = getCheck('labelShowHoney');
         let yeastText = "", honeyText = "";
-        if (showYeast) { const y = document.getElementById('displayLabelYeast')?.textContent; if(y && y.trim() !== '--') yeastText = y.trim(); }
-        if (showHoney) { const h = document.getElementById('displayLabelHoney')?.textContent; if(h && h.trim() !== '--') honeyText = h.trim(); }
-        const showSpecsBlock = yeastText || honeyText || allergenText;
+        const yVal = document.getElementById('displayLabelYeast')?.textContent; 
+        if (yVal && yVal.trim() !== '--') yeastText = yVal.trim();
+        const hVal = document.getElementById('displayLabelHoney')?.textContent; 
+        if (hVal && hVal.trim() !== '--') honeyText = hVal.trim();
+        
+        const showSpecsBlock = (showYeast && yeastText) || (showHoney && honeyText) || allergenText;
         
         let peakDateVal = "";
         const selectEl = document.getElementById('labelRecipeSelect');
@@ -5096,11 +5102,8 @@ function setLabelTheme(theme) {
         if (selectedBrew && selectedBrew.peakFlavorDate) { try { peakDateVal = new Date(selectedBrew.peakFlavorDate).toLocaleDateString('nl-NL').replace(/-/g, '/'); } catch(e){} } 
         else if (rawDate) { try { const d = new Date(rawDate); const abvNum = parseFloat(abv); let months = (abvNum < 8) ? 3 : (abvNum > 14 ? 12 : 6); d.setMonth(d.getMonth() + months); peakDateVal = d.toLocaleDateString('nl-NL').replace(/-/g, '/'); } catch(e) {} }
 
-
-        // --- UI GENERATIE (HIER ZIT DE KLEUR FIX) ---
         container.innerHTML = `
             <style>
-                /* !important zorgt dat deze kleur wint van de standaard CSS classes */
                 #prev-title { 
                     font-size: ${titleSize2}px !important; 
                     line-height: 0.85; 
@@ -5126,8 +5129,8 @@ function setLabelTheme(theme) {
                 
                 ${showSpecsBlock ? `
                 <div class="py-2 border-b border-gray-300 space-y-1 mb-2">
-                    ${honeyText ? `<div class="flex flex-col leading-tight"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Honey Source</span><span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${honeyText}</span></div>` : ''}
-                    ${yeastText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Yeast Strain</span><span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${yeastText}</span></div>` : ''}
+                    ${showHoney && honeyText ? `<div class="flex flex-col leading-tight"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Honey Source</span><span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${honeyText}</span></div>` : ''}
+                    ${showYeast && yeastText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Yeast Strain</span><span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${yeastText}</span></div>` : ''}
                     ${allergenText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Allergens</span><span class="text-black font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${allergenText}</span></div>` : ''}
                 </div>` : ''}
                 
@@ -5152,7 +5155,6 @@ function setLabelTheme(theme) {
                             ${title}
                         </h1>
                     </div>
-                    
                     <div id="style-container" class="h-[50%] flex flex-col justify-end overflow-hidden" style="margin-left: ${styleGap}px; padding-bottom: ${styleY}px;">
                          <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-normal leading-none line-clamp-3 text-ellipsis" 
                             style="writing-mode: vertical-rl; transform: rotate(180deg);">

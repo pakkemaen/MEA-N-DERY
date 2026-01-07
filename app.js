@@ -5062,10 +5062,7 @@ function setLabelTheme(theme) {
         const logoX = getVal('tuneLogoX') || 50;   // Was 95
         const logoY = getVal('tuneLogoY') || 15;   // Was 5 
 
-        // ... (rest van je variabelen zoals artZoom, logoSize blijven hier staan) ...
         const artZoom = getVal('tuneArtZoom') || 1.0;
-        const artX = getVal('tuneArtX') || 0;
-        const artY = getVal('tuneArtY') || 0;
         const artOpacity = getVal('tuneArtOpacity') || 1.0;
 
         const logoSize = getVal('tuneLogoSize') || 100;

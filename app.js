@@ -5169,7 +5169,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V10 - TOP ANCHOR STABILITY)
+    // THEMA 2: SPECIAL (V10 - SPLIT TEXT ENGINE)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
@@ -5180,8 +5180,8 @@ function setLabelTheme(theme) {
        const titleY = getVal('tuneTitleY') || 20;
        const titleRot = getVal('tuneTitleRotate') || 0;
        const titleColor = getVal('tuneTitleColor') || '#ffffff';
-       const titleSize1 = getVal('tuneTitleSize') || 100; 
-       const titleSize2 = getVal('tuneTitleSize2') || 60; 
+       const titleSize1 = parseInt(getVal('tuneTitleSize')) || 100; 
+       const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60; 
        
        const subX = getVal('tuneStyleGap') || 50; 
        const subY = getVal('tuneStyleY') || 35;   
@@ -5212,10 +5212,21 @@ function setLabelTheme(theme) {
        const logoFlat = getCheck('logoColorMode');
        const logoColor = getVal('tuneLogoColor') || '#ffffff';
        
-       // FIX: Rand via Box Shadow
        const borderWidth = getVal('tuneBorderWidth') || 0;
 
-       // --- DATA ---
+       // --- DATA & CONTENT SPLITTING (DE FIX) ---
+       // We splitsen de titel op basis van een enter (\n). 
+       // Deel 1 krijgt Size L1, de rest krijgt Size L2.
+       const titleLines = title.split('\n');
+       const titlePart1 = titleLines[0] || "";
+       const titlePart2 = titleLines.slice(1).join('\n') || "";
+
+       // Zelfde trucje voor de subtitle als je wilt (hier simpel gehouden)
+       const subLines = sub.split('\n');
+       const subPart1 = subLines[0] || "";
+       const subPart2 = subLines.slice(1).join('\n') || "";
+
+       // Specs data
        const showYeast = getCheck('labelShowYeast');
        const showHoney = getCheck('labelShowHoney');
        let yeastText = "", honeyText = "";
@@ -5249,71 +5260,41 @@ function setLabelTheme(theme) {
            logoInnerHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
        }
 
-       // --- GENERATE HTML ---
+       // --- GENERATE HTML (NO STYLE TAGS) ---
+       // We gebruiken inline styles voor directe controle.
+       // Line-height 0.85 zorgt dat het compact is (niet springt).
        
-       // FIX: Bereken Line-Height in Pixels met iets meer ademruimte (1.1 factor)
-       const lhTitle1 = titleSize1 * 1.0; 
-       const lhTitle2 = titleSize2 * 1.0;
-       const lhSub1 = subSize1 * 1.1; 
-       const lhSub2 = subSize2 * 1.1;
-
        container.innerHTML = `
-           <style>
-               #prev-title { 
-                   font-size: ${titleSize2}px !important; 
-                   line-height: ${lhTitle2}px !important; 
-                   color: ${titleColor} !important; 
-                   text-align: center;
-                   white-space: pre-wrap;
-                   margin: 0; padding: 0;
-               }
-               #prev-title::first-line { 
-                   font-size: ${titleSize1}px !important; 
-                   line-height: ${lhTitle1}px !important; 
-               }
-               
-               #prev-subtitle { 
-                   font-size: ${subSize2}px !important; 
-                   line-height: ${lhSub2}px !important; 
-                   color: ${subColor} !important; 
-                   text-align: center;
-                   white-space: pre-wrap;
-                   margin: 0; padding: 0;
-               }
-               #prev-subtitle::first-line { 
-                   font-size: ${subSize1}px !important; 
-                   line-height: ${lhSub1}px !important; 
-               }
-           </style>
-
            ${bgHtml}
 
            <div class="absolute inset-0 pointer-events-none z-50" 
                 style="box-shadow: inset 0 0 0 ${borderWidth}mm white;">
            </div>
 
-           <div class="absolute z-10 pointer-events-none" 
+           <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-center text-center" 
                 style="top: ${titleY}%; left: ${titleX}%; 
                        transform: translate(-50%, 0) rotate(${titleRot}deg); 
                        transform-origin: top center;
-                       width: 100%; display: flex; justify-content: center;">
+                       width: 100%;">
                 
-                <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest drop-shadow-lg"
-                    style="width: 90%; overflow-wrap: break-word;">
-                    ${title}
-                </h1>
+                <h1 class="font-header font-bold uppercase tracking-widest drop-shadow-lg leading-none"
+                    style="font-size: ${titleSize1}px; color: ${titleColor}; width: 90%; overflow-wrap: break-word; white-space: pre-wrap;">${titlePart1}</h1>
+                
+                ${titlePart2 ? `<h1 class="font-header font-bold uppercase tracking-widest drop-shadow-lg leading-none"
+                    style="font-size: ${titleSize2}px; color: ${titleColor}; width: 90%; overflow-wrap: break-word; white-space: pre-wrap; margin-top: 0.1em;">${titlePart2}</h1>` : ''}
            </div>
 
-           <div class="absolute z-10 pointer-events-none" 
+           <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-center text-center" 
                 style="top: ${subY}%; left: ${subX}%; 
                        transform: translate(-50%, 0) rotate(${subRot}deg); 
                        transform-origin: top center;
-                       width: 100%; display: flex; justify-content: center;">
+                       width: 100%;">
                 
-                <p id="prev-subtitle" class="font-bold uppercase tracking-[0.4em] drop-shadow-md"
-                   style="width: 90%; overflow-wrap: break-word;">
-                   ${sub}
-                </p>
+                <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
+                   style="font-size: ${subSize1}px; color: ${subColor}; width: 90%; overflow-wrap: break-word;">${subPart1}</p>
+                
+                ${subPart2 ? `<p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
+                   style="font-size: ${subSize2}px; color: ${subColor}; width: 90%; overflow-wrap: break-word;">${subPart2}</p>` : ''}
            </div>
 
            <div class="absolute z-10 pointer-events-none" 

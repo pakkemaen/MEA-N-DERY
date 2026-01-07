@@ -5169,11 +5169,10 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V6 - BORDER OVERLAY, WHITE BG, FIXED LINE-HEIGHT)
+    // THEMA 2: SPECIAL (V7 - TOP ANCHOR STABILITY & WIDTH FIX)
     // =================================================================
     else if (theme === 'special') {
-       // FIX 4: Achtergrond wit gemaakt (was bg-black). 
-       // Hierdoor zorgt 'Transparency' voor vervaging naar wit, en 'Dimmer' voor vervaging naar zwart.
+       // Achtergrond wit voor correcte transparency werking
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
        container.style = ""; 
        
@@ -5214,7 +5213,6 @@ function setLabelTheme(theme) {
        const logoFlat = getCheck('logoColorMode');
        const logoColor = getVal('tuneLogoColor') || '#ffffff';
        
-       // FIX 1: Witte Rand via Overlay (De 'window frame' techniek)
        const borderWidth = getVal('tuneBorderWidth') || 0;
 
        // --- DATA ---
@@ -5253,35 +5251,36 @@ function setLabelTheme(theme) {
 
        // --- GENERATE HTML ---
        
-       // FIX 2 & 4: Line Height Fix (Harde pixels om springen te voorkomen)
-       // We gebruiken 0.85 als factor, maar zetten het vast in px.
+       // Harde pixels line-height om springen te voorkomen
        const lhTitle1 = titleSize1 * 0.85; 
        const lhTitle2 = titleSize2 * 0.85;
-       const lhSub1 = subSize1 * 1.0; // Iets ruimer voor leesbaarheid
-       const lhSub2 = subSize2 * 1.0;
+       const lhSub1 = subSize1 * 1.1; 
+       const lhSub2 = subSize2 * 1.1;
 
        container.innerHTML = `
            <style>
-               /* TITEL STIJLEN */
+               /* TITEL: Block display en Top Anchor logica */
                #prev-title { 
                    font-size: ${titleSize2}px !important; 
                    line-height: ${lhTitle2}px !important; 
                    color: ${titleColor} !important; 
                    text-align: center;
-                   display: block; /* Zorgt dat het blok stabiel is */
+                   display: block; 
+                   margin: 0; padding: 0;
                }
                #prev-title::first-line { 
                    font-size: ${titleSize1}px !important; 
                    line-height: ${lhTitle1}px !important; 
                }
                
-               /* SUBTITEL STIJLEN */
+               /* STIJL */
                #prev-subtitle { 
                    font-size: ${subSize2}px !important; 
                    line-height: ${lhSub2}px !important; 
                    color: ${subColor} !important; 
                    text-align: center;
                    display: block;
+                   margin: 0; padding: 0;
                }
                #prev-subtitle::first-line { 
                    font-size: ${subSize1}px !important; 
@@ -5296,17 +5295,17 @@ function setLabelTheme(theme) {
            </div>
 
            <div class="absolute z-10 pointer-events-none" 
-                style="top: ${titleY}%; left: ${titleX}%; transform: translate(-50%, -50%) rotate(${titleRot}deg); display: flex; justify-content: center; width: 100%;">
+                style="top: ${titleY}%; left: ${titleX}%; transform: translate(-50%, 0) rotate(${titleRot}deg); display: flex; justify-content: center; width: 100%; max-width: 95%;">
                 <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest drop-shadow-lg"
-                    style="white-space: normal; max-width: 90%;">
+                    style="white-space: normal; overflow-wrap: break-word;">
                     ${title}
                 </h1>
            </div>
 
            <div class="absolute z-10 pointer-events-none" 
-                style="top: ${subY}%; left: ${subX}%; transform: translate(-50%, -50%) rotate(${subRot}deg); display: flex; justify-content: center; width: 100%;">
+                style="top: ${subY}%; left: ${subX}%; transform: translate(-50%, 0) rotate(${subRot}deg); display: flex; justify-content: center; width: 100%; max-width: 80%;">
                 <p id="prev-subtitle" class="font-bold uppercase tracking-[0.4em] drop-shadow-md"
-                   style="white-space: normal; max-width: 50%;">
+                   style="white-space: normal; overflow-wrap: break-word;">
                    ${sub}
                 </p>
            </div>
@@ -5326,7 +5325,7 @@ function setLabelTheme(theme) {
            </div>
 
            <div class="absolute z-20 pointer-events-none" 
-                style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, -50%) rotate(${logoRot}deg); opacity: ${logoOp};">
+                style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, 0) rotate(${logoRot}deg); opacity: ${logoOp};">
                 ${logoInnerHtml}
            </div>
        `;

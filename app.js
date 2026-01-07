@@ -4545,7 +4545,8 @@ function initLabelForge() {
         'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleColor', 'tuneStyleRotate',
         'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsColor', 'tuneSpecsRotate', 'tuneAllergenColor',
         'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity', 'tuneArtRotate', 'tuneArtOverlay',
-        'tuneLogoSize', 'tuneLogoX', 'tuneLogoY', 'tuneLogoRotate', 'tuneLogoOpacity'
+        'tuneLogoSize', 'tuneLogoX', 'tuneLogoY', 'tuneLogoRotate', 'tuneLogoOpacity',
+        'tuneBorderWidth'
     ];
 
     // Voeg listeners toe voor de niet-sliders (checkboxes en colors)
@@ -4578,7 +4579,7 @@ function initLabelForge() {
                     if(id.includes('Rotate')) {
                         // Rotatie in graden
                         disp.textContent = e.target.value + '°';
-                    } else if(id.includes('Width')) { // <--- NIEUW: Millimeters voor border
+                    } else if(id.includes('Width')) {
                         disp.textContent = e.target.value + 'mm';
                     } else if(id.includes('Opacity') || id.includes('Overlay')) {
                         // Opaciteit in procenten

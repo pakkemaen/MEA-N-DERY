@@ -5169,10 +5169,9 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V7 - TOP ANCHOR STABILITY & WIDTH FIX)
+    // THEMA 2: SPECIAL (V8 - STABILITY FIX & INSET BORDER)
     // =================================================================
     else if (theme === 'special') {
-       // Achtergrond wit voor correcte transparency werking
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
        container.style = ""; 
        
@@ -5213,6 +5212,7 @@ function setLabelTheme(theme) {
        const logoFlat = getCheck('logoColorMode');
        const logoColor = getVal('tuneLogoColor') || '#ffffff';
        
+       // FIX 2: Witte Rand via Box-Shadow (Werkt altijd)
        const borderWidth = getVal('tuneBorderWidth') || 0;
 
        // --- DATA ---
@@ -5251,7 +5251,7 @@ function setLabelTheme(theme) {
 
        // --- GENERATE HTML ---
        
-       // Harde pixels line-height om springen te voorkomen
+       // Line-height vastzetten in pixels
        const lhTitle1 = titleSize1 * 0.85; 
        const lhTitle2 = titleSize2 * 0.85;
        const lhSub1 = subSize1 * 1.1; 
@@ -5259,54 +5259,44 @@ function setLabelTheme(theme) {
 
        container.innerHTML = `
            <style>
-               /* TITEL: Block display en Top Anchor logica */
-               #prev-title { 
-                   font-size: ${titleSize2}px !important; 
-                   line-height: ${lhTitle2}px !important; 
-                   color: ${titleColor} !important; 
+               /* TITEL & STIJL: Forceer block display */
+               #prev-title, #prev-subtitle { 
                    text-align: center;
-                   display: block; 
+                   display: flex;
+                   flex-direction: column;
+                   align-items: center;
                    margin: 0; padding: 0;
-               }
-               #prev-title::first-line { 
-                   font-size: ${titleSize1}px !important; 
-                   line-height: ${lhTitle1}px !important; 
-               }
-               
-               /* STIJL */
-               #prev-subtitle { 
-                   font-size: ${subSize2}px !important; 
-                   line-height: ${lhSub2}px !important; 
-                   color: ${subColor} !important; 
-                   text-align: center;
-                   display: block;
-                   margin: 0; padding: 0;
-               }
-               #prev-subtitle::first-line { 
-                   font-size: ${subSize1}px !important; 
-                   line-height: ${lhSub1}px !important; 
                }
            </style>
 
            ${bgHtml}
 
            <div class="absolute inset-0 pointer-events-none z-50" 
-                style="border: ${borderWidth}mm solid white; box-sizing: border-box;">
+                style="box-shadow: inset 0 0 0 ${borderWidth}mm white;">
            </div>
 
            <div class="absolute z-10 pointer-events-none" 
-                style="top: ${titleY}%; left: ${titleX}%; transform: translate(-50%, 0) rotate(${titleRot}deg); display: flex; justify-content: center; width: 100%; max-width: 95%;">
+                style="top: ${titleY}%; left: ${titleX}%; 
+                       transform: translate(-50%, 0) rotate(${titleRot}deg); 
+                       transform-origin: top center;
+                       display: flex; justify-content: center; width: auto; min-width: 200px; max-width: 90%;">
+                
                 <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest drop-shadow-lg"
-                    style="white-space: normal; overflow-wrap: break-word;">
-                    ${title}
-                </h1>
+                    style="white-space: normal; overflow-wrap: break-word; color: ${titleColor};">
+                    <span style="font-size: ${titleSize1}px; line-height: ${lhTitle1}px; display: block;">${title}</span>
+                    <span style="font-size: ${titleSize2}px; line-height: ${lhTitle2}px; display: block;"></span> </h1>
            </div>
 
            <div class="absolute z-10 pointer-events-none" 
-                style="top: ${subY}%; left: ${subX}%; transform: translate(-50%, 0) rotate(${subRot}deg); display: flex; justify-content: center; width: 100%; max-width: 80%;">
+                style="top: ${subY}%; left: ${subX}%; 
+                       transform: translate(-50%, 0) rotate(${subRot}deg); 
+                       transform-origin: top center;
+                       display: flex; justify-content: center; width: auto; min-width: 150px; max-width: 80%;">
+                
                 <p id="prev-subtitle" class="font-bold uppercase tracking-[0.4em] drop-shadow-md"
-                   style="white-space: normal; overflow-wrap: break-word;">
-                   ${sub}
+                   style="white-space: normal; overflow-wrap: break-word; color: ${subColor};">
+                   <span style="font-size: ${subSize1}px; line-height: ${lhSub1}px; display: block;">${sub}</span>
+                   <span style="font-size: ${subSize2}px; line-height: ${lhSub2}px; display: block;"></span>
                 </p>
            </div>
 
@@ -5325,7 +5315,7 @@ function setLabelTheme(theme) {
            </div>
 
            <div class="absolute z-20 pointer-events-none" 
-                style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, 0) rotate(${logoRot}deg); opacity: ${logoOp};">
+                style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, -50%) rotate(${logoRot}deg); opacity: ${logoOp};">
                 ${logoInnerHtml}
            </div>
        `;

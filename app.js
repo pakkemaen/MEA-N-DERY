@@ -4841,58 +4841,59 @@ function loadLabelFromBrew(e) {
         setText('displayLabelHoney', s.honeyName || generatedHoney);
 
         // 4. Sliders herstellen
-        const restoreSlider = (id, val) => {
+        const restoreSlider = (id, val, fallback) => {
             const el = document.getElementById(id);
-            if(el && val !== undefined) {
-                el.value = val;
+            if(el) {
+                // Als er een opgeslagen waarde is, gebruik die. Anders de fallback.
+                el.value = (val !== undefined) ? val : fallback;
                 el.dispatchEvent(new Event('input')); 
             }
         };
 
-        restoreSlider('tuneTitleSize', s.tuneTitleSize);
-        restoreSlider('tuneTitleSize2', s.tuneTitleSize2);
-        restoreSlider('tuneTitleX', s.tuneTitleX);
-        restoreSlider('tuneTitleY', s.tuneTitleY);
-        restoreSlider('tuneTitleRotate', s.tuneTitleRotate);
+        restoreSlider('tuneTitleSize', s.tuneTitleSize, 100);
+        restoreSlider('tuneTitleSize2', s.tuneTitleSize2, 60);
+        restoreSlider('tuneTitleX', s.tuneTitleX, 50);
+        restoreSlider('tuneTitleY', s.tuneTitleY, 20);
+        restoreSlider('tuneTitleRotate', s.tuneTitleRotate, 0);
         
-        restoreSlider('tuneStyleY', s.tuneStyleY);
-        restoreSlider('tuneStyleSize', s.tuneStyleSize);
-        restoreSlider('tuneStyleSize2', s.tuneStyleSize2);
-        restoreSlider('tuneStyleGap', s.tuneStyleGap);
-        restoreSlider('tuneStyleRotate', s.tuneStyleRotate);
+        restoreSlider('tuneStyleY', s.tuneStyleY, 35);
+        restoreSlider('tuneStyleSize', s.tuneStyleSize, 14);
+        restoreSlider('tuneStyleSize2', s.tuneStyleSize2, 10);
+        restoreSlider('tuneStyleGap', s.tuneStyleGap, 50);
+        restoreSlider('tuneStyleRotate', s.tuneStyleRotate, 0);
 
-        
-        restoreSlider('tuneSpecsSize', s.tuneSpecsSize);
-        restoreSlider('tuneSpecsX', s.tuneSpecsX);
-        restoreSlider('tuneSpecsY', s.tuneSpecsY);
+        restoreSlider('tuneSpecsSize', s.tuneSpecsSize, 4);
+        restoreSlider('tuneSpecsX', s.tuneSpecsX, 50);
+        restoreSlider('tuneSpecsY', s.tuneSpecsY, 80);
         setVal('tuneSpecsColor', s.tuneSpecsColor || '#ffffff');
-        restoreSlider('tuneSpecsRotate', s.tuneSpecsRotate);
+        restoreSlider('tuneSpecsRotate', s.tuneSpecsRotate, 0);
 
-        restoreSlider('tuneArtZoom', s.tuneArtZoom);
-        restoreSlider('tuneArtX', s.tuneArtX);
-        restoreSlider('tuneArtY', s.tuneArtY);
-        restoreSlider('tuneArtOpacity', s.tuneArtOpacity);
-        restoreSlider('tuneArtRotate', s.tuneArtRotate);
-        restoreSlider('tuneArtOverlay', s.tuneArtOverlay);
+        // --- ARTWORK DEFAULTS FIX ---
+        // Als er geen opgeslagen waarde is (oude save), dwingen we de nieuwe defaults af
+        restoreSlider('tuneArtZoom', s.tuneArtZoom, 1.0);
+        restoreSlider('tuneArtX', s.tuneArtX, 50);
+        restoreSlider('tuneArtY', s.tuneArtY, 50);
+        restoreSlider('tuneArtRotate', s.tuneArtRotate, 0);
         
-        restoreSlider('tuneLogoSize', s.tuneLogoSize);
-        restoreSlider('tuneLogoX', s.tuneLogoX);
-        restoreSlider('tuneLogoY', s.tuneLogoY);
-        restoreSlider('tuneLogoRotate', s.tuneLogoRotate);
-        restoreSlider('tuneLogoOpacity', s.tuneLogoOpacity);
+        // HIER ZIT DE FIX VOOR OPACITY/OVERLAY
+        restoreSlider('tuneArtOpacity', s.tuneArtOpacity, 1.0); // Default 100%
+        restoreSlider('tuneArtOverlay', s.tuneArtOverlay, 0.0); // Default 0%
+        
+        restoreSlider('tuneLogoSize', s.tuneLogoSize, 100);
+        restoreSlider('tuneLogoX', s.tuneLogoX, 50);
+        restoreSlider('tuneLogoY', s.tuneLogoY, 10);
+        restoreSlider('tuneLogoRotate', s.tuneLogoRotate, 0);
+        restoreSlider('tuneLogoOpacity', s.tuneLogoOpacity, 1.0);
         setCheck('logoColorMode', s.logoColorMode);
         setVal('tuneLogoColor', s.tuneLogoColor || '#ffffff');
 
-        // BORDER MIGRATIE LOGICA:
-        // 1. Hebben we een nieuwe waarde? Gebruik die.
-        // 2. Geen nieuwe waarde? Check de oude checkbox. True = 5mm, False = 0mm.
-        // 3. Niets? Default 5mm.
+        // BORDER MIGRATIE LOGICA
         let savedBorder = s.tuneBorderWidth;
         if (savedBorder === undefined) {
-            if (s.labelShowBorder === false) savedBorder = 0;
-            else savedBorder = 5; 
+            // Als er geen border width is opgeslagen, zet hem op 0 (Full Bleed)
+            savedBorder = 0; 
         }
-        restoreSlider('tuneBorderWidth', savedBorder);
+        restoreSlider('tuneBorderWidth', savedBorder, 0);
 
         setVal('tuneAllergenColor', s.tuneAllergenColor || '#ffffff');
 

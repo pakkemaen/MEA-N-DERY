@@ -783,6 +783,13 @@
     <div class="p-2 bg-app-tertiary/50 rounded-lg border border-app-brand/5 space-y-3">
         <p class="text-[10px] font-bold uppercase text-app-secondary">Title Tuning</p>
         <div class="grid grid-cols-2 gap-2">
+
+            <div class="mb-2">
+            <label class="font-semibold text-app-header text-xs">Font Family</label>
+            <select id="tuneTitleFont" class="w-full p-1 border rounded-lg bg-app-tertiary text-xs text-app-header border-app-brand/20 focus:ring-1 focus:ring-app-brand font-sans">
+                </select>
+        </div>
+
             <div>
                 <div class="flex justify-between text-xs mb-1">
                 <label class="font-semibold text-app-header">Size L1</label>
@@ -981,7 +988,15 @@
                 <input type="range" id="tuneDescY" min="0" max="100" value="70" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
         </div>
-        
+
+        <div>
+            <div class="flex justify-between text-xs mb-1">
+                <label class="font-semibold text-app-header">Text Width (Container)</label>
+                <span id="disp-desc-width" class="font-mono text-xs text-gray-400">60%</span>
+            </div>
+            <input type="range" id="tuneDescWidth" min="10" max="100" value="60" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+        </div>
+
         <div class="grid grid-cols-2 gap-2">
             <div>
                 <div class="flex justify-between text-xs mb-1">
@@ -995,25 +1010,6 @@
                     <label class="font-semibold text-app-header text-xs">Font Size</label>
                     <span id="disp-desc-size" class="font-mono text-[10px] text-gray-400">6px</span>
                 </div>
-                <input type="range" id="tuneDescSize" min="2" max="20" value="6" step="0.1" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-            </div>
-        </div>
-
-        <div>
-            <div class="flex justify-between text-xs mb-1">
-                <label class="font-semibold text-app-header">Text Width (Container)</label>
-                <span id="disp-desc-width" class="font-mono text-xs text-gray-400">60%</span>
-            </div>
-            <input type="range" id="tuneDescWidth" min="10" max="100" value="60" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-            <div>
-                <label class="font-semibold text-app-header text-xs">Rotation</label>
-                <input type="range" id="tuneDescRotate" min="-180" max="180" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
-            </div>
-            <div>
-                <label class="font-semibold text-app-header text-xs">Font Size</label>
                 <input type="range" id="tuneDescSize" min="2" max="20" value="6" step="0.1" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
             </div>
         </div>

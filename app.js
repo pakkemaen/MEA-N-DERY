@@ -5173,7 +5173,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V16 - SLIDER BASED WORD BREAK & OFFSET)
+    // THEMA 2: SPECIAL (V17 - NO-WRAP FIX)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
@@ -5187,7 +5187,7 @@ function setLabelTheme(theme) {
        const titleSize1 = parseInt(getVal('tuneTitleSize')) || 100; 
        const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60; 
        const titleOffset = getVal('tuneTitleOffset') || 0;
-       const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8; // NIEUW: Default 8 (alles op 1 regel)
+       const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8; 
        
        const subX = getVal('tuneStyleGap') || 50; 
        const subY = getVal('tuneStyleY') || 35;   
@@ -5196,7 +5196,7 @@ function setLabelTheme(theme) {
        const subSize2 = parseInt(getVal('tuneStyleSize2')) || 10;
        const subRot = getVal('tuneStyleRotate') || 0;
        const subOffset = getVal('tuneStyleOffset') || 0;
-       const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; // NIEUW
+       const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; 
 
        const specsX = getVal('tuneSpecsX') || 50; 
        const specsY = getVal('tuneSpecsY') || 80; 
@@ -5222,22 +5222,17 @@ function setLabelTheme(theme) {
        
        const borderWidth = getVal('tuneBorderWidth') || 0;
 
-       // --- SLIDER SPLIT LOGIC ---
-       // Deze functie hakt de zin in tweeën op basis van het woordnummer (breakVal)
+       // --- SPLIT LOGIC ---
        const splitBySlider = (text, breakVal) => {
-           // Veiligheid: verwijder eventuele oude pipes voor de zekerheid
            const cleanText = text.replace(/\|/g, ''); 
-           const words = cleanText.split(' ').filter(w => w.trim() !== ''); // Split op spaties en negeer lege
+           const words = cleanText.split(' ').filter(w => w.trim() !== '');
            
-           // Als slider op Max (8) staat, of hoger dan aantal woorden -> Geen split
            if (breakVal >= 8 || breakVal >= words.length) {
                return { l1: cleanText, l2: "", isSplit: false };
            }
 
-           // Anders: Split op de index
            const part1 = words.slice(0, breakVal).join(' ');
            const part2 = words.slice(breakVal).join(' ');
-           
            return { l1: part1, l2: part2, isSplit: true };
        };
 
@@ -5277,6 +5272,7 @@ function setLabelTheme(theme) {
            logoInnerHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
        }
 
+       // --- HIER ZIT DE FIX: white-space: nowrap ---
        container.innerHTML = `
            ${bgHtml}
 
@@ -5290,10 +5286,10 @@ function setLabelTheme(theme) {
                        width: 100%;">
                 
                 <h1 class="font-header font-bold uppercase tracking-widest drop-shadow-lg leading-none"
-                    style="font-size: ${titleSize1}px; color: ${titleColor}; width: 100%; overflow-wrap: break-word; white-space: pre-wrap; margin: 0;">${tData.l1}</h1>
+                    style="font-size: ${titleSize1}px; color: ${titleColor}; width: 100%; white-space: nowrap; margin: 0;">${tData.l1}</h1>
                 
                 ${tData.isSplit ? `<h1 class="font-header font-bold uppercase tracking-widest drop-shadow-lg leading-none"
-                    style="font-size: ${titleSize2}px; color: ${titleColor}; width: 100%; overflow-wrap: break-word; white-space: pre-wrap; margin-top: 5px; transform: translateX(${titleOffset}%);">${tData.l2}</h1>` : ''}
+                    style="font-size: ${titleSize2}px; color: ${titleColor}; width: 100%; white-space: nowrap; margin-top: 5px; transform: translateX(${titleOffset}%);">${tData.l2}</h1>` : ''}
            </div>
 
            <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-center text-center" 
@@ -5302,10 +5298,10 @@ function setLabelTheme(theme) {
                        width: 100%;">
                 
                 <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
-                   style="font-size: ${subSize1}px; color: ${subColor}; width: 100%; overflow-wrap: break-word; margin: 0;">${sData.l1}</p>
+                   style="font-size: ${subSize1}px; color: ${subColor}; width: 100%; white-space: nowrap; margin: 0;">${sData.l1}</p>
                 
                 ${sData.isSplit ? `<p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
-                   style="font-size: ${subSize2}px; color: ${subColor}; width: 100%; overflow-wrap: break-word; margin-top: 5px; transform: translateX(${subOffset}%);">${sData.l2}</p>` : ''}
+                   style="font-size: ${subSize2}px; color: ${subColor}; width: 100%; white-space: nowrap; margin-top: 5px; transform: translateX(${subOffset}%);">${sData.l2}</p>` : ''}
            </div>
 
            <div class="absolute z-10 pointer-events-none" 

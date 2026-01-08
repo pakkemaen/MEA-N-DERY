@@ -5173,7 +5173,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V18 - TOP ANCHOR & FIXED L1 POSITION)
+    // THEMA 2: SPECIAL (V19 - SMART ANCHORING & FIXED POSITIONS)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
@@ -5226,11 +5226,9 @@ function setLabelTheme(theme) {
        const splitBySlider = (text, breakVal) => {
            const cleanText = text.replace(/\|/g, ''); 
            const words = cleanText.split(' ').filter(w => w.trim() !== '');
-           
            if (breakVal >= 8 || breakVal >= words.length) {
                return { l1: cleanText, l2: "", isSplit: false };
            }
-
            const part1 = words.slice(0, breakVal).join(' ');
            const part2 = words.slice(breakVal).join(' ');
            return { l1: part1, l2: part2, isSplit: true };
@@ -5238,6 +5236,17 @@ function setLabelTheme(theme) {
 
        const tData = splitBySlider(title, titleBreak);
        const sData = splitBySlider(sub, subBreak);
+
+       // --- SMART ALIGNMENT CALCULATOR ---
+       // Bepaalt ankerpunt op basis van X positie
+       const getSmartAlign = (xVal) => {
+           if (xVal < 40) return { align: 'left', transform: 'translate(0, 0)' }; // Links vast
+           if (xVal > 60) return { align: 'right', transform: 'translate(-100%, 0)' }; // Rechts vast
+           return { align: 'center', transform: 'translate(-50%, 0)' }; // Midden (Standaard)
+       };
+
+       const tAlign = getSmartAlign(titleX);
+       const sAlign = getSmartAlign(subX);
 
        // Specs data
        const showYeast = getCheck('labelShowYeast');
@@ -5272,10 +5281,6 @@ function setLabelTheme(theme) {
            logoInnerHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
        }
 
-       // --- GENERATE HTML (TOP ANCHOR FIX) ---
-       // Let op de 'transform: translate(-50%, 0)' hieronder.
-       // De '0' betekent: veranker aan de bovenkant.
-       
        container.innerHTML = `
            ${bgHtml}
 
@@ -5283,28 +5288,30 @@ function setLabelTheme(theme) {
                 style="box-shadow: inset 0 0 0 ${borderWidth}mm white;">
            </div>
 
-           <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-start text-center" 
+           <div class="absolute z-10 pointer-events-none flex flex-col justify-start" 
                 style="top: ${titleY}%; left: ${titleX}%; 
-                       transform: translate(-50%, 0) rotate(${titleRot}deg); 
-                       width: 100%;">
+                       text-align: ${tAlign.align};
+                       transform: ${tAlign.transform} rotate(${titleRot}deg); 
+                       width: auto; white-space: nowrap;">
                 
                 <h1 class="font-header font-bold uppercase tracking-widest drop-shadow-lg leading-none"
-                    style="font-size: ${titleSize1}px; color: ${titleColor}; width: 100%; white-space: nowrap; margin: 0;">${tData.l1}</h1>
+                    style="font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">${tData.l1}</h1>
                 
                 ${tData.isSplit ? `<h1 class="font-header font-bold uppercase tracking-widest drop-shadow-lg leading-none"
-                    style="font-size: ${titleSize2}px; color: ${titleColor}; width: 100%; white-space: nowrap; margin-top: 5px; transform: translateX(${titleOffset}%);">${tData.l2}</h1>` : ''}
+                    style="font-size: ${titleSize2}px; color: ${titleColor}; margin-top: 5px; transform: translateX(${titleOffset}%);">${tData.l2}</h1>` : ''}
            </div>
 
-           <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-start text-center" 
+           <div class="absolute z-10 pointer-events-none flex flex-col justify-start" 
                 style="top: ${subY}%; left: ${subX}%; 
-                       transform: translate(-50%, 0) rotate(${subRot}deg); 
-                       width: 100%;">
+                       text-align: ${sAlign.align};
+                       transform: ${sAlign.transform} rotate(${subRot}deg); 
+                       width: auto; white-space: nowrap;">
                 
                 <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
-                   style="font-size: ${subSize1}px; color: ${subColor}; width: 100%; white-space: nowrap; margin: 0;">${sData.l1}</p>
+                   style="font-size: ${subSize1}px; color: ${subColor}; margin: 0;">${sData.l1}</p>
                 
                 ${sData.isSplit ? `<p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
-                   style="font-size: ${subSize2}px; color: ${subColor}; width: 100%; white-space: nowrap; margin-top: 5px; transform: translateX(${subOffset}%);">${sData.l2}</p>` : ''}
+                   style="font-size: ${subSize2}px; color: ${subColor}; margin-top: 5px; transform: translateX(${subOffset}%);">${sData.l2}</p>` : ''}
            </div>
 
            <div class="absolute z-10 pointer-events-none" 

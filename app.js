@@ -4594,15 +4594,20 @@ function initLabelForge() {
         'tuneBorderWidth'
     ];
 
-    // Kleuren, Checkboxes EN FONTS
-    ['labelShowBorder', 'logoColorMode', 'tuneLogoColor', 'tuneTitleColor', 'tuneStyleColor', 'tuneSpecsColor', 'tuneAllergenColor', 
-     'tuneDescColor', 'tuneTitleFont', 'tuneStyleFont', 'tuneSpecsFont', 'tuneDescFont' 
+    // E. LIVE UPDATE LISTENERS (Kleuren, Checkboxes EN FONTS)
+    // Zorg dat de IDs 'tuneTitleFont', 'tuneStyleFont', enz. hierin staan!
+    [
+        'labelShowBorder', 'logoColorMode', 
+        'tuneLogoColor', 'tuneTitleColor', 'tuneStyleColor', 'tuneSpecsColor', 'tuneAllergenColor', 'tuneDescColor',
+        'tuneTitleFont', 'tuneStyleFont', 'tuneSpecsFont', 'tuneDescFont' // <--- DEZE ZIJN CRUCIAAL VOOR LIVE UPDATE
     ].forEach(id => {
         const el = document.getElementById(id);
-        if(el) el.addEventListener('input', () => {
-            const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
-            setLabelTheme(activeTheme);
-        });
+        if(el) {
+            el.addEventListener('input', () => {
+                const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
+                setLabelTheme(activeTheme);
+            });
+        }
     });
 
     // De Slimme Slider Logica
@@ -5225,10 +5230,11 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V25 - CUSTOM FONTS ENABLED)
+    // THEMA 2: SPECIAL (V25 - CUSTOM FONTS ACTIVATED)
     // =================================================================
     else if (theme === 'special') {
-       container.className = `relative w-full h-full overflow-hidden bg-white`; // font-sans weggehaald
+       // Let op: 'font-sans' is hier weggehaald zodat we volledige controle hebben
+       container.className = `relative w-full h-full overflow-hidden bg-white`; 
        container.style = ""; 
        
        // --- TUNING VALUES ---
@@ -5241,7 +5247,7 @@ function setLabelTheme(theme) {
        const titleOffset = getVal('tuneTitleOffset') || 0;
        const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8; 
        
-       // HAAL HIER DE FONTS OP
+       // --- FONT LOGIC: Haal de keuze op uit de dropdown ---
        const titleFont = getVal('tuneTitleFont') || 'Barlow Semi Condensed';
        
        const subX = getVal('tuneStyleGap') || 50; 
@@ -5252,6 +5258,8 @@ function setLabelTheme(theme) {
        const subRot = getVal('tuneStyleRotate') || 0;
        const subOffset = getVal('tuneStyleOffset') || 0;
        const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; 
+       
+       // --- FONT LOGIC ---
        const subFont = getVal('tuneStyleFont') || 'Barlow Semi Condensed';
 
        const descX = getVal('tuneDescX') || 50;
@@ -5260,6 +5268,8 @@ function setLabelTheme(theme) {
        const descRot = getVal('tuneDescRotate') || 0;
        const descSize = getVal('tuneDescSize') || 6;
        const descColor = getVal('tuneDescColor') || '#ffffff';
+       
+       // --- FONT LOGIC ---
        const descFont = getVal('tuneDescFont') || 'Playfair Display';
 
        const specsX = getVal('tuneSpecsX') || 50; 
@@ -5268,6 +5278,8 @@ function setLabelTheme(theme) {
        const specsColor = getVal('tuneSpecsColor') || '#ffffff';
        const allergenColor = getVal('tuneAllergenColor') || specsColor;
        const specsSize = getVal('tuneSpecsSize') || 4;
+       
+       // --- FONT LOGIC ---
        const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
 
        const artZoom = getVal('tuneArtZoom') || 1.0;

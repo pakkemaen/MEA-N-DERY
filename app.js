@@ -5157,7 +5157,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V21 - COLOR PICKER FIX & ROBUST MASKING)
+    // THEMA 2: SPECIAL (V22 - SMOOTH GLIDE FIX & LOGO COLOR)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
@@ -5223,15 +5223,15 @@ function setLabelTheme(theme) {
        const tData = splitBySlider(title, titleBreak);
        const sData = splitBySlider(sub, subBreak);
 
-       // --- SMART ANCHOR ---
-       const getSmartAlign = (xVal) => {
-           if (xVal < 40) return { align: 'left', transform: 'translate(0, 0)', origin: '0% 0%' }; 
-           if (xVal > 60) return { align: 'right', transform: 'translate(-100%, 0)', origin: '100% 0%' }; 
-           return { align: 'center', transform: 'translate(-50%, 0)', origin: '50% 0%' }; 
+       // --- SMOOTH ALIGNMENT (DE FIX) ---
+       // We gebruiken GEEN 'Smart' switching meer (<40/>60).
+       // We gebruiken een vaste Center-Top ankerplaats.
+       // Hierdoor glijdt de tekst soepel mee met de slider zonder te springen.
+       const fixedAlign = {
+           align: 'center',
+           transform: 'translate(-50%, 0)', // Horizontaal: Midden, Verticaal: Top
+           origin: '50% 0%' // Draaipunt: Midden-Boven
        };
-
-       const tAlign = getSmartAlign(titleX);
-       const sAlign = getSmartAlign(subX);
 
        // Specs data
        const showYeast = getCheck('labelShowYeast');
@@ -5259,15 +5259,11 @@ function setLabelTheme(theme) {
            bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
        }
 
-       // --- LOGO GENERATOR (ROBUST MASKING MET FALLBACK) ---
+       // --- LOGO GENERATOR ---
        let logoInnerHtml = '';
-       
-       // Bepaal de bron van het logo (we gebruiken de bron die in de standaardweergave werkt)
-       // Dit fixt het probleem als 'logo.png' niet bestaat maar 'favicon.png' wel
        const currentLogoSrc = document.getElementById('label-logo-img')?.src || 'logo.png';
 
        if (logoFlat) {
-           // We gebruiken de dynamische bron voor het masker
            logoInnerHtml = `
            <div style="width: 100%; height: 100%; 
                        background-color: ${logoColor}; 
@@ -5287,9 +5283,9 @@ function setLabelTheme(theme) {
 
            <div class="absolute z-10 pointer-events-none flex flex-col justify-start" 
                 style="top: ${titleY}%; left: ${titleX}%; 
-                       text-align: ${tAlign.align};
-                       transform-origin: ${tAlign.origin};
-                       transform: ${tAlign.transform} rotate(${titleRot}deg); 
+                       text-align: ${fixedAlign.align};
+                       transform-origin: ${fixedAlign.origin};
+                       transform: ${fixedAlign.transform} rotate(${titleRot}deg); 
                        width: auto; white-space: nowrap;">
                 
                 <h1 class="font-header font-bold uppercase tracking-widest drop-shadow-lg leading-none"
@@ -5301,9 +5297,9 @@ function setLabelTheme(theme) {
 
            <div class="absolute z-10 pointer-events-none flex flex-col justify-start" 
                 style="top: ${subY}%; left: ${subX}%; 
-                       text-align: ${sAlign.align};
-                       transform-origin: ${sAlign.origin};
-                       transform: ${sAlign.transform} rotate(${subRot}deg); 
+                       text-align: ${fixedAlign.align};
+                       transform-origin: ${fixedAlign.origin};
+                       transform: ${fixedAlign.transform} rotate(${subRot}deg); 
                        width: auto; white-space: nowrap;">
                 
                 <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"

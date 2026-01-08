@@ -5173,7 +5173,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V17 - NO-WRAP FIX)
+    // THEMA 2: SPECIAL (V18 - TOP ANCHOR & FIXED L1 POSITION)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
@@ -5272,7 +5272,10 @@ function setLabelTheme(theme) {
            logoInnerHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
        }
 
-       // --- HIER ZIT DE FIX: white-space: nowrap ---
+       // --- GENERATE HTML (TOP ANCHOR FIX) ---
+       // Let op de 'transform: translate(-50%, 0)' hieronder.
+       // De '0' betekent: veranker aan de bovenkant.
+       
        container.innerHTML = `
            ${bgHtml}
 
@@ -5280,9 +5283,9 @@ function setLabelTheme(theme) {
                 style="box-shadow: inset 0 0 0 ${borderWidth}mm white;">
            </div>
 
-           <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-center text-center" 
+           <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-start text-center" 
                 style="top: ${titleY}%; left: ${titleX}%; 
-                       transform: translate(-50%, -50%) rotate(${titleRot}deg); 
+                       transform: translate(-50%, 0) rotate(${titleRot}deg); 
                        width: 100%;">
                 
                 <h1 class="font-header font-bold uppercase tracking-widest drop-shadow-lg leading-none"
@@ -5292,9 +5295,9 @@ function setLabelTheme(theme) {
                     style="font-size: ${titleSize2}px; color: ${titleColor}; width: 100%; white-space: nowrap; margin-top: 5px; transform: translateX(${titleOffset}%);">${tData.l2}</h1>` : ''}
            </div>
 
-           <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-center text-center" 
+           <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-start text-center" 
                 style="top: ${subY}%; left: ${subX}%; 
-                       transform: translate(-50%, -50%) rotate(${subRot}deg); 
+                       transform: translate(-50%, 0) rotate(${subRot}deg); 
                        width: 100%;">
                 
                 <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
@@ -5319,7 +5322,7 @@ function setLabelTheme(theme) {
            </div>
 
            <div class="absolute z-20 pointer-events-none" 
-                style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, -50%) rotate(${logoRot}deg); opacity: ${logoOp};">
+                style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, 0) rotate(${logoRot}deg); opacity: ${logoOp};">
                 ${logoInnerHtml}
            </div>
        `;

@@ -5173,7 +5173,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V20 - ROTATION ORIGIN FIX)
+    // THEMA 2: SPECIAL (V21 - COLOR PICKER FIX & ROBUST MASKING)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
@@ -5217,6 +5217,8 @@ function setLabelTheme(theme) {
        const logoY = getVal('tuneLogoY') || 10;
        const logoRot = getVal('tuneLogoRotate') || 0; 
        const logoOp = getVal('tuneLogoOpacity') || 1.0; 
+       
+       // LOGO COLOR LOGIC
        const logoFlat = getCheck('logoColorMode');
        const logoColor = getVal('tuneLogoColor') || '#ffffff';
        
@@ -5237,25 +5239,11 @@ function setLabelTheme(theme) {
        const tData = splitBySlider(title, titleBreak);
        const sData = splitBySlider(sub, subBreak);
 
-       // --- SMART ANCHOR & ORIGIN CALCULATOR (DE FIX) ---
-       // We bepalen niet alleen de 'transform' (positie), maar ook de 'origin' (draaipunt).
-       // Hierdoor draait de tekst altijd om de bovenkant van L1, ongeacht hoe groot L2 wordt.
+       // --- SMART ANCHOR ---
        const getSmartAlign = (xVal) => {
-           if (xVal < 40) return { 
-               align: 'left', 
-               transform: 'translate(0, 0)', 
-               origin: '0% 0%' // Linkerbovenhoek
-           }; 
-           if (xVal > 60) return { 
-               align: 'right', 
-               transform: 'translate(-100%, 0)', 
-               origin: '100% 0%' // Rechterbovenhoek
-           }; 
-           return { 
-               align: 'center', 
-               transform: 'translate(-50%, 0)', 
-               origin: '50% 0%' // Middenboven
-           }; 
+           if (xVal < 40) return { align: 'left', transform: 'translate(0, 0)', origin: '0% 0%' }; 
+           if (xVal > 60) return { align: 'right', transform: 'translate(-100%, 0)', origin: '100% 0%' }; 
+           return { align: 'center', transform: 'translate(-50%, 0)', origin: '50% 0%' }; 
        };
 
        const tAlign = getSmartAlign(titleX);
@@ -5287,9 +5275,17 @@ function setLabelTheme(theme) {
            bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
        }
 
+       // --- LOGO GENERATOR (ROBUST MASKING) ---
        let logoInnerHtml = '';
        if (logoFlat) {
-           logoInnerHtml = `<div style="width: 100%; height: 100%; background-color: ${logoColor}; -webkit-mask-image: url(logo.png); mask-image: url(logo.png); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; mask-position: center; -webkit-mask-origin: content-box;"></div>`;
+           // We gebruiken een geavanceerde mask syntax die op alle moderne browsers werkt
+           // Het logo wordt gebruikt als "uitknippatroon" voor een vlak met jouw gekozen kleur.
+           logoInnerHtml = `
+           <div style="width: 100%; height: 100%; 
+                       background-color: ${logoColor}; 
+                       -webkit-mask: url(logo.png) no-repeat center / contain;
+                       mask: url(logo.png) no-repeat center / contain;">
+           </div>`;
        } else {
            logoInnerHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
        }

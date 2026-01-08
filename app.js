@@ -5157,7 +5157,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V22 - SMOOTH GLIDE FIX & LOGO COLOR)
+    // THEMA 2: SPECIAL (V23 - BACK STORY ADDED TO SPECS)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
@@ -5202,7 +5202,6 @@ function setLabelTheme(theme) {
        const logoRot = getVal('tuneLogoRotate') || 0; 
        const logoOp = getVal('tuneLogoOpacity') || 1.0; 
        
-       // LOGO COLOR LOGIC
        const logoFlat = getCheck('logoColorMode');
        const logoColor = getVal('tuneLogoColor') || '#ffffff';
        
@@ -5223,14 +5222,11 @@ function setLabelTheme(theme) {
        const tData = splitBySlider(title, titleBreak);
        const sData = splitBySlider(sub, subBreak);
 
-       // --- SMOOTH ALIGNMENT (DE FIX) ---
-       // We gebruiken GEEN 'Smart' switching meer (<40/>60).
-       // We gebruiken een vaste Center-Top ankerplaats.
-       // Hierdoor glijdt de tekst soepel mee met de slider zonder te springen.
+       // --- SMOOTH ALIGNMENT ---
        const fixedAlign = {
            align: 'center',
-           transform: 'translate(-50%, 0)', // Horizontaal: Midden, Verticaal: Top
-           origin: '50% 0%' // Draaipunt: Midden-Boven
+           transform: 'translate(-50%, 0)', 
+           origin: '50% 0%' 
        };
 
        // Specs data
@@ -5312,14 +5308,19 @@ function setLabelTheme(theme) {
            <div class="absolute z-10 pointer-events-none" 
                 style="left: ${specsX}%; top: ${specsY}%; transform: translate(-50%, -50%) rotate(${specsRot}deg);">
                 <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.8); text-align: center;">
+                   
                    <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-mono justify-center">
                        <span class="opacity-70">ABV</span> <span class="font-bold">${abv}%</span>
                        ${fg ? `<span class="opacity-70">FG</span> <span class="font-bold">${fg}</span>` : ''}
                        <span class="opacity-70">Vol</span> <span class="font-bold">${vol}ml</span>
                        <span class="opacity-70">Date</span> <span class="font-bold">${dateVal}</span>
                    </div>
+
                    ${extraInfoHtml ? `<div class="mb-2 border-t border-white/20 pt-1 space-y-0.5">${extraInfoHtml}</div>` : ''}
-                   ${showDetails && details ? `<p class="opacity-90 max-w-[200px] mx-auto leading-tight font-serif italic border-t border-white/20 pt-1">${details}</p>` : ''}
+                   
+                   ${desc ? `<p class="mb-2 opacity-80 font-serif italic leading-tight max-w-[220px] mx-auto whitespace-normal">${desc}</p>` : ''}
+
+                   ${showDetails && details ? `<p class="opacity-90 max-w-[200px] mx-auto leading-tight font-serif italic border-t border-white/20 pt-1 whitespace-normal">${details}</p>` : ''}
                </div>
            </div>
 

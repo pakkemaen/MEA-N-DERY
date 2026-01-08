@@ -4798,7 +4798,7 @@ function updateLabelPreviewText() {
     }
 }
 
-// Data uit recept laden (MET SMART RECOVERY)
+// Data uit recept laden (MET SMART RECOVERY & OFFSET FIX)
 function loadLabelFromBrew(e) {
     const brewId = e.target.value;
     if (!brewId) return;
@@ -4810,24 +4810,20 @@ function loadLabelFromBrew(e) {
     const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
     const setCheck = (id, val) => { const el = document.getElementById(id); if(el) el.checked = val; };
 
-    // 1. STANDAARD WAARDEN BEREKENEN (Als fallback)
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
     const generatedDetails = ings.map(i => i.name).join(' • ');
     
-    let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist') || i.name.toLowerCase().includes('lalvin') || i.name.toLowerCase().includes('safale'));
+    let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist'));
     let generatedYeast = yeastItem ? yeastItem.name.replace(/yeast|gist/gi, '').trim() : 'Unknown';
 
     let honeyItem = ings.find(i => i.name.toLowerCase().includes('honey') || i.name.toLowerCase().includes('honing'));
     let generatedHoney = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
 
-    // --- CHECK: ZIJN ER OPGESLAGEN INSTELLINGEN? ---
     if (brew.labelSettings) {
         const s = brew.labelSettings;
         
-        // 1. Content herstellen
         setVal('labelTitle', s.title);
         setVal('labelSubtitle', s.subtitle);
-        // Kleuren herstellen
         setVal('tuneTitleColor', s.tuneTitleColor || '#8F8C79');
         setVal('tuneStyleColor', s.tuneStyleColor || '#9ca3af');
         setVal('labelAbv', s.abv);
@@ -4835,28 +4831,21 @@ function loadLabelFromBrew(e) {
         setVal('labelVol', s.vol);
         setVal('labelDate', s.date);
         setVal('labelDescription', s.desc);
-        
-        // *** DE FIX: Als opgeslagen lijst leeg is, gebruik de nieuwe scan ***
         setVal('labelDetails', s.details || generatedDetails); 
-        
         setVal('labelAllergens', s.allergens || ''); 
         
         if (s.persona) setVal('label-persona-select', s.persona);
 
-        // 2. Toggles herstellen
         setCheck('labelShowYeast', s.showYeast);
         setCheck('labelShowHoney', s.showHoney);
         setCheck('labelShowDetails', s.showDetails);
 
-        // 3. Verborgen velden herstellen (ook hier fallback gebruiken)
         setText('displayLabelYeast', s.yeastName || generatedYeast);
         setText('displayLabelHoney', s.honeyName || generatedHoney);
 
-        // 4. Sliders herstellen
         const restoreSlider = (id, val, fallback) => {
             const el = document.getElementById(id);
             if(el) {
-                // Als er een opgeslagen waarde is, gebruik die. Anders de fallback.
                 el.value = (val !== undefined) ? val : fallback;
                 el.dispatchEvent(new Event('input')); 
             }
@@ -4867,12 +4856,16 @@ function loadLabelFromBrew(e) {
         restoreSlider('tuneTitleX', s.tuneTitleX, 50);
         restoreSlider('tuneTitleY', s.tuneTitleY, 20);
         restoreSlider('tuneTitleRotate', s.tuneTitleRotate, 0);
+        restoreSlider('tuneTitleOffset', s.tuneTitleOffset, 0); // <--- TOEGEVOEGD
+        restoreSlider('tuneTitleBreak', s.tuneTitleBreak, 8);   // <--- TOEGEVOEGD
         
         restoreSlider('tuneStyleY', s.tuneStyleY, 35);
         restoreSlider('tuneStyleSize', s.tuneStyleSize, 14);
         restoreSlider('tuneStyleSize2', s.tuneStyleSize2, 10);
         restoreSlider('tuneStyleGap', s.tuneStyleGap, 50);
         restoreSlider('tuneStyleRotate', s.tuneStyleRotate, 0);
+        restoreSlider('tuneStyleOffset', s.tuneStyleOffset, 0); // <--- TOEGEVOEGD
+        restoreSlider('tuneStyleBreak', s.tuneStyleBreak, 8);   // <--- TOEGEVOEGD
 
         restoreSlider('tuneSpecsSize', s.tuneSpecsSize, 4);
         restoreSlider('tuneSpecsX', s.tuneSpecsX, 50);
@@ -4880,16 +4873,13 @@ function loadLabelFromBrew(e) {
         setVal('tuneSpecsColor', s.tuneSpecsColor || '#ffffff');
         restoreSlider('tuneSpecsRotate', s.tuneSpecsRotate, 0);
 
-        // --- ARTWORK DEFAULTS FIX ---
-        // Als er geen opgeslagen waarde is (oude save), dwingen we de nieuwe defaults af
         restoreSlider('tuneArtZoom', s.tuneArtZoom, 1.0);
         restoreSlider('tuneArtX', s.tuneArtX, 50);
         restoreSlider('tuneArtY', s.tuneArtY, 50);
         restoreSlider('tuneArtRotate', s.tuneArtRotate, 0);
         
-        // HIER ZIT DE FIX VOOR OPACITY/OVERLAY
-        restoreSlider('tuneArtOpacity', s.tuneArtOpacity, 1.0); // Default 100%
-        restoreSlider('tuneArtOverlay', s.tuneArtOverlay, 0.0); // Default 0%
+        restoreSlider('tuneArtOpacity', s.tuneArtOpacity, 1.0);
+        restoreSlider('tuneArtOverlay', s.tuneArtOverlay, 0.0);
         
         restoreSlider('tuneLogoSize', s.tuneLogoSize, 100);
         restoreSlider('tuneLogoX', s.tuneLogoX, 50);
@@ -4899,17 +4889,12 @@ function loadLabelFromBrew(e) {
         setCheck('logoColorMode', s.logoColorMode);
         setVal('tuneLogoColor', s.tuneLogoColor || '#ffffff');
 
-        // BORDER MIGRATIE LOGICA
         let savedBorder = s.tuneBorderWidth;
-        if (savedBorder === undefined) {
-            // Als er geen border width is opgeslagen, zet hem op 0 (Full Bleed)
-            savedBorder = 0; 
-        }
+        if (savedBorder === undefined) { savedBorder = 0; }
         restoreSlider('tuneBorderWidth', savedBorder, 0);
 
         setVal('tuneAllergenColor', s.tuneAllergenColor || '#ffffff');
 
-        // 5. Afbeelding herstellen
         if (s.imageSrc) {
             window.currentLabelImageSrc = s.imageSrc;
             const imgDisplay = document.getElementById('label-img-display');
@@ -4918,27 +4903,20 @@ function loadLabelFromBrew(e) {
                 imgDisplay.classList.remove('hidden');
             }
         }
-
         showToast("Loaded saved label design.", "info");
 
     } else {
-        // --- GEEN SAVED DATA? GEBRUIK DE STANDAARD LOGICA (CENTER ORIGIN DEFAULTS) ---
-        
+        // --- DEFAULTS ---
         setVal('labelTitle', brew.recipeName);
-        
-        // ... (stijl bepaling logica mag je laten staan) ...
         let style = "Traditional Mead";
         if (brew.recipeMarkdown.toLowerCase().includes('melomel')) style = "Melomel (Fruit Mead)";
-        // ... etc ...
         setVal('labelSubtitle', style);
 
-        // Data
         setVal('labelAbv', brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '');
         setVal('labelFg', brew.logData?.actualFG || brew.logData?.targetFG || '');
         setVal('labelVol', '330');
-        setVal('labelDate', brew.logData?.brewDate || new Date().toLocaleDateString('nl-NL')); // Let op: nl-NL datum
+        setVal('labelDate', brew.logData?.brewDate || new Date().toLocaleDateString('nl-NL'));
 
-        // Quote & Details
         let foundQuote = "";
         const quoteMatch = brew.recipeMarkdown.match(/^>\s*(["']?)(.*?)\1\s*$/m);
         if (quoteMatch && quoteMatch[2]) foundQuote = quoteMatch[2].trim();
@@ -4949,8 +4927,7 @@ function loadLabelFromBrew(e) {
         setText('displayLabelHoney', generatedHoney);
         setVal('labelDetails', generatedDetails);
 
-        // Kleuren & Allergens
-        setVal('tuneTitleColor', '#ffffff'); // Wit is vaak beter op artwork
+        setVal('tuneTitleColor', '#ffffff');
         setVal('tuneStyleColor', '#cccccc');
         setVal('tuneSpecsColor', '#ffffff');
         setVal('tuneAllergenColor', '#ffffff');
@@ -4959,49 +4936,45 @@ function loadLabelFromBrew(e) {
         setVal('labelAllergens', hasSulfites ? 'Contains Sulfites' : '');
         setCheck('logoColorMode', false);
 
-        // --- DE NIEUWE SLIDER STANDAARDEN (CENTERED) ---
         const resetSlider = (id, val) => { const el = document.getElementById(id); if(el) { el.value = val; el.dispatchEvent(new Event('input')); }};
         
-        // LOGO (Bovenaan in het midden)
         resetSlider('tuneLogoSize', 100);
-        resetSlider('tuneLogoX', 50);       // 50% = Midden
-        resetSlider('tuneLogoY', 15);       // 15% = Bovenin
+        resetSlider('tuneLogoX', 50);
+        resetSlider('tuneLogoY', 15);
         resetSlider('tuneLogoRotate', 0);
         resetSlider('tuneLogoOpacity', 1.0);
 
-        // TITEL (Iets onder het logo)
         resetSlider('tuneTitleSize', 100);
         resetSlider('tuneTitleSize2', 60);
-        resetSlider('tuneTitleX', 50);      // 50% = Midden
-        resetSlider('tuneTitleY', 40);      // 40% = Boven het midden
+        resetSlider('tuneTitleX', 50);
+        resetSlider('tuneTitleY', 40);
         resetSlider('tuneTitleRotate', 0);
+        resetSlider('tuneTitleOffset', 0); // <--- TOEGEVOEGD
+        resetSlider('tuneTitleBreak', 8);  // <--- TOEGEVOEGD
 
-        // STIJL (Onder de titel)
         resetSlider('tuneStyleSize', 14);
         resetSlider('tuneStyleSize2', 10);
-        resetSlider('tuneStyleGap', 50);    // 50% = Midden
-        resetSlider('tuneStyleY', 55);      // 55% = Net onder het midden
+        resetSlider('tuneStyleGap', 50);
+        resetSlider('tuneStyleY', 55);
         resetSlider('tuneStyleRotate', 0);
+        resetSlider('tuneStyleOffset', 0); // <--- TOEGEVOEGD
+        resetSlider('tuneStyleBreak', 8);  // <--- TOEGEVOEGD
 
-        // SPECS (Onderaan)
         resetSlider('tuneSpecsSize', 4);
-        resetSlider('tuneSpecsX', 50);      // 50% = Midden
-        resetSlider('tuneSpecsY', 85);      // 85% = Onderaan
+        resetSlider('tuneSpecsX', 50);
+        resetSlider('tuneSpecsY', 85);
         resetSlider('tuneSpecsRotate', 0);
 
-        // ARTWORK (Precies in het midden, helder en zonder rand)
         resetSlider('tuneArtZoom', 1.0);
         resetSlider('tuneArtX', 50);        
         resetSlider('tuneArtY', 50);        
-        resetSlider('tuneArtOpacity', 1.0); // 100% Zichtbaar
-        resetSlider('tuneArtOverlay', 0.0); // 0% Dimmer (Helder)
+        resetSlider('tuneArtOpacity', 1.0);
+        resetSlider('tuneArtOverlay', 0.0);
         resetSlider('tuneArtRotate', 0);
 
-        // AANGEPAST:
-        resetSlider('tuneBorderWidth', 0); // Standaard 0mm (Full Bleed)
+        resetSlider('tuneBorderWidth', 0);
     }
 
-    // Forceer update van het thema
     const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
     if(typeof setLabelTheme === 'function') setLabelTheme(activeTheme);
 }
@@ -5286,16 +5259,20 @@ function setLabelTheme(theme) {
            bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
        }
 
-       // --- LOGO GENERATOR (ROBUST MASKING) ---
+       // --- LOGO GENERATOR (ROBUST MASKING MET FALLBACK) ---
        let logoInnerHtml = '';
+       
+       // Bepaal de bron van het logo (we gebruiken de bron die in de standaardweergave werkt)
+       // Dit fixt het probleem als 'logo.png' niet bestaat maar 'favicon.png' wel
+       const currentLogoSrc = document.getElementById('label-logo-img')?.src || 'logo.png';
+
        if (logoFlat) {
-           // We gebruiken een geavanceerde mask syntax die op alle moderne browsers werkt
-           // Het logo wordt gebruikt als "uitknippatroon" voor een vlak met jouw gekozen kleur.
+           // We gebruiken de dynamische bron voor het masker
            logoInnerHtml = `
            <div style="width: 100%; height: 100%; 
                        background-color: ${logoColor}; 
-                       -webkit-mask: url(logo.png) no-repeat center / contain;
-                       mask: url(logo.png) no-repeat center / contain;">
+                       -webkit-mask: url(${currentLogoSrc}) no-repeat center / contain;
+                       mask: url(${currentLogoSrc}) no-repeat center / contain;">
            </div>`;
        } else {
            logoInnerHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
@@ -5708,7 +5685,7 @@ function printLabelsSheet() {
     win.document.close();
 }
 
-// --- LABEL OPSLAAN FUNCTIE (CORRECTE VERSIE) ---
+// --- LABEL OPSLAAN FUNCTIE (GEFIXT: OFFSET & BREAK TOEGEVOEGD) ---
 window.saveLabelToBrew = async function() {
     const select = document.getElementById('labelRecipeSelect');
     const brewId = select?.value; 
@@ -5746,19 +5723,25 @@ window.saveLabelToBrew = async function() {
         yeastName: getText('displayLabelYeast'),
         honeyName: getText('displayLabelHoney'),
 
+        // --- TITLE TUNING (NU COMPLEET) ---
         tuneTitleSize: getVal('tuneTitleSize'),
         tuneTitleSize2: getVal('tuneTitleSize2'),
         tuneTitleX: getVal('tuneTitleX'),
         tuneTitleY: getVal('tuneTitleY'),
         tuneTitleColor: getVal('tuneTitleColor'), 
         tuneTitleRotate: getVal('tuneTitleRotate'),
+        tuneTitleOffset: getVal('tuneTitleOffset'),
+        tuneTitleBreak: getVal('tuneTitleBreak'),
         
+        // --- STYLE TUNING (NU COMPLEET) ---
         tuneStyleY: getVal('tuneStyleY'),
         tuneStyleSize: getVal('tuneStyleSize'),
         tuneStyleSize2: getVal('tuneStyleSize2'),
         tuneStyleGap: getVal('tuneStyleGap'),
         tuneStyleColor: getVal('tuneStyleColor'),
         tuneStyleRotate: getVal('tuneStyleRotate'),
+        tuneStyleOffset: getVal('tuneStyleOffset'),
+        tuneStyleBreak: getVal('tuneStyleBreak'),
         
         tuneSpecsSize: getVal('tuneSpecsSize'),
         tuneSpecsX: getVal('tuneSpecsX'),
@@ -5781,7 +5764,7 @@ window.saveLabelToBrew = async function() {
         logoColorMode: getCheck('logoColorMode'),
         tuneLogoColor: getVal('tuneLogoColor'),
 
-        tuneBorderWidth: getVal('tuneBorderWidth'), // <--- Opslaan als getal
+        tuneBorderWidth: getVal('tuneBorderWidth'),
 
         tuneAllergenColor: getVal('tuneAllergenColor'),
         

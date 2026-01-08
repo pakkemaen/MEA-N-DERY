@@ -5173,7 +5173,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V19 - SMART ANCHORING & FIXED POSITIONS)
+    // THEMA 2: SPECIAL (V20 - ROTATION ORIGIN FIX)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
@@ -5237,12 +5237,25 @@ function setLabelTheme(theme) {
        const tData = splitBySlider(title, titleBreak);
        const sData = splitBySlider(sub, subBreak);
 
-       // --- SMART ALIGNMENT CALCULATOR ---
-       // Bepaalt ankerpunt op basis van X positie
+       // --- SMART ANCHOR & ORIGIN CALCULATOR (DE FIX) ---
+       // We bepalen niet alleen de 'transform' (positie), maar ook de 'origin' (draaipunt).
+       // Hierdoor draait de tekst altijd om de bovenkant van L1, ongeacht hoe groot L2 wordt.
        const getSmartAlign = (xVal) => {
-           if (xVal < 40) return { align: 'left', transform: 'translate(0, 0)' }; // Links vast
-           if (xVal > 60) return { align: 'right', transform: 'translate(-100%, 0)' }; // Rechts vast
-           return { align: 'center', transform: 'translate(-50%, 0)' }; // Midden (Standaard)
+           if (xVal < 40) return { 
+               align: 'left', 
+               transform: 'translate(0, 0)', 
+               origin: '0% 0%' // Linkerbovenhoek
+           }; 
+           if (xVal > 60) return { 
+               align: 'right', 
+               transform: 'translate(-100%, 0)', 
+               origin: '100% 0%' // Rechterbovenhoek
+           }; 
+           return { 
+               align: 'center', 
+               transform: 'translate(-50%, 0)', 
+               origin: '50% 0%' // Middenboven
+           }; 
        };
 
        const tAlign = getSmartAlign(titleX);
@@ -5291,6 +5304,7 @@ function setLabelTheme(theme) {
            <div class="absolute z-10 pointer-events-none flex flex-col justify-start" 
                 style="top: ${titleY}%; left: ${titleX}%; 
                        text-align: ${tAlign.align};
+                       transform-origin: ${tAlign.origin};
                        transform: ${tAlign.transform} rotate(${titleRot}deg); 
                        width: auto; white-space: nowrap;">
                 
@@ -5304,6 +5318,7 @@ function setLabelTheme(theme) {
            <div class="absolute z-10 pointer-events-none flex flex-col justify-start" 
                 style="top: ${subY}%; left: ${subX}%; 
                        text-align: ${sAlign.align};
+                       transform-origin: ${sAlign.origin};
                        transform: ${sAlign.transform} rotate(${subRot}deg); 
                        width: auto; white-space: nowrap;">
                 

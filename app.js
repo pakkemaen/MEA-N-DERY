@@ -3810,7 +3810,8 @@ async function loadLabelAssets() {
         if (!labelAssets.fonts) labelAssets.fonts = [];
 
         renderLabelAssetsSettings();
-        loadGoogleFontsInHeader(); 
+        loadGoogleFontsInHeader();
+        populateLabelFontsDropdowns()
         
     } catch (e) {
         console.error("Error loading label assets:", e);
@@ -4505,10 +4506,53 @@ const builtInLabelFormats = {
 let userLabelFormats = {}; // Wordt gevuld vanuit Firestore
 
 // 2. INITIALISATIE
+// --- NIEUWE FUNCTIE: VUL DE FONT DROPDOWNS (ALLEEN SETTINGS) ---
+function populateLabelFontsDropdowns() {
+    // 1. Definieer de IDs van de 4 dropdowns
+    const ids = ['tuneTitleFont', 'tuneStyleFont', 'tuneSpecsFont', 'tuneDescFont'];
+    
+    // 2. Haal de eigen fonts op (of lege lijst als nog niet geladen)
+    const userFonts = (typeof labelAssets !== 'undefined' && labelAssets.fonts) ? labelAssets.fonts : [];
+
+    ids.forEach(id => {
+        const select = document.getElementById(id);
+        if (!select) return;
+        
+        const currentVal = select.value; // Onthoud keuze
+        select.innerHTML = ''; // Maak leeg
+        
+        // Check of er fonts zijn
+        if (userFonts.length === 0) {
+            const opt = document.createElement('option');
+            opt.text = "-- No Fonts in Settings --";
+            select.appendChild(opt);
+            return;
+        }
+
+        // Voeg alleen de fonts uit Settings toe
+        userFonts.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f.name;
+            opt.textContent = f.name;
+            opt.style.fontFamily = f.name; // Preview in de lijst
+            select.appendChild(opt);
+        });
+        
+        // Herstel de gekozen waarde (als die nog in de lijst staat)
+        // Anders pakken we automatisch de eerste uit de lijst
+        if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
+            select.value = currentVal;
+        } else if (select.options.length > 0) {
+            select.selectedIndex = 0;
+        }
+    });
+}
+
 function initLabelForge() {
-    // 1. VUL DE DROPDOWN DIRECT (Met de standaard formaten Avery etc.)
+    // 1. VUL DE DROPDOWN DIRECT
     // Dit lost het probleem op dat de lijst leeg blijft.
-    populateLabelPaperDropdown(); 
+    populateLabelFontsDropdowns();
+    populateLabelPaperDropdown();
 
     // 2. Haal recepten en custom formaten op
     populateLabelRecipeDropdown();
@@ -4550,8 +4594,10 @@ function initLabelForge() {
         'tuneBorderWidth'
     ];
 
-    // Kleuren en checkboxes
-    ['labelShowBorder', 'logoColorMode', 'tuneLogoColor', 'tuneTitleColor', 'tuneStyleColor', 'tuneSpecsColor', 'tuneAllergenColor', 'tuneDescColor'].forEach(id => {
+    // Kleuren, Checkboxes EN FONTS
+    ['labelShowBorder', 'logoColorMode', 'tuneLogoColor', 'tuneTitleColor', 'tuneStyleColor', 'tuneSpecsColor', 'tuneAllergenColor', 
+     'tuneDescColor', 'tuneTitleFont', 'tuneStyleFont', 'tuneSpecsFont', 'tuneDescFont' 
+    ].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.addEventListener('input', () => {
             const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
@@ -5179,10 +5225,10 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V24 - FREEDOM FOR BACK STORY)
+    // THEMA 2: SPECIAL (V25 - CUSTOM FONTS ENABLED)
     // =================================================================
     else if (theme === 'special') {
-       container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
+       container.className = `relative w-full h-full overflow-hidden bg-white`; // font-sans weggehaald
        container.style = ""; 
        
        // --- TUNING VALUES ---
@@ -5195,6 +5241,9 @@ function setLabelTheme(theme) {
        const titleOffset = getVal('tuneTitleOffset') || 0;
        const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8; 
        
+       // HAAL HIER DE FONTS OP
+       const titleFont = getVal('tuneTitleFont') || 'Barlow Semi Condensed';
+       
        const subX = getVal('tuneStyleGap') || 50; 
        const subY = getVal('tuneStyleY') || 35;   
        const subColor = getVal('tuneStyleColor') || '#cccccc';
@@ -5203,14 +5252,15 @@ function setLabelTheme(theme) {
        const subRot = getVal('tuneStyleRotate') || 0;
        const subOffset = getVal('tuneStyleOffset') || 0;
        const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; 
+       const subFont = getVal('tuneStyleFont') || 'Barlow Semi Condensed';
 
-       // --- NIEUW: STORY / DESCRIPTION SETTINGS ---
        const descX = getVal('tuneDescX') || 50;
        const descY = getVal('tuneDescY') || 70;
-       const descWidth = getVal('tuneDescWidth') || 60; // Breedte van de tekstcontainer
+       const descWidth = getVal('tuneDescWidth') || 60;
        const descRot = getVal('tuneDescRotate') || 0;
        const descSize = getVal('tuneDescSize') || 6;
        const descColor = getVal('tuneDescColor') || '#ffffff';
+       const descFont = getVal('tuneDescFont') || 'Playfair Display';
 
        const specsX = getVal('tuneSpecsX') || 50; 
        const specsY = getVal('tuneSpecsY') || 80; 
@@ -5218,6 +5268,7 @@ function setLabelTheme(theme) {
        const specsColor = getVal('tuneSpecsColor') || '#ffffff';
        const allergenColor = getVal('tuneAllergenColor') || specsColor;
        const specsSize = getVal('tuneSpecsSize') || 4;
+       const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
 
        const artZoom = getVal('tuneArtZoom') || 1.0;
        const artX = getVal('tuneArtX') || 50; 
@@ -5312,12 +5363,13 @@ function setLabelTheme(theme) {
                        text-align: ${fixedAlign.align};
                        transform-origin: ${fixedAlign.origin};
                        transform: ${fixedAlign.transform} rotate(${titleRot}deg); 
-                       width: auto; white-space: nowrap;">
+                       width: auto; white-space: nowrap;
+                       font-family: '${titleFont}', sans-serif;">
                 
-                <h1 class="font-header font-bold uppercase tracking-widest drop-shadow-lg leading-none"
+                <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none"
                     style="font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">${tData.l1}</h1>
                 
-                ${tData.isSplit ? `<h1 class="font-header font-bold uppercase tracking-widest drop-shadow-lg leading-none"
+                ${tData.isSplit ? `<h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none"
                     style="font-size: ${titleSize2}px; color: ${titleColor}; margin-top: 5px; transform: translateX(${titleOffset}%);">${tData.l2}</h1>` : ''}
            </div>
 
@@ -5326,7 +5378,8 @@ function setLabelTheme(theme) {
                        text-align: ${fixedAlign.align};
                        transform-origin: ${fixedAlign.origin};
                        transform: ${fixedAlign.transform} rotate(${subRot}deg); 
-                       width: auto; white-space: nowrap;">
+                       width: auto; white-space: nowrap;
+                       font-family: '${subFont}', sans-serif;">
                 
                 <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
                    style="font-size: ${subSize1}px; color: ${subColor}; margin: 0;">${sData.l1}</p>
@@ -5338,28 +5391,30 @@ function setLabelTheme(theme) {
            ${desc ? `
            <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-center text-center" 
                 style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%;
-                       transform: translate(-50%, -50%) rotate(${descRot}deg);">
+                       transform: translate(-50%, -50%) rotate(${descRot}deg);
+                       font-family: '${descFont}', serif;">
                 
-                <p class="font-serif italic leading-tight drop-shadow-md whitespace-normal"
+                <p class="italic leading-tight drop-shadow-md whitespace-normal"
                    style="font-size: ${descSize}px; color: ${descColor};">
                    ${desc}
                 </p>
            </div>` : ''}
 
            <div class="absolute z-10 pointer-events-none" 
-                style="left: ${specsX}%; top: ${specsY}%; transform: translate(-50%, -50%) rotate(${specsRot}deg);">
+                style="left: ${specsX}%; top: ${specsY}%; transform: translate(-50%, -50%) rotate(${specsRot}deg);
+                       font-family: '${specsFont}', monospace;">
                 <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.8); text-align: center;">
                    
-                   <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-mono justify-center">
-                       <span class="opacity-70">ABV</span> <span class="font-bold">${abv}%</span>
-                       ${fg ? `<span class="opacity-70">FG</span> <span class="font-bold">${fg}</span>` : ''}
-                       <span class="opacity-70">Vol</span> <span class="font-bold">${vol}ml</span>
-                       <span class="opacity-70">Date</span> <span class="font-bold">${dateVal}</span>
+                   <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-bold justify-center">
+                       <span class="opacity-70">ABV</span> <span>${abv}%</span>
+                       ${fg ? `<span class="opacity-70">FG</span> <span>${fg}</span>` : ''}
+                       <span class="opacity-70">Vol</span> <span>${vol}ml</span>
+                       <span class="opacity-70">Date</span> <span>${dateVal}</span>
                    </div>
 
-                   ${extraInfoHtml ? `<div class="mb-2 border-t border-white/20 pt-1 space-y-0.5">${extraInfoHtml}</div>` : ''}
+                   ${extraInfoHtml ? `<div class="mb-2 border-t border-white/20 pt-1 space-y-0.5 font-sans">${extraInfoHtml}</div>` : ''}
                    
-                   ${showDetails && details ? `<p class="opacity-90 max-w-[200px] mx-auto leading-tight font-serif italic border-t border-white/20 pt-1 whitespace-normal">${details}</p>` : ''}
+                   ${showDetails && details ? `<p class="opacity-90 max-w-[200px] mx-auto leading-tight italic border-t border-white/20 pt-1 whitespace-normal">${details}</p>` : ''}
                </div>
            </div>
 

@@ -4541,8 +4541,8 @@ function initLabelForge() {
     
     // D. TUNING & SLIDERS (MET KLEUREN)
     const sliders = [
-        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleColor', 'tuneTitleRotate',
-        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleColor', 'tuneStyleRotate',
+        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleColor', 'tuneTitleRotate', 'tuneTitleOffset', 'tuneTitleBreak',
+        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleColor', 'tuneStyleRotate', 'tuneStyleOffset', 'tuneStyleBreak',
         'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsColor', 'tuneSpecsRotate', 'tuneAllergenColor',
         'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity', 'tuneArtRotate', 'tuneArtOverlay',
         'tuneLogoSize', 'tuneLogoX', 'tuneLogoY', 'tuneLogoRotate', 'tuneLogoOpacity',
@@ -4575,10 +4575,12 @@ function initLabelForge() {
                 const disp = document.getElementById(dispId);
                 
                 if(disp) {
-                    // EENHEDEN BEPALEN
                     if(id.includes('Rotate')) {
-                        // Rotatie in graden
                         disp.textContent = e.target.value + '°';
+                    } else if(id.includes('Break')) {
+                        // Als de slider op max staat (8), zeggen we "All" (geen break)
+                        disp.textContent = (e.target.value >= 8) ? "All (No Break)" : "Word " + e.target.value;
+                    } 
                     } else if(id.includes('Width')) {
                         disp.textContent = e.target.value + 'mm';
                     } else if(id.includes('Opacity') || id.includes('Overlay')) {
@@ -5172,7 +5174,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V14 - CSS FIRST-LINE AUTOMATION)
+    // THEMA 2: SPECIAL (V16 - SLIDER BASED WORD BREAK & OFFSET)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
@@ -5185,6 +5187,8 @@ function setLabelTheme(theme) {
        const titleColor = getVal('tuneTitleColor') || '#ffffff';
        const titleSize1 = parseInt(getVal('tuneTitleSize')) || 100; 
        const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60; 
+       const titleOffset = getVal('tuneTitleOffset') || 0;
+       const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8; // NIEUW: Default 8 (alles op 1 regel)
        
        const subX = getVal('tuneStyleGap') || 50; 
        const subY = getVal('tuneStyleY') || 35;   
@@ -5192,6 +5196,8 @@ function setLabelTheme(theme) {
        const subSize1 = parseInt(getVal('tuneStyleSize')) || 14; 
        const subSize2 = parseInt(getVal('tuneStyleSize2')) || 10;
        const subRot = getVal('tuneStyleRotate') || 0;
+       const subOffset = getVal('tuneStyleOffset') || 0;
+       const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; // NIEUW
 
        const specsX = getVal('tuneSpecsX') || 50; 
        const specsY = getVal('tuneSpecsY') || 80; 
@@ -5216,6 +5222,28 @@ function setLabelTheme(theme) {
        const logoColor = getVal('tuneLogoColor') || '#ffffff';
        
        const borderWidth = getVal('tuneBorderWidth') || 0;
+
+       // --- SLIDER SPLIT LOGIC ---
+       // Deze functie hakt de zin in tweeën op basis van het woordnummer (breakVal)
+       const splitBySlider = (text, breakVal) => {
+           // Veiligheid: verwijder eventuele oude pipes voor de zekerheid
+           const cleanText = text.replace(/\|/g, ''); 
+           const words = cleanText.split(' ').filter(w => w.trim() !== ''); // Split op spaties en negeer lege
+           
+           // Als slider op Max (8) staat, of hoger dan aantal woorden -> Geen split
+           if (breakVal >= 8 || breakVal >= words.length) {
+               return { l1: cleanText, l2: "", isSplit: false };
+           }
+
+           // Anders: Split op de index
+           const part1 = words.slice(0, breakVal).join(' ');
+           const part2 = words.slice(breakVal).join(' ');
+           
+           return { l1: part1, l2: part2, isSplit: true };
+       };
+
+       const tData = splitBySlider(title, titleBreak);
+       const sData = splitBySlider(sub, subBreak);
 
        // Specs data
        const showYeast = getCheck('labelShowYeast');
@@ -5250,34 +5278,7 @@ function setLabelTheme(theme) {
            logoInnerHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
        }
 
-       // --- CSS GENERATOR VOOR PSEUDO ELEMENTS ---
-       // Dit is de magie: We injecteren een <style> blok dat de ::first-line regelt.
-       // #prev-title krijgt Size L2 (Base).
-       // #prev-title::first-line krijgt Size L1.
-       
        container.innerHTML = `
-           <style>
-               /* TITEL LOGICA */
-               #prev-title { 
-                   font-size: ${titleSize2}px !important; 
-                   line-height: 0.85; 
-                   color: ${titleColor} !important; 
-               }
-               #prev-title::first-line { 
-                   font-size: ${titleSize1}px !important; 
-               }
-               
-               /* SUBTITEL LOGICA */
-               #prev-subtitle { 
-                   font-size: ${subSize2}px !important; 
-                   line-height: 1.1; 
-                   color: ${subColor} !important; 
-               }
-               #prev-subtitle::first-line { 
-                   font-size: ${subSize1}px !important; 
-               }
-           </style>
-
            ${bgHtml}
 
            <div class="absolute inset-0 pointer-events-none z-50" 
@@ -5289,8 +5290,11 @@ function setLabelTheme(theme) {
                        transform: translate(-50%, -50%) rotate(${titleRot}deg); 
                        width: 100%;">
                 
-                <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest drop-shadow-lg"
-                    style="width: 90%; overflow-wrap: break-word; white-space: pre-wrap; margin: 0;">${title}</h1>
+                <h1 class="font-header font-bold uppercase tracking-widest drop-shadow-lg leading-none"
+                    style="font-size: ${titleSize1}px; color: ${titleColor}; width: 100%; overflow-wrap: break-word; white-space: pre-wrap; margin: 0;">${tData.l1}</h1>
+                
+                ${tData.isSplit ? `<h1 class="font-header font-bold uppercase tracking-widest drop-shadow-lg leading-none"
+                    style="font-size: ${titleSize2}px; color: ${titleColor}; width: 100%; overflow-wrap: break-word; white-space: pre-wrap; margin-top: 5px; transform: translateX(${titleOffset}%);">${tData.l2}</h1>` : ''}
            </div>
 
            <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-center text-center" 
@@ -5298,9 +5302,11 @@ function setLabelTheme(theme) {
                        transform: translate(-50%, -50%) rotate(${subRot}deg); 
                        width: 100%;">
                 
-                <p id="prev-subtitle" class="font-bold uppercase tracking-[0.4em] drop-shadow-md"
-                   style="width: 90%; overflow-wrap: break-word; margin: 0;">${sub}
-                </p>
+                <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
+                   style="font-size: ${subSize1}px; color: ${subColor}; width: 100%; overflow-wrap: break-word; margin: 0;">${sData.l1}</p>
+                
+                ${sData.isSplit ? `<p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
+                   style="font-size: ${subSize2}px; color: ${subColor}; width: 100%; overflow-wrap: break-word; margin-top: 5px; transform: translateX(${subOffset}%);">${sData.l2}</p>` : ''}
            </div>
 
            <div class="absolute z-10 pointer-events-none" 

@@ -4617,6 +4617,17 @@ function initLabelForge() {
     document.getElementById('lf-lookup-btn')?.addEventListener('click', autoDetectLabelFormat);
     document.getElementById('label-format-form')?.addEventListener('submit', saveCustomLabelFormat);
     document.getElementById('logoUpload')?.addEventListener('change', handleLogoUpload);
+
+    // AUTO-CHECK FLAT MODE: Als je de kleur verandert, gaat de checkbox automatisch aan.
+    document.getElementById('tuneLogoColor')?.addEventListener('input', () => {
+        const checkbox = document.getElementById('logoColorMode');
+        if (checkbox && !checkbox.checked) {
+            checkbox.checked = true;
+            // Forceer update zodat de wijziging zichtbaar wordt
+            const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
+            setLabelTheme(activeTheme);
+        }
+    });
 }
 
 // 3. DATAMANAGEMENT (Laden & Dropdowns)

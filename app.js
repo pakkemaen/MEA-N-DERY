@@ -4580,7 +4580,6 @@ function initLabelForge() {
                     } else if(id.includes('Break')) {
                         // Als de slider op max staat (8), zeggen we "All" (geen break)
                         disp.textContent = (e.target.value >= 8) ? "All (No Break)" : "Word " + e.target.value;
-                    } 
                     } else if(id.includes('Width')) {
                         disp.textContent = e.target.value + 'mm';
                     } else if(id.includes('Opacity') || id.includes('Overlay')) {

@@ -4539,19 +4539,19 @@ function initLabelForge() {
         });
     });
     
-    // D. TUNING & SLIDERS (MET KLEUREN)
+    // D. TUNING & SLIDERS (MET COMPLETE WAARDE WEERGAVE)
     const sliders = [
-        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleColor', 'tuneTitleRotate', 'tuneTitleOffset', 'tuneTitleBreak',
-        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleColor', 'tuneStyleRotate', 'tuneStyleOffset', 'tuneStyleBreak',
-        'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsColor', 'tuneSpecsRotate', 'tuneAllergenColor',
-        'tuneDescX', 'tuneDescY', 'tuneDescWidth', 'tuneDescRotate', 'tuneDescSize', 'tuneDescColor',
+        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleRotate', 'tuneTitleOffset', 'tuneTitleBreak',
+        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleRotate', 'tuneStyleOffset', 'tuneStyleBreak',
+        'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsRotate',
+        'tuneDescX', 'tuneDescY', 'tuneDescWidth', 'tuneDescRotate', 'tuneDescSize',
         'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity', 'tuneArtRotate', 'tuneArtOverlay',
         'tuneLogoSize', 'tuneLogoX', 'tuneLogoY', 'tuneLogoRotate', 'tuneLogoOpacity',
         'tuneBorderWidth'
     ];
 
-    // Voeg listeners toe voor de niet-sliders (checkboxes en colors)
-    ['labelShowBorder', 'logoColorMode', 'tuneLogoColor'].forEach(id => {
+    // Kleuren en checkboxes
+    ['labelShowBorder', 'logoColorMode', 'tuneLogoColor', 'tuneTitleColor', 'tuneStyleColor', 'tuneSpecsColor', 'tuneAllergenColor', 'tuneDescColor'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.addEventListener('input', () => {
             const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
@@ -4559,16 +4559,17 @@ function initLabelForge() {
         });
     });
 
+    // De Slimme Slider Logica
     sliders.forEach(id => {
         const el = document.getElementById(id);
         if(el) {
             el.addEventListener('input', (e) => {
-                // 1. Slimme ID berekening
+                // Bereken de ID van het display span (tuneTitleSize -> disp-title-size)
                 let dispId = id.replace('tune', 'disp')
                                .replace(/([A-Z])/g, '-$1')
                                .toLowerCase();
                 
-                // FIX: Zorg dat 'size2' verandert in 'size-2' zodat het matcht met de HTML
+                // Fix voor Size2 (wordt anders size-2)
                 if (id.endsWith('Size2')) {
                     dispId = dispId.replace('size2', 'size-2');
                 }
@@ -4576,28 +4577,34 @@ function initLabelForge() {
                 const disp = document.getElementById(dispId);
                 
                 if(disp) {
+                    const val = e.target.value;
+                    
+                    // EENHEDEN BEPALEN
                     if(id.includes('Rotate')) {
-                        disp.textContent = e.target.value + '°';
+                        disp.textContent = val + '°';
                     } else if(id.includes('Break')) {
-                        // Als de slider op max staat (8), zeggen we "All" (geen break)
-                        disp.textContent = (e.target.value >= 8) ? "All (No Break)" : "Word " + e.target.value;
-                    } else if(id.includes('Width')) {
-                        disp.textContent = e.target.value + 'mm';
+                        disp.textContent = (val >= 8) ? "All (No Break)" : "Word " + val;
+                    } else if(id.includes('Width') && id.includes('Border')) { 
+                        // Border Width is mm
+                        disp.textContent = val + 'mm';
                     } else if(id.includes('Opacity') || id.includes('Overlay')) {
-                        // Opaciteit in procenten
-                        disp.textContent = Math.round(e.target.value * 100) + '%';
+                        // Opacity is 0-1, we willen %
+                        disp.textContent = Math.round(val * 100) + '%';
                     } else if(id.includes('Zoom')) {
-                        // Zoom in factor
-                        disp.textContent = parseFloat(e.target.value).toFixed(1) + 'x';
-                    } else if(id.includes('X') || id.includes('Y') || id.includes('Gap')) {
-                        // Positie in procenten (want we gebruiken nu 0-100% systeem)
-                        disp.textContent = e.target.value + '%';
+                        disp.textContent = parseFloat(val).toFixed(1) + 'x';
+                    } else if(id.includes('X') || id.includes('Y') || id.includes('Gap') || (id.includes('Width') && !id.includes('Border'))) {
+                        // Posities en container-breedtes zijn in %
+                        disp.textContent = val + '%';
+                    } else if(id.includes('Offset')) {
+                        // Offset is ook % in onze CSS translate
+                        disp.textContent = val + '%';
                     } else {
-                        // Groottes in pixels
-                        disp.textContent = e.target.value + 'px';
+                        // Standaard Font Size etc is px
+                        disp.textContent = val + 'px';
                     }
                 }
                 
+                // Update het label
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
                 setLabelTheme(activeTheme);
             });

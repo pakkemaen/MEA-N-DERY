@@ -4976,15 +4976,16 @@ function loadLabelFromBrew(e) {
         resetSlider('tuneSpecsY', 85);      // 85% = Onderaan
         resetSlider('tuneSpecsRotate', 0);
 
-        // ARTWORK (Precies in het midden)
+        // ARTWORK (Precies in het midden, helder en zonder rand)
         resetSlider('tuneArtZoom', 1.0);
-        resetSlider('tuneArtX', 50);        // 50% = Midden
-        resetSlider('tuneArtY', 50);        // 50% = Midden
-        resetSlider('tuneArtOpacity', 1.0);
-        resetSlider('tuneArtOverlay', 0.2); // Beetje dimmen standaard
+        resetSlider('tuneArtX', 50);        
+        resetSlider('tuneArtY', 50);        
+        resetSlider('tuneArtOpacity', 1.0); // 100% Zichtbaar
+        resetSlider('tuneArtOverlay', 0.0); // 0% Dimmer (Helder)
         resetSlider('tuneArtRotate', 0);
 
-        resetSlider('tuneBorderWidth', 5); // Standaard 5mm rand
+        // AANGEPAST:
+        resetSlider('tuneBorderWidth', 0); // Standaard 0mm (Full Bleed)
     }
 
     // Forceer update van het thema

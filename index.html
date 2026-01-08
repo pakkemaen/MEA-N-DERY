@@ -945,6 +945,45 @@
     </div>
 
     <div class="p-2 bg-app-tertiary/50 rounded-lg border border-app-brand/5 space-y-3 mt-4">
+        <p class="text-[10px] font-bold uppercase text-app-secondary">Story / Description Tuning</p>
+        
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Pos X</label>
+                <input type="range" id="tuneDescX" min="0" max="100" value="50" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            </div>
+            <div>
+                <label class="block text-[10px] font-semibold text-app-header mb-1">Pos Y</label>
+                <input type="range" id="tuneDescY" min="0" max="100" value="70" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            </div>
+        </div>
+
+        <div>
+            <div class="flex justify-between text-xs mb-1">
+                <label class="font-semibold text-app-header">Text Width (Container)</label>
+                <span id="disp-desc-width" class="font-mono text-xs text-gray-400">60%</span>
+            </div>
+            <input type="range" id="tuneDescWidth" min="10" max="100" value="60" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="font-semibold text-app-header text-xs">Rotation</label>
+                <input type="range" id="tuneDescRotate" min="-180" max="180" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            </div>
+            <div>
+                <label class="font-semibold text-app-header text-xs">Font Size</label>
+                <input type="range" id="tuneDescSize" min="2" max="20" value="6" step="0.1" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center mb-2">
+            <label class="font-semibold text-app-header text-[10px]">Text Color</label>
+            <input type="color" id="tuneDescColor" value="#ffffff" class="w-6 h-6 p-0 border-0 rounded cursor-pointer">
+        </div>
+    </div>
+
+    <div class="p-2 bg-app-tertiary/50 rounded-lg border border-app-brand/5 space-y-3 mt-4">
         <p class="text-[10px] font-bold uppercase text-app-secondary">Artwork Adjustment</p>
         
         <div>

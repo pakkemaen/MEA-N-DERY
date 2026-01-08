@@ -4544,6 +4544,7 @@ function initLabelForge() {
         'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleColor', 'tuneTitleRotate', 'tuneTitleOffset', 'tuneTitleBreak',
         'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleColor', 'tuneStyleRotate', 'tuneStyleOffset', 'tuneStyleBreak',
         'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsColor', 'tuneSpecsRotate', 'tuneAllergenColor',
+        'tuneDescX', 'tuneDescY', 'tuneDescWidth', 'tuneDescRotate', 'tuneDescSize', 'tuneDescColor',
         'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity', 'tuneArtRotate', 'tuneArtOverlay',
         'tuneLogoSize', 'tuneLogoX', 'tuneLogoY', 'tuneLogoRotate', 'tuneLogoOpacity',
         'tuneBorderWidth'
@@ -4873,6 +4874,13 @@ function loadLabelFromBrew(e) {
         setVal('tuneSpecsColor', s.tuneSpecsColor || '#ffffff');
         restoreSlider('tuneSpecsRotate', s.tuneSpecsRotate, 0);
 
+        restoreSlider('tuneDescX', s.tuneDescX, 50);
+        restoreSlider('tuneDescY', s.tuneDescY, 70);
+        restoreSlider('tuneDescWidth', s.tuneDescWidth, 60);
+        restoreSlider('tuneDescRotate', s.tuneDescRotate, 0);
+        restoreSlider('tuneDescSize', s.tuneDescSize, 6);
+        setVal('tuneDescColor', s.tuneDescColor || '#ffffff');
+
         restoreSlider('tuneArtZoom', s.tuneArtZoom, 1.0);
         restoreSlider('tuneArtX', s.tuneArtX, 50);
         restoreSlider('tuneArtY', s.tuneArtY, 50);
@@ -4964,6 +4972,13 @@ function loadLabelFromBrew(e) {
         resetSlider('tuneSpecsX', 50);
         resetSlider('tuneSpecsY', 85);
         resetSlider('tuneSpecsRotate', 0);
+
+        resetSlider('tuneDescX', 50);
+        resetSlider('tuneDescY', 70);
+        resetSlider('tuneDescWidth', 60);
+        resetSlider('tuneDescRotate', 0);
+        resetSlider('tuneDescSize', 6);
+        setVal('tuneDescColor', '#ffffff');
 
         resetSlider('tuneArtZoom', 1.0);
         resetSlider('tuneArtX', 50);        
@@ -5157,7 +5172,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V23 - BACK STORY ADDED TO SPECS)
+    // THEMA 2: SPECIAL (V24 - FREEDOM FOR BACK STORY)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white font-sans`;
@@ -5181,6 +5196,14 @@ function setLabelTheme(theme) {
        const subRot = getVal('tuneStyleRotate') || 0;
        const subOffset = getVal('tuneStyleOffset') || 0;
        const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; 
+
+       // --- NIEUW: STORY / DESCRIPTION SETTINGS ---
+       const descX = getVal('tuneDescX') || 50;
+       const descY = getVal('tuneDescY') || 70;
+       const descWidth = getVal('tuneDescWidth') || 60; // Breedte van de tekstcontainer
+       const descRot = getVal('tuneDescRotate') || 0;
+       const descSize = getVal('tuneDescSize') || 6;
+       const descColor = getVal('tuneDescColor') || '#ffffff';
 
        const specsX = getVal('tuneSpecsX') || 50; 
        const specsY = getVal('tuneSpecsY') || 80; 
@@ -5305,6 +5328,17 @@ function setLabelTheme(theme) {
                    style="font-size: ${subSize2}px; color: ${subColor}; margin-top: 5px; transform: translateX(${subOffset}%);">${sData.l2}</p>` : ''}
            </div>
 
+           ${desc ? `
+           <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-center text-center" 
+                style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%;
+                       transform: translate(-50%, -50%) rotate(${descRot}deg);">
+                
+                <p class="font-serif italic leading-tight drop-shadow-md whitespace-normal"
+                   style="font-size: ${descSize}px; color: ${descColor};">
+                   ${desc}
+                </p>
+           </div>` : ''}
+
            <div class="absolute z-10 pointer-events-none" 
                 style="left: ${specsX}%; top: ${specsY}%; transform: translate(-50%, -50%) rotate(${specsRot}deg);">
                 <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.8); text-align: center;">
@@ -5318,8 +5352,6 @@ function setLabelTheme(theme) {
 
                    ${extraInfoHtml ? `<div class="mb-2 border-t border-white/20 pt-1 space-y-0.5">${extraInfoHtml}</div>` : ''}
                    
-                   ${desc ? `<p class="mb-2 opacity-80 font-serif italic leading-tight max-w-[220px] mx-auto whitespace-normal">${desc}</p>` : ''}
-
                    ${showDetails && details ? `<p class="opacity-90 max-w-[200px] mx-auto leading-tight font-serif italic border-t border-white/20 pt-1 whitespace-normal">${details}</p>` : ''}
                </div>
            </div>
@@ -5745,6 +5777,13 @@ window.saveLabelToBrew = async function() {
         tuneSpecsY: getVal('tuneSpecsY'),
         tuneSpecsColor: getVal('tuneSpecsColor'),
         tuneSpecsRotate: getVal('tuneSpecsRotate'),
+
+        tuneDescX: getVal('tuneDescX'),
+        tuneDescY: getVal('tuneDescY'),
+        tuneDescWidth: getVal('tuneDescWidth'),
+        tuneDescRotate: getVal('tuneDescRotate'),
+        tuneDescSize: getVal('tuneDescSize'),
+        tuneDescColor: getVal('tuneDescColor'),
         
         tuneArtZoom: getVal('tuneArtZoom'),
         tuneArtX: getVal('tuneArtX'),

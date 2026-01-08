@@ -3818,17 +3818,21 @@ async function loadLabelAssets() {
     }
 }
 
-// 2. GOOGLE FONTS INLADEN (Dynamisch)
+// 2. GOOGLE FONTS INLADEN (Dynamisch & Robuust)
 function loadGoogleFontsInHeader() {
+    if (!labelAssets.fonts) return;
+
     labelAssets.fonts.forEach(font => {
-        const fontName = font.name.replace(/\s+/g, '+'); // Spaties naar +
-        const id = `font-link-${fontName}`;
+        // Zorg dat de naam correct is voor Google URL (Spaties -> +)
+        const fontQuery = font.name.trim().replace(/\s+/g, '+'); 
+        const id = `font-link-${font.name.replace(/\s+/g, '-')}`; // ID voor de <link> tag
         
         if (!document.getElementById(id)) {
             const link = document.createElement('link');
             link.id = id;
             link.rel = 'stylesheet';
-            link.href = `https://fonts.googleapis.com/css2?family=${fontName}:wght@400;700&display=swap`;
+            // We laden gewicht 400 (Regular) en 700 (Bold)
+            link.href = `https://fonts.googleapis.com/css2?family=${fontQuery}:wght@400;700&display=swap`;
             document.head.appendChild(link);
         }
     });
@@ -3861,18 +3865,90 @@ function renderLabelAssetsSettings() {
     }
 }
 
-// 4. TOEVOEGEN & VERWIJDEREN
-window.addLabelStyle = async function() {
-    const name = document.getElementById('newStyleName').value.trim();
-    const prompt = document.getElementById('newStylePrompt').value.trim();
+// 4. TOEVOEGEN (MET VALIDATIE & AUTO-CORRECT)
+window.addLabelFont = async function() {
+    const input = document.getElementById('newFontName');
+    const rawName = input.value.trim();
+    const btn = document.getElementById('addFontBtn');
     
-    if (!name || !prompt) return showToast("Vul beide velden in.", "error");
+    if (!rawName) return showToast("Enter a font name first.", "error");
     
-    labelAssets.styles.push({ id: Date.now().toString(), name, prompt });
-    await saveLabelAssets();
-    
-    document.getElementById('newStyleName').value = '';
-    document.getElementById('newStylePrompt').value = '';
+    // UI Feedback
+    const originalText = btn.innerText;
+    btn.innerText = "Checking...";
+    btn.disabled = true;
+
+    try {
+        let finalName = rawName;
+        let autoCorrected = false;
+
+        // 1. Check de ingevoerde naam
+        const isValid = await isValidGoogleFont(finalName);
+
+        if (!isValid) {
+            // 2. POGING TOT AUTO-CORRECT (CamelCase -> Spaties)
+            // Bijv: "OpenSans" -> "Open Sans", "BarlowCondensed" -> "Barlow Condensed"
+            const fixedName = rawName.replace(/([a-z])([A-Z])/g, '$1 $2');
+            
+            // Check of de gefixte naam wel bestaat
+            const isFixedValid = await isValidGoogleFont(fixedName);
+            
+            if (isFixedValid) {
+                finalName = fixedName;
+                autoCorrected = true;
+            } else {
+                // 3. ECHT NIET GEVONDEN
+                throw new Error(`Font "${rawName}" not found on Google Fonts. Check spacing (e.g. 'Open Sans').`);
+            }
+        }
+
+        // Dubbele check of hij al in de lijst staat
+        if (labelAssets.fonts.some(f => f.name.toLowerCase() === finalName.toLowerCase())) {
+            throw new Error("This font is already in your list.");
+        }
+
+        // Toevoegen
+        labelAssets.fonts.push({ id: Date.now().toString(), name: finalName });
+        await saveLabelAssets();
+        
+        // Laad hem direct in de header en update dropdowns
+        loadGoogleFontsInHeader(); 
+        populateLabelFontsDropdowns(); 
+        
+        // Reset input
+        input.value = '';
+        
+        if (autoCorrected) {
+            showToast(`Corrected to "${finalName}" and added!`, "success");
+        } else {
+            showToast(`"${finalName}" added successfully!`, "success");
+        }
+
+    } catch (error) {
+        showToast(error.message, "error");
+        // Maak het input veld rood voor visuele feedback
+        input.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+        setTimeout(() => input.classList.remove('border-red-500', 'ring-1', 'ring-red-500'), 2000);
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
+
+// --- VALIDATOR: CHECK GOOGLE FONTS ---
+async function isValidGoogleFont(fontName) {
+    // Google API url formatteert spaties als plustekens (Open Sans -> Open+Sans)
+    const formattedName = fontName.trim().replace(/\s+/g, '+');
+    const url = `https://fonts.googleapis.com/css2?family=${formattedName}&display=swap`;
+
+    try {
+        // We doen een 'HEAD' request (alleen headers checken, data niet downloaden = sneller)
+        const response = await fetch(url, { method: 'HEAD' });
+        return response.ok; // Geeft true als status 200 is, false bij 400 (niet gevonden)
+    } catch (e) {
+        console.warn("Font check failed (network error)", e);
+        return false; // Bij twijfel (offline/cors), blokkeren we niet hard, maar hier gaan we uit van online.
+    }
 }
 
 window.addLabelFont = async function() {

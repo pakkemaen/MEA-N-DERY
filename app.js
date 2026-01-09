@@ -4738,10 +4738,10 @@ function initLabelForge() {
     // D. OVERIGE KNOPPEN
     document.getElementById('labelRecipeSelect')?.addEventListener('change', loadLabelFromBrew);
     
-    // UPDATE: Knoppen laden nu ook de data opnieuw
+    // UPDATE: Knoppen laden nu ook de data opnieuw + Feedback
     document.querySelectorAll('.label-theme-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const theme = e.target.dataset.theme;
+            const newTheme = e.target.dataset.theme;
             
             // 1. Zet visueel de knop om
             document.querySelectorAll('.label-theme-btn').forEach(b => {
@@ -4749,16 +4749,21 @@ function initLabelForge() {
             });
             e.target.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
 
-            // 2. Probeer data te laden voor dit thema (als er een recept geselecteerd is)
+            // 2. Probeer data te laden voor dit thema
             const brewId = document.getElementById('labelRecipeSelect').value;
+            
             if (brewId) {
-                loadLabelFromBrew(brewId, theme);
+                // Als er een recept is, laad de specifieke data voor dit thema
+                // De load functie geeft nu zelf de Toast ("Standard Loaded" of "Special Loaded")
+                loadLabelFromBrew(brewId, newTheme);
             } else {
-                // Geen recept? Doe alleen de render
-                setLabelTheme(theme);
+                // Geen recept? Doe alleen de render en geef simpele feedback
+                setLabelTheme(newTheme);
+                showToast(`Switched to ${newTheme} theme`, "info");
             }
         });
     });
+
     document.querySelectorAll('.label-theme-btn').forEach(btn => btn.addEventListener('click', (e) => setLabelTheme(e.target.dataset.theme)));
     document.getElementById('ai-label-art-btn')?.addEventListener('click', generateLabelArt);
     document.getElementById('ai-label-desc-btn')?.addEventListener('click', generateLabelDescription);
@@ -5005,7 +5010,7 @@ function updateLabelPreviewText() {
     }
 }
 
-// --- DATA LADEN (V3.0 - MULTI-THEME SUPPORT) ---
+// --- DATA LADEN (V3.1 - STRICT SEPARATION & FEEDBACK) ---
 function loadLabelFromBrew(eOrId, forceTheme = null) {
     // Flexibele input: kan een event zijn (dropdown change) of een string (ID)
     const brewId = (typeof eOrId === 'object' && eOrId.target) ? eOrId.target.value : eOrId;
@@ -5015,7 +5020,6 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
     if (!brew) return;
 
     // 1. BEPAAL THEMA
-    // Als we geforceerd worden (bijv. door knopklik), gebruik dat. Anders de actieve knop.
     let theme = forceTheme;
     if (!theme) {
         const activeBtn = document.querySelector('.label-theme-btn.active');
@@ -5029,12 +5033,13 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
     const restoreSlider = (id, val, fallback) => {
         const el = document.getElementById(id);
         if(el) {
-            el.value = (val !== undefined) ? val : fallback;
+            // Als de opgeslagen waarde undefined is, gebruik de fallback (reset)
+            el.value = (val !== undefined && val !== null) ? val : fallback;
             el.dispatchEvent(new Event('input')); 
         }
     };
 
-    // Basis data genereren (altijd nodig, ook als er geen save is)
+    // Basis data genereren (Tekstuele data blijft gedeeld, tenzij overschreven in save)
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
     const generatedDetails = ings.map(i => i.name).join(' • ');
     let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist'));
@@ -5042,26 +5047,23 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
     let honeyItem = ings.find(i => i.name.toLowerCase().includes('honey') || i.name.toLowerCase().includes('honing'));
     let generatedHoney = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
 
-    // 2. DATA ZOEKEN
+    // 2. DATA ZOEKEN (STRICT)
     let s = null;
+    let isSavedData = false;
     
-    // Check A: Nieuwe structuur (labelSettings.standard OF labelSettings.special)
+    // Check: Bestaat er een specifieke save voor DIT thema?
     if (brew.labelSettings && brew.labelSettings[theme]) {
         s = brew.labelSettings[theme];
+        isSavedData = true;
     } 
-    // Check B: Oude structuur (Backward compatibility voor labels die je vorige week maakte)
-    // Als we in 'standard' modus zitten en er is oude data (zonder submap), gebruik die.
-    else if (theme === 'standard' && brew.labelSettings && !brew.labelSettings.standard && !brew.labelSettings.special && brew.labelSettings.title) {
-        s = brew.labelSettings; 
-    }
-
-    // 3. TOEPASSEN (OF DEFAULTS)
-    if (s) {
-        // --- LOAD SAVED SETTINGS ---
+    
+    // 3. TOEPASSEN
+    if (isSavedData && s) {
+        // --- SCENARIO A: ER IS EEN SAVE (HERSTEL ALLES) ---
+        
+        // Teksten
         setVal('labelTitle', s.title);
         setVal('labelSubtitle', s.subtitle);
-        setVal('tuneTitleColor', s.tuneTitleColor || '#8F8C79');
-        setVal('tuneStyleColor', s.tuneStyleColor || '#9ca3af');
         setVal('labelAbv', s.abv);
         setVal('labelFg', s.fg);
         setVal('labelVol', s.vol);
@@ -5079,20 +5081,23 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
         setText('displayLabelYeast', s.yeastName || generatedYeast);
         setText('displayLabelHoney', s.honeyName || generatedHoney);
 
-        // Sliders herstellen
+        // Styling & Sliders
+        setVal('tuneTitleColor', s.tuneTitleColor);
+        setVal('tuneStyleColor', s.tuneStyleColor);
+        
         restoreSlider('tuneTitleSize', s.tuneTitleSize, 100);
         restoreSlider('tuneTitleSize2', s.tuneTitleSize2, 60);
-        restoreSlider('tuneTitleX', s.tuneTitleX, 50);
-        restoreSlider('tuneTitleY', s.tuneTitleY, 20);
+        restoreSlider('tuneTitleX', s.tuneTitleX, 10);
+        restoreSlider('tuneTitleY', s.tuneTitleY, 10);
         restoreSlider('tuneTitleRotate', s.tuneTitleRotate, 0);
         restoreSlider('tuneTitleOffset', s.tuneTitleOffset, 0);
         restoreSlider('tuneTitleOffsetY', s.tuneTitleOffsetY, 0);
         restoreSlider('tuneTitleBreak', s.tuneTitleBreak, 8);
         
-        restoreSlider('tuneStyleY', s.tuneStyleY, 35);
+        restoreSlider('tuneStyleY', s.tuneStyleY, 0);
         restoreSlider('tuneStyleSize', s.tuneStyleSize, 14);
         restoreSlider('tuneStyleSize2', s.tuneStyleSize2, 10);
-        restoreSlider('tuneStyleGap', s.tuneStyleGap, 50);
+        restoreSlider('tuneStyleGap', s.tuneStyleGap, 5);
         restoreSlider('tuneStyleRotate', s.tuneStyleRotate, 0);
         restoreSlider('tuneStyleOffset', s.tuneStyleOffset, 0);
         restoreSlider('tuneStyleOffsetY', s.tuneStyleOffsetY, 0)
@@ -5115,7 +5120,6 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
         restoreSlider('tuneArtX', s.tuneArtX, 50);
         restoreSlider('tuneArtY', s.tuneArtY, 50);
         restoreSlider('tuneArtRotate', s.tuneArtRotate, 0);
-        
         restoreSlider('tuneArtOpacity', s.tuneArtOpacity, 1.0);
         restoreSlider('tuneArtOverlay', s.tuneArtOverlay, 0.0);
         
@@ -5127,11 +5131,7 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
         setCheck('logoColorMode', s.logoColorMode);
         setVal('tuneLogoColor', s.tuneLogoColor || '#ffffff');
 
-        let savedBorder = s.tuneBorderWidth;
-        if (savedBorder === undefined && theme === 'standard') savedBorder = 3; // Default voor Standard
-        if (savedBorder === undefined) savedBorder = 0;
-        restoreSlider('tuneBorderWidth', savedBorder, 0);
-
+        restoreSlider('tuneBorderWidth', s.tuneBorderWidth, (theme === 'standard' ? 3 : 0));
         setVal('tuneAllergenColor', s.tuneAllergenColor || '#ffffff');
 
         if (s.imageSrc) {
@@ -5142,62 +5142,53 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
                 imgDisplay.classList.remove('hidden');
             }
         }
-        // Feedback zonder toast om spam te voorkomen bij switchen
-        console.log(`Loaded settings for ${theme}`);
+
+        // FEEDBACK: LATEN ZIEN DAT WE GELADEN HEBBEN
+        showToast(`📂 ${theme.charAt(0).toUpperCase() + theme.slice(1)} Label Loaded!`, "success");
 
     } else {
-        // --- LOAD DEFAULTS (Als er geen save is voor DIT thema) ---
-        // We behouden wel de tekst (Titel, ABV etc) van het recept
+        // --- SCENARIO B: GEEN SAVE (RESET NAAR HARDE DEFAULTS) ---
+        // Dit is cruciaal: als we switchen naar een thema dat nog niet is opgeslagen,
+        // moeten we de sliders resetten naar de standaardwaarden van DAT thema.
+        
+        // 1. Reset Basis Teksten (uit Recept)
         setVal('labelTitle', brew.recipeName);
         let style = "Traditional Mead";
-        if (brew.recipeMarkdown.toLowerCase().includes('melomel')) style = "Melomel (Fruit Mead)";
+        if (brew.recipeMarkdown.toLowerCase().includes('melomel')) style = "Melomel";
         setVal('labelSubtitle', style);
-
         setVal('labelAbv', brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '');
         setVal('labelFg', brew.logData?.actualFG || brew.logData?.targetFG || '');
         setVal('labelVol', '330');
         setVal('labelDate', brew.logData?.brewDate || new Date().toLocaleDateString('nl-NL'));
-
-        let foundQuote = "";
-        const quoteMatch = brew.recipeMarkdown.match(/^>\s*(["']?)(.*?)\1\s*$/m);
-        if (quoteMatch && quoteMatch[2]) foundQuote = quoteMatch[2].trim();
-        else foundQuote = `A handcrafted ${style.toLowerCase()}, brewed on ${new Date().getFullYear()}.`;
         
-        setVal('labelDescription', foundQuote);
-        setText('displayLabelYeast', generatedYeast);
-        setText('displayLabelHoney', generatedHoney);
-        setVal('labelDetails', generatedDetails);
-
-        const hasSulfites = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
-        setVal('labelAllergens', hasSulfites ? 'Contains Sulfites' : '');
-        setCheck('logoColorMode', false);
-
-        // THEMA SPECIFIEKE DEFAULTS
+        // 2. Reset Sliders per Thema
         if (theme === 'standard') {
             setVal('tuneTitleColor', '#8F8C79');
             setVal('tuneStyleColor', '#9ca3af');
             
-            resetSlider('tuneLogoSize', 100); resetSlider('tuneLogoX', 0); resetSlider('tuneLogoY', 0);
+            restoreSlider('tuneLogoSize', 100); restoreSlider('tuneLogoX', 0); restoreSlider('tuneLogoY', 0);
+            restoreSlider('tuneTitleSize', 100); restoreSlider('tuneTitleSize2', 60);
+            restoreSlider('tuneTitleX', 10); restoreSlider('tuneTitleY', 10);
+            restoreSlider('tuneTitleRot', 0); restoreSlider('tuneTitleOffset', 0);
             
-            resetSlider('tuneTitleSize', 100); resetSlider('tuneTitleSize2', 60);
-            resetSlider('tuneTitleX', 10); resetSlider('tuneTitleY', 10);
-            resetSlider('tuneTitleRotate', 0); resetSlider('tuneTitleOffset', 0); resetSlider('tuneTitleOffsetY', 0);
+            restoreSlider('tuneStyleSize', 14); restoreSlider('tuneStyleSize2', 10);
+            restoreSlider('tuneStyleGap', 5); restoreSlider('tuneStyleY', 0);
+            restoreSlider('tuneStyleRotate', 0);
             
-            resetSlider('tuneStyleSize', 14); resetSlider('tuneStyleSize2', 10);
-            resetSlider('tuneStyleGap', 5); resetSlider('tuneStyleY', 0);
-            resetSlider('tuneStyleRotate', 0); resetSlider('tuneStyleOffset', 0); resetSlider('tuneStyleOffsetY', 0);
-            
-            resetSlider('tuneBorderWidth', 3); // Witte rand
+            restoreSlider('tuneBorderWidth', 3); // Standard heeft border
         } else {
-            // Special Defaults
+            // Special
             setVal('tuneTitleColor', '#ffffff');
             setVal('tuneStyleColor', '#cccccc');
             
-            resetSlider('tuneLogoSize', 100); resetSlider('tuneLogoX', 50); resetSlider('tuneLogoY', 15);
-            resetSlider('tuneTitleX', 50); resetSlider('tuneTitleY', 40);
-            resetSlider('tuneStyleGap', 50); resetSlider('tuneStyleY', 55);
-            resetSlider('tuneBorderWidth', 0); // Geen rand
+            restoreSlider('tuneLogoSize', 100); restoreSlider('tuneLogoX', 50); restoreSlider('tuneLogoY', 15);
+            restoreSlider('tuneTitleX', 50); restoreSlider('tuneTitleY', 40);
+            restoreSlider('tuneStyleGap', 50); restoreSlider('tuneStyleY', 55);
+            restoreSlider('tuneBorderWidth', 0); // Special heeft geen border
         }
+
+        // FEEDBACK: LATEN ZIEN DAT HET DEFAULTS ZIJN
+        showToast(`ℹ️ ${theme.charAt(0).toUpperCase() + theme.slice(1)} (Defaults) Loaded`, "info");
     }
 
     // Forceer render

@@ -5234,7 +5234,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA : STANDARD LABEL (V2.2 - FIX: subRot defined & Layout Stabiliteit)
+    // THEMA : STANDARD LABEL (V2.3 - FIX: Crash subRot & Positioning)
     // =================================================================
     if (theme === 'standard') {
         // 1. CONTAINER SETUP (30/70 verdeling)
@@ -5273,9 +5273,9 @@ function setLabelTheme(theme) {
         const styleGap = getVal('tuneStyleGap') || 5;  // Afstand in PX
         const styleY = getVal('tuneStyleY') || 0;      // Verschuiving Y
         
-        // --- HIER ZAT DE FOUT: DEZE VARIABELE ONTBRAK ---
+        // --- FIX: DEZE VARIABELE MOET BESTAAN OM CRASH TE VOORKOMEN ---
         const subRot = getVal('tuneStyleRotate') || 0; 
-        // ------------------------------------------------
+        // -------------------------------------------------------------
         
         const styleOffset = getVal('tuneStyleOffset') || 0;
         const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
@@ -5373,10 +5373,10 @@ function setLabelTheme(theme) {
                 <div id="text-group" class="absolute z-10 pointer-events-none" 
                      style="left: ${titleX}%; bottom: ${titleY}%; transform-origin: bottom left;">
                     
-                    <div id="title-container" class="relative">
+                    <div id="title-container" class="relative" style="width: max-content;">
                         
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-visible" 
-                            style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0; white-space: nowrap;">
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-nowrap overflow-visible" 
+                            style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
                             
                             ${tData.l1}
                             

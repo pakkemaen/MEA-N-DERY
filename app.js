@@ -4732,7 +4732,7 @@ function initLabelForge() {
     });
     
     // D. TUNING & SLIDERS (MET COMPLETE WAARDE WEERGAVE)
-    onst sliders = [
+    const sliders = [
         'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleRotate', 'tuneTitleOffset', 'tuneTitleOffsetY', 'tuneTitleBreak',
         'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleRotate', 'tuneStyleOffset', 'tuneStyleOffsetY', 'tuneStyleBreak',
         'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsRotate',

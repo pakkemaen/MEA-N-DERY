@@ -4795,7 +4795,7 @@ function initLabelForge() {
         'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsRotate',
         
         // Story Tuning
-        'tuneDescFont', 'tuneDescColor',
+        'tuneDescFont', 'tuneDescColor', 'tuneDescAlign',
         'tuneDescX', 'tuneDescY', 'tuneDescWidth', 'tuneDescRotate', 'tuneDescSize',
         
         // Artwork
@@ -5247,7 +5247,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA : STANDARD LABEL (V3.5 - FIX: Specs & Date Sliders Activated)
+    // THEMA : STANDARD LABEL (V3.6 - FIX: Text Alignment Added)
     // =================================================================
     if (theme === 'standard') {
         // 1. CONTAINER SETUP
@@ -5283,7 +5283,7 @@ function setLabelTheme(theme) {
         const styleOffset = getVal('tuneStyleOffset') || 0;
         const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
 
-        // STORY SLIDERS (Backstory)
+        // STORY SLIDERS & ALIGNMENT
         const descX = getVal('tuneDescX') || 50;  
         const descY = getVal('tuneDescY') || 15;  
         const descWidth = getVal('tuneDescWidth') || 85; 
@@ -5291,10 +5291,13 @@ function setLabelTheme(theme) {
         const descSize = getVal('tuneDescSize') || 6;
         const descColor = getVal('tuneDescColor') || '#000000';
         const descFont = getVal('tuneDescFont') || 'Barlow Semi Condensed';
+        
+        // NIEUW: ALIGNMENT (Default: center)
+        const descAlign = getVal('tuneDescAlign') || 'center';
 
-        // SPECS SLIDERS (Nu geactiveerd!)
-        const specsX = getVal('tuneSpecsX') || 50; // 50% = Midden van de balk
-        const specsY = getVal('tuneSpecsY') || 85; // 85% = Onderaan de balk
+        // SPECS SLIDERS
+        const specsX = getVal('tuneSpecsX') || 50;
+        const specsY = getVal('tuneSpecsY') || 85; 
         const specsRot = getVal('tuneSpecsRotate') || 0;
         const specsSize = getVal('tuneSpecsSize') || 4; 
         const specsColor = getVal('tuneSpecsColor') || '#8F8C79';
@@ -5349,13 +5352,14 @@ function setLabelTheme(theme) {
             <div class="relative h-full w-[30%] bg-gray-50/80 z-20 overflow-hidden" 
                  style="font-family: '${specsFont}', sans-serif;">
                 
-                <div class="absolute flex flex-col items-center justify-start text-center"
+                <div class="absolute flex flex-col"
                      style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%; 
                             transform: translate(-50%, 0) rotate(${descRot}deg);
                             font-size: ${descSize}px; color: ${descColor}; font-family: '${descFont}', serif;
+                            text-align: ${descAlign};
                             line-height: 1.4; white-space: normal; overflow-wrap: break-word;">
                     ${desc}
-                    ${showDetails && details ? `<p class="mt-2 pt-2 border-t border-gray-300 w-full text-center uppercase tracking-wide opacity-80" style="font-size: 0.8em; font-family: sans-serif;">${details}</p>` : ''}
+                    ${showDetails && details ? `<p class="mt-2 pt-2 border-t border-gray-300 w-full uppercase tracking-wide opacity-80" style="font-size: 0.8em; font-family: sans-serif;">${details}</p>` : ''}
                 </div>
 
                 <div class="absolute flex flex-col items-center justify-center text-center"
@@ -5417,7 +5421,7 @@ function setLabelTheme(theme) {
                 ${logoHtml}
             </div>
         `;
-    } 
+    }
     
     // =================================================================
     // THEMA 2: SPECIAL (FIXED FONTS & ANCHOR)

@@ -5234,10 +5234,10 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA : STANDARD LABEL (V2.3 - FIX: Crash subRot & Positioning)
+    // THEMA : STANDARD LABEL (V2.4 - FIX: subRot Definitie & Zichtbaarheid Subtitel)
     // =================================================================
     if (theme === 'standard') {
-        // 1. CONTAINER SETUP (30/70 verdeling)
+        // 1. CONTAINER SETUP
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
@@ -5246,8 +5246,7 @@ function setLabelTheme(theme) {
         // BORDER
         const borderWidth = getVal('tuneBorderWidth') || 0;
 
-        // POSITIE HOOFDGROEP (TITEL + SUBTITEL)
-        // percentages (%) t.o.v. de 70% container
+        // POSITIE HOOFDGROEP (TITEL + SUBTITEL) in %
         const titleX = getVal('tuneTitleX') || 10; 
         const titleY = getVal('tuneTitleY') || 10; 
         const titleRot = getVal('tuneTitleRotate') || 0;
@@ -5273,14 +5272,14 @@ function setLabelTheme(theme) {
         const styleGap = getVal('tuneStyleGap') || 5;  // Afstand in PX
         const styleY = getVal('tuneStyleY') || 0;      // Verschuiving Y
         
-        // --- FIX: DEZE VARIABELE MOET BESTAAN OM CRASH TE VOORKOMEN ---
+        // --- BELANGRIJKE FIX: DEFINIEER SUBROT ---
         const subRot = getVal('tuneStyleRotate') || 0; 
-        // -------------------------------------------------------------
+        // -----------------------------------------
         
         const styleOffset = getVal('tuneStyleOffset') || 0;
         const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
 
-        // Overige (Specs, Art, Logo)
+        // Overige
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
         const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
         const specsColor = getVal('tuneSpecsColor') || '#000000'; 
@@ -5388,7 +5387,7 @@ function setLabelTheme(theme) {
                             </div>` : ''}
 
                             <div id="style-container" class="absolute" 
-                                 style="top: 0; left: 100%; margin-left: ${styleGap}px; transform: translateY(${styleY}px);">
+                                 style="top: 0; left: 100%; transform: translate(${styleGap}px, ${styleY}px);">
                                  
                                  <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-nowrap leading-none" 
                                     style="writing-mode: vertical-rl; transform: rotate(${parseInt(subRot)}deg); font-family: '${styleFont}', sans-serif; font-size: ${styleSize1}px; color: ${styleColor}; margin: 0;">

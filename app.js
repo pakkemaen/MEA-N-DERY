@@ -5175,7 +5175,7 @@ function loadLabelFromBrew(e) {
         resetSlider('tuneArtOverlay', 0.0);
         resetSlider('tuneArtRotate', 0);
 
-        resetSlider('tuneBorderWidth', 0);
+        resetSlider('tuneBorderWidth', 5);
     }
 
     const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
@@ -5234,14 +5234,19 @@ function setLabelTheme(theme) {
     });
 
     if (theme === 'standard') {
-        // 1. CONTAINER SETUP: DE OORSPRONKELIJKE 30/70 FLEX LAYOUT
+        // 1. CONTAINER SETUP
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
         // --- TUNING VALUES ---
+        
+        // BORDER (NIEUW in Standard)
+        const borderWidth = getVal('tuneBorderWidth') || 0;
+
         // Positie
-        const titleX = getVal('tuneTitleX') || 0; // Werkt als padding-left in dit model
-        const titleY = getVal('tuneTitleY') || 0; // Werkt als padding-bottom
+        const titleX = getVal('tuneTitleX') || 0; 
+        const titleY = getVal('tuneTitleY') || 0; 
+        const titleRot = getVal('tuneTitleRotate') || 0;
         
         // Styling L1 (Titel)
         const titleColor = getVal('tuneTitleColor') || '#8F8C79';
@@ -5262,14 +5267,14 @@ function setLabelTheme(theme) {
         const styleBreak = parseInt(getVal('tuneStyleBreak')) || 8;
         
         // Positie L2 t.o.v. L1
-        const styleGap = getVal('tuneStyleGap') || 5; // Afstand tussen titel en subtitel
-        const styleY = getVal('tuneStyleY') || 0;     // Verticale verschuiving subtitel
-        const subRot = getVal('tuneStyleRotate') || 0; // Rotatie subtitel
+        const styleGap = getVal('tuneStyleGap') || 5; 
+        const styleY = getVal('tuneStyleY') || 0;     
+        const subRot = getVal('tuneStyleRotate') || 0; 
         
         const styleOffset = getVal('tuneStyleOffset') || 0;
         const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
 
-        // Overige (Specs, Art, Logo)
+        // Overige
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
         const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
         const specsColor = getVal('tuneSpecsColor') || '#000000'; 
@@ -5306,7 +5311,7 @@ function setLabelTheme(theme) {
         
         const logoHtml = `<div class="absolute top-0 right-0 z-20 pointer-events-none" style="transform: translate(${logoX}px, ${logoY}px); width: ${logoSize}px; padding: 10px;"><img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-full h-auto object-contain drop-shadow-md"></div>`;
         
-        // Specs Data Logic (Ongewijzigd)
+        // Specs Logic
         const showYeast = getCheck('labelShowYeast');
         const showHoney = getCheck('labelShowHoney');
         let yeastText = "", honeyText = "";
@@ -5324,6 +5329,10 @@ function setLabelTheme(theme) {
         else if (rawDate) { try { const d = new Date(rawDate); const abvNum = parseFloat(abv); let months = (abvNum < 8) ? 3 : (abvNum > 14 ? 12 : 6); d.setMonth(d.getMonth() + months); peakDateVal = d.toLocaleDateString('nl-NL').replace(/-/g, '/'); } catch(e) {} }
 
         container.innerHTML = `
+            <div class="absolute inset-0 pointer-events-none z-50" 
+                 style="box-shadow: inset 0 0 0 ${borderWidth}mm white;">
+            </div>
+
             <div class="h-full w-[30%] bg-gray-50/80 pt-0.5 pb-0 pl-0 pr-2 flex flex-col text-right z-20 relative"
                  style="font-family: '${specsFont}', sans-serif; color: ${specsColor};">
                 

@@ -4743,15 +4743,21 @@ function initLabelForge() {
     ];
 
     // E. LIVE UPDATE LISTENERS (Kleuren, Checkboxes EN FONTS)
-    // Zorg dat de IDs 'tuneTitleFont', 'tuneStyleFont', enz. hierin staan!
     [
         'labelShowBorder', 'logoColorMode', 
         'tuneLogoColor', 'tuneTitleColor', 'tuneStyleColor', 'tuneSpecsColor', 'tuneAllergenColor', 'tuneDescColor',
-        'tuneTitleFont', 'tuneStyleFont', 'tuneSpecsFont', 'tuneDescFont' // <--- DEZE ZIJN CRUCIAAL VOOR LIVE UPDATE
+        // HIERONDER STAAN DE FONT DROPDOWNS:
+        'tuneTitleFont', 'tuneStyleFont', 'tuneSpecsFont', 'tuneDescFont' 
     ].forEach(id => {
         const el = document.getElementById(id);
         if(el) {
+            // We gebruiken 'change' voor dropdowns en 'input' voor de rest
             el.addEventListener('input', () => {
+                const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
+                setLabelTheme(activeTheme);
+            });
+            // Voor de zekerheid ook 'change' toevoegen (sommige browsers pakken input niet op selects)
+            el.addEventListener('change', () => {
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
                 setLabelTheme(activeTheme);
             });
@@ -5527,7 +5533,9 @@ function setLabelTheme(theme) {
                        font-family: '${titleFont}', sans-serif;">
                 
                 <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none"
-                    style="font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">${tData.l1}</h1>
+                       style="font-size: ${titleSize1}px; color: ${titleColor}; margin: 0; font-family: '${titleFont}', sans-serif;">
+                       ${tData.l1}
+                </h1>
                 
                 ${tData.isSplit ? `<h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none"
                     style="font-size: ${titleSize2}px; color: ${titleColor}; margin-top: 5px; transform: translateX(${titleOffset}%);">${tData.l2}</h1>` : ''}

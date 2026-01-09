@@ -3843,20 +3843,20 @@ function renderLabelAssetsSettings() {
     const stylesList = document.getElementById('settings-styles-list');
     const fontsList = document.getElementById('settings-fonts-list');
     
-    // A. RENDER STYLES
+    // A. RENDER STYLES (Art Prompts)
     if (stylesList) {
         stylesList.innerHTML = labelAssets.styles.map((s, idx) => `
             <div class="flex justify-between items-center p-2 bg-app-tertiary rounded border border-app-brand/5 group mb-1">
-                <div class="overflow-hidden">
-                    <p class="font-bold text-xs text-app-header">${s.name}</p>
-                    <p class="text-[10px] text-app-secondary truncate">${s.prompt}</p>
-                </div>
+                <span class="font-bold text-sm text-app-header pl-1">
+                    ${s.name}
+                </span>
+                
                 <button onclick="window.deleteLabelAsset('styles', ${idx})" class="text-red-400 hover:text-red-600 font-bold px-3 text-xl leading-none">&times;</button>
             </div>
         `).join('');
     }
 
-    // B. RENDER FONTS
+    // B. RENDER FONTS (Typography)
     if (fontsList) {
         fontsList.innerHTML = labelAssets.fonts.map((f, idx) => `
             <div class="flex justify-between items-center p-2 bg-app-tertiary rounded border border-app-brand/5 group mb-1">
@@ -3870,41 +3870,49 @@ function renderLabelAssetsSettings() {
     }
 }
 
-// 4. TOEVOEGEN (MET VALIDATIE & AUTO-CORRECT)
+// 4. TOEVOEGEN (MET SLIMME HOOFDLETTER CORRECTIE)
 window.addLabelFont = async function() {
     const input = document.getElementById('newFontName');
-    const rawName = input.value.trim();
+    
+    // NIEUW: Auto-Capitalize (open sans -> Open Sans)
+    // Dit maakt de input vergevingsgezind voor kleine letters
+    let rawName = input.value.trim().toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+    
     const btn = document.getElementById('addFontBtn');
     
     if (!rawName) return showToast("Enter a font name first.", "error");
     
-    // UI Feedback
     const originalText = btn.innerText;
     btn.innerText = "Checking...";
     btn.disabled = true;
 
     try {
-        let finalName = rawName;
+        let finalName = null;
         let autoCorrected = false;
 
-        // 1. Check de ingevoerde naam
-        const isValid = await isValidGoogleFont(finalName);
+        // POGING 1: Check de (nu netjes gemaakte) naam
+        const isExactValid = await isValidGoogleFont(rawName);
 
-        if (!isValid) {
-            // 2. POGING TOT AUTO-CORRECT (CamelCase -> Spaties)
-            // Bijv: "OpenSans" -> "Open Sans", "BarlowCondensed" -> "Barlow Condensed"
+        if (isExactValid) {
+            finalName = rawName;
+        } else {
+            // POGING 2: Probeer Auto-Correctie voor ontbrekende spaties (CamelCase -> Spaties)
+            // bv. "Opensans" -> "Open Sans" (Als de gebruiker spaties vergat)
             const fixedName = rawName.replace(/([a-z])([A-Z])/g, '$1 $2');
             
-            // Check of de gefixte naam wel bestaat
+            console.log(`Check failed for '${rawName}'. Trying '${fixedName}'...`);
+            
             const isFixedValid = await isValidGoogleFont(fixedName);
             
             if (isFixedValid) {
                 finalName = fixedName;
                 autoCorrected = true;
-            } else {
-                // 3. ECHT NIET GEVONDEN
-                throw new Error(`Font "${rawName}" not found on Google Fonts. Check spacing (e.g. 'Open Sans').`);
             }
+        }
+
+        // CONCLUSIE
+        if (!finalName) {
+            throw new Error(`Font "${rawName}" not found on Google Fonts. Check spelling.`);
         }
 
         // Dubbele check of hij al in de lijst staat
@@ -3912,26 +3920,23 @@ window.addLabelFont = async function() {
             throw new Error("This font is already in your list.");
         }
 
-        // Toevoegen
+        // OPSLAAN
         labelAssets.fonts.push({ id: Date.now().toString(), name: finalName });
         await saveLabelAssets();
         
-        // Laad hem direct in de header en update dropdowns
+        // UI Updates
         loadGoogleFontsInHeader(); 
         populateLabelFontsDropdowns(); 
-        
-        // Reset input
         input.value = '';
         
         if (autoCorrected) {
-            showToast(`Corrected to "${finalName}" and added!`, "success");
+            showToast(`Corrected to "${finalName}" and saved!`, "success");
         } else {
             showToast(`"${finalName}" added successfully!`, "success");
         }
 
     } catch (error) {
         showToast(error.message, "error");
-        // Maak het input veld rood voor visuele feedback
         input.classList.add('border-red-500', 'ring-1', 'ring-red-500');
         setTimeout(() => input.classList.remove('border-red-500', 'ring-1', 'ring-red-500'), 2000);
     } finally {

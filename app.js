@@ -5234,10 +5234,10 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA : STANDARD LABEL 
+    // THEMA : STANDARD LABEL (V2.2 - FIX: subRot defined & Layout Stabiliteit)
     // =================================================================
     if (theme === 'standard') {
-        // 1. CONTAINER SETUP: 30/70 verdeling
+        // 1. CONTAINER SETUP (30/70 verdeling)
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
@@ -5247,7 +5247,7 @@ function setLabelTheme(theme) {
         const borderWidth = getVal('tuneBorderWidth') || 0;
 
         // POSITIE HOOFDGROEP (TITEL + SUBTITEL)
-        // AANGEPAST: We gebruiken nu standaard % als er geen eenheid is, voor betere positionering in de 70% box
+        // percentages (%) t.o.v. de 70% container
         const titleX = getVal('tuneTitleX') || 10; 
         const titleY = getVal('tuneTitleY') || 10; 
         const titleRot = getVal('tuneTitleRotate') || 0;
@@ -5270,14 +5270,17 @@ function setLabelTheme(theme) {
         const styleBreak = parseInt(getVal('tuneStyleBreak')) || 8;
         
         // Positie L2 t.o.v. L1
-        const styleGap = getVal('tuneStyleGap') || 10; // Afstand in PX tussen titel en subtitel
-        const styleY = getVal('tuneStyleY') || 0;      // Verschuiving omhoog/omlaag t.o.v. titel
+        const styleGap = getVal('tuneStyleGap') || 5;  // Afstand in PX
+        const styleY = getVal('tuneStyleY') || 0;      // Verschuiving Y
+        
+        // --- HIER ZAT DE FOUT: DEZE VARIABELE ONTBRAK ---
         const subRot = getVal('tuneStyleRotate') || 0; 
+        // ------------------------------------------------
         
         const styleOffset = getVal('tuneStyleOffset') || 0;
         const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
 
-        // Overige
+        // Overige (Specs, Art, Logo)
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
         const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
         const specsColor = getVal('tuneSpecsColor') || '#000000'; 
@@ -5368,12 +5371,12 @@ function setLabelTheme(theme) {
                 ${artHtml}
 
                 <div id="text-group" class="absolute z-10 pointer-events-none" 
-                     style="left: ${titleX}%; bottom: ${titleY}%;">
+                     style="left: ${titleX}%; bottom: ${titleY}%; transform-origin: bottom left;">
                     
                     <div id="title-container" class="relative">
                         
                         <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-visible" 
-                            style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
+                            style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0; white-space: nowrap;">
                             
                             ${tData.l1}
                             
@@ -5387,7 +5390,7 @@ function setLabelTheme(theme) {
                             <div id="style-container" class="absolute" 
                                  style="top: 0; left: 100%; margin-left: ${styleGap}px; transform: translateY(${styleY}px);">
                                  
-                                 <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-normal leading-none" 
+                                 <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-nowrap leading-none" 
                                     style="writing-mode: vertical-rl; transform: rotate(${parseInt(subRot)}deg); font-family: '${styleFont}', sans-serif; font-size: ${styleSize1}px; color: ${styleColor}; margin: 0;">
                                     
                                     ${sData.l1}

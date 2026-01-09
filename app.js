@@ -5238,19 +5238,19 @@ function setLabelTheme(theme) {
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
-        // --- TUNING VALUES (UITGEBREID MET NIEUWE FEATURES) ---
-        // 1. Positie & Rotatie (Container)
-        const titleX = getVal('tuneTitleX') || 0; // In Standard is dit vaak pixels t.o.v. de rand
-        const titleY = getVal('tuneTitleY') || 0;
-        const titleRot = getVal('tuneTitleRotate') || 0; // Nu ook rotatie mogelijk in standard
+        // --- TUNING VALUES (STANDARD) ---
         
-        // 2. Styling L1 & L2
+        // 1. Positie & Rotatie (Container)
+        const titleX = getVal('tuneTitleX') || 0; 
+        const titleY = getVal('tuneTitleY') || 0;
+        const titleRot = getVal('tuneTitleRotate') || 0;
+        
+        // 2. Styling L1 & L2 (Titel)
         const titleColor = getVal('tuneTitleColor') || '#8F8C79';
         const titleSize1 = parseInt(getVal('tuneTitleSize')) || 100;
         const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60;
         const titleFont = getVal('tuneTitleFont') || 'Barlow Semi Condensed';
         
-        // 3. Offsets & Breaks (NIEUW)
         const titleOffset = getVal('tuneTitleOffset') || 0;
         const titleOffsetY = getVal('tuneTitleOffsetY') || 0;
         const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8;
@@ -5264,6 +5264,9 @@ function setLabelTheme(theme) {
         const styleGap = getVal('tuneStyleGap') || 5;
         const styleY = getVal('tuneStyleY') || 0;
         
+        // CORRECTIE: subRot toegevoegd
+        const subRot = getVal('tuneStyleRotate') || 0; 
+        
         const styleOffset = getVal('tuneStyleOffset') || 0;
         const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
         const styleBreak = parseInt(getVal('tuneStyleBreak')) || 8;
@@ -5271,7 +5274,7 @@ function setLabelTheme(theme) {
         // --- OVERIGE WAARDEN ---
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
         const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
-        const specsColor = getVal('tuneSpecsColor') || '#000000'; // Standaard zwart voor specs
+        const specsColor = getVal('tuneSpecsColor') || '#000000'; 
 
         const artZoom = getVal('tuneArtZoom') || 1.0;
         const artX = getVal('tuneArtX') || 0;
@@ -5282,7 +5285,7 @@ function setLabelTheme(theme) {
         const logoX = getVal('tuneLogoX') || 0;
         const logoY = getVal('tuneLogoY') || 0;
         
-        // --- SPLIT LOGIC (Hergebruikt van Special) ---
+        // --- SPLIT LOGIC ---
         const splitBySlider = (text, breakVal) => {
            const cleanText = text.replace(/\|/g, ''); 
            const words = cleanText.split(' ').filter(w => w.trim() !== '');
@@ -5297,7 +5300,7 @@ function setLabelTheme(theme) {
         const tData = splitBySlider(title, titleBreak);
         const sData = splitBySlider(sub, styleBreak);
 
-        // --- HTML GENERATIE (STANDARD) ---
+        // --- HTML GENERATIE ---
         let artHtml = '';
         if (hasImage) {
              artHtml = `<div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center pointer-events-none"><img src="${imgSrc}" style="transform: translate(${artX}px, ${artY}px) scale(${artZoom}); opacity: ${artOpacity}; transform-origin: center;" class="w-full h-full object-cover transition-transform duration-75"></div>`;
@@ -5305,7 +5308,7 @@ function setLabelTheme(theme) {
         
         const logoHtml = `<div class="absolute top-0 right-0 z-20 pointer-events-none" style="transform: translate(${logoX}px, ${logoY}px); width: ${logoSize}px; padding: 10px;"><img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-full h-auto object-contain drop-shadow-md"></div>`;
         
-        // Specs Logic (Data ophalen)
+        // Specs Logic
         const showYeast = getCheck('labelShowYeast');
         const showHoney = getCheck('labelShowHoney');
         let yeastText = "", honeyText = "";

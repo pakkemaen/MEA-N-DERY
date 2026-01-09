@@ -5175,7 +5175,7 @@ function loadLabelFromBrew(e) {
         resetSlider('tuneArtOverlay', 0.0);
         resetSlider('tuneArtRotate', 0);
 
-        resetSlider('tuneBorderWidth', 5);
+        resetSlider('tuneBorderWidth', 3);
     }
 
     const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
@@ -5233,19 +5233,23 @@ function setLabelTheme(theme) {
         if(b.dataset.theme === theme) b.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
     });
 
+    // =================================================================
+    // THEMA : STANDARD LABEL 
+    // =================================================================
     if (theme === 'standard') {
-        // 1. CONTAINER SETUP
+        // 1. CONTAINER SETUP: 30/70 verdeling
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
         // --- TUNING VALUES ---
         
-        // BORDER (NIEUW in Standard)
+        // BORDER
         const borderWidth = getVal('tuneBorderWidth') || 0;
 
-        // Positie
-        const titleX = getVal('tuneTitleX') || 0; 
-        const titleY = getVal('tuneTitleY') || 0; 
+        // POSITIE HOOFDGROEP (TITEL + SUBTITEL)
+        // AANGEPAST: We gebruiken nu standaard % als er geen eenheid is, voor betere positionering in de 70% box
+        const titleX = getVal('tuneTitleX') || 10; 
+        const titleY = getVal('tuneTitleY') || 10; 
         const titleRot = getVal('tuneTitleRotate') || 0;
         
         // Styling L1 (Titel)
@@ -5255,7 +5259,6 @@ function setLabelTheme(theme) {
         const titleFont = getVal('tuneTitleFont') || 'Barlow Semi Condensed';
         const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8;
         
-        // Offsets L2 (binnen de titel)
         const titleOffset = getVal('tuneTitleOffset') || 0;
         const titleOffsetY = getVal('tuneTitleOffsetY') || 0;
 
@@ -5267,8 +5270,8 @@ function setLabelTheme(theme) {
         const styleBreak = parseInt(getVal('tuneStyleBreak')) || 8;
         
         // Positie L2 t.o.v. L1
-        const styleGap = getVal('tuneStyleGap') || 5; 
-        const styleY = getVal('tuneStyleY') || 0;     
+        const styleGap = getVal('tuneStyleGap') || 10; // Afstand in PX tussen titel en subtitel
+        const styleY = getVal('tuneStyleY') || 0;      // Verschuiving omhoog/omlaag t.o.v. titel
         const subRot = getVal('tuneStyleRotate') || 0; 
         
         const styleOffset = getVal('tuneStyleOffset') || 0;
@@ -5364,13 +5367,13 @@ function setLabelTheme(theme) {
             <div class="h-full w-[70%] relative p-2 overflow-hidden bg-gray-50/20">
                 ${artHtml}
 
-                <div id="text-group" class="absolute bottom-0 left-0 z-10 pointer-events-none" 
-                     style="left: ${titleX}px; bottom: ${titleY}px;">
+                <div id="text-group" class="absolute z-10 pointer-events-none" 
+                     style="left: ${titleX}%; bottom: ${titleY}%;">
                     
                     <div id="title-container" class="relative">
                         
                         <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-visible" 
-                            style="writing-mode: vertical-rl; transform: rotate(180deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
+                            style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
                             
                             ${tData.l1}
                             

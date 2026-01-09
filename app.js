@@ -4836,7 +4836,7 @@ function updateSliderDisplay(id, val) {
         else if(id.includes('Break')) disp.textContent = (val >= 8) ? "All" : "Word " + val;
         else if(id.includes('Width') && id.includes('Border')) disp.textContent = val + 'mm';
         else if(id.includes('Opacity') || id.includes('Overlay')) disp.textContent = Math.round(val * 100) + '%';
-        else if(id.includes('Zoom')) disp.textContent = parseFloat(val).toFixed(1) + 'x';
+        else if(id.includes('Zoom')) disp.textContent = parseFloat(val).toFixed(2) + 'x';
         else if(id.includes('X') || id.includes('Y') || id.includes('Gap') || id.includes('Offset') || (id.includes('Width') && !id.includes('Border'))) disp.textContent = val + '%';
         else disp.textContent = val + 'px';
     }

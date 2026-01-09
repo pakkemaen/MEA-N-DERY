@@ -894,3 +894,34 @@ input:focus, select:focus, textarea:focus {
     width: 100%;
     height: 100%;
 }
+
+/* --- SCREEN ONLY: MAXIMIZE PREVIEW --- */
+/* Maak de preview groter op het scherm voor betere leesbaarheid */
+#label-preview-container {
+    transform: scale(1.6); /* 60% Groter op scherm */
+    transition: transform 0.3s ease, width 0.3s, height 0.3s;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); /* Diepe schaduw */
+}
+
+/* Mobiele aanpassing: iets minder groot zoomen op telefoons */
+@media (max-width: 768px) {
+    #label-preview-container {
+        transform: scale(0.9); /* Op mobiel juist passend maken */
+    }
+}
+
+/* --- PRINT RESET (CRUCIAAL) --- */
+/* Zorg dat de zoom NIET op de printer gebeurt */
+@media print {
+    #label-preview-container {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    /* Verberg de app structuur tijdens printen */
+    main {
+        background: white !important;
+        border: none !important;
+        position: static !important;
+        display: block !important;
+    }
+}

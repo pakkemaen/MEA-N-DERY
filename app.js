@@ -5070,7 +5070,7 @@ function loadLabelFromBrew(e) {
         restoreSlider('tuneTitleY', s.tuneTitleY, 20);
         restoreSlider('tuneTitleRotate', s.tuneTitleRotate, 0);
         restoreSlider('tuneTitleOffset', s.tuneTitleOffset, 0); // <--- TOEGEVOEGD
-        restoreSlider('tuneTitleOffsetY', s.tuneTitleOffsetY,
+        restoreSlider('tuneTitleOffsetY', s.tuneTitleOffsetY;
         restoreSlider('tuneTitleBreak', s.tuneTitleBreak, 8);   // <--- TOEGEVOEGD
         
         restoreSlider('tuneStyleY', s.tuneStyleY, 35);

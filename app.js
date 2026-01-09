@@ -4732,9 +4732,9 @@ function initLabelForge() {
     });
     
     // D. TUNING & SLIDERS (MET COMPLETE WAARDE WEERGAVE)
-    const sliders = [
-        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleRotate', 'tuneTitleOffset', 'tuneTitleBreak',
-        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleRotate', 'tuneStyleOffset', 'tuneStyleBreak',
+    onst sliders = [
+        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleRotate', 'tuneTitleOffset', 'tuneTitleOffsetY', 'tuneTitleBreak',
+        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleRotate', 'tuneStyleOffset', 'tuneStyleOffsetY', 'tuneStyleBreak',
         'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsRotate',
         'tuneDescX', 'tuneDescY', 'tuneDescWidth', 'tuneDescRotate', 'tuneDescSize',
         'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity', 'tuneArtRotate', 'tuneArtOverlay',
@@ -5070,6 +5070,7 @@ function loadLabelFromBrew(e) {
         restoreSlider('tuneTitleY', s.tuneTitleY, 20);
         restoreSlider('tuneTitleRotate', s.tuneTitleRotate, 0);
         restoreSlider('tuneTitleOffset', s.tuneTitleOffset, 0); // <--- TOEGEVOEGD
+        restoreSlider('tuneTitleOffsetY', s.tuneTitleOffsetY,
         restoreSlider('tuneTitleBreak', s.tuneTitleBreak, 8);   // <--- TOEGEVOEGD
         
         restoreSlider('tuneStyleY', s.tuneStyleY, 35);
@@ -5078,6 +5079,7 @@ function loadLabelFromBrew(e) {
         restoreSlider('tuneStyleGap', s.tuneStyleGap, 50);
         restoreSlider('tuneStyleRotate', s.tuneStyleRotate, 0);
         restoreSlider('tuneStyleOffset', s.tuneStyleOffset, 0); // <--- TOEGEVOEGD
+        restoreSlider('tuneStyleOffsetY', s.tuneStyleOffsetY, 0)
         restoreSlider('tuneStyleBreak', s.tuneStyleBreak, 8);   // <--- TOEGEVOEGD
 
         restoreSlider('tuneSpecsSize', s.tuneSpecsSize, 4);
@@ -5169,16 +5171,18 @@ function loadLabelFromBrew(e) {
         resetSlider('tuneTitleX', 50);
         resetSlider('tuneTitleY', 40);
         resetSlider('tuneTitleRotate', 0);
-        resetSlider('tuneTitleOffset', 0); // <--- TOEGEVOEGD
-        resetSlider('tuneTitleBreak', 8);  // <--- TOEGEVOEGD
+        resetSlider('tuneTitleOffset', 0); 
+        resetSlider('tuneTitleOffsetY', 0);
+        resetSlider('tuneTitleBreak', 8);
 
         resetSlider('tuneStyleSize', 14);
         resetSlider('tuneStyleSize2', 10);
         resetSlider('tuneStyleGap', 50);
         resetSlider('tuneStyleY', 55);
         resetSlider('tuneStyleRotate', 0);
-        resetSlider('tuneStyleOffset', 0); // <--- TOEGEVOEGD
-        resetSlider('tuneStyleBreak', 8);  // <--- TOEGEVOEGD
+        resetSlider('tuneStyleOffset', 0);
+        resetSlider('tuneStyleOffsetY', 0);
+        resetSlider('tuneStyleBreak', 8);
 
         resetSlider('tuneSpecsSize', 4);
         resetSlider('tuneSpecsX', 50);
@@ -5384,10 +5388,9 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V25 - CUSTOM FONTS ACTIVATED)
+    // THEMA 2: SPECIAL (V26 - L2 VERTICAL OFFSET)
     // =================================================================
     else if (theme === 'special') {
-       // Let op: 'font-sans' is hier weggehaald zodat we volledige controle hebben
        container.className = `relative w-full h-full overflow-hidden bg-white`; 
        container.style = ""; 
        
@@ -5398,10 +5401,11 @@ function setLabelTheme(theme) {
        const titleColor = getVal('tuneTitleColor') || '#ffffff';
        const titleSize1 = parseInt(getVal('tuneTitleSize')) || 100; 
        const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60; 
-       const titleOffset = getVal('tuneTitleOffset') || 0;
-       const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8; 
        
-       // --- FONT LOGIC: Haal de keuze op uit de dropdown ---
+       const titleOffset = getVal('tuneTitleOffset') || 0;
+       const titleOffsetY = getVal('tuneTitleOffsetY') || 0; // NIEUW
+       
+       const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8; 
        const titleFont = getVal('tuneTitleFont') || 'Barlow Semi Condensed';
        
        const subX = getVal('tuneStyleGap') || 50; 
@@ -5410,10 +5414,11 @@ function setLabelTheme(theme) {
        const subSize1 = parseInt(getVal('tuneStyleSize')) || 14; 
        const subSize2 = parseInt(getVal('tuneStyleSize2')) || 10;
        const subRot = getVal('tuneStyleRotate') || 0;
-       const subOffset = getVal('tuneStyleOffset') || 0;
-       const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; 
        
-       // --- FONT LOGIC ---
+       const subOffset = getVal('tuneStyleOffset') || 0;
+       const subOffsetY = getVal('tuneStyleOffsetY') || 0; // NIEUW
+       
+       const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; 
        const subFont = getVal('tuneStyleFont') || 'Barlow Semi Condensed';
 
        const descX = getVal('tuneDescX') || 50;
@@ -5422,8 +5427,6 @@ function setLabelTheme(theme) {
        const descRot = getVal('tuneDescRotate') || 0;
        const descSize = getVal('tuneDescSize') || 6;
        const descColor = getVal('tuneDescColor') || '#ffffff';
-       
-       // --- FONT LOGIC ---
        const descFont = getVal('tuneDescFont') || 'Playfair Display';
 
        const specsX = getVal('tuneSpecsX') || 50; 
@@ -5432,8 +5435,6 @@ function setLabelTheme(theme) {
        const specsColor = getVal('tuneSpecsColor') || '#ffffff';
        const allergenColor = getVal('tuneAllergenColor') || specsColor;
        const specsSize = getVal('tuneSpecsSize') || 4;
-       
-       // --- FONT LOGIC ---
        const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
 
        const artZoom = getVal('tuneArtZoom') || 1.0;
@@ -5533,12 +5534,10 @@ function setLabelTheme(theme) {
                        font-family: '${titleFont}', sans-serif;">
                 
                 <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none"
-                       style="font-size: ${titleSize1}px; color: ${titleColor}; margin: 0; font-family: '${titleFont}', sans-serif;">
-                       ${tData.l1}
-                </h1>
+                    style="font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">${tData.l1}</h1>
                 
                 ${tData.isSplit ? `<h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none"
-                    style="font-size: ${titleSize2}px; color: ${titleColor}; margin-top: 5px; transform: translateX(${titleOffset}%);">${tData.l2}</h1>` : ''}
+                    style="font-size: ${titleSize2}px; color: ${titleColor}; margin-top: 5px; transform: translate(${titleOffset}%, ${titleOffsetY}%);">${tData.l2}</h1>` : ''}
            </div>
 
            <div class="absolute z-10 pointer-events-none flex flex-col justify-start" 
@@ -5553,7 +5552,7 @@ function setLabelTheme(theme) {
                    style="font-size: ${subSize1}px; color: ${subColor}; margin: 0;">${sData.l1}</p>
                 
                 ${sData.isSplit ? `<p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
-                   style="font-size: ${subSize2}px; color: ${subColor}; margin-top: 5px; transform: translateX(${subOffset}%);">${sData.l2}</p>` : ''}
+                   style="font-size: ${subSize2}px; color: ${subColor}; margin-top: 5px; transform: translate(${subOffset}%, ${subOffsetY}%);">${sData.l2}</p>` : ''}
            </div>
 
            ${desc ? `
@@ -5990,6 +5989,7 @@ window.saveLabelToBrew = async function() {
         tuneTitleColor: getVal('tuneTitleColor'), 
         tuneTitleRotate: getVal('tuneTitleRotate'),
         tuneTitleOffset: getVal('tuneTitleOffset'),
+        tuneTitleOffsetY: getVal('tuneTitleOffsetY')
         tuneTitleBreak: getVal('tuneTitleBreak'),
         
         // --- STYLE TUNING (NU COMPLEET) ---
@@ -5997,6 +5997,7 @@ window.saveLabelToBrew = async function() {
         tuneStyleSize: getVal('tuneStyleSize'),
         tuneStyleSize2: getVal('tuneStyleSize2'),
         tuneStyleGap: getVal('tuneStyleGap'),
+        tuneStyleOffsetY: getVal('tuneStyleOffsetY')
         tuneStyleColor: getVal('tuneStyleColor'),
         tuneStyleRotate: getVal('tuneStyleRotate'),
         tuneStyleOffset: getVal('tuneStyleOffset'),

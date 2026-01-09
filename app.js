@@ -5360,13 +5360,13 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (FIXED L1 ANCHOR - L2 ABSOLUTE)
+    // THEMA 2: SPECIAL (FIXED FONTS & ANCHOR)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white`; 
        container.style = ""; 
        
-       // --- TUNING VALUES ---
+       // --- TUNING VALUES (Identiek aan voorheen) ---
        const titleX = getVal('tuneTitleX') || 50; 
        const titleY = getVal('tuneTitleY') || 20;
        const titleRot = getVal('tuneTitleRotate') || 0;
@@ -5393,7 +5393,6 @@ function setLabelTheme(theme) {
        const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; 
        const subFont = getVal('tuneStyleFont') || 'Barlow Semi Condensed';
 
-       // (De rest van de variabelen blijven hetzelfde, hier ingekort voor overzicht)
        const descX = getVal('tuneDescX') || 50;
        const descY = getVal('tuneDescY') || 70;
        const descWidth = getVal('tuneDescWidth') || 60;
@@ -5443,7 +5442,7 @@ function setLabelTheme(theme) {
        const tData = splitBySlider(title, titleBreak);
        const sData = splitBySlider(sub, subBreak);
 
-       // Specs data (zelfde als voorheen)
+       // Specs data setup (ongewijzigd)
        const showYeast = getCheck('labelShowYeast');
        const showHoney = getCheck('labelShowHoney');
        let yeastText = "", honeyText = "";
@@ -5493,18 +5492,17 @@ function setLabelTheme(theme) {
            <div class="absolute z-10 pointer-events-none" 
                 style="top: ${titleY}%; left: ${titleX}%; 
                        transform: translate(-50%, -50%) rotate(${titleRot}deg); 
-                       white-space: nowrap; text-align: center;
-                       font-family: '${titleFont}', sans-serif;">
+                       white-space: nowrap; text-align: center;">
                 
                 <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none relative"
-                    style="font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
+                    style="font-size: ${titleSize1}px; color: ${titleColor}; margin: 0; font-family: '${titleFont}', sans-serif;">
                     ${tData.l1}
                     
                     ${tData.isSplit ? `
                     <div class="absolute top-full left-1/2 w-max" 
                          style="transform: translate(-50%, ${titleOffsetY}%) translate(${titleOffset}%, 0);">
                         <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none"
-                            style="font-size: ${titleSize2}px; color: ${titleColor}; margin-top: 5px;">
+                            style="font-size: ${titleSize2}px; color: ${titleColor}; margin-top: 5px; font-family: '${titleFont}', sans-serif;">
                             ${tData.l2}
                         </h1>
                     </div>` : ''}
@@ -5514,18 +5512,17 @@ function setLabelTheme(theme) {
            <div class="absolute z-10 pointer-events-none" 
                 style="top: ${subY}%; left: ${subX}%; 
                        transform: translate(-50%, -50%) rotate(${subRot}deg); 
-                       white-space: nowrap; text-align: center;
-                       font-family: '${subFont}', sans-serif;">
+                       white-space: nowrap; text-align: center;">
                 
                 <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight relative"
-                   style="font-size: ${subSize1}px; color: ${subColor}; margin: 0;">
+                   style="font-size: ${subSize1}px; color: ${subColor}; margin: 0; font-family: '${subFont}', sans-serif;">
                    ${sData.l1}
 
                    ${sData.isSplit ? `
                    <div class="absolute top-full left-1/2 w-max" 
                         style="transform: translate(-50%, ${subOffsetY}%) translate(${subOffset}%, 0);">
                         <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
-                           style="font-size: ${subSize2}px; color: ${subColor}; margin-top: 5px;">
+                           style="font-size: ${subSize2}px; color: ${subColor}; margin-top: 5px; font-family: '${subFont}', sans-serif;">
                            ${sData.l2}
                         </p>
                    </div>` : ''}
@@ -5535,11 +5532,10 @@ function setLabelTheme(theme) {
            ${desc ? `
            <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-center text-center" 
                 style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%;
-                       transform: translate(-50%, -50%) rotate(${descRot}deg);
-                       font-family: '${descFont}', serif;">
+                       transform: translate(-50%, -50%) rotate(${descRot}deg);">
                 
                 <p class="italic leading-tight drop-shadow-md whitespace-normal"
-                   style="font-size: ${descSize}px; color: ${descColor};">
+                   style="font-size: ${descSize}px; color: ${descColor}; font-family: '${descFont}', serif;">
                    ${desc}
                 </p>
            </div>` : ''}

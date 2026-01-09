@@ -5234,7 +5234,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA : STANDARD LABEL (V2.6 - FIX: Back to Flexbox V1 Structure)
+    // THEMA : STANDARD LABEL (V2.7 - FIX: L2 Rotation Sync & Alignment)
     // =================================================================
     if (theme === 'standard') {
         // 1. CONTAINER SETUP

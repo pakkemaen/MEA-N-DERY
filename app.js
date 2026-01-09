@@ -1,9 +1,18 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, deleteDoc, getDoc, setDoc, writeBatch, getDocs, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { 
+    getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc, query, where, onSnapshot 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// --- CRUCIAAL: Importeer je sleutels ---
-import CONFIG from './secrets.js';
+// NIEUW: TOEVOEGEN VOOR OPSLAG VAN GROTE PLAATJES
+import { 
+    getStorage, ref, uploadString, getDownloadURL, deleteObject 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js"; 
+
+import { firebaseConfig } from './secrets.js';
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app); // Activeer de storage service
 
 // --- App State Variables ---
 let db, auth, userId;
@@ -5785,20 +5794,33 @@ async function generateLabelArt() {
     btn.innerHTML = "🎨 Painting...";
     btn.disabled = true;
 
-    // --- DE AANGEPASTE PROMPT LOGICA ---
-    // 1. We vragen om een "Background illustration" i.p.v. "Label design".
-    // 2. We voegen een harde "NO TEXT" regel toe.
-    let artPrompt = `Artistic background illustration for a mead called "${title}". Subject: ${style}. 
-    CRITICAL CONSTRAINT: NO TEXT. Do not write the name. Do not use letters, words, or typography. Create a text-free illustration only.`;
+    // --- AANGEPASTE PROMPT LOGICA (V3.7 - ANTI-TEKST) ---
+    let visualStyle = "";
+    if (theme === 'special') {
+        visualStyle = "Dark, mystical, premium texture, gold accents, high contrast, oil painting style.";
+    } else {
+        visualStyle = "Clean, modern vector art, vibrant colors, white background, minimalist.";
+    }
 
-    if (theme === 'special') artPrompt += " Style: Dark, premium, gold accents, mystical, minimal, high quality.";
-    else artPrompt += " Style: Clean, modern vector art, white background, vibrant colors, high contrast.";
+    // De truc: We vragen om een 'Artistic interpretation' van het concept, niet om een 'Label'.
+    // En we verbieden expliciet het schrijven van de titel.
+    let artPrompt = `
+    Create a high-quality artistic background illustration.
+    
+    VISUAL SUBJECT: A creative visual interpretation of the concept: "${title}" (${style}).
+    ART STYLE: ${visualStyle}
+    
+    CRITICAL NEGATIVE CONSTRAINTS (STRICT):
+    1. NO TEXT. NO WORDS. NO LETTERS. NO TYPOGRAPHY.
+    2. Do NOT write the name "${title}" anywhere.
+    3. Do NOT make a "product label" layout. Just create the artwork/illustration itself.
+    4. No borders, no frames. Full bleed image.
+    `;
 
     try {
         let apiKey = userSettings.imageApiKey || userSettings.apiKey;
         if (!apiKey) throw new Error("No API Key found.");
 
-        // We gebruiken de instelling uit Settings, of de default Google Imagen
         const model = userSettings.imageModel || "imagen-3.0-generate-001";
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
         
@@ -5827,14 +5849,13 @@ async function generateLabelArt() {
                 imgDisplay.src = finalSrc;
                 imgDisplay.classList.remove('hidden');
             }
-            // Verberg de "upload" knop placeholder als die er is (afhankelijk van je CSS)
             const placeholder = document.getElementById('label-img-placeholder');
             if(placeholder) placeholder.classList.add('hidden');
 
-            // Forceer refresh van het label thema zodat de afbeelding goed in de lagen komt
+            // Forceer refresh van het label thema
             setLabelTheme(theme);
             
-            showToast("Artwork created (Text-free)!", "success");
+            showToast("Artwork created!", "success");
         }
     } catch (error) {
         console.error(error);
@@ -5842,6 +5863,135 @@ async function generateLabelArt() {
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
+    }
+}
+
+// --- CLOUD GALLERY SYSTEM (V2.0 - FIREBASE STORAGE) ---
+
+// 1. Opslaan (Nu geschikt voor Hoge Resolutie!)
+window.saveArtToCloud = async function() {
+    if (!window.currentLabelImageSrc) return;
+    if (!userId) return showToast("Log in to use Cloud Gallery.", "error");
+
+    const btn = document.querySelector('button[onclick="window.saveArtToCloud()"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "Uploading HD..."; // Feedback dat we groot bestand doen
+    btn.disabled = true;
+
+    try {
+        const title = document.getElementById('labelTitle')?.value || "Untitled";
+        // We maken een unieke bestandsnaam: users/USER_ID/gallery/TIMESTAMP_TITEL.png
+        const timestamp = Date.now();
+        const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const filePath = `users/${userId}/gallery/${timestamp}_${safeTitle}.png`;
+        
+        // A. Upload het bestand naar Storage (Harde Schijf)
+        const storageRef = ref(storage, filePath);
+        // currentLabelImageSrc is een base64 string, dus we gebruiken uploadString
+        await uploadString(storageRef, window.currentLabelImageSrc, 'data_url');
+        
+        // B. Haal de publieke download URL op
+        const downloadUrl = await getDownloadURL(storageRef);
+
+        // C. Sla de REFERENTIE op in de Database (Database blijft nu snel & klein)
+        await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'gallery'), {
+            imageSrc: downloadUrl,    // We slaan nu de link op, niet de data zelf
+            storagePath: filePath,    // Pad bewaren om later te kunnen verwijderen
+            name: title,
+            createdAt: new Date().toISOString()
+        });
+
+        showToast("HD Artwork saved to Cloud!", "success");
+    } catch (e) {
+        console.error(e);
+        showToast("Upload failed: " + e.message, "error");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+// 2. Open Galerij & Laad Plaatjes
+window.openArtGallery = function() {
+    if (!userId) return showToast("Log in first.", "error");
+    
+    const modal = document.getElementById('gallery-modal');
+    const grid = document.getElementById('gallery-grid');
+    modal.classList.remove('hidden');
+    grid.innerHTML = '<div class="col-span-full flex justify-center py-10"><div class="loader"></div></div>';
+
+    // Haal data op
+    const q = query(collection(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'gallery'));
+    
+    // Realtime listener (zodat delete direct zichtbaar is)
+    onSnapshot(q, (snapshot) => {
+        if (snapshot.empty) {
+            grid.innerHTML = `<div class="col-span-full text-center py-10 text-app-secondary opacity-60 flex flex-col items-center gap-2"><span class="text-4xl">📂</span><p>Gallery is empty.<br>Save your creations to see them here.</p></div>`;
+            return;
+        }
+
+        // Sorteer op nieuwste eerst
+        const arts = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}))
+                                  .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        grid.innerHTML = arts.map(art => `
+            <div class="relative group aspect-square rounded-lg overflow-hidden border border-app-brand/20 bg-black cursor-pointer shadow-md hover:shadow-xl transition-all hover:scale-[1.02]">
+                <img src="${art.imageSrc}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100" onclick="window.selectFromGallery('${art.imageSrc}')">
+                
+                <div class="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[10px] p-2 truncate">
+                    ${art.name}
+                </div>
+                
+        <button onclick="window.deleteFromGallery('${art.id}', '${art.storagePath || ''}')" class="...">
+            &times;
+        </button>
+
+            </div>
+        `).join('');
+    });
+}
+
+// 3. Kies Plaatje (Inladen in Editor)
+window.selectFromGallery = function(src) {
+    window.currentLabelImageSrc = src;
+    
+    // Update UI
+    const imgDisplay = document.getElementById('label-img-display');
+    if (imgDisplay) {
+        imgDisplay.src = src;
+        imgDisplay.classList.remove('hidden');
+    }
+    document.getElementById('label-img-placeholder')?.classList.add('hidden');
+    
+    // Sluit modal
+    document.getElementById('gallery-modal').classList.add('hidden');
+    
+    // Refresh label & knoppen
+    const activeBtn = document.querySelector('.label-theme-btn.active');
+    const theme = activeBtn ? activeBtn.dataset.theme : 'standard';
+    setLabelTheme(theme);
+    window.updateArtButtons();
+    
+    showToast("Artwork loaded from Cloud!", "success");
+}
+
+// 4. Verwijder uit Cloud (Database + Storage File)
+window.deleteFromGallery = async function(docId, storagePath) {
+    if(!confirm("Permanently delete this artwork?")) return;
+    try {
+        // A. Verwijder eerst het bestand uit Storage (als het pad bekend is)
+        if (storagePath) {
+            const fileRef = ref(storage, storagePath);
+            await deleteObject(fileRef).catch(err => console.log("File not found in storage, deleting doc only."));
+        }
+
+        // B. Verwijder daarna het document uit de database
+        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'gallery', docId));
+        
+        showToast("Artwork deleted.", "success");
+    } catch(e) {
+        console.error(e);
+        showToast("Delete failed: " + e.message, "error");
     }
 }
 

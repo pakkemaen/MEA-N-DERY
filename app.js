@@ -5989,7 +5989,7 @@ window.saveLabelToBrew = async function() {
         tuneTitleColor: getVal('tuneTitleColor'), 
         tuneTitleRotate: getVal('tuneTitleRotate'),
         tuneTitleOffset: getVal('tuneTitleOffset'),
-        tuneTitleOffsetY: getVal('tuneTitleOffsetY')
+        tuneTitleOffsetY: getVal('tuneTitleOffsetY'),
         tuneTitleBreak: getVal('tuneTitleBreak'),
         
         // --- STYLE TUNING (NU COMPLEET) ---
@@ -5997,7 +5997,7 @@ window.saveLabelToBrew = async function() {
         tuneStyleSize: getVal('tuneStyleSize'),
         tuneStyleSize2: getVal('tuneStyleSize2'),
         tuneStyleGap: getVal('tuneStyleGap'),
-        tuneStyleOffsetY: getVal('tuneStyleOffsetY')
+        tuneStyleOffsetY: getVal('tuneStyleOffsetY'),
         tuneStyleColor: getVal('tuneStyleColor'),
         tuneStyleRotate: getVal('tuneStyleRotate'),
         tuneStyleOffset: getVal('tuneStyleOffset'),

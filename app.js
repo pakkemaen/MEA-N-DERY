@@ -5360,7 +5360,7 @@ function setLabelTheme(theme) {
     } 
     
     // =================================================================
-    // THEMA 2: SPECIAL (V26 - L2 VERTICAL OFFSET)
+    // THEMA 2: SPECIAL (FIXED L1 ANCHOR - L2 ABSOLUTE)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white`; 
@@ -5375,7 +5375,7 @@ function setLabelTheme(theme) {
        const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60; 
        
        const titleOffset = getVal('tuneTitleOffset') || 0;
-       const titleOffsetY = getVal('tuneTitleOffsetY') || 0; // NIEUW
+       const titleOffsetY = getVal('tuneTitleOffsetY') || 0; 
        
        const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8; 
        const titleFont = getVal('tuneTitleFont') || 'Barlow Semi Condensed';
@@ -5388,11 +5388,12 @@ function setLabelTheme(theme) {
        const subRot = getVal('tuneStyleRotate') || 0;
        
        const subOffset = getVal('tuneStyleOffset') || 0;
-       const subOffsetY = getVal('tuneStyleOffsetY') || 0; // NIEUW
+       const subOffsetY = getVal('tuneStyleOffsetY') || 0; 
        
        const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; 
        const subFont = getVal('tuneStyleFont') || 'Barlow Semi Condensed';
 
+       // (De rest van de variabelen blijven hetzelfde, hier ingekort voor overzicht)
        const descX = getVal('tuneDescX') || 50;
        const descY = getVal('tuneDescY') || 70;
        const descWidth = getVal('tuneDescWidth') || 60;
@@ -5442,14 +5443,7 @@ function setLabelTheme(theme) {
        const tData = splitBySlider(title, titleBreak);
        const sData = splitBySlider(sub, subBreak);
 
-       // --- SMOOTH ALIGNMENT ---
-       const fixedAlign = {
-           align: 'center',
-           transform: 'translate(-50%, 0)', 
-           origin: '50% 0%' 
-       };
-
-       // Specs data
+       // Specs data (zelfde als voorheen)
        const showYeast = getCheck('labelShowYeast');
        const showHoney = getCheck('labelShowHoney');
        let yeastText = "", honeyText = "";
@@ -5475,7 +5469,6 @@ function setLabelTheme(theme) {
            bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
        }
 
-       // --- LOGO GENERATOR ---
        let logoInnerHtml = '';
        const currentLogoSrc = document.getElementById('label-logo-img')?.src || 'logo.png';
 
@@ -5497,34 +5490,46 @@ function setLabelTheme(theme) {
                 style="box-shadow: inset 0 0 0 ${borderWidth}mm white;">
            </div>
 
-           <div class="absolute z-10 pointer-events-none flex flex-col justify-start" 
+           <div class="absolute z-10 pointer-events-none" 
                 style="top: ${titleY}%; left: ${titleX}%; 
-                       text-align: ${fixedAlign.align};
-                       transform-origin: ${fixedAlign.origin};
-                       transform: ${fixedAlign.transform} rotate(${titleRot}deg); 
-                       width: auto; white-space: nowrap;
+                       transform: translate(-50%, -50%) rotate(${titleRot}deg); 
+                       white-space: nowrap; text-align: center;
                        font-family: '${titleFont}', sans-serif;">
                 
-                <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none"
-                    style="font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">${tData.l1}</h1>
-                
-                ${tData.isSplit ? `<h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none"
-                    style="font-size: ${titleSize2}px; color: ${titleColor}; margin-top: 5px; transform: translate(${titleOffset}%, ${titleOffsetY}%);">${tData.l2}</h1>` : ''}
+                <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none relative"
+                    style="font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
+                    ${tData.l1}
+                    
+                    ${tData.isSplit ? `
+                    <div class="absolute top-full left-1/2 w-max" 
+                         style="transform: translate(-50%, ${titleOffsetY}%) translate(${titleOffset}%, 0);">
+                        <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none"
+                            style="font-size: ${titleSize2}px; color: ${titleColor}; margin-top: 5px;">
+                            ${tData.l2}
+                        </h1>
+                    </div>` : ''}
+                </h1>
            </div>
 
-           <div class="absolute z-10 pointer-events-none flex flex-col justify-start" 
+           <div class="absolute z-10 pointer-events-none" 
                 style="top: ${subY}%; left: ${subX}%; 
-                       text-align: ${fixedAlign.align};
-                       transform-origin: ${fixedAlign.origin};
-                       transform: ${fixedAlign.transform} rotate(${subRot}deg); 
-                       width: auto; white-space: nowrap;
+                       transform: translate(-50%, -50%) rotate(${subRot}deg); 
+                       white-space: nowrap; text-align: center;
                        font-family: '${subFont}', sans-serif;">
                 
-                <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
-                   style="font-size: ${subSize1}px; color: ${subColor}; margin: 0;">${sData.l1}</p>
-                
-                ${sData.isSplit ? `<p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
-                   style="font-size: ${subSize2}px; color: ${subColor}; margin-top: 5px; transform: translate(${subOffset}%, ${subOffsetY}%);">${sData.l2}</p>` : ''}
+                <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight relative"
+                   style="font-size: ${subSize1}px; color: ${subColor}; margin: 0;">
+                   ${sData.l1}
+
+                   ${sData.isSplit ? `
+                   <div class="absolute top-full left-1/2 w-max" 
+                        style="transform: translate(-50%, ${subOffsetY}%) translate(${subOffset}%, 0);">
+                        <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
+                           style="font-size: ${subSize2}px; color: ${subColor}; margin-top: 5px;">
+                           ${sData.l2}
+                        </p>
+                   </div>` : ''}
+                </p>
            </div>
 
            ${desc ? `

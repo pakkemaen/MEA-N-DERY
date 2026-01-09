@@ -5234,44 +5234,42 @@ function setLabelTheme(theme) {
     });
 
     if (theme === 'standard') {
-        // CONTAINER SETUP: Flexbox voor de 30/70 verdeling
+        // 1. CONTAINER SETUP: DE OORSPRONKELIJKE 30/70 FLEX LAYOUT
         container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
         container.style = ""; 
 
-        // --- TUNING VALUES (STANDARD) ---
+        // --- TUNING VALUES ---
+        // Positie
+        const titleX = getVal('tuneTitleX') || 0; // Werkt als padding-left in dit model
+        const titleY = getVal('tuneTitleY') || 0; // Werkt als padding-bottom
         
-        // 1. Positie & Rotatie (Container)
-        const titleX = getVal('tuneTitleX') || 0; 
-        const titleY = getVal('tuneTitleY') || 0;
-        const titleRot = getVal('tuneTitleRotate') || 0;
-        
-        // 2. Styling L1 & L2 (Titel)
+        // Styling L1 (Titel)
         const titleColor = getVal('tuneTitleColor') || '#8F8C79';
         const titleSize1 = parseInt(getVal('tuneTitleSize')) || 100;
         const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60;
         const titleFont = getVal('tuneTitleFont') || 'Barlow Semi Condensed';
+        const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8;
         
+        // Offsets L2 (binnen de titel)
         const titleOffset = getVal('tuneTitleOffset') || 0;
         const titleOffsetY = getVal('tuneTitleOffsetY') || 0;
-        const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8;
 
-        // --- SUBTITEL WAARDEN ---
+        // Styling L2 (Subtitel)
         const styleColor = getVal('tuneStyleColor') || '#9ca3af';
         const styleSize1 = parseInt(getVal('tuneStyleSize')) || 14;
         const styleSize2 = parseInt(getVal('tuneStyleSize2')) || 10;
         const styleFont = getVal('tuneStyleFont') || 'Barlow Semi Condensed';
+        const styleBreak = parseInt(getVal('tuneStyleBreak')) || 8;
         
-        const styleGap = getVal('tuneStyleGap') || 5;
-        const styleY = getVal('tuneStyleY') || 0;
-        
-        // CORRECTIE: subRot toegevoegd
-        const subRot = getVal('tuneStyleRotate') || 0; 
+        // Positie L2 t.o.v. L1
+        const styleGap = getVal('tuneStyleGap') || 5; // Afstand tussen titel en subtitel
+        const styleY = getVal('tuneStyleY') || 0;     // Verticale verschuiving subtitel
+        const subRot = getVal('tuneStyleRotate') || 0; // Rotatie subtitel
         
         const styleOffset = getVal('tuneStyleOffset') || 0;
         const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
-        const styleBreak = parseInt(getVal('tuneStyleBreak')) || 8;
 
-        // --- OVERIGE WAARDEN ---
+        // Overige (Specs, Art, Logo)
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
         const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
         const specsColor = getVal('tuneSpecsColor') || '#000000'; 
@@ -5308,7 +5306,7 @@ function setLabelTheme(theme) {
         
         const logoHtml = `<div class="absolute top-0 right-0 z-20 pointer-events-none" style="transform: translate(${logoX}px, ${logoY}px); width: ${logoSize}px; padding: 10px;"><img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-full h-auto object-contain drop-shadow-md"></div>`;
         
-        // Specs Logic
+        // Specs Data Logic (Ongewijzigd)
         const showYeast = getCheck('labelShowYeast');
         const showHoney = getCheck('labelShowHoney');
         let yeastText = "", honeyText = "";
@@ -5326,7 +5324,7 @@ function setLabelTheme(theme) {
         else if (rawDate) { try { const d = new Date(rawDate); const abvNum = parseFloat(abv); let months = (abvNum < 8) ? 3 : (abvNum > 14 ? 12 : 6); d.setMonth(d.getMonth() + months); peakDateVal = d.toLocaleDateString('nl-NL').replace(/-/g, '/'); } catch(e) {} }
 
         container.innerHTML = `
-            <div class="h-full w-[30%] bg-gray-50/80 pt-0.5 pb-0 pl-0 pr-2 flex flex-col text-right z-20 relative" 
+            <div class="h-full w-[30%] bg-gray-50/80 pt-0.5 pb-0 pl-0 pr-2 flex flex-col text-right z-20 relative"
                  style="font-family: '${specsFont}', sans-serif; color: ${specsColor};">
                 
                 <div class="flex flex-col gap-1 overflow-hidden">
@@ -5357,12 +5355,13 @@ function setLabelTheme(theme) {
             <div class="h-full w-[70%] relative p-2 overflow-hidden bg-gray-50/20">
                 ${artHtml}
 
-                <div id="text-group" class="absolute top-0 bottom-0 z-10 flex flex-row items-end pointer-events-none" 
-                     style="left: ${titleX}px; padding-left: 2px;">
+                <div id="text-group" class="absolute bottom-0 left-0 z-10 pointer-events-none" 
+                     style="left: ${titleX}px; bottom: ${titleY}px;">
                     
-                    <div id="title-container" class="h-full flex flex-col justify-end" style="padding-bottom: ${titleY}px;">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-hidden relative" 
-                            style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor};">
+                    <div id="title-container" class="relative">
+                        
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-normal line-clamp-2 text-ellipsis overflow-visible" 
+                            style="writing-mode: vertical-rl; transform: rotate(180deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
                             
                             ${tData.l1}
                             
@@ -5372,24 +5371,25 @@ function setLabelTheme(theme) {
                                     ${tData.l2}
                                 </span>
                             </div>` : ''}
-                        </h1>
-                    </div>
-                    
-                    <div id="style-container" class="h-[50%] flex flex-col justify-end overflow-hidden" 
-                         style="margin-left: ${styleGap}px; padding-bottom: ${styleY}px;">
-                         
-                         <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-normal leading-none line-clamp-3 text-ellipsis relative" 
-                            style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(subRot)}deg); font-family: '${styleFont}', sans-serif; font-size: ${styleSize1}px; color: ${styleColor};">
-                            
-                            ${sData.l1}
 
-                            ${sData.isSplit ? `
-                            <div class="absolute" style="top: 0; right: 100%; transform: translate(${styleOffset}%, ${styleOffsetY}%); margin-right: 5px;">
-                                <span style="font-size: ${styleSize2}px; color: ${styleColor}; font-family: '${styleFont}', sans-serif; white-space: nowrap;">
-                                    ${sData.l2}
-                                </span>
-                            </div>` : ''}
-                        </p>
+                            <div id="style-container" class="absolute" 
+                                 style="top: 0; left: 100%; margin-left: ${styleGap}px; transform: translateY(${styleY}px);">
+                                 
+                                 <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-normal leading-none" 
+                                    style="writing-mode: vertical-rl; transform: rotate(${parseInt(subRot)}deg); font-family: '${styleFont}', sans-serif; font-size: ${styleSize1}px; color: ${styleColor}; margin: 0;">
+                                    
+                                    ${sData.l1}
+
+                                    ${sData.isSplit ? `
+                                    <div class="absolute" style="top: 0; right: 100%; transform: translate(${styleOffset}%, ${styleOffsetY}%); margin-right: 5px;">
+                                        <span style="font-size: ${styleSize2}px; color: ${styleColor}; font-family: '${styleFont}', sans-serif; white-space: nowrap;">
+                                            ${sData.l2}
+                                        </span>
+                                    </div>` : ''}
+                                </p>
+                            </div>
+
+                        </h1>
                     </div>
                 </div>
 

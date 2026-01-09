@@ -5247,7 +5247,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA : STANDARD LABEL (V3.3 - FIX: Story in 30% Sidebar & Sliders)
+    // THEMA : STANDARD LABEL (V3.5 - FIX: Specs & Date Sliders Activated)
     // =================================================================
     if (theme === 'standard') {
         // 1. CONTAINER SETUP
@@ -5283,19 +5283,23 @@ function setLabelTheme(theme) {
         const styleOffset = getVal('tuneStyleOffset') || 0;
         const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
 
-        // Overige (Specs & Story)
-        const specsFontSize = getVal('tuneSpecsSize') || 5; 
-        const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
-        const specsColor = getVal('tuneSpecsColor') || '#000000'; 
-        
-        // STORY SLIDERS (Nu toegepast op de linker balk)
-        const descX = getVal('tuneDescX') || 50;
-        const descY = getVal('tuneDescY') || 20; // Default wat hoger in de balk
-        const descWidth = getVal('tuneDescWidth') || 90;
+        // STORY SLIDERS (Backstory)
+        const descX = getVal('tuneDescX') || 50;  
+        const descY = getVal('tuneDescY') || 15;  
+        const descWidth = getVal('tuneDescWidth') || 85; 
         const descRot = getVal('tuneDescRotate') || 0;
         const descSize = getVal('tuneDescSize') || 6;
-        const descColor = getVal('tuneDescColor') || '#000000'; // Zwart in de balk
+        const descColor = getVal('tuneDescColor') || '#000000';
         const descFont = getVal('tuneDescFont') || 'Barlow Semi Condensed';
+
+        // SPECS SLIDERS (Nu geactiveerd!)
+        const specsX = getVal('tuneSpecsX') || 50; // 50% = Midden van de balk
+        const specsY = getVal('tuneSpecsY') || 85; // 85% = Onderaan de balk
+        const specsRot = getVal('tuneSpecsRotate') || 0;
+        const specsSize = getVal('tuneSpecsSize') || 4; 
+        const specsColor = getVal('tuneSpecsColor') || '#8F8C79';
+        const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
+        const allergenColor = getVal('tuneAllergenColor') || '#000000';
 
         // Art & Logo
         const artZoom = getVal('tuneArtZoom') || 1.0;
@@ -5342,33 +5346,36 @@ function setLabelTheme(theme) {
         container.innerHTML = `
             <div class="absolute inset-0 pointer-events-none z-50" style="box-shadow: inset 0 0 0 ${borderWidth}mm white;"></div>
 
-            <div class="relative h-full w-[30%] bg-gray-50/80 pt-2 pb-0 pl-0 pr-2 z-20" style="font-family: '${specsFont}', sans-serif; color: ${specsColor};">
+            <div class="relative h-full w-[30%] bg-gray-50/80 z-20 overflow-hidden" 
+                 style="font-family: '${specsFont}', sans-serif;">
                 
-                <div class="absolute flex flex-col items-center justify-center text-justify"
+                <div class="absolute flex flex-col items-center justify-start text-center"
                      style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%; 
-                            transform: translate(-50%, -50%) rotate(${descRot}deg);
+                            transform: translate(-50%, 0) rotate(${descRot}deg);
                             font-size: ${descSize}px; color: ${descColor}; font-family: '${descFont}', serif;
-                            line-height: 1.4; white-space: normal;">
+                            line-height: 1.4; white-space: normal; overflow-wrap: break-word;">
                     ${desc}
                     ${showDetails && details ? `<p class="mt-2 pt-2 border-t border-gray-300 w-full text-center uppercase tracking-wide opacity-80" style="font-size: 0.8em; font-family: sans-serif;">${details}</p>` : ''}
                 </div>
 
-                <div class="absolute bottom-0 left-0 w-full pr-2 pb-2 flex flex-col text-right justify-end bg-gradient-to-t from-gray-50 via-gray-50/90 to-transparent pt-4">
+                <div class="absolute flex flex-col items-center justify-center text-center"
+                     style="top: ${specsY}%; left: ${specsX}%; width: 90%; 
+                            transform: translate(-50%, -50%) rotate(${specsRot}deg);
+                            font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.3;">
+                    
                     ${showSpecsBlock ? `
-                    <div class="py-2 border-b border-gray-300 space-y-1 mb-2">
-                        ${showHoney && honeyText ? `<div class="flex flex-col leading-tight"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Honey Source</span><span class="font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${honeyText}</span></div>` : ''}
-                        ${showYeast && yeastText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Yeast Strain</span><span class="font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${yeastText}</span></div>` : ''}
-                        ${allergenText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Allergens</span><span class="font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${allergenText}</span></div>` : ''}
+                    <div class="w-full pb-2 mb-2 border-b border-gray-300/50 space-y-1">
+                        ${showHoney && honeyText ? `<div class="leading-tight"><span class="block font-bold uppercase tracking-widest opacity-60" style="font-size: 0.8em;">Honey Source</span><span class="uppercase font-bold">${honeyText}</span></div>` : ''}
+                        ${showYeast && yeastText ? `<div class="leading-tight"><span class="block font-bold uppercase tracking-widest opacity-60" style="font-size: 0.8em;">Yeast Strain</span><span class="uppercase font-bold">${yeastText}</span></div>` : ''}
+                        ${allergenText ? `<div class="leading-tight pt-1"><span class="uppercase font-bold" style="color: ${allergenColor}">${allergenText}</span></div>` : ''}
                     </div>` : ''}
                     
-                    <div class="text-[#8F8C79]">
-                        <div class="grid grid-cols-2 gap-x-0 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider">
-                            ${abv ? `<div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>` : ''}
-                            ${fg ? `<div class="text-gray-400">FG</div> <div class="text-black text-right"><span id="prev-fg">${fg}</span></div>` : ''}
-                            ${vol ? `<div class="text-gray-400">Vol</div> <div class="text-black text-right"><span id="prev-vol">${vol}</span>ml</div>` : ''}
-                            ${dateVal ? `<div class="text-gray-400">Bottled</div> <div class="text-black text-right"><span id="prev-date">${dateVal}</span></div>` : ''}
-                            ${peakDateVal ? `<div class="text-gray-400">Peak</div> <div class="text-black text-right">${peakDateVal}</div>` : ''}
-                        </div>
+                    <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 font-bold w-full uppercase tracking-wider">
+                        ${abv ? `<div class="text-right opacity-60">ABV</div> <div class="text-left">${abv}%</div>` : ''}
+                        ${fg ? `<div class="text-right opacity-60">FG</div> <div class="text-left">${fg}</div>` : ''}
+                        ${vol ? `<div class="text-right opacity-60">Vol</div> <div class="text-left">${vol}ml</div>` : ''}
+                        ${dateVal ? `<div class="text-right opacity-60">Bottled</div> <div class="text-left">${dateVal}</div>` : ''}
+                        ${peakDateVal ? `<div class="text-right opacity-60">Peak</div> <div class="text-left">${peakDateVal}</div>` : ''}
                     </div>
                 </div>
             </div>

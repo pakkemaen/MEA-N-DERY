@@ -5954,7 +5954,7 @@ function printLabelsSheet() {
     win.document.close();
 }
 
-// --- LABEL OPSLAAN FUNCTIE (V3.0 - MULTI-THEME SUPPORT) ---
+// --- LABEL OPSLAAN FUNCTIE (V3.2 - FIX: SETDOC MERGE & SANITIZE) ---
 window.saveLabelToBrew = async function() {
     const select = document.getElementById('labelRecipeSelect');
     const brewId = select?.value; 
@@ -5973,12 +5973,14 @@ window.saveLabelToBrew = async function() {
         btn.disabled = true;
     }
 
+    // Helpers
     const getVal = (id) => document.getElementById(id)?.value || '';
     const getCheck = (id) => document.getElementById(id)?.checked || false;
     const getText = (id) => document.getElementById(id)?.textContent || '';
 
-    // 2. VERZAMEL DE SETTINGS (Dit zijn de instellingen voor DIT thema)
-    const specificSettings = {
+    // 2. VERZAMEL DE SETTINGS
+    // We verzamelen eerst alles in een ruw object
+    let rawSettings = {
         title: getVal('labelTitle'),
         subtitle: getVal('labelSubtitle'),
         abv: getVal('labelAbv'),
@@ -5997,7 +5999,7 @@ window.saveLabelToBrew = async function() {
         yeastName: getText('displayLabelYeast'),
         honeyName: getText('displayLabelHoney'),
 
-        // --- SLIDERS (Worden opgeslagen voor dit specifieke thema) ---
+        // Sliders & Styling
         tuneTitleSize: getVal('tuneTitleSize'),
         tuneTitleSize2: getVal('tuneTitleSize2'),
         tuneTitleX: getVal('tuneTitleX'),
@@ -6052,16 +6054,25 @@ window.saveLabelToBrew = async function() {
         imageSrc: window.currentLabelImageSrc || ''
     };
 
+    // 3. CLEANUP: Maak data database-veilig (verwijdert undefined etc.)
+    // Dit is de magische regel die de "invalid nested entity" error voorkomt.
+    const specificSettings = JSON.parse(JSON.stringify(rawSettings));
+
     try {
         const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
         
-        // 3. UPDATE: We schrijven naar een sub-pad (bijv: labelSettings.standard)
-        // Hierdoor blijft labelSettings.special ongewijzigd!
-        await updateDoc(docRef, { 
-            [`labelSettings.${currentTheme}`]: specificSettings 
-        });
+        // 4. SAVE VIA SETDOC + MERGE
+        // Dit commando zegt: "Zorg dat labelSettings bestaat, en update ALLEEN de sub-map van het huidige thema."
+        // De andere thema's blijven ongewijzigd.
+        const payload = {
+            labelSettings: {
+                [currentTheme]: specificSettings
+            }
+        };
+
+        await setDoc(docRef, payload, { merge: true });
         
-        // Update lokale cache
+        // Update lokale cache voor directe feedback
         const brewIndex = brews.findIndex(b => b.id === brewId);
         if(brewIndex > -1) {
             if (!brews[brewIndex].labelSettings) brews[brewIndex].labelSettings = {};
@@ -6071,7 +6082,7 @@ window.saveLabelToBrew = async function() {
         showToast(`${currentTheme.toUpperCase()} label saved!`, "success");
     } catch (e) {
         console.error("Save Error:", e);
-        showToast("Could not save label.", "error");
+        showToast("Save failed: " + e.message, "error");
     } finally {
         if(btn) {
             btn.innerHTML = originalText;

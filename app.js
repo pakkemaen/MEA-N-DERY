@@ -5234,7 +5234,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA : STANDARD LABEL (V2.7 - FIX: L2 Rotation Sync & Alignment)
+    // THEMA : STANDARD LABEL (V2.8 - FIX: Stable Flex Container & Split Anchor)
     // =================================================================
     if (theme === 'standard') {
         // 1. CONTAINER SETUP
@@ -5367,7 +5367,7 @@ function setLabelTheme(theme) {
                 ${artHtml}
 
                 <div id="text-group" class="absolute z-10 flex flex-row items-end pointer-events-none" 
-                     style="left: ${titleX}%; bottom: ${titleY}%; transform-origin: bottom left;">
+                     style="left: ${titleX}%; bottom: ${titleY}%;">
                     
                     <div id="title-container" class="relative">
                         <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-nowrap overflow-visible" 
@@ -5376,7 +5376,7 @@ function setLabelTheme(theme) {
                             ${tData.l1}
                             
                             ${tData.isSplit ? `
-                            <div class="absolute" style="top: 0; right: 100%; transform: translate(${titleOffset}%, ${titleOffsetY}%); margin-right: 8px;">
+                            <div class="absolute" style="top: 0; left: 0; transform: translate(${titleOffset}%, ${titleOffsetY}%);">
                                 <span style="font-size: ${titleSize2}px; color: ${titleColor}; font-family: '${titleFont}', sans-serif; white-space: nowrap;">
                                     ${tData.l2}
                                 </span>
@@ -5393,7 +5393,7 @@ function setLabelTheme(theme) {
                             ${sData.l1}
 
                             ${sData.isSplit ? `
-                            <div class="absolute" style="top: 0; right: 100%; transform: translate(${styleOffset}%, ${styleOffsetY}%); margin-right: 5px;">
+                            <div class="absolute" style="top: 0; left: 0; transform: translate(${styleOffset}%, ${styleOffsetY}%);">
                                 <span style="font-size: ${styleSize2}px; color: ${styleColor}; font-family: '${styleFont}', sans-serif; white-space: nowrap;">
                                     ${sData.l2}
                                 </span>

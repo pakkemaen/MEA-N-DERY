@@ -5973,10 +5973,19 @@ window.saveLabelToBrew = async function() {
         btn.disabled = true;
     }
 
-    // Helpers
-    const getVal = (id) => document.getElementById(id)?.value || '';
-    const getCheck = (id) => document.getElementById(id)?.checked || false;
-    const getText = (id) => document.getElementById(id)?.textContent || '';
+    // Helpers (Lokaal gedefinieerd voor zekerheid)
+    const getVal = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value : ''; // Return lege string als element mist (voorkomt undefined)
+    };
+    const getCheck = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.checked : false;
+    };
+    const getText = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.textContent : '';
+    };
 
     // 2. VERZAMEL DE SETTINGS
     // We verzamelen eerst alles in een ruw object
@@ -6054,16 +6063,16 @@ window.saveLabelToBrew = async function() {
         imageSrc: window.currentLabelImageSrc || ''
     };
 
-    // 3. CLEANUP: Maak data database-veilig (verwijdert undefined etc.)
-    // Dit is de magische regel die de "invalid nested entity" error voorkomt.
+    // 3. CLEANUP: Maak data database-veilig
+    // Dit is de 'magische' regel die de "invalid nested entity" error voorkomt.
+    // Het converteert het object naar JSON en terug, waardoor alle 'undefined' waarden worden verwijderd.
     const specificSettings = JSON.parse(JSON.stringify(rawSettings));
 
     try {
         const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
         
         // 4. SAVE VIA SETDOC + MERGE
-        // Dit commando zegt: "Zorg dat labelSettings bestaat, en update ALLEEN de sub-map van het huidige thema."
-        // De andere thema's blijven ongewijzigd.
+        // We slaan op in de submap van het huidige thema
         const payload = {
             labelSettings: {
                 [currentTheme]: specificSettings
@@ -6072,7 +6081,7 @@ window.saveLabelToBrew = async function() {
 
         await setDoc(docRef, payload, { merge: true });
         
-        // Update lokale cache voor directe feedback
+        // Update lokale cache voor directe feedback zonder herladen
         const brewIndex = brews.findIndex(b => b.id === brewId);
         if(brewIndex > -1) {
             if (!brews[brewIndex].labelSettings) brews[brewIndex].labelSettings = {};

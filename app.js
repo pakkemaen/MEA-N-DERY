@@ -5234,7 +5234,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA : STANDARD LABEL (V2.8 - FIX: Stable Flex Container & Split Anchor)
+    // THEMA : STANDARD LABEL (V2.9 - FIX: Stable Flexbox & Split Origin)
     // =================================================================
     if (theme === 'standard') {
         // 1. CONTAINER SETUP
@@ -5242,37 +5242,31 @@ function setLabelTheme(theme) {
         container.style = ""; 
 
         // --- TUNING VALUES ---
-        
-        // BORDER
         const borderWidth = getVal('tuneBorderWidth') || 0;
 
-        // POSITIE HOOFDGROEP (TITEL + SUBTITEL) in %
+        // POSITIE HOOFDGROEP (in %)
         const titleX = getVal('tuneTitleX') || 10; 
         const titleY = getVal('tuneTitleY') || 10; 
         const titleRot = getVal('tuneTitleRotate') || 0;
         
-        // Styling L1 (Titel)
+        // Styling L1
         const titleColor = getVal('tuneTitleColor') || '#8F8C79';
         const titleSize1 = parseInt(getVal('tuneTitleSize')) || 100;
         const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60;
         const titleFont = getVal('tuneTitleFont') || 'Barlow Semi Condensed';
         const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8;
-        
         const titleOffset = getVal('tuneTitleOffset') || 0;
         const titleOffsetY = getVal('tuneTitleOffsetY') || 0;
 
-        // Styling L2 (Subtitel)
+        // Styling L2
         const styleColor = getVal('tuneStyleColor') || '#9ca3af';
         const styleSize1 = parseInt(getVal('tuneStyleSize')) || 14;
         const styleSize2 = parseInt(getVal('tuneStyleSize2')) || 10;
         const styleFont = getVal('tuneStyleFont') || 'Barlow Semi Condensed';
         const styleBreak = parseInt(getVal('tuneStyleBreak')) || 8;
-        
-        // Positie L2 t.o.v. L1
-        const styleGap = getVal('tuneStyleGap') || 5;  
+        const styleGap = getVal('tuneStyleGap') || 5; 
         const styleY = getVal('tuneStyleY') || 0;      
         const subRot = getVal('tuneStyleRotate') || 0; 
-        
         const styleOffset = getVal('tuneStyleOffset') || 0;
         const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
 
@@ -5280,12 +5274,10 @@ function setLabelTheme(theme) {
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
         const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
         const specsColor = getVal('tuneSpecsColor') || '#000000'; 
-
         const artZoom = getVal('tuneArtZoom') || 1.0;
         const artX = getVal('tuneArtX') || 0;
         const artY = getVal('tuneArtY') || 0;
         const artOpacity = getVal('tuneArtOpacity') || 1.0;
-
         const logoSize = getVal('tuneLogoSize') || 100;
         const logoX = getVal('tuneLogoX') || 0;
         const logoY = getVal('tuneLogoY') || 0;
@@ -5294,12 +5286,8 @@ function setLabelTheme(theme) {
         const splitBySlider = (text, breakVal) => {
            const cleanText = text.replace(/\|/g, ''); 
            const words = cleanText.split(' ').filter(w => w.trim() !== '');
-           if (breakVal >= 8 || breakVal >= words.length) {
-               return { l1: cleanText, l2: "", isSplit: false };
-           }
-           const part1 = words.slice(0, breakVal).join(' ');
-           const part2 = words.slice(breakVal).join(' ');
-           return { l1: part1, l2: part2, isSplit: true };
+           if (breakVal >= 8 || breakVal >= words.length) return { l1: cleanText, l2: "", isSplit: false };
+           return { l1: words.slice(0, breakVal).join(' '), l2: words.slice(breakVal).join(' '), isSplit: true };
         };
 
         const tData = splitBySlider(title, titleBreak);
@@ -5317,11 +5305,8 @@ function setLabelTheme(theme) {
         const showYeast = getCheck('labelShowYeast');
         const showHoney = getCheck('labelShowHoney');
         let yeastText = "", honeyText = "";
-        const yVal = document.getElementById('displayLabelYeast')?.textContent; 
-        if (yVal && yVal.trim() !== '--') yeastText = yVal.trim();
-        const hVal = document.getElementById('displayLabelHoney')?.textContent; 
-        if (hVal && hVal.trim() !== '--') honeyText = hVal.trim();
-        
+        const yVal = document.getElementById('displayLabelYeast')?.textContent; if (yVal && yVal.trim() !== '--') yeastText = yVal.trim();
+        const hVal = document.getElementById('displayLabelHoney')?.textContent; if (hVal && hVal.trim() !== '--') honeyText = hVal.trim();
         const showSpecsBlock = (showYeast && yeastText) || (showHoney && honeyText) || allergenText;
         
         let peakDateVal = "";
@@ -5331,27 +5316,20 @@ function setLabelTheme(theme) {
         else if (rawDate) { try { const d = new Date(rawDate); const abvNum = parseFloat(abv); let months = (abvNum < 8) ? 3 : (abvNum > 14 ? 12 : 6); d.setMonth(d.getMonth() + months); peakDateVal = d.toLocaleDateString('nl-NL').replace(/-/g, '/'); } catch(e) {} }
 
         container.innerHTML = `
-            <div class="absolute inset-0 pointer-events-none z-50" 
-                 style="box-shadow: inset 0 0 0 ${borderWidth}mm white;">
-            </div>
+            <div class="absolute inset-0 pointer-events-none z-50" style="box-shadow: inset 0 0 0 ${borderWidth}mm white;"></div>
 
-            <div class="h-full w-[30%] bg-gray-50/80 pt-0.5 pb-0 pl-0 pr-2 flex flex-col text-right z-20 relative"
-                 style="font-family: '${specsFont}', sans-serif; color: ${specsColor};">
-                
+            <div class="h-full w-[30%] bg-gray-50/80 pt-0.5 pb-0 pl-0 pr-2 flex flex-col text-right z-20 relative" style="font-family: '${specsFont}', sans-serif; color: ${specsColor};">
                 <div class="flex flex-col gap-1 overflow-hidden">
                     <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">${desc}</p>
                     ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-right mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">${details}</p>` : ''}
                 </div>
-                
                 <div class="flex-grow"></div>
-                
                 ${showSpecsBlock ? `
                 <div class="py-2 border-b border-gray-300 space-y-1 mb-2">
                     ${showHoney && honeyText ? `<div class="flex flex-col leading-tight"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Honey Source</span><span class="font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${honeyText}</span></div>` : ''}
                     ${showYeast && yeastText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Yeast Strain</span><span class="font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${yeastText}</span></div>` : ''}
                     ${allergenText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Allergens</span><span class="font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${allergenText}</span></div>` : ''}
                 </div>` : ''}
-                
                 <div class="text-[#8F8C79]">
                     <div class="grid grid-cols-2 gap-x-0 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider">
                         ${abv ? `<div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>` : ''}
@@ -5367,16 +5345,15 @@ function setLabelTheme(theme) {
                 ${artHtml}
 
                 <div id="text-group" class="absolute z-10 flex flex-row items-end pointer-events-none" 
-                     style="left: ${titleX}%; bottom: ${titleY}%;">
+                     style="left: ${titleX}%; bottom: ${titleY}%; transform-origin: bottom left;">
                     
-                    <div id="title-container" class="relative">
+                    <div id="title-container" class="relative" style="line-height: 0;">
                         <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-nowrap overflow-visible" 
                             style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
-                            
                             ${tData.l1}
                             
                             ${tData.isSplit ? `
-                            <div class="absolute" style="top: 0; left: 0; transform: translate(${titleOffset}%, ${titleOffsetY}%);">
+                            <div class="absolute" style="top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; transform: translate(${titleOffset}%, ${titleOffsetY}%);">
                                 <span style="font-size: ${titleSize2}px; color: ${titleColor}; font-family: '${titleFont}', sans-serif; white-space: nowrap;">
                                     ${tData.l2}
                                 </span>
@@ -5385,15 +5362,14 @@ function setLabelTheme(theme) {
                     </div>
 
                     <div id="style-container" class="relative" 
-                         style="margin-left: ${styleGap}px; transform: translateY(${styleY}px);">
+                         style="margin-left: ${styleGap}px; transform: translateY(${styleY}px); line-height: 0;">
                          
                          <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-nowrap leading-none" 
                             style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(subRot)}deg); font-family: '${styleFont}', sans-serif; font-size: ${styleSize1}px; color: ${styleColor}; margin: 0;">
-                            
                             ${sData.l1}
 
                             ${sData.isSplit ? `
-                            <div class="absolute" style="top: 0; left: 0; transform: translate(${styleOffset}%, ${styleOffsetY}%);">
+                            <div class="absolute" style="top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; transform: translate(${styleOffset}%, ${styleOffsetY}%);">
                                 <span style="font-size: ${styleSize2}px; color: ${styleColor}; font-family: '${styleFont}', sans-serif; white-space: nowrap;">
                                     ${sData.l2}
                                 </span>

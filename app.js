@@ -3843,23 +3843,28 @@ function renderLabelAssetsSettings() {
     const stylesList = document.getElementById('settings-styles-list');
     const fontsList = document.getElementById('settings-fonts-list');
     
+    // A. RENDER STYLES
     if (stylesList) {
         stylesList.innerHTML = labelAssets.styles.map((s, idx) => `
-            <div class="flex justify-between items-center p-2 bg-app-tertiary rounded border border-app-brand/5 group">
+            <div class="flex justify-between items-center p-2 bg-app-tertiary rounded border border-app-brand/5 group mb-1">
                 <div class="overflow-hidden">
                     <p class="font-bold text-xs text-app-header">${s.name}</p>
                     <p class="text-[10px] text-app-secondary truncate">${s.prompt}</p>
                 </div>
-                <button onclick="window.deleteLabelAsset('styles', ${idx})" class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity font-bold px-2">&times;</button>
+                <button onclick="window.deleteLabelAsset('styles', ${idx})" class="text-red-400 hover:text-red-600 font-bold px-3 text-xl leading-none">&times;</button>
             </div>
         `).join('');
     }
 
+    // B. RENDER FONTS
     if (fontsList) {
         fontsList.innerHTML = labelAssets.fonts.map((f, idx) => `
-            <div class="flex justify-between items-center p-2 bg-app-tertiary rounded border border-app-brand/5 group">
-                <p class="text-sm text-app-header" style="font-family: '${f.name}', sans-serif;">${f.name} (Preview)</p>
-                <button onclick="window.deleteLabelAsset('fonts', ${idx})" class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity font-bold px-2">&times;</button>
+            <div class="flex justify-between items-center p-2 bg-app-tertiary rounded border border-app-brand/5 group mb-1">
+                <p class="text-lg text-app-header pl-1" style="font-family: '${f.name}', sans-serif;">
+                    ${f.name}
+                </p>
+                
+                <button onclick="window.deleteLabelAsset('fonts', ${idx})" class="text-red-400 hover:text-red-600 font-bold px-3 text-xl leading-none">&times;</button>
             </div>
         `).join('');
     }
@@ -3935,31 +3940,93 @@ window.addLabelFont = async function() {
     }
 }
 
-// --- VALIDATOR: CHECK GOOGLE FONTS ---
+// --- VALIDATOR: CHECK GOOGLE FONTS (STRICT GET) ---
 async function isValidGoogleFont(fontName) {
-    // Google API url formatteert spaties als plustekens (Open Sans -> Open+Sans)
+    if (!fontName) return false;
+    
+    // Google API url formatteert spaties als plustekens
     const formattedName = fontName.trim().replace(/\s+/g, '+');
     const url = `https://fonts.googleapis.com/css2?family=${formattedName}&display=swap`;
 
     try {
-        // We doen een 'HEAD' request (alleen headers checken, data niet downloaden = sneller)
-        const response = await fetch(url, { method: 'HEAD' });
-        return response.ok; // Geeft true als status 200 is, false bij 400 (niet gevonden)
+        // We gebruiken GET in plaats van HEAD voor maximale betrouwbaarheid
+        const response = await fetch(url, { method: 'GET' });
+        return response.ok; // Geeft true (200) of false (400)
     } catch (e) {
         console.warn("Font check failed (network error)", e);
-        return false; // Bij twijfel (offline/cors), blokkeren we niet hard, maar hier gaan we uit van online.
+        return false;
     }
 }
 
+// 4. TOEVOEGEN (MET STRICTE VALIDATIE & AUTO-CORRECT)
 window.addLabelFont = async function() {
-    const name = document.getElementById('newFontName').value.trim();
-    if (!name) return showToast("Vul een font naam in.", "error");
+    const input = document.getElementById('newFontName');
+    const rawName = input.value.trim();
+    const btn = document.getElementById('addFontBtn');
     
-    labelAssets.fonts.push({ id: Date.now().toString(), name });
-    await saveLabelAssets();
+    if (!rawName) return showToast("Enter a font name first.", "error");
     
-    loadGoogleFontsInHeader(); // Direct inladen zodat preview werkt
-    document.getElementById('newFontName').value = '';
+    const originalText = btn.innerText;
+    btn.innerText = "Checking...";
+    btn.disabled = true;
+
+    try {
+        let finalName = null;
+        let autoCorrected = false;
+
+        // POGING 1: Check de exacte invoer (bv. "Playfair Display")
+        const isExactValid = await isValidGoogleFont(rawName);
+
+        if (isExactValid) {
+            finalName = rawName;
+        } else {
+            // POGING 2: Probeer Auto-Correctie (CamelCase -> Spaties)
+            // bv. "OpenSans" -> "Open Sans"
+            const fixedName = rawName.replace(/([a-z])([A-Z])/g, '$1 $2');
+            
+            console.log(`Exact match failed for '${rawName}'. Trying '${fixedName}'...`);
+            
+            const isFixedValid = await isValidGoogleFont(fixedName);
+            
+            if (isFixedValid) {
+                finalName = fixedName;
+                autoCorrected = true;
+            }
+        }
+
+        // CONCLUSIE: Hebben we een geldige naam gevonden?
+        if (!finalName) {
+            throw new Error(`Font "${rawName}" not found on Google Fonts. Check spelling.`);
+        }
+
+        // Dubbele check of hij al in de lijst staat
+        if (labelAssets.fonts.some(f => f.name.toLowerCase() === finalName.toLowerCase())) {
+            throw new Error("This font is already in your list.");
+        }
+
+        // OPSLAAN (Alleen als we hier komen is het veilig)
+        labelAssets.fonts.push({ id: Date.now().toString(), name: finalName });
+        await saveLabelAssets();
+        
+        // UI Updates
+        loadGoogleFontsInHeader(); 
+        populateLabelFontsDropdowns(); 
+        input.value = '';
+        
+        if (autoCorrected) {
+            showToast(`Auto-corrected to "${finalName}" and saved!`, "success");
+        } else {
+            showToast(`"${finalName}" added successfully!`, "success");
+        }
+
+    } catch (error) {
+        showToast(error.message, "error");
+        input.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+        setTimeout(() => input.classList.remove('border-red-500', 'ring-1', 'ring-red-500'), 2000);
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
 }
 
 window.deleteLabelAsset = async function(type, index) {

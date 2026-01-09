@@ -5247,7 +5247,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA : STANDARD LABEL (V3.0 - FIX: Reset Coordinates & Manual Split Control)
+    // THEMA : STANDARD LABEL (V3.3 - FIX: Story in 30% Sidebar & Sliders)
     // =================================================================
     if (theme === 'standard') {
         // 1. CONTAINER SETUP
@@ -5283,10 +5283,21 @@ function setLabelTheme(theme) {
         const styleOffset = getVal('tuneStyleOffset') || 0;
         const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
 
-        // Overige
+        // Overige (Specs & Story)
         const specsFontSize = getVal('tuneSpecsSize') || 5; 
         const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
         const specsColor = getVal('tuneSpecsColor') || '#000000'; 
+        
+        // STORY SLIDERS (Nu toegepast op de linker balk)
+        const descX = getVal('tuneDescX') || 50;
+        const descY = getVal('tuneDescY') || 20; // Default wat hoger in de balk
+        const descWidth = getVal('tuneDescWidth') || 90;
+        const descRot = getVal('tuneDescRotate') || 0;
+        const descSize = getVal('tuneDescSize') || 6;
+        const descColor = getVal('tuneDescColor') || '#000000'; // Zwart in de balk
+        const descFont = getVal('tuneDescFont') || 'Barlow Semi Condensed';
+
+        // Art & Logo
         const artZoom = getVal('tuneArtZoom') || 1.0;
         const artX = getVal('tuneArtX') || 0;
         const artY = getVal('tuneArtY') || 0;
@@ -5331,25 +5342,33 @@ function setLabelTheme(theme) {
         container.innerHTML = `
             <div class="absolute inset-0 pointer-events-none z-50" style="box-shadow: inset 0 0 0 ${borderWidth}mm white;"></div>
 
-            <div class="h-full w-[30%] bg-gray-50/80 pt-0.5 pb-0 pl-0 pr-2 flex flex-col text-right z-20 relative" style="font-family: '${specsFont}', sans-serif; color: ${specsColor};">
-                <div class="flex flex-col gap-1 overflow-hidden">
-                    <p id="prev-desc" class="text-[6px] leading-relaxed text-gray-600 italic font-serif text-justify">${desc}</p>
-                    ${showDetails && details ? `<p class="text-[4px] text-gray-400 leading-tight text-right mt-1 pt-1 border-t border-gray-200 uppercase tracking-wide font-sans">${details}</p>` : ''}
+            <div class="relative h-full w-[30%] bg-gray-50/80 pt-2 pb-0 pl-0 pr-2 z-20" style="font-family: '${specsFont}', sans-serif; color: ${specsColor};">
+                
+                <div class="absolute flex flex-col items-center justify-center text-justify"
+                     style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%; 
+                            transform: translate(-50%, -50%) rotate(${descRot}deg);
+                            font-size: ${descSize}px; color: ${descColor}; font-family: '${descFont}', serif;
+                            line-height: 1.4; white-space: normal;">
+                    ${desc}
+                    ${showDetails && details ? `<p class="mt-2 pt-2 border-t border-gray-300 w-full text-center uppercase tracking-wide opacity-80" style="font-size: 0.8em; font-family: sans-serif;">${details}</p>` : ''}
                 </div>
-                <div class="flex-grow"></div>
-                ${showSpecsBlock ? `
-                <div class="py-2 border-b border-gray-300 space-y-1 mb-2">
-                    ${showHoney && honeyText ? `<div class="flex flex-col leading-tight"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Honey Source</span><span class="font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${honeyText}</span></div>` : ''}
-                    ${showYeast && yeastText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Yeast Strain</span><span class="font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${yeastText}</span></div>` : ''}
-                    ${allergenText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Allergens</span><span class="font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${allergenText}</span></div>` : ''}
-                </div>` : ''}
-                <div class="text-[#8F8C79]">
-                    <div class="grid grid-cols-2 gap-x-0 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider">
-                        ${abv ? `<div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>` : ''}
-                        ${fg ? `<div class="text-gray-400">FG</div> <div class="text-black text-right"><span id="prev-fg">${fg}</span></div>` : ''}
-                        ${vol ? `<div class="text-gray-400">Vol</div> <div class="text-black text-right"><span id="prev-vol">${vol}</span>ml</div>` : ''}
-                        ${dateVal ? `<div class="text-gray-400">Bottled</div> <div class="text-black text-right"><span id="prev-date">${dateVal}</span></div>` : ''}
-                        ${peakDateVal ? `<div class="text-gray-400">Peak</div> <div class="text-black text-right">${peakDateVal}</div>` : ''}
+
+                <div class="absolute bottom-0 left-0 w-full pr-2 pb-2 flex flex-col text-right justify-end bg-gradient-to-t from-gray-50 via-gray-50/90 to-transparent pt-4">
+                    ${showSpecsBlock ? `
+                    <div class="py-2 border-b border-gray-300 space-y-1 mb-2">
+                        ${showHoney && honeyText ? `<div class="flex flex-col leading-tight"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Honey Source</span><span class="font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${honeyText}</span></div>` : ''}
+                        ${showYeast && yeastText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Yeast Strain</span><span class="font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${yeastText}</span></div>` : ''}
+                        ${allergenText ? `<div class="flex flex-col leading-tight mt-0.5"><span class="text-gray-400 font-bold uppercase tracking-widest" style="font-size: ${specsFontSize * 0.8}px;">Allergens</span><span class="font-bold uppercase truncate" style="font-size: ${specsFontSize}px;">${allergenText}</span></div>` : ''}
+                    </div>` : ''}
+                    
+                    <div class="text-[#8F8C79]">
+                        <div class="grid grid-cols-2 gap-x-0 gap-y-0.5 text-[6px] font-bold uppercase tracking-wider">
+                            ${abv ? `<div class="text-gray-400">ABV</div> <div class="text-black text-right"><span id="prev-abv">${abv}</span>%</div>` : ''}
+                            ${fg ? `<div class="text-gray-400">FG</div> <div class="text-black text-right"><span id="prev-fg">${fg}</span></div>` : ''}
+                            ${vol ? `<div class="text-gray-400">Vol</div> <div class="text-black text-right"><span id="prev-vol">${vol}</span>ml</div>` : ''}
+                            ${dateVal ? `<div class="text-gray-400">Bottled</div> <div class="text-black text-right"><span id="prev-date">${dateVal}</span></div>` : ''}
+                            ${peakDateVal ? `<div class="text-gray-400">Peak</div> <div class="text-black text-right">${peakDateVal}</div>` : ''}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -5364,7 +5383,6 @@ function setLabelTheme(theme) {
                         <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-nowrap overflow-visible" 
                             style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
                             ${tData.l1}
-                            
                             ${tData.isSplit ? `
                             <div class="absolute" style="top: 0; left: 0; pointer-events: none; transform: translate(${titleOffset}%, ${titleOffsetY}%);">
                                 <span style="font-size: ${titleSize2}px; color: ${titleColor}; font-family: '${titleFont}', sans-serif; white-space: nowrap;">
@@ -5376,11 +5394,9 @@ function setLabelTheme(theme) {
 
                     <div id="style-container" class="relative" 
                          style="margin-left: ${styleGap}px; transform: translateY(${styleY}px); line-height: 0;">
-                         
                          <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-nowrap leading-none" 
                             style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(subRot)}deg); font-family: '${styleFont}', sans-serif; font-size: ${styleSize1}px; color: ${styleColor}; margin: 0;">
                             ${sData.l1}
-
                             ${sData.isSplit ? `
                             <div class="absolute" style="top: 0; left: 0; pointer-events: none; transform: translate(${styleOffset}%, ${styleOffsetY}%);">
                                 <span style="font-size: ${styleSize2}px; color: ${styleColor}; font-family: '${styleFont}', sans-serif; white-space: nowrap;">
@@ -5389,7 +5405,6 @@ function setLabelTheme(theme) {
                             </div>` : ''}
                         </p>
                     </div>
-
                 </div>
 
                 ${logoHtml}

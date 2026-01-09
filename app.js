@@ -4696,151 +4696,124 @@ function populateLabelFontsDropdowns() {
     });
 }
 
+// --- LABEL EDITOR INITIALISATIE (COMPLETE VERSIE) ---
 function initLabelForge() {
-    // 1. VUL DE DROPDOWN DIRECT
-    // Dit lost het probleem op dat de lijst leeg blijft.
+    // 1. Vul de dropdowns (Fonts & Papier)
     populateLabelFontsDropdowns();
     populateLabelPaperDropdown();
-
-    // 2. Haal recepten en custom formaten op
+    
+    // 2. Laad de recepten lijst
     populateLabelRecipeDropdown();
     loadUserLabelFormats(); 
 
-    // A. LIVE TEKST (Update bestaande elementen)
+    // A. LIVE TEKST (Typen = Direct zien)
     ['labelTitle', 'labelSubtitle', 'labelAbv', 'labelFg', 'labelVol', 'labelDate', 'labelDescription', 'labelDetails'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', updateLabelPreviewText);
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('input', updateLabelPreviewText);
     });
 
-    // B. LAYOUT TRIGGERS (Hertekenen)
-    ['labelAllergens'].forEach(id => {
+    // B. LAYOUT TRIGGERS (Checkboxes & Selects die hertekenen vereisen)
+    ['labelAllergens', 'labelShowDetails', 'labelShowYeast', 'labelShowHoney', 'label-persona-select'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) {
+        if(el) {
             el.addEventListener('input', () => {
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
                 setLabelTheme(activeTheme);
             });
         }
     });
-
-    // C. CHECKBOXES & SELECTS
-    ['labelShowDetails', 'labelShowYeast', 'labelShowHoney', 'label-persona-select'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('change', () => {
-            const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
-            setLabelTheme(activeTheme);
-        });
-    });
     
-    // D. TUNING & SLIDERS (MET COMPLETE WAARDE WEERGAVE)
-    const sliders = [
-        'tuneTitleSize', 'tuneTitleSize2', 'tuneTitleX', 'tuneTitleY', 'tuneTitleRotate', 'tuneTitleOffset', 'tuneTitleOffsetY', 'tuneTitleBreak',
-        'tuneStyleSize', 'tuneStyleSize2', 'tuneStyleGap', 'tuneStyleY', 'tuneStyleRotate', 'tuneStyleOffset', 'tuneStyleOffsetY', 'tuneStyleBreak',
+    // C. PAPIER UPDATE (Formaat wijzigen)
+    const paperSelect = document.getElementById('labelPaper');
+    if (paperSelect) {
+        paperSelect.addEventListener('change', () => {
+            updateLabelPreviewDimensions();
+            // Ook knop status updaten
+            const isCustom = typeof userLabelFormats !== 'undefined' && userLabelFormats.hasOwnProperty(paperSelect.value);
+            const delBtn = document.getElementById('deleteLabelFormatBtn');
+            if(delBtn) delBtn.classList.toggle('hidden', !isCustom);
+        });
+    }
+
+    // D. OVERIGE KNOPPEN
+    document.getElementById('labelRecipeSelect')?.addEventListener('change', loadLabelFromBrew);
+    document.querySelectorAll('.label-theme-btn').forEach(btn => btn.addEventListener('click', (e) => setLabelTheme(e.target.dataset.theme)));
+    document.getElementById('ai-label-art-btn')?.addEventListener('click', generateLabelArt);
+    document.getElementById('ai-label-desc-btn')?.addEventListener('click', generateLabelDescription);
+    document.getElementById('printLabelsBtn')?.addEventListener('click', printLabelsSheet); 
+    document.getElementById('lf-lookup-btn')?.addEventListener('click', autoDetectLabelFormat);
+    document.getElementById('label-format-form')?.addEventListener('submit', saveCustomLabelFormat);
+    document.getElementById('logoUpload')?.addEventListener('change', handleLogoUpload);
+
+    // E. ALLE SLIDERS & INPUTS DIE HET THEMA UPDATEN
+    // Hier staan de Fonts (tune...Font) en de nieuwe Offsets (tune...OffsetY) bij!
+    const liveUpdateIds = [
+        // Algemeen
+        'labelShowBorder', 'logoColorMode', 'tuneBorderWidth',
+        
+        // Logo
+        'tuneLogoColor', 'tuneLogoSize', 'tuneLogoX', 'tuneLogoY', 'tuneLogoRotate', 'tuneLogoOpacity',
+        
+        // Titel Tuning
+        'tuneTitleFont', 'tuneTitleColor', 'tuneTitleSize', 'tuneTitleSize2', 
+        'tuneTitleX', 'tuneTitleY', 'tuneTitleRotate', 'tuneTitleBreak',
+        'tuneTitleOffset', 'tuneTitleOffsetY', // <--- Belangrijk!
+        
+        // Style Tuning
+        'tuneStyleFont', 'tuneStyleColor', 'tuneStyleSize', 'tuneStyleSize2',
+        'tuneStyleGap', 'tuneStyleY', 'tuneStyleRotate', 'tuneStyleBreak',
+        'tuneStyleOffset', 'tuneStyleOffsetY', // <--- Belangrijk!
+        
+        // Specs Tuning
+        'tuneSpecsFont', 'tuneSpecsColor', 'tuneAllergenColor', 
         'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsRotate',
+        
+        // Story Tuning
+        'tuneDescFont', 'tuneDescColor',
         'tuneDescX', 'tuneDescY', 'tuneDescWidth', 'tuneDescRotate', 'tuneDescSize',
-        'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity', 'tuneArtRotate', 'tuneArtOverlay',
-        'tuneLogoSize', 'tuneLogoX', 'tuneLogoY', 'tuneLogoRotate', 'tuneLogoOpacity',
-        'tuneBorderWidth'
+        
+        // Artwork
+        'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity', 'tuneArtRotate', 'tuneArtOverlay'
     ];
 
-    // E. LIVE UPDATE LISTENERS (Kleuren, Checkboxes EN FONTS)
-    [
-        'labelShowBorder', 'logoColorMode', 
-        'tuneLogoColor', 'tuneTitleColor', 'tuneStyleColor', 'tuneSpecsColor', 'tuneAllergenColor', 'tuneDescColor',
-        // HIERONDER STAAN DE FONT DROPDOWNS:
-        'tuneTitleFont', 'tuneStyleFont', 'tuneSpecsFont', 'tuneDescFont' 
-    ].forEach(id => {
+    liveUpdateIds.forEach(id => {
         const el = document.getElementById(id);
         if(el) {
-            // We gebruiken 'change' voor dropdowns en 'input' voor de rest
+            // We luisteren naar INPUT (voor sliders) en CHANGE (voor dropdowns)
             el.addEventListener('input', () => {
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
                 setLabelTheme(activeTheme);
+                updateSliderDisplay(id, el.value); // Update het getalletje naast de slider
             });
-            // Voor de zekerheid ook 'change' toevoegen (sommige browsers pakken input niet op selects)
+            
             el.addEventListener('change', () => {
                 const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
                 setLabelTheme(activeTheme);
             });
         }
     });
+}
 
-    // De Slimme Slider Logica
-    sliders.forEach(id => {
-        const el = document.getElementById(id);
-        if(el) {
-            el.addEventListener('input', (e) => {
-                // Bereken de ID van het display span (tuneTitleSize -> disp-title-size)
-                let dispId = id.replace('tune', 'disp')
-                               .replace(/([A-Z])/g, '-$1')
-                               .toLowerCase();
-                
-                // Fix voor Size2 (wordt anders size-2)
-                if (id.endsWith('Size2')) {
-                    dispId = dispId.replace('size2', 'size-2');
-                }
-
-                const disp = document.getElementById(dispId);
-                
-                if(disp) {
-                    const val = e.target.value;
-                    
-                    // EENHEDEN BEPALEN
-                    if(id.includes('Rotate')) {
-                        disp.textContent = val + '°';
-                    } else if(id.includes('Break')) {
-                        disp.textContent = (val >= 8) ? "All (No Break)" : "Word " + val;
-                    } else if(id.includes('Width') && id.includes('Border')) { 
-                        // Border Width is mm
-                        disp.textContent = val + 'mm';
-                    } else if(id.includes('Opacity') || id.includes('Overlay')) {
-                        // Opacity is 0-1, we willen %
-                        disp.textContent = Math.round(val * 100) + '%';
-                    } else if(id.includes('Zoom')) {
-                        disp.textContent = parseFloat(val).toFixed(1) + 'x';
-                    } else if(id.includes('X') || id.includes('Y') || id.includes('Gap') || (id.includes('Width') && !id.includes('Border'))) {
-                        // Posities en container-breedtes zijn in %
-                        disp.textContent = val + '%';
-                    } else if(id.includes('Offset')) {
-                        // Offset is ook % in onze CSS translate
-                        disp.textContent = val + '%';
-                    } else {
-                        // Standaard Font Size etc is px
-                        disp.textContent = val + 'px';
-                    }
-                }
-                
-                // Update het label
-                const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
-                setLabelTheme(activeTheme);
-            });
-        }
-    });
-
-    // Overige Listeners
-    document.getElementById('labelRecipeSelect')?.addEventListener('change', loadLabelFromBrew);
-    document.querySelectorAll('.label-theme-btn').forEach(btn => btn.addEventListener('click', (e) => setLabelTheme(e.target.dataset.theme)));
-    document.getElementById('ai-label-art-btn')?.addEventListener('click', generateLabelArt);
-    document.getElementById('ai-label-desc-btn')?.addEventListener('click', generateLabelDescription);
+// Helper om de % en px getallen bij de sliders te updaten
+function updateSliderDisplay(id, val) {
+    let dispId = id.replace('tune', 'disp')
+                   .replace(/([A-Z])/g, '-$1')
+                   .toLowerCase();
     
-    // PAPIER UPDATE LISTENER
-    // Zorgt dat de preview grootte verandert als je een ander papier kiest
-    document.getElementById('labelPaper')?.addEventListener('change', updateLabelPreviewDimensions); 
-    
-    document.getElementById('printLabelsBtn')?.addEventListener('click', printLabelsSheet); 
-    document.getElementById('lf-lookup-btn')?.addEventListener('click', autoDetectLabelFormat);
-    document.getElementById('label-format-form')?.addEventListener('submit', saveCustomLabelFormat);
-    document.getElementById('logoUpload')?.addEventListener('change', handleLogoUpload);
+    // Fix voor ID afwijkingen
+    if (id.endsWith('Size2')) dispId = dispId.replace('size2', 'size-2');
+    if (id.includes('OffsetY')) dispId = dispId.replace('offset-y', 'offset-y'); // check of dit matcht met HTML ID
 
-    // AUTO-CHECK FLAT MODE: Als je de kleur verandert, gaat de checkbox automatisch aan.
-    document.getElementById('tuneLogoColor')?.addEventListener('input', () => {
-        const checkbox = document.getElementById('logoColorMode');
-        if (checkbox && !checkbox.checked) {
-            checkbox.checked = true;
-            // Forceer update zodat de wijziging zichtbaar wordt
-            const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
-            setLabelTheme(activeTheme);
-        }
-    });
+    const disp = document.getElementById(dispId);
+    if(disp) {
+        if(id.includes('Rotate')) disp.textContent = val + '°';
+        else if(id.includes('Break')) disp.textContent = (val >= 8) ? "All" : "Word " + val;
+        else if(id.includes('Width') && id.includes('Border')) disp.textContent = val + 'mm';
+        else if(id.includes('Opacity') || id.includes('Overlay')) disp.textContent = Math.round(val * 100) + '%';
+        else if(id.includes('Zoom')) disp.textContent = parseFloat(val).toFixed(1) + 'x';
+        else if(id.includes('X') || id.includes('Y') || id.includes('Gap') || id.includes('Offset') || (id.includes('Width') && !id.includes('Border'))) disp.textContent = val + '%';
+        else disp.textContent = val + 'px';
+    }
 }
 
 // 3. DATAMANAGEMENT (Laden & Dropdowns)

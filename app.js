@@ -4737,6 +4737,28 @@ function initLabelForge() {
 
     // D. OVERIGE KNOPPEN
     document.getElementById('labelRecipeSelect')?.addEventListener('change', loadLabelFromBrew);
+    
+    // UPDATE: Knoppen laden nu ook de data opnieuw
+    document.querySelectorAll('.label-theme-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const theme = e.target.dataset.theme;
+            
+            // 1. Zet visueel de knop om
+            document.querySelectorAll('.label-theme-btn').forEach(b => {
+                b.classList.remove('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
+            });
+            e.target.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
+
+            // 2. Probeer data te laden voor dit thema (als er een recept geselecteerd is)
+            const brewId = document.getElementById('labelRecipeSelect').value;
+            if (brewId) {
+                loadLabelFromBrew(brewId, theme);
+            } else {
+                // Geen recept? Doe alleen de render
+                setLabelTheme(theme);
+            }
+        });
+    });
     document.querySelectorAll('.label-theme-btn').forEach(btn => btn.addEventListener('click', (e) => setLabelTheme(e.target.dataset.theme)));
     document.getElementById('ai-label-art-btn')?.addEventListener('click', generateLabelArt);
     document.getElementById('ai-label-desc-btn')?.addEventListener('click', generateLabelDescription);
@@ -4983,30 +5005,59 @@ function updateLabelPreviewText() {
     }
 }
 
-// Data uit recept laden (MET SMART RECOVERY & OFFSET FIX)
-function loadLabelFromBrew(e) {
-    const brewId = e.target.value;
+// --- DATA LADEN (V3.0 - MULTI-THEME SUPPORT) ---
+function loadLabelFromBrew(eOrId, forceTheme = null) {
+    // Flexibele input: kan een event zijn (dropdown change) of een string (ID)
+    const brewId = (typeof eOrId === 'object' && eOrId.target) ? eOrId.target.value : eOrId;
+    
     if (!brewId) return;
     const brew = brews.find(b => b.id === brewId);
     if (!brew) return;
+
+    // 1. BEPAAL THEMA
+    // Als we geforceerd worden (bijv. door knopklik), gebruik dat. Anders de actieve knop.
+    let theme = forceTheme;
+    if (!theme) {
+        const activeBtn = document.querySelector('.label-theme-btn.active');
+        theme = activeBtn ? activeBtn.dataset.theme : 'standard';
+    }
 
     // Helpers
     const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
     const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
     const setCheck = (id, val) => { const el = document.getElementById(id); if(el) el.checked = val; };
+    const restoreSlider = (id, val, fallback) => {
+        const el = document.getElementById(id);
+        if(el) {
+            el.value = (val !== undefined) ? val : fallback;
+            el.dispatchEvent(new Event('input')); 
+        }
+    };
 
+    // Basis data genereren (altijd nodig, ook als er geen save is)
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
     const generatedDetails = ings.map(i => i.name).join(' • ');
-    
     let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist'));
     let generatedYeast = yeastItem ? yeastItem.name.replace(/yeast|gist/gi, '').trim() : 'Unknown';
-
     let honeyItem = ings.find(i => i.name.toLowerCase().includes('honey') || i.name.toLowerCase().includes('honing'));
     let generatedHoney = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
 
-    if (brew.labelSettings) {
-        const s = brew.labelSettings;
-        
+    // 2. DATA ZOEKEN
+    let s = null;
+    
+    // Check A: Nieuwe structuur (labelSettings.standard OF labelSettings.special)
+    if (brew.labelSettings && brew.labelSettings[theme]) {
+        s = brew.labelSettings[theme];
+    } 
+    // Check B: Oude structuur (Backward compatibility voor labels die je vorige week maakte)
+    // Als we in 'standard' modus zitten en er is oude data (zonder submap), gebruik die.
+    else if (theme === 'standard' && brew.labelSettings && !brew.labelSettings.standard && !brew.labelSettings.special && brew.labelSettings.title) {
+        s = brew.labelSettings; 
+    }
+
+    // 3. TOEPASSEN (OF DEFAULTS)
+    if (s) {
+        // --- LOAD SAVED SETTINGS ---
         setVal('labelTitle', s.title);
         setVal('labelSubtitle', s.subtitle);
         setVal('tuneTitleColor', s.tuneTitleColor || '#8F8C79');
@@ -5028,31 +5079,24 @@ function loadLabelFromBrew(e) {
         setText('displayLabelYeast', s.yeastName || generatedYeast);
         setText('displayLabelHoney', s.honeyName || generatedHoney);
 
-        const restoreSlider = (id, val, fallback) => {
-            const el = document.getElementById(id);
-            if(el) {
-                el.value = (val !== undefined) ? val : fallback;
-                el.dispatchEvent(new Event('input')); 
-            }
-        };
-
+        // Sliders herstellen
         restoreSlider('tuneTitleSize', s.tuneTitleSize, 100);
         restoreSlider('tuneTitleSize2', s.tuneTitleSize2, 60);
         restoreSlider('tuneTitleX', s.tuneTitleX, 50);
         restoreSlider('tuneTitleY', s.tuneTitleY, 20);
         restoreSlider('tuneTitleRotate', s.tuneTitleRotate, 0);
-        restoreSlider('tuneTitleOffset', s.tuneTitleOffset, 0); // <--- TOEGEVOEGD
+        restoreSlider('tuneTitleOffset', s.tuneTitleOffset, 0);
         restoreSlider('tuneTitleOffsetY', s.tuneTitleOffsetY, 0);
-        restoreSlider('tuneTitleBreak', s.tuneTitleBreak, 8);   // <--- TOEGEVOEGD
+        restoreSlider('tuneTitleBreak', s.tuneTitleBreak, 8);
         
         restoreSlider('tuneStyleY', s.tuneStyleY, 35);
         restoreSlider('tuneStyleSize', s.tuneStyleSize, 14);
         restoreSlider('tuneStyleSize2', s.tuneStyleSize2, 10);
         restoreSlider('tuneStyleGap', s.tuneStyleGap, 50);
         restoreSlider('tuneStyleRotate', s.tuneStyleRotate, 0);
-        restoreSlider('tuneStyleOffset', s.tuneStyleOffset, 0); // <--- TOEGEVOEGD
+        restoreSlider('tuneStyleOffset', s.tuneStyleOffset, 0);
         restoreSlider('tuneStyleOffsetY', s.tuneStyleOffsetY, 0)
-        restoreSlider('tuneStyleBreak', s.tuneStyleBreak, 8);   // <--- TOEGEVOEGD
+        restoreSlider('tuneStyleBreak', s.tuneStyleBreak, 8);
 
         restoreSlider('tuneSpecsSize', s.tuneSpecsSize, 4);
         restoreSlider('tuneSpecsX', s.tuneSpecsX, 50);
@@ -5084,7 +5128,8 @@ function loadLabelFromBrew(e) {
         setVal('tuneLogoColor', s.tuneLogoColor || '#ffffff');
 
         let savedBorder = s.tuneBorderWidth;
-        if (savedBorder === undefined) { savedBorder = 0; }
+        if (savedBorder === undefined && theme === 'standard') savedBorder = 3; // Default voor Standard
+        if (savedBorder === undefined) savedBorder = 0;
         restoreSlider('tuneBorderWidth', savedBorder, 0);
 
         setVal('tuneAllergenColor', s.tuneAllergenColor || '#ffffff');
@@ -5097,10 +5142,12 @@ function loadLabelFromBrew(e) {
                 imgDisplay.classList.remove('hidden');
             }
         }
-        showToast("Loaded saved label design.", "info");
+        // Feedback zonder toast om spam te voorkomen bij switchen
+        console.log(`Loaded settings for ${theme}`);
 
     } else {
-        // --- DEFAULTS ---
+        // --- LOAD DEFAULTS (Als er geen save is voor DIT thema) ---
+        // We behouden wel de tekst (Titel, ABV etc) van het recept
         setVal('labelTitle', brew.recipeName);
         let style = "Traditional Mead";
         if (brew.recipeMarkdown.toLowerCase().includes('melomel')) style = "Melomel (Fruit Mead)";
@@ -5121,65 +5168,40 @@ function loadLabelFromBrew(e) {
         setText('displayLabelHoney', generatedHoney);
         setVal('labelDetails', generatedDetails);
 
-        setVal('tuneTitleColor', '#ffffff');
-        setVal('tuneStyleColor', '#cccccc');
-        setVal('tuneSpecsColor', '#ffffff');
-        setVal('tuneAllergenColor', '#ffffff');
-        
         const hasSulfites = brew.recipeMarkdown.toLowerCase().includes('sulfite') || brew.recipeMarkdown.toLowerCase().includes('meta') || brew.recipeMarkdown.toLowerCase().includes('campden');
         setVal('labelAllergens', hasSulfites ? 'Contains Sulfites' : '');
         setCheck('logoColorMode', false);
 
-        const resetSlider = (id, val) => { const el = document.getElementById(id); if(el) { el.value = val; el.dispatchEvent(new Event('input')); }};
-        
-        resetSlider('tuneLogoSize', 100);
-        resetSlider('tuneLogoX', 50);
-        resetSlider('tuneLogoY', 15);
-        resetSlider('tuneLogoRotate', 0);
-        resetSlider('tuneLogoOpacity', 1.0);
-
-        resetSlider('tuneTitleSize', 100);
-        resetSlider('tuneTitleSize2', 60);
-        resetSlider('tuneTitleX', 50);
-        resetSlider('tuneTitleY', 40);
-        resetSlider('tuneTitleRotate', 0);
-        resetSlider('tuneTitleOffset', 0); 
-        resetSlider('tuneTitleOffsetY', 0);
-        resetSlider('tuneTitleBreak', 8);
-
-        resetSlider('tuneStyleSize', 14);
-        resetSlider('tuneStyleSize2', 10);
-        resetSlider('tuneStyleGap', 50);
-        resetSlider('tuneStyleY', 55);
-        resetSlider('tuneStyleRotate', 0);
-        resetSlider('tuneStyleOffset', 0);
-        resetSlider('tuneStyleOffsetY', 0);
-        resetSlider('tuneStyleBreak', 8);
-
-        resetSlider('tuneSpecsSize', 4);
-        resetSlider('tuneSpecsX', 50);
-        resetSlider('tuneSpecsY', 85);
-        resetSlider('tuneSpecsRotate', 0);
-
-        resetSlider('tuneDescX', 50);
-        resetSlider('tuneDescY', 70);
-        resetSlider('tuneDescWidth', 60);
-        resetSlider('tuneDescRotate', 0);
-        resetSlider('tuneDescSize', 6);
-        setVal('tuneDescColor', '#ffffff');
-
-        resetSlider('tuneArtZoom', 1.0);
-        resetSlider('tuneArtX', 50);        
-        resetSlider('tuneArtY', 50);        
-        resetSlider('tuneArtOpacity', 1.0);
-        resetSlider('tuneArtOverlay', 0.0);
-        resetSlider('tuneArtRotate', 0);
-
-        resetSlider('tuneBorderWidth', 3);
+        // THEMA SPECIFIEKE DEFAULTS
+        if (theme === 'standard') {
+            setVal('tuneTitleColor', '#8F8C79');
+            setVal('tuneStyleColor', '#9ca3af');
+            
+            resetSlider('tuneLogoSize', 100); resetSlider('tuneLogoX', 0); resetSlider('tuneLogoY', 0);
+            
+            resetSlider('tuneTitleSize', 100); resetSlider('tuneTitleSize2', 60);
+            resetSlider('tuneTitleX', 10); resetSlider('tuneTitleY', 10);
+            resetSlider('tuneTitleRotate', 0); resetSlider('tuneTitleOffset', 0); resetSlider('tuneTitleOffsetY', 0);
+            
+            resetSlider('tuneStyleSize', 14); resetSlider('tuneStyleSize2', 10);
+            resetSlider('tuneStyleGap', 5); resetSlider('tuneStyleY', 0);
+            resetSlider('tuneStyleRotate', 0); resetSlider('tuneStyleOffset', 0); resetSlider('tuneStyleOffsetY', 0);
+            
+            resetSlider('tuneBorderWidth', 3); // Witte rand
+        } else {
+            // Special Defaults
+            setVal('tuneTitleColor', '#ffffff');
+            setVal('tuneStyleColor', '#cccccc');
+            
+            resetSlider('tuneLogoSize', 100); resetSlider('tuneLogoX', 50); resetSlider('tuneLogoY', 15);
+            resetSlider('tuneTitleX', 50); resetSlider('tuneTitleY', 40);
+            resetSlider('tuneStyleGap', 50); resetSlider('tuneStyleY', 55);
+            resetSlider('tuneBorderWidth', 0); // Geen rand
+        }
     }
 
-    const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
-    if(typeof setLabelTheme === 'function') setLabelTheme(activeTheme);
+    // Forceer render
+    if(typeof setLabelTheme === 'function') setLabelTheme(theme);
 }
 
 // --- LABEL THEMA FUNCTIE (MET DATUM FIX) ---
@@ -5941,13 +5963,17 @@ function printLabelsSheet() {
     win.document.close();
 }
 
-// --- LABEL OPSLAAN FUNCTIE (GEFIXT: OFFSET & BREAK TOEGEVOEGD) ---
+// --- LABEL OPSLAAN FUNCTIE (V3.0 - MULTI-THEME SUPPORT) ---
 window.saveLabelToBrew = async function() {
     const select = document.getElementById('labelRecipeSelect');
     const brewId = select?.value; 
     
     if (!brewId) return showToast("Select a recipe first.", "error");
     if (!userId) return;
+
+    // 1. BEPAAL HET HUIDIGE THEMA
+    const activeBtn = document.querySelector('.label-theme-btn.active');
+    const currentTheme = activeBtn ? activeBtn.dataset.theme : 'standard';
 
     const btn = document.querySelector('button[onclick="window.saveLabelToBrew()"]');
     const originalText = btn ? btn.innerHTML : 'Save';
@@ -5960,7 +5986,8 @@ window.saveLabelToBrew = async function() {
     const getCheck = (id) => document.getElementById(id)?.checked || false;
     const getText = (id) => document.getElementById(id)?.textContent || '';
 
-    const labelSettings = {
+    // 2. VERZAMEL DE SETTINGS (Dit zijn de instellingen voor DIT thema)
+    const specificSettings = {
         title: getVal('labelTitle'),
         subtitle: getVal('labelSubtitle'),
         abv: getVal('labelAbv'),
@@ -5979,7 +6006,7 @@ window.saveLabelToBrew = async function() {
         yeastName: getText('displayLabelYeast'),
         honeyName: getText('displayLabelHoney'),
 
-        // --- TITLE TUNING (NU COMPLEET) ---
+        // --- SLIDERS (Worden opgeslagen voor dit specifieke thema) ---
         tuneTitleSize: getVal('tuneTitleSize'),
         tuneTitleSize2: getVal('tuneTitleSize2'),
         tuneTitleX: getVal('tuneTitleX'),
@@ -5990,7 +6017,6 @@ window.saveLabelToBrew = async function() {
         tuneTitleOffsetY: getVal('tuneTitleOffsetY'),
         tuneTitleBreak: getVal('tuneTitleBreak'),
         
-        // --- STYLE TUNING (NU COMPLEET) ---
         tuneStyleY: getVal('tuneStyleY'),
         tuneStyleSize: getVal('tuneStyleSize'),
         tuneStyleSize2: getVal('tuneStyleSize2'),
@@ -6030,7 +6056,6 @@ window.saveLabelToBrew = async function() {
         tuneLogoColor: getVal('tuneLogoColor'),
 
         tuneBorderWidth: getVal('tuneBorderWidth'),
-
         tuneAllergenColor: getVal('tuneAllergenColor'),
         
         imageSrc: window.currentLabelImageSrc || ''
@@ -6038,14 +6063,21 @@ window.saveLabelToBrew = async function() {
 
     try {
         const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
-        await updateDoc(docRef, { labelSettings: labelSettings });
         
+        // 3. UPDATE: We schrijven naar een sub-pad (bijv: labelSettings.standard)
+        // Hierdoor blijft labelSettings.special ongewijzigd!
+        await updateDoc(docRef, { 
+            [`labelSettings.${currentTheme}`]: specificSettings 
+        });
+        
+        // Update lokale cache
         const brewIndex = brews.findIndex(b => b.id === brewId);
         if(brewIndex > -1) {
-            brews[brewIndex].labelSettings = labelSettings;
+            if (!brews[brewIndex].labelSettings) brews[brewIndex].labelSettings = {};
+            brews[brewIndex].labelSettings[currentTheme] = specificSettings;
         }
 
-        showToast("Label design saved!", "success");
+        showToast(`${currentTheme.toUpperCase()} label saved!`, "success");
     } catch (e) {
         console.error("Save Error:", e);
         showToast("Could not save label.", "error");

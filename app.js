@@ -5234,7 +5234,7 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA : STANDARD LABEL (V2.9 - FIX: Stable Flexbox & Split Origin)
+    // THEMA : STANDARD LABEL (V3.0 - FIX: Reset Coordinates & Manual Split Control)
     // =================================================================
     if (theme === 'standard') {
         // 1. CONTAINER SETUP
@@ -5244,7 +5244,7 @@ function setLabelTheme(theme) {
         // --- TUNING VALUES ---
         const borderWidth = getVal('tuneBorderWidth') || 0;
 
-        // POSITIE HOOFDGROEP (in %)
+        // POSITIE HOOFDGROEP
         const titleX = getVal('tuneTitleX') || 10; 
         const titleY = getVal('tuneTitleY') || 10; 
         const titleRot = getVal('tuneTitleRotate') || 0;
@@ -5353,7 +5353,7 @@ function setLabelTheme(theme) {
                             ${tData.l1}
                             
                             ${tData.isSplit ? `
-                            <div class="absolute" style="top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; transform: translate(${titleOffset}%, ${titleOffsetY}%);">
+                            <div class="absolute" style="top: 0; left: 0; pointer-events: none; transform: translate(${titleOffset}%, ${titleOffsetY}%);">
                                 <span style="font-size: ${titleSize2}px; color: ${titleColor}; font-family: '${titleFont}', sans-serif; white-space: nowrap;">
                                     ${tData.l2}
                                 </span>
@@ -5369,7 +5369,7 @@ function setLabelTheme(theme) {
                             ${sData.l1}
 
                             ${sData.isSplit ? `
-                            <div class="absolute" style="top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; transform: translate(${styleOffset}%, ${styleOffsetY}%);">
+                            <div class="absolute" style="top: 0; left: 0; pointer-events: none; transform: translate(${styleOffset}%, ${styleOffsetY}%);">
                                 <span style="font-size: ${styleSize2}px; color: ${styleColor}; font-family: '${styleFont}', sans-serif; white-space: nowrap;">
                                     ${sData.l2}
                                 </span>

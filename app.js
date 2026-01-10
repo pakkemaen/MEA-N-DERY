@@ -1,21 +1,30 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+// 1. AUTHENTICATION
 import { 
-    getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc, query, where, onSnapshot 
+    getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// 2. FIRESTORE (Database)
+import { 
+    getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc, query, where, onSnapshot, serverTimestamp, arrayUnion, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// NIEUW: TOEVOEGEN VOOR OPSLAG VAN GROTE PLAATJES
+// 3. STORAGE (Plaatjes)
 import { 
     getStorage, ref, uploadString, getDownloadURL, deleteObject 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js"; 
 
 import { firebaseConfig } from './secrets.js';
 
+// --- INITIALISATIE ---
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app); // Activeer de storage service
+const storage = getStorage(app);
+const auth = getAuth(app);
 
 // --- App State Variables ---
-let auth, userId;
+let userId; // 'auth' is hier weggehaald omdat het hierboven al als const is gedefinieerd
 let lastGeneratedPrompt = '';
 let brews = []; // Local cache of brews
 let inventory = []; // Local cache of inventory

@@ -5494,23 +5494,21 @@ function setLabelTheme(theme) {
     }
     
     // =================================================================
-    // THEMA 2: SPECIAL (FIXED FONTS & ANCHOR)
+    // THEMA 2: SPECIAL (V3.11 - NU MET UITLIJNING & STABILITEIT)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden bg-white`; 
        container.style = ""; 
        
-       // --- TUNING VALUES (Identiek aan voorheen) ---
+       // --- TUNING VALUES ---
        const titleX = getVal('tuneTitleX') || 50; 
        const titleY = getVal('tuneTitleY') || 20;
        const titleRot = getVal('tuneTitleRotate') || 0;
        const titleColor = getVal('tuneTitleColor') || '#ffffff';
        const titleSize1 = parseInt(getVal('tuneTitleSize')) || 100; 
        const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60; 
-       
        const titleOffset = getVal('tuneTitleOffset') || 0;
        const titleOffsetY = getVal('tuneTitleOffsetY') || 0; 
-       
        const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8; 
        const titleFont = getVal('tuneTitleFont') || 'Barlow Semi Condensed';
        
@@ -5520,10 +5518,8 @@ function setLabelTheme(theme) {
        const subSize1 = parseInt(getVal('tuneStyleSize')) || 14; 
        const subSize2 = parseInt(getVal('tuneStyleSize2')) || 10;
        const subRot = getVal('tuneStyleRotate') || 0;
-       
        const subOffset = getVal('tuneStyleOffset') || 0;
        const subOffsetY = getVal('tuneStyleOffsetY') || 0; 
-       
        const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; 
        const subFont = getVal('tuneStyleFont') || 'Barlow Semi Condensed';
 
@@ -5534,6 +5530,7 @@ function setLabelTheme(theme) {
        const descSize = getVal('tuneDescSize') || 6;
        const descColor = getVal('tuneDescColor') || '#ffffff';
        const descFont = getVal('tuneDescFont') || 'Playfair Display';
+       const descAlign = getVal('tuneDescAlign') || 'center'; // <--- OPHALEN
 
        const specsX = getVal('tuneSpecsX') || 50; 
        const specsY = getVal('tuneSpecsY') || 80; 
@@ -5542,6 +5539,7 @@ function setLabelTheme(theme) {
        const allergenColor = getVal('tuneAllergenColor') || specsColor;
        const specsSize = getVal('tuneSpecsSize') || 4;
        const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
+       const specsAlign = getVal('tuneSpecsAlign') || 'center'; // <--- OPHALEN
 
        const artZoom = getVal('tuneArtZoom') || 1.0;
        const artX = getVal('tuneArtX') || 50; 
@@ -5555,28 +5553,28 @@ function setLabelTheme(theme) {
        const logoY = getVal('tuneLogoY') || 10;
        const logoRot = getVal('tuneLogoRotate') || 0; 
        const logoOp = getVal('tuneLogoOpacity') || 1.0; 
-       
        const logoFlat = getCheck('logoColorMode');
        const logoColor = getVal('tuneLogoColor') || '#ffffff';
        
        const borderWidth = getVal('tuneBorderWidth') || 0;
 
+       // Bepaal Flex alignment op basis van tekst alignment (voor Description)
+       let descFlex = 'items-center';
+       if(descAlign === 'left') descFlex = 'items-start';
+       if(descAlign === 'right') descFlex = 'items-end';
+
        // --- SPLIT LOGIC ---
        const splitBySlider = (text, breakVal) => {
            const cleanText = text.replace(/\|/g, ''); 
            const words = cleanText.split(' ').filter(w => w.trim() !== '');
-           if (breakVal >= 8 || breakVal >= words.length) {
-               return { l1: cleanText, l2: "", isSplit: false };
-           }
-           const part1 = words.slice(0, breakVal).join(' ');
-           const part2 = words.slice(breakVal).join(' ');
-           return { l1: part1, l2: part2, isSplit: true };
+           if (breakVal >= 8 || breakVal >= words.length) return { l1: cleanText, l2: "", isSplit: false };
+           return { l1: words.slice(0, breakVal).join(' '), l2: words.slice(breakVal).join(' '), isSplit: true };
        };
 
        const tData = splitBySlider(title, titleBreak);
        const sData = splitBySlider(sub, subBreak);
 
-       // Specs data setup (ongewijzigd)
+       // Specs data setup
        const showYeast = getCheck('labelShowYeast');
        const showHoney = getCheck('labelShowHoney');
        let yeastText = "", honeyText = "";
@@ -5606,12 +5604,7 @@ function setLabelTheme(theme) {
        const currentLogoSrc = document.getElementById('label-logo-img')?.src || 'logo.png';
 
        if (logoFlat) {
-           logoInnerHtml = `
-           <div style="width: 100%; height: 100%; 
-                       background-color: ${logoColor}; 
-                       -webkit-mask: url(${currentLogoSrc}) no-repeat center / contain;
-                       mask: url(${currentLogoSrc}) no-repeat center / contain;">
-           </div>`;
+           logoInnerHtml = `<div style="width: 100%; height: 100%; background-color: ${logoColor}; -webkit-mask: url(${currentLogoSrc}) no-repeat center / contain; mask: url(${currentLogoSrc}) no-repeat center / contain;"></div>`;
        } else {
            logoInnerHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
        }
@@ -5619,19 +5612,15 @@ function setLabelTheme(theme) {
        container.innerHTML = `
            ${bgHtml}
 
-           <div class="absolute inset-0 pointer-events-none z-50" 
-                style="box-shadow: inset 0 0 0 ${borderWidth}mm white;">
-           </div>
+           <div class="absolute inset-0 pointer-events-none z-50" style="box-shadow: inset 0 0 0 ${borderWidth}mm white;"></div>
 
            <div class="absolute z-10 pointer-events-none" 
                 style="top: ${titleY}%; left: ${titleX}%; 
                        transform: translate(-50%, -50%) rotate(${titleRot}deg); 
                        white-space: nowrap; text-align: center;">
-                
                 <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none relative"
                     style="font-size: ${titleSize1}px; color: ${titleColor}; margin: 0; font-family: '${titleFont}', sans-serif;">
                     ${tData.l1}
-                    
                     ${tData.isSplit ? `
                     <div class="absolute top-full left-1/2 w-max" 
                          style="transform: translate(-50%, ${titleOffsetY}%) translate(${titleOffset}%, 0);">
@@ -5647,11 +5636,9 @@ function setLabelTheme(theme) {
                 style="top: ${subY}%; left: ${subX}%; 
                        transform: translate(-50%, -50%) rotate(${subRot}deg); 
                        white-space: nowrap; text-align: center;">
-                
                 <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight relative"
                    style="font-size: ${subSize1}px; color: ${subColor}; margin: 0; font-family: '${subFont}', sans-serif;">
                    ${sData.l1}
-
                    ${sData.isSplit ? `
                    <div class="absolute top-full left-1/2 w-max" 
                         style="transform: translate(-50%, ${subOffsetY}%) translate(${subOffset}%, 0);">
@@ -5664,10 +5651,10 @@ function setLabelTheme(theme) {
            </div>
 
            ${desc ? `
-           <div class="absolute z-10 pointer-events-none flex flex-col items-center justify-center text-center" 
+           <div class="absolute z-10 pointer-events-none flex flex-col ${descFlex}" 
                 style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%;
-                       transform: translate(-50%, -50%) rotate(${descRot}deg);">
-                
+                       transform: translate(-50%, -50%) rotate(${descRot}deg);
+                       text-align: ${descAlign};">
                 <p class="italic leading-tight drop-shadow-md whitespace-normal"
                    style="font-size: ${descSize}px; color: ${descColor}; font-family: '${descFont}', serif;">
                    ${desc}
@@ -5677,9 +5664,9 @@ function setLabelTheme(theme) {
            <div class="absolute z-10 pointer-events-none" 
                 style="left: ${specsX}%; top: ${specsY}%; transform: translate(-50%, -50%) rotate(${specsRot}deg);
                        font-family: '${specsFont}', monospace;">
-                <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.8); text-align: center;">
+                <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.8); text-align: ${specsAlign};">
                    
-                   <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-bold justify-center">
+                   <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-bold justify-center" style="justify-content: ${specsAlign === 'left' ? 'start' : (specsAlign === 'right' ? 'end' : 'center')}">
                        <span class="opacity-70">ABV</span> <span>${abv}%</span>
                        ${fg ? `<span class="opacity-70">FG</span> <span>${fg}</span>` : ''}
                        <span class="opacity-70">Vol</span> <span>${vol}ml</span>
@@ -5698,7 +5685,6 @@ function setLabelTheme(theme) {
            </div>
        `;
     }
-}
 
 // 5. LABEL MANAGER (ADD / DELETE / AUTO-DETECT)
 

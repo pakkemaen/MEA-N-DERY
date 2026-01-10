@@ -5480,7 +5480,7 @@ function setLabelTheme(theme) {
                 ${sData.isSplit ? `
                 <div class="absolute" style="top: 0; left: 0; pointer-events: none; 
                      writing-mode: vertical-rl; 
-                     transform: translate(${styleOffset}%, ${styleOffsetY}%) rotate(180deg);">
+                     transform: translate(${styleOffset}px, ${styleOffsetY}%) rotate(180deg);">
                     <span style="font-size: ${styleSize2}px; color: ${styleColor}; font-family: '${styleFont}', sans-serif; white-space: nowrap;">
                         ${sData.l2}
                     </span>

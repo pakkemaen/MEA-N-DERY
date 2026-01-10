@@ -1,7 +1,7 @@
 // secrets.js
 // DIT BESTAND BEVAT GEVOELIGE SLEUTELS. DEEL DIT NIET ONLINE.
 
-const CONFIG = {
+export const firebaseConfig = {
 
     // Jouw Firebase Config
     firebase: {

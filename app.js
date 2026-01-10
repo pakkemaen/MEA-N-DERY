@@ -6191,7 +6191,7 @@ function printLabelsSheet() {
     win.document.close();
 }
 
-// --- LABEL OPSLAAN FUNCTIE (V3.2 - FIX: SETDOC MERGE & SANITIZE) ---
+// --- LABEL OPSLAAN FUNCTIE (V3.4 - SELF HEALING FIX) ---
 window.saveLabelToBrew = async function() {
     const select = document.getElementById('labelRecipeSelect');
     const brewId = select?.value; 
@@ -6199,141 +6199,127 @@ window.saveLabelToBrew = async function() {
     if (!brewId) return showToast("Select a recipe first.", "error");
     if (!userId) return;
 
-    // 1. BEPAAL HET HUIDIGE THEMA
-    const activeBtn = document.querySelector('.label-theme-btn.active');
-    const currentTheme = activeBtn ? activeBtn.dataset.theme : 'standard';
-
+    // 1. UI Feedback
     const btn = document.querySelector('button[onclick="window.saveLabelToBrew()"]');
     const originalText = btn ? btn.innerHTML : 'Save';
-    if(btn) {
-        btn.innerHTML = "Saving...";
-        btn.disabled = true;
-    }
-
-    // Helpers (Lokaal gedefinieerd voor zekerheid)
-    const getVal = (id) => {
-        const el = document.getElementById(id);
-        return el ? el.value : ''; // Return lege string als element mist (voorkomt undefined)
-    };
-    const getCheck = (id) => {
-        const el = document.getElementById(id);
-        return el ? el.checked : false;
-    };
-    const getText = (id) => {
-        const el = document.getElementById(id);
-        return el ? el.textContent : '';
-    };
-
-    // 2. VERZAMEL DE SETTINGS
-    // We verzamelen eerst alles in een ruw object
-    let rawSettings = {
-        title: getVal('labelTitle'),
-        subtitle: getVal('labelSubtitle'),
-        abv: getVal('labelAbv'),
-        fg: getVal('labelFg'),
-        vol: getVal('labelVol'),
-        date: getVal('labelDate'),
-        desc: getVal('labelDescription'),
-        details: getVal('labelDetails'),
-        persona: getVal('label-persona-select'),
-        allergens: getVal('labelAllergens'),
-        
-        showYeast: getCheck('labelShowYeast'),
-        showHoney: getCheck('labelShowHoney'),
-        showDetails: getCheck('labelShowDetails'),
-        
-        yeastName: getText('displayLabelYeast'),
-        honeyName: getText('displayLabelHoney'),
-
-        // Sliders & Styling
-        tuneTitleSize: getVal('tuneTitleSize'),
-        tuneTitleSize2: getVal('tuneTitleSize2'),
-        tuneTitleX: getVal('tuneTitleX'),
-        tuneTitleY: getVal('tuneTitleY'),
-        tuneTitleColor: getVal('tuneTitleColor'), 
-        tuneTitleRotate: getVal('tuneTitleRotate'),
-        tuneTitleOffset: getVal('tuneTitleOffset'),
-        tuneTitleOffsetY: getVal('tuneTitleOffsetY'),
-        tuneTitleBreak: getVal('tuneTitleBreak'),
-        
-        tuneStyleY: getVal('tuneStyleY'),
-        tuneStyleSize: getVal('tuneStyleSize'),
-        tuneStyleSize2: getVal('tuneStyleSize2'),
-        tuneStyleGap: getVal('tuneStyleGap'),
-        tuneStyleOffsetY: getVal('tuneStyleOffsetY'),
-        tuneStyleColor: getVal('tuneStyleColor'),
-        tuneStyleRotate: getVal('tuneStyleRotate'),
-        tuneStyleOffset: getVal('tuneStyleOffset'),
-        tuneStyleBreak: getVal('tuneStyleBreak'),
-        
-        tuneSpecsSize: getVal('tuneSpecsSize'),
-        tuneSpecsX: getVal('tuneSpecsX'),
-        tuneSpecsY: getVal('tuneSpecsY'),
-        tuneSpecsColor: getVal('tuneSpecsColor'),
-        tuneSpecsRotate: getVal('tuneSpecsRotate'),
-
-        tuneDescX: getVal('tuneDescX'),
-        tuneDescY: getVal('tuneDescY'),
-        tuneDescWidth: getVal('tuneDescWidth'),
-        tuneDescRotate: getVal('tuneDescRotate'),
-        tuneDescSize: getVal('tuneDescSize'),
-        tuneDescColor: getVal('tuneDescColor'),
-        
-        tuneArtZoom: getVal('tuneArtZoom'),
-        tuneArtX: getVal('tuneArtX'),
-        tuneArtY: getVal('tuneArtY'),
-        tuneArtOpacity: getVal('tuneArtOpacity'),
-        tuneArtRotate: getVal('tuneArtRotate'),
-        tuneArtOverlay: getVal('tuneArtOverlay'),
-        
-        tuneLogoSize: getVal('tuneLogoSize'),
-        tuneLogoX: getVal('tuneLogoX'),
-        tuneLogoY: getVal('tuneLogoY'),
-        tuneLogoRotate: getVal('tuneLogoRotate'),
-        tuneLogoOpacity: getVal('tuneLogoOpacity'),
-        logoColorMode: getCheck('logoColorMode'),
-        tuneLogoColor: getVal('tuneLogoColor'),
-
-        tuneBorderWidth: getVal('tuneBorderWidth'),
-        tuneAllergenColor: getVal('tuneAllergenColor'),
-        
-        imageSrc: window.currentLabelImageSrc || ''
-    };
-
-    // 3. CLEANUP: Maak data database-veilig
-    // Dit is de 'magische' regel die de "invalid nested entity" error voorkomt.
-    // Het converteert het object naar JSON en terug, waardoor alle 'undefined' waarden worden verwijderd.
-    const specificSettings = JSON.parse(JSON.stringify(rawSettings));
+    if(btn) { btn.innerHTML = "Saving..."; btn.disabled = true; }
 
     try {
-        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
-        
-        // 4. SAVE VIA SETDOC + MERGE
-        // We slaan op in de submap van het huidige thema
-        const payload = {
-            labelSettings: {
-                [currentTheme]: specificSettings
-            }
+        // --- STAP A: DATA VERZAMELEN ---
+        // Helpers
+        const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+        const getCheck = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
+        const getText = (id) => { const el = document.getElementById(id); return el ? el.textContent : ''; };
+
+        // Huidig thema
+        const activeBtn = document.querySelector('.label-theme-btn.active');
+        const currentTheme = activeBtn ? activeBtn.dataset.theme : 'standard';
+
+        // Afbeelding Uploaden (indien nodig)
+        let finalImageSrc = window.currentLabelImageSrc || '';
+        if (finalImageSrc.startsWith('data:image')) {
+            btn.innerHTML = "Uploading Art..."; 
+            const storagePath = `users/${userId}/labels/art_${Date.now()}.png`;
+            const storageRef = ref(storage, storagePath);
+            await uploadString(storageRef, finalImageSrc, 'data_url');
+            finalImageSrc = await getDownloadURL(storageRef);
+            window.currentLabelImageSrc = finalImageSrc; // Update cache
+        }
+
+        btn.innerHTML = "Saving Data...";
+
+        // Verzamel alle instellingen
+        const rawSettings = {
+            title: getVal('labelTitle'), subtitle: getVal('labelSubtitle'),
+            abv: getVal('labelAbv'), fg: getVal('labelFg'), vol: getVal('labelVol'),
+            date: getVal('labelDate'), desc: getVal('labelDescription'),
+            details: getVal('labelDetails'), persona: getVal('label-persona-select'),
+            allergens: getVal('labelAllergens'),
+            
+            showYeast: getCheck('labelShowYeast'), showHoney: getCheck('labelShowHoney'),
+            showDetails: getCheck('labelShowDetails'),
+            yeastName: getText('displayLabelYeast'), honeyName: getText('displayLabelHoney'),
+
+            // Sliders (Alles in één keer)
+            tuneTitleSize: getVal('tuneTitleSize'), tuneTitleSize2: getVal('tuneTitleSize2'),
+            tuneTitleX: getVal('tuneTitleX'), tuneTitleY: getVal('tuneTitleY'),
+            tuneTitleColor: getVal('tuneTitleColor'), tuneTitleRotate: getVal('tuneTitleRotate'),
+            tuneTitleOffset: getVal('tuneTitleOffset'), tuneTitleOffsetY: getVal('tuneTitleOffsetY'),
+            tuneTitleBreak: getVal('tuneTitleBreak'),
+            
+            tuneStyleY: getVal('tuneStyleY'), tuneStyleSize: getVal('tuneStyleSize'),
+            tuneStyleSize2: getVal('tuneStyleSize2'), tuneStyleGap: getVal('tuneStyleGap'),
+            tuneStyleOffsetY: getVal('tuneStyleOffsetY'), tuneStyleColor: getVal('tuneStyleColor'),
+            tuneStyleRotate: getVal('tuneStyleRotate'), tuneStyleOffset: getVal('tuneStyleOffset'),
+            tuneStyleBreak: getVal('tuneStyleBreak'),
+            
+            tuneSpecsSize: getVal('tuneSpecsSize'), tuneSpecsX: getVal('tuneSpecsX'),
+            tuneSpecsY: getVal('tuneSpecsY'), tuneSpecsColor: getVal('tuneSpecsColor'),
+            tuneSpecsRotate: getVal('tuneSpecsRotate'), tuneSpecsAlign: getVal('tuneSpecsAlign'),
+
+            tuneDescX: getVal('tuneDescX'), tuneDescY: getVal('tuneDescY'),
+            tuneDescWidth: getVal('tuneDescWidth'), tuneDescRotate: getVal('tuneDescRotate'),
+            tuneDescSize: getVal('tuneDescSize'), tuneDescColor: getVal('tuneDescColor'),
+            tuneDescAlign: getVal('tuneDescAlign'),
+            
+            tuneArtZoom: getVal('tuneArtZoom'), tuneArtX: getVal('tuneArtX'),
+            tuneArtY: getVal('tuneArtY'), tuneArtOpacity: getVal('tuneArtOpacity'),
+            tuneArtRotate: getVal('tuneArtRotate'), tuneArtOverlay: getVal('tuneArtOverlay'),
+            
+            tuneLogoSize: getVal('tuneLogoSize'), tuneLogoX: getVal('tuneLogoX'),
+            tuneLogoY: getVal('tuneLogoY'), tuneLogoRotate: getVal('tuneLogoRotate'),
+            tuneLogoOpacity: getVal('tuneLogoOpacity'), logoColorMode: getCheck('logoColorMode'),
+            tuneLogoColor: getVal('tuneLogoColor'),
+
+            tuneBorderWidth: getVal('tuneBorderWidth'), tuneAllergenColor: getVal('tuneAllergenColor'),
+            
+            imageSrc: finalImageSrc 
         };
 
-        await setDoc(docRef, payload, { merge: true });
+        // Maak schoon (verwijder undefined/empty keys die problemen geven)
+        const specificSettings = JSON.parse(JSON.stringify(rawSettings));
+
+        // --- STAP B: DATABASE REPARATIE & OPSLAAN ---
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', userId, 'brews', brewId);
         
-        // Update lokale cache voor directe feedback zonder herladen
+        // 1. Haal eerst het document op om de structuur te controleren
+        const docSnap = await getDoc(docRef);
+        let currentData = docSnap.exists() ? docSnap.data() : {};
+        
+        // 2. Check of labelSettings bestaat en of het een Array is (FOUT)
+        if (currentData.labelSettings && Array.isArray(currentData.labelSettings)) {
+            console.warn("⚠️ Corrupt Data Detected: labelSettings is an Array. Converting to Object...");
+            // Reset het veld naar een leeg object
+            await updateDoc(docRef, { labelSettings: {} });
+        }
+
+        // 3. Nu veilig opslaan met Dot Notation (dit voorkomt dat we de hele map overschrijven)
+        // We gebruiken updateDoc als de doc bestaat, anders setDoc
+        const fieldPath = `labelSettings.${currentTheme}`;
+        
+        if (docSnap.exists()) {
+            await updateDoc(docRef, { [fieldPath]: specificSettings });
+        } else {
+            // Fallback voor als het document niet bestaat (zou niet moeten kunnen hier)
+            await setDoc(docRef, { labelSettings: { [currentTheme]: specificSettings } }, { merge: true });
+        }
+
+        // Update lokale cache
         const brewIndex = brews.findIndex(b => b.id === brewId);
         if(brewIndex > -1) {
-            if (!brews[brewIndex].labelSettings) brews[brewIndex].labelSettings = {};
+            if (!brews[brewIndex].labelSettings || Array.isArray(brews[brewIndex].labelSettings)) {
+                brews[brewIndex].labelSettings = {};
+            }
             brews[brewIndex].labelSettings[currentTheme] = specificSettings;
         }
 
         showToast(`${currentTheme.toUpperCase()} label saved!`, "success");
+
     } catch (e) {
-        console.error("Save Error:", e);
+        console.error("Save Error Detail:", e);
         showToast("Save failed: " + e.message, "error");
     } finally {
-        if(btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
+        if(btn) { btn.innerHTML = originalText; btn.disabled = false; }
     }
 }
 

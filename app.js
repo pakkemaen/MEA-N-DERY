@@ -4838,6 +4838,19 @@ function initLabelForge() {
     });
 }
 
+// --- NIEUW: LAAT DE OPSLAAN-KNOPPEN ZIEN ---
+window.updateArtButtons = function() {
+    const artActions = document.getElementById('art-actions');
+    // Is er een plaatje in het geheugen?
+    if (window.currentLabelImageSrc && window.currentLabelImageSrc.length > 10) {
+        // Zo ja: toon de knoppen
+        if(artActions) artActions.classList.remove('hidden');
+    } else {
+        // Zo nee: verberg ze
+        if(artActions) artActions.classList.add('hidden');
+    }
+}
+
 // Helper om de % en px getallen bij de sliders te updaten
 function updateSliderDisplay(id, val) {
     let dispId = id.replace('tune', 'disp')
@@ -5823,6 +5836,8 @@ function handleLogoUpload(event) {
             const activeThemeBtn = document.querySelector('.label-theme-btn.active');
             const theme = activeThemeBtn ? activeThemeBtn.dataset.theme : 'standard';
             setLabelTheme(theme);
+
+            window.updateArtButtons();
         }
         reader.readAsDataURL(file);
     }
@@ -5901,6 +5916,8 @@ async function generateLabelArt() {
 
             // Forceer refresh van het label thema
             setLabelTheme(theme);
+
+            window.updateArtButtons();
             
             showToast("Artwork created!", "success");
         }
@@ -5911,6 +5928,18 @@ async function generateLabelArt() {
         btn.innerHTML = originalText;
         btn.disabled = false;
     }
+}
+
+window.clearLabelArt = function() {
+    window.currentLabelImageSrc = '';
+    document.getElementById('label-img-display').classList.add('hidden');
+    document.getElementById('label-img-placeholder')?.classList.remove('hidden');
+    
+    // Reset thema (zodat het plaatje verdwijnt uit de preview)
+    const activeBtn = document.querySelector('.label-theme-btn.active');
+    setLabelTheme(activeBtn ? activeBtn.dataset.theme : 'standard');
+    
+    window.updateArtButtons();
 }
 
 // --- CLOUD GALLERY SYSTEM (V2.0 - FIREBASE STORAGE) ---

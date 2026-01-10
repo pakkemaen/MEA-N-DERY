@@ -5464,7 +5464,7 @@ function setLabelTheme(theme) {
                 ${tData.isSplit ? `
                 <div class="absolute" style="top: 0; left: 0; pointer-events: none; 
                      writing-mode: vertical-rl;
-                     transform: translate(${titleOffset}%, ${titleOffsetY}%) rotate(180deg);">
+                     transform: translate(${titleOffset}%, ${titleOffsetY}%) rotate(0deg);">
                     <span style="font-size: ${titleSize2}px; color: ${titleColor}; font-family: '${titleFont}', sans-serif; white-space: nowrap;">
                         ${tData.l2}
                     </span>

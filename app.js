@@ -5922,6 +5922,7 @@ function handleLogoUpload(event) {
     }
 }
 
+// --- GENERATE LABEL ART (V5.1 - SAFE QUALITY BOOST) ---
 async function generateLabelArt() {
     const title = document.getElementById('labelTitle').value;
     const style = document.getElementById('labelSubtitle').value;
@@ -5932,28 +5933,48 @@ async function generateLabelArt() {
 
     const btn = document.getElementById('ai-label-art-btn');
     const originalText = btn.innerHTML;
-    btn.innerHTML = "🎨 Painting...";
+    btn.innerHTML = "🎨 Painting HD..."; 
     btn.disabled = true;
 
-    // --- AANGEPASTE PROMPT LOGICA (V4.0 - MET DROPDOWN) ---
+    // 1. STIJL BEPALEN
     let visualStyle = "";
     
-    // 1. Kijk eerst of de gebruiker een specifieke stijl heeft gekozen in de dropdown
+    // Check dropdown (Jouw custom stijlen)
     const selectedStylePrompt = document.getElementById('labelArtStyle')?.value;
 
     if (selectedStylePrompt && selectedStylePrompt.trim() !== "") {
-        // GEBRUIKER KEUZE: Gebruik de prompt uit de dropdown
-        visualStyle = selectedStylePrompt;
+        // GEBRUIKER KEUZE (Bv. Pearl Jam)
+        // We voegen hier alleen VEILIGE kwaliteitstermen toe
+        visualStyle = selectedStylePrompt + ", 8k resolution, highly detailed, sharp focus, professional artwork.";
     } else {
-        // GEEN KEUZE: Val terug op de standaard per thema
+        // FALLBACKS (Hier mogen we wel sturen op 'clean' of 'oil')
         if (theme === 'special') {
-            visualStyle = "Dark, mystical, premium texture, gold accents, high contrast, oil painting style.";
+            visualStyle = "Dark, mystical, premium texture, gold accents, high contrast, oil painting style, 8k resolution, sharp details.";
         } else {
-            visualStyle = "Clean, modern vector art, vibrant colors, white background, minimalist.";
+            visualStyle = "Clean, modern vector art, vibrant colors, white background, minimalist, sharp lines, high definition, flat design.";
         }
     }
 
-    // De rest blijft hetzelfde (Artistic interpretation request...)
+    // 2. ASPECT RATIO (SLIMME FORMATEN)
+    let aspectRatio = "1:1"; 
+    const paperSelect = document.getElementById('labelPaper');
+    if (paperSelect) {
+        const key = paperSelect.value;
+        const fmt = builtInLabelFormats[key] || userLabelFormats[key];
+        
+        if (fmt) {
+            const ratio = fmt.width / fmt.height;
+            if (ratio > 1.6) aspectRatio = "16:9";      
+            else if (ratio > 1.1) aspectRatio = "4:3";  
+            else if (ratio < 0.6) aspectRatio = "9:16"; 
+            else if (ratio < 0.9) aspectRatio = "3:4";  
+            else aspectRatio = "1:1";                   
+            
+            console.log(`📏 Auto-Ratio: ${fmt.width}x${fmt.height} -> ${aspectRatio}`);
+        }
+    }
+
+    // 3. DE PROMPT
     let artPrompt = `
     Create a high-quality artistic background illustration.
     
@@ -5963,12 +5984,13 @@ async function generateLabelArt() {
     CRITICAL NEGATIVE CONSTRAINTS (STRICT):
     1. NO TEXT. NO WORDS. NO LETTERS. NO TYPOGRAPHY.
     2. Do NOT write the name "${title}" anywhere.
-    3. Do NOT make a "product label" layout. Just create the artwork/illustration itself.
-    4. No borders, no frames. Full bleed image.
+    3. Do NOT make a "product label" layout with borders. Create the artwork itself.
+    4. No blurry elements, no artifacts, no pixelation.
     `;
 
     try {
         let apiKey = userSettings.imageApiKey || userSettings.apiKey;
+        if (!apiKey && typeof CONFIG !== 'undefined') apiKey = CONFIG.firebase.apiKey;
         if (!apiKey) throw new Error("No API Key found.");
 
         const model = userSettings.imageModel || "imagen-3.0-generate-001";
@@ -5979,39 +6001,41 @@ async function generateLabelArt() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 instances: [{ prompt: artPrompt }], 
-                parameters: { sampleCount: 1, aspectRatio: "1:1" } 
+                parameters: { 
+                    sampleCount: 1, 
+                    aspectRatio: aspectRatio 
+                } 
             })
         });
 
-        if (!response.ok) throw new Error("AI Error");
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error?.message || "AI Error");
+        }
+        
         const data = await response.json();
         
         if (data.predictions && data.predictions[0].bytesBase64Encoded) {
             const base64Img = data.predictions[0].bytesBase64Encoded;
             const finalSrc = `data:image/png;base64,${base64Img}`;
             
-            // SLA OP IN GEHEUGEN
             window.currentLabelImageSrc = finalSrc;
 
-            // Update scherm
             const imgDisplay = document.getElementById('label-img-display');
             if (imgDisplay) {
                 imgDisplay.src = finalSrc;
                 imgDisplay.classList.remove('hidden');
             }
-            const placeholder = document.getElementById('label-img-placeholder');
-            if(placeholder) placeholder.classList.add('hidden');
+            document.getElementById('label-img-placeholder')?.classList.add('hidden');
 
-            // Forceer refresh van het label thema
             setLabelTheme(theme);
-
             window.updateArtButtons();
             
-            showToast("Artwork created!", "success");
+            showToast(`Artwork created (${aspectRatio})!`, "success");
         }
     } catch (error) {
         console.error(error);
-        showToast("Art generation failed: " + error.message, "error");
+        showToast("Generation failed: " + error.message, "error");
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;

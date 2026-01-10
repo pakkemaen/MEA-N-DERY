@@ -3799,6 +3799,59 @@ let labelAssets = {
     fonts: []
 };
 
+// --- NIEUWE FUNCTIE: VOEG ART STYLE TOE ---
+window.addLabelStyle = async function() {
+    const nameInput = document.getElementById('newStyleName');
+    const promptInput = document.getElementById('newStylePrompt');
+    const btn = document.getElementById('addStyleBtn');
+
+    const name = nameInput.value.trim();
+    const prompt = promptInput.value.trim();
+
+    if (!name || !prompt) {
+        showToast("Vul eerst een Naam én een Prompt in.", "error");
+        return;
+    }
+
+    // UI Feedback
+    const originalText = btn.innerText;
+    btn.innerText = "...";
+    btn.disabled = true;
+
+    try {
+        // 1. Voeg toe aan de lokale lijst
+        if (!labelAssets.styles) labelAssets.styles = [];
+        
+        labelAssets.styles.push({
+            id: 'style_' + Date.now(),
+            name: name,
+            prompt: prompt
+        });
+
+        // 2. Sla op in Firebase
+        await saveLabelAssets();
+
+        // 3. Update de UI (Lijst in Settings & Dropdown in Label Forge)
+        renderLabelAssetsSettings();
+        if(typeof populateLabelStylesDropdown === 'function') {
+            populateLabelStylesDropdown();
+        }
+
+        // 4. Reset inputs
+        nameInput.value = '';
+        promptInput.value = '';
+        
+        showToast(`Stijl "${name}" toegevoegd!`, "success");
+
+    } catch (e) {
+        console.error(e);
+        showToast("Fout bij toevoegen.", "error");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
+
 // 1. DATA LADEN (VEILIGE VERSIE)
 async function loadLabelAssets() {
     if (!userId) return;

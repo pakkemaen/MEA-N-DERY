@@ -4871,7 +4871,7 @@ function initLabelForge() {
     // E. GECOMBINEERDE LIVE UPDATE LISTENERS (Sliders, Kleuren, Fonts, Checkboxes)
     const liveUpdateIds = [
         // Algemeen
-        'labelShowBorder', 'logoColorMode', 'tuneBorderWidth',
+        'labelShowBorder', 'logoColorMode', 'tuneBorderWidth', 'tuneBackgroundColor',
         
         // Logo
         'tuneLogoColor', 'tuneLogoSize', 'tuneLogoX', 'tuneLogoY', 'tuneLogoRotate', 'tuneLogoOpacity',
@@ -5298,6 +5298,11 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
 
         restoreSlider('tuneBorderWidth', s.tuneBorderWidth, (theme === 'standard' ? 3 : 0));
         setVal('tuneAllergenColor', s.tuneAllergenColor || '#ffffff');
+        setVal('tuneBackgroundColor', s.tuneBackgroundColor || '#ffffff');
+        
+        // Update het tekstlabeltje naast de color picker (optioneel, voor netheid)
+        const bgDisp = document.getElementById('disp-background-color');
+        if(bgDisp) bgDisp.textContent = s.tuneBackgroundColor || '#ffffff';
 
         if (s.imageSrc) {
             window.currentLabelImageSrc = s.imageSrc;
@@ -5330,6 +5335,7 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
         if (theme === 'standard') {
             setVal('tuneTitleColor', '#8F8C79');
             setVal('tuneStyleColor', '#9ca3af');
+            setVal('tuneBackgroundColor', '#ffffff');
             
             restoreSlider('tuneLogoSize', 100); restoreSlider('tuneLogoX', 0); restoreSlider('tuneLogoY', 0);
             restoreSlider('tuneTitleSize', 100); restoreSlider('tuneTitleSize2', 60);
@@ -5345,6 +5351,7 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
             // Special
             setVal('tuneTitleColor', '#ffffff');
             setVal('tuneStyleColor', '#cccccc');
+            setVal('tuneBackgroundColor', '#000000');
             
             restoreSlider('tuneLogoSize', 100); restoreSlider('tuneLogoX', 50); restoreSlider('tuneLogoY', 15);
             restoreSlider('tuneTitleX', 50); restoreSlider('tuneTitleY', 40);
@@ -5417,6 +5424,7 @@ function setLabelTheme(theme) {
     if (theme === 'standard') {
         // ... (container setup en tuning values blijven hetzelfde) ...
         const borderWidth = getVal('tuneBorderWidth') || 0;
+        const bgColor = getVal('tuneBackgroundColor') || '#ffffff';
         const titleX = getVal('tuneTitleX') || 10; 
         const titleY = getVal('tuneTitleY') || 10; 
         const titleRot = getVal('tuneTitleRotate') || 0;
@@ -5543,7 +5551,7 @@ function setLabelTheme(theme) {
                 </div>
             </div>
 
-            <div class="h-full w-[70%] relative p-2 overflow-hidden bg-gray-50/20">
+            <div class="h-full w-[70%] relative p-2 overflow-hidden" style="background-color: ${bgColor};">
     ${artHtml}
     <div id="text-group" class="absolute z-10 flex flex-row items-end pointer-events-none" 
          style="left: ${titleX}%; bottom: ${titleY}%; transform-origin: bottom left;">
@@ -5588,7 +5596,8 @@ function setLabelTheme(theme) {
     // THEMA 2: SPECIAL (V3.11 - NU MET UITLIJNING & STABILITEIT)
     // =================================================================
     else if (theme === 'special') {
-       container.className = `relative w-full h-full overflow-hidden bg-white`; 
+       container.className = `relative w-full h-full overflow-hidden`; 
+       container.style.backgroundColor = bgColor; 
        container.style = ""; 
        
        // --- TUNING VALUES ---
@@ -5688,7 +5697,12 @@ function setLabelTheme(theme) {
                 <div class="absolute inset-0 pointer-events-none" style="background-color: black; opacity: ${artOverlay};"></div>
            </div>`;
        } else {
-           bgHtml = `<div class="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-black"></div>`;
+           // Als de gebruiker wit kiest, tonen we misschien de default gradient, 
+           // OF we tonen gewoon de kleur. Laten we de kleur leidend maken:
+           bgHtml = `<div class="absolute inset-0 z-0" style="background-color: ${bgColor};"></div>`;
+           
+           // Optioneel: Als je de oude "dark gradient" wilt behouden als de user NIETS kiest (dus #ffffff),
+           // kun je een check doen. Maar een harde kleurkeuze is vaak duidelijker.
        }
 
        let logoInnerHtml = '';
@@ -6424,6 +6438,7 @@ window.saveLabelToBrew = async function() {
             tuneLogoColor: getVal('tuneLogoColor'),
 
             tuneBorderWidth: getVal('tuneBorderWidth'), tuneAllergenColor: getVal('tuneAllergenColor'),
+            tuneBackgroundColor: getVal('tuneBackgroundColor'),
             
             imageSrc: finalImageSrc 
         };

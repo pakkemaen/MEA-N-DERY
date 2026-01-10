@@ -4809,7 +4809,7 @@ function initLabelForge() {
         'tuneStyleOffset', 'tuneStyleOffsetY',
         
         // Specs Tuning
-        'tuneSpecsFont', 'tuneSpecsColor', 'tuneAllergenColor', 
+        'tuneSpecsFont', 'tuneSpecsColor', 'tuneAllergenColor', 'tuneSpecsAlign',
         'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsRotate',
         
         // Story Tuning
@@ -4980,6 +4980,41 @@ function updateLabelPreviewDimensions() {
     }
 }
 
+// --- AUTO-SCALE PREVIEW ---
+window.autoScaleLabelPreview = function() {
+    const mainContainer = document.querySelector('#labels-view main'); // De grijze bak
+    const labelContainer = document.getElementById('label-preview-container'); // Het witte label
+
+    if (!mainContainer || !labelContainer) return;
+
+    // 1. Reset eerst de transform om de ware grootte te meten
+    labelContainer.style.transform = 'scale(1)';
+
+    // 2. Haal afmetingen op
+    const availableWidth = mainContainer.clientWidth - 60; // 60px padding marge
+    const availableHeight = mainContainer.clientHeight - 60;
+    
+    const labelWidth = labelContainer.offsetWidth;
+    const labelHeight = labelContainer.offsetHeight;
+
+    if (labelWidth === 0 || labelHeight === 0) return;
+
+    // 3. Bereken de schaal (neem de kleinste ratio zodat hij altijd past)
+    const scaleX = availableWidth / labelWidth;
+    const scaleY = availableHeight / labelHeight;
+    const scale = Math.min(scaleX, scaleY);
+
+    // 4. Pas toe (met een maximum van 3x om pixels te voorkomen bij kleine labels)
+    // We gebruiken transform, zodat de fysieke mm afmetingen voor print intact blijven
+    const finalScale = Math.min(scale, 3.5); 
+    
+    labelContainer.style.transform = `scale(${finalScale})`;
+    
+    // Update de tekst linksboven zodat de gebruiker het weet
+    const infoText = mainContainer.querySelector('p.absolute');
+    if(infoText) infoText.textContent = `Live Preview (Zoom: ${finalScale.toFixed(2)}x)`;
+}
+
 // 4. PREVIEW & UI LOGICA
 
 // --- UNIEKE VERSIE VAN DE UPDATE FUNCTIE ---
@@ -5057,9 +5092,18 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
         }
     };
 
-    // Basis data genereren (Tekstuele data blijft gedeeld, tenzij overschreven in save)
+    // Basis data genereren
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
-    const generatedDetails = ings.map(i => i.name).join(' • ');
+    
+    // NIEUW: FILTER HONING EN GIST ERUIT
+    const filteredIngs = ings.filter(i => {
+        const n = i.name.toLowerCase();
+        // Verwijder alles wat lijkt op honing, gist, yeast, honey, etc.
+        return !n.includes('honey') && !n.includes('honing') && !n.includes('yeast') && !n.includes('gist') && !n.includes('safale') && !n.includes('lalvin') && !n.includes('mangrove');
+    });
+
+    const generatedDetails = filteredIngs.map(i => i.name).join(' • ');
+
     let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist'));
     let generatedYeast = yeastItem ? yeastItem.name.replace(/yeast|gist/gi, '').trim() : 'Unknown';
     let honeyItem = ings.find(i => i.name.toLowerCase().includes('honey') || i.name.toLowerCase().includes('honing'));
@@ -5265,22 +5309,14 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA : STANDARD LABEL (V3.6 - FIX: Text Alignment Added)
+    // THEMA : STANDARD LABEL (V3.7 - FIX: Specs Alignment & Clean Ingredients)
     // =================================================================
     if (theme === 'standard') {
-        // 1. CONTAINER SETUP
-        container.className = `relative w-full h-full bg-white overflow-hidden flex font-sans`;
-        container.style = ""; 
-
-        // --- TUNING VALUES ---
+        // ... (container setup en tuning values blijven hetzelfde) ...
         const borderWidth = getVal('tuneBorderWidth') || 0;
-
-        // POSITIE HOOFDGROEP
         const titleX = getVal('tuneTitleX') || 10; 
         const titleY = getVal('tuneTitleY') || 10; 
         const titleRot = getVal('tuneTitleRotate') || 0;
-        
-        // Styling L1
         const titleColor = getVal('tuneTitleColor') || '#8F8C79';
         const titleSize1 = parseInt(getVal('tuneTitleSize')) || 100;
         const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60;
@@ -5289,7 +5325,6 @@ function setLabelTheme(theme) {
         const titleOffset = getVal('tuneTitleOffset') || 0;
         const titleOffsetY = getVal('tuneTitleOffsetY') || 0;
 
-        // Styling L2
         const styleColor = getVal('tuneStyleColor') || '#9ca3af';
         const styleSize1 = parseInt(getVal('tuneStyleSize')) || 14;
         const styleSize2 = parseInt(getVal('tuneStyleSize2')) || 10;
@@ -5301,19 +5336,7 @@ function setLabelTheme(theme) {
         const styleOffset = getVal('tuneStyleOffset') || 0;
         const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
 
-        // STORY SLIDERS & ALIGNMENT
-        const descX = getVal('tuneDescX') || 50;  
-        const descY = getVal('tuneDescY') || 15;  
-        const descWidth = getVal('tuneDescWidth') || 85; 
-        const descRot = getVal('tuneDescRotate') || 0;
-        const descSize = getVal('tuneDescSize') || 6;
-        const descColor = getVal('tuneDescColor') || '#000000';
-        const descFont = getVal('tuneDescFont') || 'Barlow Semi Condensed';
-        
-        // NIEUW: ALIGNMENT (Default: center)
-        const descAlign = getVal('tuneDescAlign') || 'center';
-
-        // SPECS SLIDERS
+        // SPECS SLIDERS & ALIGNMENT (NIEUW)
         const specsX = getVal('tuneSpecsX') || 50;
         const specsY = getVal('tuneSpecsY') || 85; 
         const specsRot = getVal('tuneSpecsRotate') || 0;
@@ -5321,6 +5344,23 @@ function setLabelTheme(theme) {
         const specsColor = getVal('tuneSpecsColor') || '#8F8C79';
         const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
         const allergenColor = getVal('tuneAllergenColor') || '#000000';
+        const specsAlign = getVal('tuneSpecsAlign') || 'center'; // <--- NIEUW
+
+        // Bepaal CSS classes voor specs uitlijning
+        let specsFlexAlign = 'items-center'; // Default center
+        let specsTextAlign = 'text-center';
+        if (specsAlign === 'left') { specsFlexAlign = 'items-start'; specsTextAlign = 'text-left'; }
+        if (specsAlign === 'right') { specsFlexAlign = 'items-end'; specsTextAlign = 'text-right'; }
+
+        // Story Sliders
+        const descX = getVal('tuneDescX') || 50;  
+        const descY = getVal('tuneDescY') || 15;  
+        const descWidth = getVal('tuneDescWidth') || 85; 
+        const descRot = getVal('tuneDescRotate') || 0;
+        const descSize = getVal('tuneDescSize') || 6;
+        const descColor = getVal('tuneDescColor') || '#000000';
+        const descFont = getVal('tuneDescFont') || 'Barlow Semi Condensed';
+        const descAlign = getVal('tuneDescAlign') || 'center';
 
         // Art & Logo
         const artZoom = getVal('tuneArtZoom') || 1.0;
@@ -5331,26 +5371,24 @@ function setLabelTheme(theme) {
         const logoX = getVal('tuneLogoX') || 0;
         const logoY = getVal('tuneLogoY') || 0;
         
-        // --- SPLIT LOGIC ---
+        // Split logic (hetzelfde)
         const splitBySlider = (text, breakVal) => {
            const cleanText = text.replace(/\|/g, ''); 
            const words = cleanText.split(' ').filter(w => w.trim() !== '');
            if (breakVal >= 8 || breakVal >= words.length) return { l1: cleanText, l2: "", isSplit: false };
            return { l1: words.slice(0, breakVal).join(' '), l2: words.slice(breakVal).join(' '), isSplit: true };
         };
-
         const tData = splitBySlider(title, titleBreak);
         const sData = splitBySlider(sub, styleBreak);
 
-        // --- HTML GENERATIE ---
+        // ... Art & Logo HTML (hetzelfde) ...
         let artHtml = '';
         if (hasImage) {
              artHtml = `<div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center pointer-events-none"><img src="${imgSrc}" style="transform: translate(${artX}px, ${artY}px) scale(${artZoom}); opacity: ${artOpacity}; transform-origin: center;" class="w-full h-full object-cover transition-transform duration-75"></div>`;
         }
-        
         const logoHtml = `<div class="absolute top-0 right-0 z-20 pointer-events-none" style="transform: translate(${logoX}px, ${logoY}px); width: ${logoSize}px; padding: 10px;"><img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-full h-auto object-contain drop-shadow-md"></div>`;
         
-        // Specs Logic
+        // Specs Logic (hetzelfde)
         const showYeast = getCheck('labelShowYeast');
         const showHoney = getCheck('labelShowHoney');
         let yeastText = "", honeyText = "";
@@ -5380,7 +5418,7 @@ function setLabelTheme(theme) {
                     ${showDetails && details ? `<p class="mt-2 pt-2 border-t border-gray-300 w-full uppercase tracking-wide opacity-80" style="font-size: 0.8em; font-family: sans-serif;">${details}</p>` : ''}
                 </div>
 
-                <div class="absolute flex flex-col items-center justify-center text-center"
+                <div class="absolute flex flex-col ${specsFlexAlign} ${specsTextAlign}"
                      style="top: ${specsY}%; left: ${specsX}%; width: 90%; 
                             transform: translate(-50%, -50%) rotate(${specsRot}deg);
                             font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.3;">
@@ -5404,10 +5442,8 @@ function setLabelTheme(theme) {
 
             <div class="h-full w-[70%] relative p-2 overflow-hidden bg-gray-50/20">
                 ${artHtml}
-
                 <div id="text-group" class="absolute z-10 flex flex-row items-end pointer-events-none" 
                      style="left: ${titleX}%; bottom: ${titleY}%; transform-origin: bottom left;">
-                    
                     <div id="title-container" class="relative" style="line-height: 0;">
                         <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-nowrap overflow-visible" 
                             style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
@@ -5420,7 +5456,6 @@ function setLabelTheme(theme) {
                             </div>` : ''}
                         </h1>
                     </div>
-
                     <div id="style-container" class="relative" 
                          style="margin-left: ${styleGap}px; transform: translateY(${styleY}px); line-height: 0;">
                          <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-nowrap leading-none" 
@@ -5435,7 +5470,6 @@ function setLabelTheme(theme) {
                         </p>
                     </div>
                 </div>
-
                 ${logoHtml}
             </div>
         `;

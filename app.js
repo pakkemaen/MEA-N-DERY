@@ -5453,37 +5453,43 @@ function setLabelTheme(theme) {
             </div>
 
             <div class="h-full w-[70%] relative p-2 overflow-hidden bg-gray-50/20">
-                ${artHtml}
-                <div id="text-group" class="absolute z-10 flex flex-row items-end pointer-events-none" 
-                     style="left: ${titleX}%; bottom: ${titleY}%; transform-origin: bottom left;">
-                    <div id="title-container" class="relative" style="line-height: 0;">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-nowrap overflow-visible" 
-                            style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
-                            ${tData.l1}
-                            ${tData.isSplit ? `
-                            <div class="absolute" style="top: 0; left: 0; pointer-events: none; transform: translate(${titleOffset}%, ${titleOffsetY}%);">
-                                <span style="font-size: ${titleSize2}px; color: ${titleColor}; font-family: '${titleFont}', sans-serif; white-space: nowrap;">
-                                    ${tData.l2}
-                                </span>
-                            </div>` : ''}
-                        </h1>
-                    </div>
-                    <div id="style-container" class="relative" 
-                         style="margin-left: ${styleGap}px; transform: translateY(${styleY}px); line-height: 0;">
-                         <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-nowrap leading-none" 
-                            style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(subRot)}deg); font-family: '${styleFont}', sans-serif; font-size: ${styleSize1}px; color: ${styleColor}; margin: 0;">
-                            ${sData.l1}
-                            ${sData.isSplit ? `
-                            <div class="absolute" style="top: 0; left: 0; pointer-events: none; transform: translate(${styleOffset}%, ${styleOffsetY}%);">
-                                <span style="font-size: ${styleSize2}px; color: ${styleColor}; font-family: '${styleFont}', sans-serif; white-space: nowrap;">
-                                    ${sData.l2}
-                                </span>
-                            </div>` : ''}
-                        </p>
-                    </div>
-                </div>
-                ${logoHtml}
-            </div>
+    ${artHtml}
+    <div id="text-group" class="absolute z-10 flex flex-row items-end pointer-events-none" 
+         style="left: ${titleX}%; bottom: ${titleY}%; transform-origin: bottom left;">
+        
+        <div id="title-container" class="relative" style="line-height: 0;">
+            <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-nowrap overflow-visible" 
+                style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
+                ${tData.l1}
+                ${tData.isSplit ? `
+                <div class="absolute" style="top: 0; left: 0; pointer-events: none; 
+                     writing-mode: vertical-rl;
+                     transform: translate(${titleOffset}%, ${titleOffsetY}%) rotate(180deg);">
+                    <span style="font-size: ${titleSize2}px; color: ${titleColor}; font-family: '${titleFont}', sans-serif; white-space: nowrap;">
+                        ${tData.l2}
+                    </span>
+                </div>` : ''}
+            </h1>
+        </div>
+
+        <div id="style-container" class="relative" 
+             style="margin-left: ${styleGap}px; transform: translateY(${styleY}px); line-height: 0;">
+             <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-nowrap leading-none" 
+                style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(subRot)}deg); font-family: '${styleFont}', sans-serif; font-size: ${styleSize1}px; color: ${styleColor}; margin: 0;">
+                ${sData.l1}
+                ${sData.isSplit ? `
+                <div class="absolute" style="top: 0; left: 0; pointer-events: none; 
+                     writing-mode: vertical-rl; 
+                     transform: translate(${styleOffset}%, ${styleOffsetY}%) rotate(180deg);">
+                    <span style="font-size: ${styleSize2}px; color: ${styleColor}; font-family: '${styleFont}', sans-serif; white-space: nowrap;">
+                        ${sData.l2}
+                    </span>
+                </div>` : ''}
+            </p>
+        </div>
+    </div>
+    ${logoHtml}
+</div>
         `;
     }
     

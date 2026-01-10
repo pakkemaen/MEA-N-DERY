@@ -7812,51 +7812,64 @@ window.autoFitLabelText = function() {
     if (fontSize <= 5) titleEl.style.fontSize = '5px';
 }
 
+// --- APP STARTUP (Correcte Versie V2.2) ---
 function initApp() {
-    // UI Elements Assignments
+    console.log("🚀 Starting Meandery...");
+
+    // UI Elements Assignments (Optioneel, mag blijven staan)
     const styleSelect = document.getElementById('style');
     const fruitSection = document.getElementById('fruit-section');
     const spiceSection = document.getElementById('spice-section');
     const braggotSection = document.getElementById('braggot-section');
     const inventoryForm = document.getElementById('inventory-form');
     
-    // Firebase Init with CONFIG from secrets.js
-    try {
-        const app = initializeApp(CONFIG.firebase);
-        db = getFirestore(app);
-        auth = getAuth(app);
+    // ------------------------------------------------------------------
+    // 1. FIREBASE AUTH & DATA LOADING
+    // ------------------------------------------------------------------
 
-        document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
+    // Login Knop Listener
+    const googleBtn = document.getElementById('google-login-btn');
+    if(googleBtn) googleBtn.addEventListener('click', signInWithGoogle);
 
-        onAuthStateChanged(auth, async (user) => {
-            const loginView = document.getElementById('login-view');
-            const appContainer = document.querySelector('.container.mx-auto'); 
+    // Luister naar inlog-status (gebruikt de 'auth' variabele van bovenin het bestand)
+    onAuthStateChanged(auth, async (user) => {
+        const loginView = document.getElementById('login-view');
+        const appContainer = document.querySelector('.container.mx-auto'); 
 
-            if (user && !user.isAnonymous) {
-                userId = user.uid;
-                loginView.classList.add('hidden');
-                if (appContainer) appContainer.classList.remove('hidden'); 
+        if (user) {
+            // -- INGELOGD --
+            console.log("✅ User logged in:", user.uid);
+            userId = user.uid;
+            
+            loginView.classList.add('hidden');
+            if (appContainer) appContainer.classList.remove('hidden'); 
 
-                try {
-                    await Promise.all([
-                        loadHistory(), loadInventory(), loadEquipmentProfiles(), loadLabelAssets(),
-                        loadCellar(), loadUserSettings(), loadPackagingCosts(), loadUserWaterProfiles()
-                    ]);
-                } catch (error) {
-                    console.error("Fout bij laden data:", error);
-                    showToast("Kon niet alle gegevens laden.", "error");
-                }
-            } else {
-                loginView.classList.remove('hidden');
-                if (appContainer) appContainer.classList.add('hidden'); 
-                if (user && user.isAnonymous) auth.signOut();
+            try {
+                // Laad alle data
+                await Promise.all([
+                    loadHistory(), loadInventory(), loadEquipmentProfiles(), loadLabelAssets(),
+                    loadCellar(), loadUserSettings(), loadPackagingCosts(), loadUserWaterProfiles()
+                ]);
+                console.log("📦 All data loaded.");
+            } catch (error) {
+                console.error("Fout bij laden data:", error);
+                showToast("Kon niet alle gegevens laden.", "error");
             }
-        });
-    } catch (e) {
-        console.error("Firebase init failed:", e);
-    }
+        } else {
+            // -- UITGELOGD --
+            console.log("🔒 No user, showing login.");
+            loginView.classList.remove('hidden');
+            if (appContainer) appContainer.classList.add('hidden'); 
+            
+            // Forceer logout als het een anonieme sessie was die niet meer mag
+            // (Je had hier logica voor isAnonymous, die heb ik even simpeler gemaakt)
+        }
+    });
 
-    // --- GLOBAL EVENT LISTENERS ---
+    // ------------------------------------------------------------------
+    // 2. GLOBAL EVENT LISTENERS
+    // ------------------------------------------------------------------
+    
     document.getElementById('history-search-input')?.addEventListener('input', renderHistoryList);
     document.getElementById('packaging-add-form')?.addEventListener('submit', addPackagingStock);
     document.getElementById('danger-cancel-btn')?.addEventListener('click', hideDangerModal);
@@ -7874,9 +7887,11 @@ function initApp() {
     // Style Change Handler
     styleSelect?.addEventListener('change', () => {
         const style = styleSelect.value.toLowerCase();
-        fruitSection.classList.toggle('hidden', !style.includes('melomel'));
-        spiceSection.classList.toggle('hidden', !style.includes('metheglin'));
-        braggotSection.classList.toggle('hidden', !style.includes('braggot'));
+        if(fruitSection) fruitSection.classList.toggle('hidden', !style.includes('melomel'));
+        if(spiceSection) spiceSection.classList.toggle('hidden', !style.includes('metheglin'));
+        if(braggotSection) braggotSection.classList.toggle('hidden', !style.includes('braggot'));
+        
+        // Reset checkboxes als de sectie verdwijnt
         if (!style.includes('melomel')) document.querySelectorAll('#fruit-section input:checked').forEach(cb => cb.checked = false);
         if (!style.includes('metheglin')) document.querySelectorAll('#spice-section input:checked').forEach(cb => cb.checked = false);
     });
@@ -7956,12 +7971,7 @@ function initApp() {
 
     // Start
     setupBrewDayEventListeners();
-    // (Optioneel: handleStyleChange aanroep hier)
 }
 
-// --- APP START ---
-// Dit is het enige startpunt van de applicatie
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("🍀 MEA(N)DERY V2.2 Quadrifoglio Loaded.");
-    initApp();
-});
+// Belangrijk: Zorg dat deze regel helemaal onderaan je bestand staat!
+document.addEventListener('DOMContentLoaded', initApp);

@@ -5095,11 +5095,23 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
     // Basis data genereren
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
     
-    // NIEUW: FILTER HONING EN GIST ERUIT
+    // FILTER HONING, GIST ÉN ALLERGENEN/ADDITIEVEN
     const filteredIngs = ings.filter(i => {
         const n = i.name.toLowerCase();
-        // Verwijder alles wat lijkt op honing, gist, yeast, honey, etc.
-        return !n.includes('honey') && !n.includes('honing') && !n.includes('yeast') && !n.includes('gist') && !n.includes('safale') && !n.includes('lalvin') && !n.includes('mangrove');
+        
+        // 1. Basis ingrediënten die al een eigen kopje hebben
+        const isBase = n.includes('honey') || n.includes('honing') || 
+                       n.includes('yeast') || n.includes('gist') || 
+                       n.includes('safale') || n.includes('lalvin') || n.includes('mangrove');
+
+        // 2. Allergenen & Stabilisatoren (staan vaak al bij 'Allergens' of 'Contains')
+        const isAllergen = n.includes('sulfite') || n.includes('sulphite') ||  // Sulfieten
+                           n.includes('campden') || n.includes('metabi') ||    // Campden / Metabisulfiet
+                           n.includes('sorbate') ||                            // Sorbaat
+                           n.includes('lactose');                              // Lactose
+
+        // We behouden het item ALLEEN als het GEEN basis is én GEEN allergeen
+        return !isBase && !isAllergen;
     });
 
     const generatedDetails = filteredIngs.map(i => i.name).join(' • ');
@@ -5344,7 +5356,7 @@ function setLabelTheme(theme) {
         const specsColor = getVal('tuneSpecsColor') || '#8F8C79';
         const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
         const allergenColor = getVal('tuneAllergenColor') || '#000000';
-        const specsAlign = getVal('tuneSpecsAlign') || 'center'; // <--- NIEUW
+        const specsAlign = getVal('tuneSpecsAlign') || 'center';
 
         // Bepaal CSS classes voor specs uitlijning
         let specsFlexAlign = 'items-center'; // Default center
@@ -5421,7 +5433,7 @@ function setLabelTheme(theme) {
                 <div class="absolute flex flex-col ${specsFlexAlign} ${specsTextAlign}"
                      style="top: ${specsY}%; left: ${specsX}%; width: 90%; 
                             transform: translate(-50%, -50%) rotate(${specsRot}deg);
-                            font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.3;">
+                            font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4;">
                     
                     ${showSpecsBlock ? `
                     <div class="w-full pb-2 mb-2 border-b border-gray-300/50 space-y-1">
@@ -5430,12 +5442,12 @@ function setLabelTheme(theme) {
                         ${allergenText ? `<div class="leading-tight pt-1"><span class="uppercase font-bold" style="color: ${allergenColor}">${allergenText}</span></div>` : ''}
                     </div>` : ''}
                     
-                    <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 font-bold w-full uppercase tracking-wider">
-                        ${abv ? `<div class="text-right opacity-60">ABV</div> <div class="text-left">${abv}%</div>` : ''}
-                        ${fg ? `<div class="text-right opacity-60">FG</div> <div class="text-left">${fg}</div>` : ''}
-                        ${vol ? `<div class="text-right opacity-60">Vol</div> <div class="text-left">${vol}ml</div>` : ''}
-                        ${dateVal ? `<div class="text-right opacity-60">Bottled</div> <div class="text-left">${dateVal}</div>` : ''}
-                        ${peakDateVal ? `<div class="text-right opacity-60">Peak</div> <div class="text-left">${peakDateVal}</div>` : ''}
+                    <div class="flex flex-col ${specsFlexAlign} gap-0.5 font-bold w-full uppercase tracking-wider">
+                        ${abv ? `<div class="flex gap-2 whitespace-nowrap"><span class="opacity-60">ABV</span> <span>${abv}%</span></div>` : ''}
+                        ${fg ? `<div class="flex gap-2 whitespace-nowrap"><span class="opacity-60">FG</span> <span>${fg}</span></div>` : ''}
+                        ${vol ? `<div class="flex gap-2 whitespace-nowrap"><span class="opacity-60">Vol</span> <span>${vol}ml</span></div>` : ''}
+                        ${dateVal ? `<div class="flex gap-2 whitespace-nowrap"><span class="opacity-60">Bottled</span> <span>${dateVal}</span></div>` : ''}
+                        ${peakDateVal ? `<div class="flex gap-2 whitespace-nowrap"><span class="opacity-60">Peak</span> <span>${peakDateVal}</span></div>` : ''}
                     </div>
                 </div>
             </div>

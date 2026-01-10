@@ -15,7 +15,7 @@ const db = getFirestore(app);
 const storage = getStorage(app); // Activeer de storage service
 
 // --- App State Variables ---
-let db, auth, userId;
+let auth, userId;
 let lastGeneratedPrompt = '';
 let brews = []; // Local cache of brews
 let inventory = []; // Local cache of inventory

@@ -5442,12 +5442,12 @@ function setLabelTheme(theme) {
                         ${allergenText ? `<div class="leading-tight pt-1"><span class="uppercase font-bold" style="color: ${allergenColor}">${allergenText}</span></div>` : ''}
                     </div>` : ''}
                     
-                    <div class="flex flex-col ${specsFlexAlign} gap-0.5 font-bold w-full uppercase tracking-wider">
-                        ${abv ? `<div class="flex gap-2 whitespace-nowrap"><span class="opacity-60">ABV</span> <span>${abv}%</span></div>` : ''}
-                        ${fg ? `<div class="flex gap-2 whitespace-nowrap"><span class="opacity-60">FG</span> <span>${fg}</span></div>` : ''}
-                        ${vol ? `<div class="flex gap-2 whitespace-nowrap"><span class="opacity-60">Vol</span> <span>${vol}ml</span></div>` : ''}
-                        ${dateVal ? `<div class="flex gap-2 whitespace-nowrap"><span class="opacity-60">Bottled</span> <span>${dateVal}</span></div>` : ''}
-                        ${peakDateVal ? `<div class="flex gap-2 whitespace-nowrap"><span class="opacity-60">Peak</span> <span>${peakDateVal}</span></div>` : ''}
+                    <div class="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 font-bold uppercase tracking-wider text-left">
+                        ${abv ? `<div class="text-right opacity-60 whitespace-nowrap">ABV</div> <div class="whitespace-nowrap">${abv}%</div>` : ''}
+                        ${fg ? `<div class="text-right opacity-60 whitespace-nowrap">FG</div> <div class="whitespace-nowrap">${fg}</div>` : ''}
+                        ${vol ? `<div class="text-right opacity-60 whitespace-nowrap">Vol</div> <div class="whitespace-nowrap">${vol}ml</div>` : ''}
+                        ${dateVal ? `<div class="text-right opacity-60 whitespace-nowrap">Bottled</div> <div class="whitespace-nowrap">${dateVal}</div>` : ''}
+                        ${peakDateVal ? `<div class="text-right opacity-60 whitespace-nowrap">Peak</div> <div class="whitespace-nowrap">${peakDateVal}</div>` : ''}
                     </div>
                 </div>
             </div>

@@ -8018,9 +8018,9 @@ function setupPromptEngineer() {
 }
 
 // 3. De Analyse Functie
-// --- DE VERNIEUWDE ANALYSE FUNCTIE (GEBRUIKT JE SETTINGS MODEL) ---
+// --- DE VERNIEUWDE ANALYSE FUNCTIE (V4.6 - STYLE DNA EXTRACTOR) ---
 async function runPromptEngineer() {
-    console.log("🚀 runPromptEngineer gestart...");
+    console.log("🚀 runPromptEngineer gestart (Style DNA Mode)...");
 
     const artistInput = document.getElementById('prompt-engineer-artist')?.value.trim();
     const contextInput = document.getElementById('prompt-engineer-context')?.value.trim();
@@ -8033,73 +8033,47 @@ async function runPromptEngineer() {
 
     const btn = document.getElementById('btn-analyze-prompt');
     const originalText = btn.innerHTML;
-    btn.innerHTML = "Analyzing..."; 
+    btn.innerHTML = "Extracting Style DNA..."; 
     btn.disabled = true;
 
     const outputDiv = document.getElementById('prompt-engineer-output');
     const outputText = document.getElementById('pe-result-text');
 
-    // 1. HAAL API KEY UIT SETTINGS
+    // API Setup
     let apiKey = userSettings.apiKey;
-    if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.firebase) {
-        apiKey = CONFIG.firebase.apiKey;
-    }
-    
+    if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.firebase) apiKey = CONFIG.firebase.apiKey;
     if (!apiKey) {
-        showToast("Geen API Key gevonden. Check Settings.", "error");
+        showToast("Geen API Key.", "error");
         btn.innerHTML = originalText;
         btn.disabled = false;
         return;
     }
 
-    // 2. MODEL KEUZE: DIRECT UIT SETTINGS (RECIPE ENGINE)
-    // We pakken de waarde van 'Recipe Engine' uit je settings (bv. gemini-2.5-pro).
-    // Dit is vaak je sterkste model.
-    let model = userSettings.aiModel; 
-
-    // Alleen als er ÉCHT niets is ingesteld, pakken we een fallback.
-    if (!model || model.trim() === "") {
-        model = "gemini-1.5-pro"; // Veilige backup voor kwaliteit
-        console.warn("⚠️ Geen model in settings gevonden, fallback naar gemini-1.5-pro");
-    }
-
-    console.log(`🤖 Prompt Engineer gebruikt jouw settings model: ${model}`);
-
+    // Gebruik het beste model (Pro is hier echt beter in abstractie)
+    let model = userSettings.aiModel || "gemini-1.5-pro"; 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    // --- SCENARIO BEPALING ---
-    let promptTask = "";
+    // --- DE SYSTEM PROMPT: PUUR STIJL, GEEN INHOUD ---
+    let promptTask = `You are an Expert Art Curator and Style Analyzer.
+
+    YOUR GOAL: Isolate the "Visual DNA" of the input style so it can be applied to ANY object later.
     
-    if (promptEngineerImageBase64) {
-        // SCENARIO 1: MET PLAATJE (Vision)
-        promptTask = `You are an Expert AI Prompt Engineer using Vision capabilities.
-        
-        TASK: Deeply analyze the visual style of the uploaded reference image.
-        ${artistInput ? `CONTEXT: The user identifies this style/artist as "${artistInput}". Combine your visual analysis with your knowledge of this artist.` : ''}
-        
-        FOCUS ON:
-        - Exact art medium (e.g. oil on canvas, digital vector, 3D render, macro photography)
-        - Lighting techniques (e.g. volumetric lighting, chiaroscuro, neon rim light)
-        - Color palette and grading
-        - Composition rules used
-        
-        OUTPUT: Write a premium, highly detailed text-to-image prompt to recreate this exact aesthetic.`;
-    } else {
-        // SCENARIO 2: ALLEEN TEKST (Knowledge)
-        promptTask = `You are an Expert AI Prompt Engineer with deep art history knowledge.
-        
-        TASK: Access your database about the designer/artist/style: "${artistInput}".
-        
-        OUTPUT: Write a premium, highly detailed text-to-image prompt that perfectly captures the signature visual elements, techniques, and aesthetic of "${artistInput}".`;
-    }
+    INPUT SOURCE:
+    ${artistInput ? `- Style/Artist Name: "${artistInput}"` : ''}
+    ${promptEngineerImageBase64 ? `- Reference Image (Analyze the visual technique)` : ''}
+    ${contextInput ? `- User Nuance: "${contextInput}"` : ''}
 
-    if (contextInput) {
-        promptTask += `\nUSER TWEAK: Incorporate this specific element/change: "${contextInput}".`;
-    }
+    CRITICAL INSTRUCTIONS:
+    1. **IGNORE THE SUBJECT:** If the source shows a person, a car, a band, or a building -> IGNORE IT. Do not mention specific objects.
+    2. **EXTRACT THE TECHNIQUE:** Describe the *medium* (e.g. screenprint, oil, vector), the *lighting*, the *texture*, the *color palette*, and the *compositional vibe*.
+    3. **OUTPUT FORMAT:** A comma-separated string of descriptive keywords and phrases.
+    
+    BAD EXAMPLE (Don't do this): "A poster of a rock band playing guitars with skeletons."
+    GOOD EXAMPLE (Do this): "Grunge aesthetic, distressed screenprint texture, high contrast, limited 3-color palette, surrealist anatomy, bold graphic lines, raw atmosphere."
 
-    promptTask += `\nOUTPUT FORMAT: Just the raw prompt string. No markdown, no intro.`;
+    OUTPUT: Just the descriptive string.`;
 
-    // --- PAYLOAD BOUWEN ---
+    // --- PAYLOAD ---
     const parts = [{ text: promptTask }];
     
     if (promptEngineerImageBase64) {
@@ -8126,7 +8100,7 @@ async function runPromptEngineer() {
             const result = data.candidates[0].content.parts[0].text.trim();
             outputDiv.classList.remove('hidden');
             outputText.value = result;
-            showToast("High-Quality Prompt generated!", "success");
+            showToast("Style DNA Extracted!", "success");
         }
 
     } catch (e) {

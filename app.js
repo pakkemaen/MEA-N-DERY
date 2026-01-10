@@ -7962,6 +7962,199 @@ window.autoFitLabelText = function() {
     if (fontSize <= 5) titleEl.style.fontSize = '5px';
 }
 
+// --- PROMPT ENGINEER TOOL (SETTINGS) ---
+
+// 1. Variabele om de foto tijdelijk op te slaan
+let promptEngineerImageBase64 = null;
+
+// 2. Event Listener Setup (Aanroepen in initApp)
+// --- PROMPT ENGINEER SETUP (V4.3 - FIX) ---
+function setupPromptEngineer() {
+    console.log("🛠️ Setup Prompt Engineer gestart...");
+
+    const upload = document.getElementById('prompt-engineer-upload');
+    const btn = document.getElementById('btn-analyze-prompt');
+
+    // Koppel de Upload Listener
+    if (upload) {
+        // Verwijder oude listeners door te clonen (optioneel, maar veilig)
+        const newUpload = upload.cloneNode(true);
+        upload.parentNode.replaceChild(newUpload, upload);
+        
+        newUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    promptEngineerImageBase64 = evt.target.result.split(',')[1];
+                    const previewContainer = document.getElementById('prompt-engineer-preview');
+                    const previewImg = document.getElementById('pe-preview-img');
+                    if (previewContainer && previewImg) {
+                        previewImg.src = evt.target.result;
+                        previewContainer.classList.remove('hidden');
+                        document.getElementById('pe-clear-btn')?.classList.remove('hidden');
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        console.log("✅ Upload listener gekoppeld.");
+    }
+
+    // Koppel de Generate Knop Listener
+    if (btn) {
+        // Verwijder oude listeners
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', () => {
+            console.log("🖱️ Knop geklikt! Starten...");
+            runPromptEngineer();
+        });
+        console.log("✅ Generate knop listener gekoppeld.");
+    } else {
+        console.error("❌ Kan knop 'btn-analyze-prompt' niet vinden in de HTML.");
+    }
+}
+
+// 3. De Analyse Functie
+// --- DE VERNIEUWDE ANALYSE FUNCTIE (GEBRUIKT JE SETTINGS MODEL) ---
+async function runPromptEngineer() {
+    console.log("🚀 runPromptEngineer gestart...");
+
+    const artistInput = document.getElementById('prompt-engineer-artist')?.value.trim();
+    const contextInput = document.getElementById('prompt-engineer-context')?.value.trim();
+    
+    // VALIDATIE
+    if (!promptEngineerImageBase64 && !artistInput) {
+        showToast("Vul een naam in OF upload een foto.", "error");
+        return;
+    }
+
+    const btn = document.getElementById('btn-analyze-prompt');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "Analyzing..."; 
+    btn.disabled = true;
+
+    const outputDiv = document.getElementById('prompt-engineer-output');
+    const outputText = document.getElementById('pe-result-text');
+
+    // 1. HAAL API KEY UIT SETTINGS
+    let apiKey = userSettings.apiKey;
+    if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.firebase) {
+        apiKey = CONFIG.firebase.apiKey;
+    }
+    
+    if (!apiKey) {
+        showToast("Geen API Key gevonden. Check Settings.", "error");
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        return;
+    }
+
+    // 2. MODEL KEUZE: DIRECT UIT SETTINGS (RECIPE ENGINE)
+    // We pakken de waarde van 'Recipe Engine' uit je settings (bv. gemini-2.5-pro).
+    // Dit is vaak je sterkste model.
+    let model = userSettings.aiModel; 
+
+    // Alleen als er ÉCHT niets is ingesteld, pakken we een fallback.
+    if (!model || model.trim() === "") {
+        model = "gemini-1.5-pro"; // Veilige backup voor kwaliteit
+        console.warn("⚠️ Geen model in settings gevonden, fallback naar gemini-1.5-pro");
+    }
+
+    console.log(`🤖 Prompt Engineer gebruikt jouw settings model: ${model}`);
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    // --- SCENARIO BEPALING ---
+    let promptTask = "";
+    
+    if (promptEngineerImageBase64) {
+        // SCENARIO 1: MET PLAATJE (Vision)
+        promptTask = `You are an Expert AI Prompt Engineer using Vision capabilities.
+        
+        TASK: Deeply analyze the visual style of the uploaded reference image.
+        ${artistInput ? `CONTEXT: The user identifies this style/artist as "${artistInput}". Combine your visual analysis with your knowledge of this artist.` : ''}
+        
+        FOCUS ON:
+        - Exact art medium (e.g. oil on canvas, digital vector, 3D render, macro photography)
+        - Lighting techniques (e.g. volumetric lighting, chiaroscuro, neon rim light)
+        - Color palette and grading
+        - Composition rules used
+        
+        OUTPUT: Write a premium, highly detailed text-to-image prompt to recreate this exact aesthetic.`;
+    } else {
+        // SCENARIO 2: ALLEEN TEKST (Knowledge)
+        promptTask = `You are an Expert AI Prompt Engineer with deep art history knowledge.
+        
+        TASK: Access your database about the designer/artist/style: "${artistInput}".
+        
+        OUTPUT: Write a premium, highly detailed text-to-image prompt that perfectly captures the signature visual elements, techniques, and aesthetic of "${artistInput}".`;
+    }
+
+    if (contextInput) {
+        promptTask += `\nUSER TWEAK: Incorporate this specific element/change: "${contextInput}".`;
+    }
+
+    promptTask += `\nOUTPUT FORMAT: Just the raw prompt string. No markdown, no intro.`;
+
+    // --- PAYLOAD BOUWEN ---
+    const parts = [{ text: promptTask }];
+    
+    if (promptEngineerImageBase64) {
+        parts.push({ inline_data: { mime_type: "image/jpeg", data: promptEngineerImageBase64 } });
+    }
+
+    const requestBody = { contents: [{ parts: parts }] };
+
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error?.message || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.candidates && data.candidates.length > 0) {
+            const result = data.candidates[0].content.parts[0].text.trim();
+            outputDiv.classList.remove('hidden');
+            outputText.value = result;
+            showToast("High-Quality Prompt generated!", "success");
+        }
+
+    } catch (e) {
+        console.error("Prompt Engineer Error:", e);
+        showToast("Mislukt: " + e.message, "error");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+// 4. Helper om te kopiëren
+window.copyEngineerPrompt = function() {
+    const text = document.getElementById('pe-result-text');
+    if (!text) return;
+    text.select();
+    navigator.clipboard.writeText(text.value);
+    showToast("Copied to clipboard!", "success");
+}
+
+// --- IMAGE CLEAR HELPER ---
+window.clearPromptEngineerImage = function() {
+    promptEngineerImageBase64 = null;
+    document.getElementById('prompt-engineer-preview').classList.add('hidden');
+    document.getElementById('pe-clear-btn').classList.add('hidden');
+    document.getElementById('prompt-engineer-upload').value = ''; // Reset file input
+}
+
 // --- APP STARTUP (Correcte Versie V2.2) ---
 function initApp() {
     console.log("🚀 Starting Meandery...");
@@ -8099,6 +8292,9 @@ function initApp() {
 
     // Labels (V2.0)
     initLabelForge();
+    
+    // Start de Prompt Engineer listeners
+    setupPromptEngineer();
 
     // Main Navigation
     document.querySelectorAll('.main-nav-btn').forEach(btn => {

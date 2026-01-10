@@ -1406,6 +1406,48 @@
                         Label Studio Assets
                     </h3>
 
+                    <div class="card p-6 rounded-lg border-2 border-pink-500/20 mt-6">
+                    <h3 class="text-xl font-header font-bold mb-4 flex items-center gap-2 text-pink-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                        Prompt Engineer
+                    </h3>
+                    <p class="text-xs text-app-secondary mb-4">Upload an image OR enter a designer name. AI will write the matching prompt.</p>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold uppercase text-app-secondary mb-1">1. Designer / Artist / Style Name</label>
+                        <input type="text" id="prompt-engineer-artist" placeholder="e.g. Alphonse Mucha, Cyberpunk, Bauhaus..." class="w-full p-2 border rounded-md bg-app-tertiary text-app-header text-sm focus:ring-2 focus:ring-pink-500">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold uppercase text-app-secondary mb-1">2. Reference Image (Optional)</label>
+                        <div class="flex items-center gap-4">
+                            <label class="cursor-pointer bg-app-tertiary border border-app hover:bg-app-secondary text-app-header px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                                <span>📂 Upload</span>
+                                <input type="file" id="prompt-engineer-upload" accept="image/*" class="hidden">
+                            </label>
+                            <div id="prompt-engineer-preview" class="w-12 h-12 bg-gray-100 rounded overflow-hidden hidden border border-gray-300">
+                                <img id="pe-preview-img" class="w-full h-full object-cover">
+                            </div>
+                            <button onclick="window.clearPromptEngineerImage()" id="pe-clear-btn" class="hidden text-xs text-red-500 font-bold hover:underline">Clear</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold uppercase text-app-secondary mb-1">3. Extra Context (Optional)</label>
+                        <input type="text" id="prompt-engineer-context" placeholder="e.g. Make it darker, add honeycombs..." class="w-full p-2 border rounded-md bg-app-tertiary text-app-header text-sm">
+                    </div>
+
+                    <button id="btn-analyze-prompt" class="w-full bg-pink-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-pink-700 btn mb-4 flex items-center justify-center gap-2">
+                        ✨ Generate Prompt
+                    </button>
+
+                    <div id="prompt-engineer-output" class="hidden">
+                        <label class="block text-xs font-bold uppercase text-app-secondary mb-1">Generated Prompt</label>
+                        <textarea id="pe-result-text" rows="3" class="w-full p-2 border rounded-md bg-app-primary border-pink-500/30 text-app-header text-sm font-mono" readonly></textarea>
+                        <button onclick="window.copyEngineerPrompt()" class="mt-2 text-xs text-pink-600 font-bold uppercase hover:underline">Copy to Clipboard</button>
+                    </div>
+                </div>
+
                     <div class="mb-6">
                         <h4 class="font-bold text-sm text-app-brand uppercase mb-2">A. Art Styles (Prompts)</h4>
                         <div class="flex gap-2 mb-2">

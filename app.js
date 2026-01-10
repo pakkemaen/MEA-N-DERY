@@ -6075,6 +6075,31 @@ window.saveArtToCloud = async function() {
     }
 }
 
+// --- DOWNLOAD ARTWORK NAAR APPARAAT ---
+window.downloadLabelArt = function() {
+    // 1. Check of er een plaatje is
+    if (!window.currentLabelImageSrc) {
+        showToast("No artwork to download.", "error");
+        return;
+    }
+
+    // 2. Maak een tijdelijke download link
+    const link = document.createElement('a');
+    link.href = window.currentLabelImageSrc;
+    
+    // 3. Bepaal bestandsnaam (gebruik titel of timestamp)
+    const title = document.getElementById('labelTitle')?.value || "mead_art";
+    const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    link.download = `${safeTitle}_${Date.now()}.png`;
+
+    // 4. Klik de link automatisch
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast("Download started!", "success");
+}
+
 // 2. Open Galerij & Laad Plaatjes
 window.openArtGallery = function() {
     if (!userId) return showToast("Log in first.", "error");

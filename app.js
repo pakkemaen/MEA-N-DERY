@@ -4714,11 +4714,36 @@ function populateLabelFontsDropdowns() {
     });
 }
 
+// VUL DE ART STYLE DROPDOWN IN LABEL FORGE ---
+function populateLabelStylesDropdown() {
+    const select = document.getElementById('labelArtStyle');
+    if (!select) return;
+
+    // Bewaar huidige keuze
+    const currentVal = select.value;
+    select.innerHTML = '<option value="">-- Use Default Style --</option>';
+
+    // Haal stijlen op uit het geheugen (geladen in loadLabelAssets)
+    const styles = (typeof labelAssets !== 'undefined' && labelAssets.styles) ? labelAssets.styles : [];
+
+    styles.forEach(style => {
+        const opt = document.createElement('option');
+        // We slaan de prompt tekst op in de value, zodat we die direct kunnen gebruiken
+        opt.value = style.prompt; 
+        opt.textContent = style.name;
+        select.appendChild(opt);
+    });
+
+    // Herstel keuze indien mogelijk
+    if (currentVal) select.value = currentVal;
+}
+
 // --- LABEL EDITOR INITIALISATIE (COMPLETE VERSIE) ---
 function initLabelForge() {
     // 1. Vul de dropdowns (Fonts & Papier)
     populateLabelFontsDropdowns();
     populateLabelPaperDropdown();
+    populateLabelStylesDropdown();
     
     // 2. Laad de recepten lijst
     populateLabelRecipeDropdown();
@@ -5857,16 +5882,25 @@ async function generateLabelArt() {
     btn.innerHTML = "🎨 Painting...";
     btn.disabled = true;
 
-    // --- AANGEPASTE PROMPT LOGICA (V3.7 - ANTI-TEKST) ---
+    // --- AANGEPASTE PROMPT LOGICA (V4.0 - MET DROPDOWN) ---
     let visualStyle = "";
-    if (theme === 'special') {
-        visualStyle = "Dark, mystical, premium texture, gold accents, high contrast, oil painting style.";
+    
+    // 1. Kijk eerst of de gebruiker een specifieke stijl heeft gekozen in de dropdown
+    const selectedStylePrompt = document.getElementById('labelArtStyle')?.value;
+
+    if (selectedStylePrompt && selectedStylePrompt.trim() !== "") {
+        // GEBRUIKER KEUZE: Gebruik de prompt uit de dropdown
+        visualStyle = selectedStylePrompt;
     } else {
-        visualStyle = "Clean, modern vector art, vibrant colors, white background, minimalist.";
+        // GEEN KEUZE: Val terug op de standaard per thema
+        if (theme === 'special') {
+            visualStyle = "Dark, mystical, premium texture, gold accents, high contrast, oil painting style.";
+        } else {
+            visualStyle = "Clean, modern vector art, vibrant colors, white background, minimalist.";
+        }
     }
 
-    // De truc: We vragen om een 'Artistic interpretation' van het concept, niet om een 'Label'.
-    // En we verbieden expliciet het schrijven van de titel.
+    // De rest blijft hetzelfde (Artistic interpretation request...)
     let artPrompt = `
     Create a high-quality artistic background illustration.
     

@@ -5402,6 +5402,7 @@ function setLabelTheme(theme) {
     }
 
     const bgColor = getVal('tuneBackgroundColor') || '#ffffff';
+    const borderWidth = getVal('tuneBorderWidth') || 0;
     const showDetails = getCheck('labelShowDetails'); 
     const allergenText = getVal('labelAllergens'); 
     
@@ -5423,8 +5424,6 @@ function setLabelTheme(theme) {
     // THEMA : STANDARD LABEL (V3.7 - FIX: Specs Alignment & Clean Ingredients)
     // =================================================================
     if (theme === 'standard') {
-        // ... (container setup en tuning values blijven hetzelfde) ...
-        const borderWidth = getVal('tuneBorderWidth') || 0;
         const bgColor = getVal('tuneBackgroundColor') || '#ffffff';
         const titleX = getVal('tuneTitleX') || 10; 
         const titleY = getVal('tuneTitleY') || 10; 

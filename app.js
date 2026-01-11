@@ -5400,7 +5400,8 @@ function setLabelTheme(theme) {
     } else {
         dateVal = new Date().toLocaleDateString('nl-NL');
     }
-    
+
+    const bgColor = getVal('tuneBackgroundColor') || '#ffffff';
     const showDetails = getCheck('labelShowDetails'); 
     const allergenText = getVal('labelAllergens'); 
     
@@ -5597,8 +5598,12 @@ function setLabelTheme(theme) {
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden`; 
-       container.style.backgroundColor = bgColor; 
+       
+       // Reset eerst alle styles om conflicten te voorkomen
        container.style = ""; 
+       
+       // Pas daarna de kleur toe
+       container.style.backgroundColor = bgColor;  
        
        // --- TUNING VALUES ---
        const titleX = getVal('tuneTitleX') || 50; 
@@ -5655,8 +5660,6 @@ function setLabelTheme(theme) {
        const logoOp = getVal('tuneLogoOpacity') || 1.0; 
        const logoFlat = getCheck('logoColorMode');
        const logoColor = getVal('tuneLogoColor') || '#ffffff';
-       
-       const borderWidth = getVal('tuneBorderWidth') || 0;
 
        // Bepaal Flex alignment op basis van tekst alignment (voor Description)
        let descFlex = 'items-center';

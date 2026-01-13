@@ -4,10 +4,14 @@
 // ============================================================================
 
 // 1. IMPORTS
+// 1. Haal de database instanties uit je lokale bestand
+import { db, auth } from './firebase-init.js';
+
+// 2. Haal de Firestore functies rechtstreeks van Google
 import { 
-    db, auth, collection, addDoc, updateDoc, doc, deleteDoc, 
+    collection, addDoc, updateDoc, doc, deleteDoc, 
     getDoc, setDoc, query, onSnapshot, serverTimestamp 
-} from './firebase-init.js';
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { state, tempState } from './state.js';
 import { 

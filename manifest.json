@@ -1,22 +1,23 @@
 {
-  "name": "MEA(N)DERY V2.0",
+  "name": "MEA(N)DERY V2.4",
   "short_name": "Meandery",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f3f0e9",
   "theme_color": "#a89a87",
-  "description": "AI-Powered Brewbuddy, Recipe Creator & Cellar Manager.",
+  "description": "AI-Powered Brewbuddy, Recipe Creator & Cellar Manager. Modular Edition.",
   "orientation": "portrait",
   "icons": [
-    {
-      "src": "app-icon.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "app-icon.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
-  ]
+  {
+    "src": "new-logo.png",
+    "type": "image/png",
+    "sizes": "192x192"
+  },
+  {
+    "src": "new-logo.png",
+    "type": "image/png",
+    "sizes": "512x512"
+    "purpose": "any maskable"
+  }
+ ]
 }

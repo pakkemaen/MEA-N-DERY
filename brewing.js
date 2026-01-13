@@ -1110,7 +1110,6 @@ function renderBrewDay(brewId) {
 
     // START PERSISTENCE CHECK
         initializeBrewDayState(brewId, primarySteps);
-   }
 }
 
 // --- RENDER: Brew Day 2 (Aging/Secondary) ---

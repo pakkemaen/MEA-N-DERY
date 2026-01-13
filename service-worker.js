@@ -1,15 +1,23 @@
-const CACHE_NAME = 'meandery-cache-v7'; // VERSNELD NAAR V7 (Fix voor syntax error) 🚀
+const CACHE_NAME = 'meandery-cache-v8-modular'; // Versie verhoogd voor de nieuwe structuur 🚀
 
 // Lijst met bestanden die we willen bewaren voor offline gebruik
+// CRUCIAAL: Alle nieuwe modules staan hier nu bij!
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
-  './app.js',
-  './secrets.js',
-  './manifest.json',      // <--- HIER MISTE DE KOMMA!
-  './icon-192x192.png',   // Let op: Zorg dat dit plaatje ook echt in je map staat!
-  './icon-512x512.png'    // Let op: Zorg dat dit plaatje ook echt in je map staat!
+  './manifest.json',
+  './secrets.js',       
+  './firebase-init.js', // Nieuw
+  './app.js',           // De hoofd orchestrator
+  './state.js',         // Nieuw
+  './utils.js',         // Nieuw
+  './brewing.js',       // Nieuw
+  './inventory.js',     // Nieuw
+  './tools.js',         // Nieuw
+  './label-forge.js',   // Nieuw
+  './logo.png',         // (Optioneel: als je die hebt, voeg toe)
+  './favicon.png'       // (Optioneel: als je die hebt, voeg toe)
 ];
 
 // 1. INSTALLATIE: Downloaden en Cachen

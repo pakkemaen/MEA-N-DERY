@@ -1363,12 +1363,19 @@ window.renderBrewDay2 = async function() {
     
     if (agingBrews.length === 0) {
         container.innerHTML = `
-            <div class="text-center py-12 px-4">
-                <div class="mb-4 text-app-brand opacity-20"><svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
-                <h2 class="text-2xl font-header font-bold mb-2 text-app-brand">Aging Chamber Empty</h2>
-                <p class="text-app-secondary mb-6 text-sm">No batches are currently aging.<br>Finish a primary fermentation to see it here.</p>
-            </div>`;
-        return;
+            <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
+                <div class="flex items-center justify-between mb-4 pb-2 border-b border-app-brand/10">
+                    <div class="flex gap-2">
+                        <button onclick="window.closeSecondaryDetail()" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1">
+                            &larr; Back
+                        </button>
+                        
+                        <button onclick="window.revertToPrimary('${activeBrew.id}')" class="text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-wider flex items-center gap-1 ml-2 border-l border-app-brand/10 pl-2" title="Send back to Primary">
+                            ↺ Undo Finish
+                        </button>
+                    </div>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-app-brand opacity-60">Secondary Phase</span>
+                </div>
     }
     
     // Lijst renderen (deze keer in exact dezelfde stijl als Day 1)
@@ -2865,6 +2872,36 @@ window.promptNewBrewType = function() {
     
     // Toon de modal
     modal.classList.remove('hidden');
+}
+
+window.revertToPrimary = async function(brewId) {
+    if (!confirm("⚠️ Foutje gemaakt? Dit stuurt de batch terug naar Brew Day 1 (Primary).")) return;
+
+    try {
+        // 1. Zet de status vlag terug
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { 
+            primaryComplete: false 
+        });
+
+        // 2. Update lokale data
+        const brew = state.brews.find(b => b.id === brewId);
+        if(brew) brew.primaryComplete = false;
+
+        // 3. Reset pointers en UI
+        tempState.activeBrewId = null; // Ga terug naar lijstweergave
+        showToast("Batch moved back to Primary!", "success");
+        
+        // 4. Verversen
+        renderBrewDay2(); // Ververs Day 2 (hij verdwijnt hier)
+        
+        // Optioneel: Switch meteen terug naar Day 1 tab
+        switchSubView('brew-day-1', 'brewing-main-view');
+        renderBrewDay(brewId); // Open hem in Day 1
+
+    } catch (e) {
+        console.error(e);
+        showToast("Revert failed", "error");
+    }
 }
 
 // ============================================================================

@@ -1188,3 +1188,4 @@ window.correctHydrometer = correctHydrometer;
 window.populateSocialRecipeDropdown = populateSocialRecipeDropdown; // Ook deze moet beschikbaar zijn
 window.linkToBacksweetenCalc = linkToBacksweetenCalc;
 window.linkToDilutionCalc = linkToDilutionCalc;
+window.loadUserWaterProfiles = loadUserWaterProfiles;

@@ -2134,3 +2134,4 @@ window.updateArtButtons = updateArtButtons;
 window.addLabelStyle = addLabelStyle;
 window.addLabelFont = addLabelFont;
 window.deleteLabelAsset = deleteLabelAsset;
+window.loadLabelAssets = loadLabelAssets;

@@ -811,21 +811,9 @@ function populateSocialRecipeDropdown() {
     select.value = current;
 }
 
-// --- SOCIAL MEDIA STUDIO 2.0 LOGIC (UPDATED) ---
+// --- SOCIAL MEDIA STUDIO 2.0 LOGIC (MIX & MATCH UPDATE) ---
 
-// A. Helper: Toggle de dropdown op basis van de checkbox
-window.toggleSocialStyleSelect = function() {
-    const checkbox = document.getElementById('social-use-persona-style');
-    const select = document.getElementById('social-art-style');
-    
-    if (checkbox.checked) {
-        select.classList.add('opacity-50', 'pointer-events-none');
-    } else {
-        select.classList.remove('opacity-50', 'pointer-events-none');
-    }
-}
-
-// B. Helper: Laad de Custom Art Styles (uit Label Forge settings)
+// 1. Helper: Laad Styles + "No Image" optie
 window.loadSocialStyles = async function() {
     if (!state.userId) return;
     const select = document.getElementById('social-art-style');
@@ -835,27 +823,37 @@ window.loadSocialStyles = async function() {
         const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'labelAssets');
         const docSnap = await getDoc(docRef);
         
-        select.innerHTML = '<option value="">-- Choose Custom Style --</option>';
+        // Reset de lijst met de basis opties
+        select.innerHTML = `
+            <option value="none">🚫 No Image (Text Only)</option>
+            <option value="persona">✨ Match Persona Vibe (Auto)</option>
+        `;
         
         if (docSnap.exists() && docSnap.data().styles) {
+            // Voeg een scheidingslijn toe
+            const group = document.createElement('optgroup');
+            group.label = "My Custom Art Styles";
+            
             docSnap.data().styles.forEach(style => {
                 const opt = document.createElement('option');
-                opt.value = style.prompt; // We gebruiken de prompt direct als value
-                opt.textContent = style.name;
-                select.appendChild(opt);
+                opt.value = style.prompt; // De art style prompt (bv. "Pearl Jam Poster style, grunge...")
+                opt.textContent = style.name; // De naam (bv. "Pearl Jam")
+                group.appendChild(opt);
             });
+            select.appendChild(group);
         }
     } catch (e) {
         console.warn("Could not load styles for social:", e);
     }
 }
 
-// 1. TEKST GENEREREN (ANTI-FLUFF UPDATE)
+// 2. TEKST GENEREREN (Nu met Style Injectie)
 window.runSocialMediaGenerator = async function() {
     const brewId = document.getElementById('social-recipe-select').value;
     const persona = document.getElementById('social-persona').value;
     const platform = document.getElementById('social-platform').value;
     const tweak = document.getElementById('social-tweak').value;
+    const selectedStyleValue = document.getElementById('social-art-style').value;
     
     if (!brewId && !tweak) { showToast("Select a recipe OR type a topic.", "error"); return; }
     
@@ -863,7 +861,7 @@ window.runSocialMediaGenerator = async function() {
     const imageBtn = document.getElementById('generate-social-image-btn');
 
     container.innerHTML = getLoaderHtml(`Channeling ${persona}...`);
-    imageBtn.classList.add('hidden');
+    imageBtn.classList.add('hidden'); // Verberg knop tot we klaar zijn
 
     // Context ophalen
     let context = "";
@@ -875,7 +873,7 @@ window.runSocialMediaGenerator = async function() {
         context = `**TOPIC:** ${tweak}`;
     }
 
-    // Persona Definities
+    // Persona Definities (Voor de TEKST)
     let toneInstruction = "";
     switch (persona) {
         case 'Ryan Reynolds': toneInstruction = `TONE: Ryan Reynolds. Witty, sarcastic, meta-humor, high energy.`; break;
@@ -884,22 +882,41 @@ window.runSocialMediaGenerator = async function() {
         default: toneInstruction = `TONE: Viking. Bold, loud, enthusiastic, glory & feasts.`; break;
     }
 
-    // Platform Rules
-    let platformInstruction = platform === 'Untappd' 
-        ? `FORMAT: Untappd. Single paragraph (max 80 words). Pure flavor description. NO lists, NO markdown.` 
-        : `FORMAT: Instagram. Catchy hook. Line breaks. Emojis. 15 Hashtags at the end.`;
+    // Image Prompt Instructie (De "Mix & Match" logica)
+    let imageInstruction = "";
+    
+    if (selectedStyleValue === 'none') {
+        imageInstruction = `**IMAGE RULE:** Do NOT generate an image prompt. The user wants text only.`;
+    } else {
+        let visualStyle = "";
+        if (selectedStyleValue === 'persona') {
+            visualStyle = `Visual style matching the '${persona}' vibe (e.g. if Viking, use rugged/fire/wood. If Reynolds, use cinematic/high contrast).`;
+        } else {
+            // HIER IS DE MAGIE: We injecteren jouw Custom Style (bv. Pearl Jam Poster)
+            visualStyle = `**MANDATORY ART STYLE:** Apply this specific art style: "${selectedStyleValue}".`;
+        }
+
+        imageInstruction = `
+        **IMAGE PROMPT GENERATION:**
+        1. At the very end, generate an AI image prompt.
+        2. ${visualStyle}
+        3. **SUBJECT MATTER:** The subject should still match the '${persona}' narrative (e.g. if the text is funny, the image subject can be quirky), but rendered in the Art Style defined above.
+        4. Format: Start a new line at the bottom with "IMG_PROMPT: [The Prompt]"
+        `;
+    }
 
     const prompt = `You are a Social Media Manager.
     
     ${context}
     ${toneInstruction}
-    ${platformInstruction}
+    ${platform === 'Untappd' ? 'FORMAT: Short, pure flavor review.' : 'FORMAT: Instagram caption with hashtags.'}
     
-    **CRITICAL OUTPUT RULES:**
+    ${imageInstruction}
+    
+    **OUTPUT RULES:**
     1. Output ONLY the caption text. 
-    2. Do NOT write "Here is the post" or "Sure thing". Start directly with the content.
-    3. Do NOT include a title like "**Instagram Caption:**". Just the text.
-    4. At the VERY END, on a new line, add: "IMG_PROMPT: [A creative AI image prompt for this post]"
+    2. Do NOT write "Here is the post".
+    3. If requested, put the IMG_PROMPT at the bottom.
     `;
     
     try {
@@ -908,21 +925,21 @@ window.runSocialMediaGenerator = async function() {
         let finalPost = rawText;
         let imgPrompt = "";
 
+        // Splitsen van Prompt en Caption
         if (rawText.includes("IMG_PROMPT:")) {
             const parts = rawText.split("IMG_PROMPT:");
             finalPost = parts[0].trim();
             imgPrompt = parts[1].trim();
         }
 
-        // Extra schoonmaak van de tekst
-        finalPost = finalPost.replace(/^["']|["']$/g, '') // Verwijder quotes om het geheel
-                             .replace(/^(Here is|Sure|Certainly|Of course).*?:/i, '') // Verwijder babbels
-                             .trim();
-
+        // Cleanup
+        finalPost = finalPost.replace(/^["']|["']$/g, '').replace(/^(Here is|Sure|Certainly).*?:/i, '').trim();
         container.innerText = finalPost; 
         
-        if (imgPrompt) {
+        // Knop logica: Alleen tonen als er een prompt is gegenereerd
+        if (imgPrompt && selectedStyleValue !== 'none') {
             imageBtn.classList.remove('hidden');
+            imageBtn.innerText = "🎨 Generate Image (1 Credit)"; // Duidelijk maken dat dit kost
             imageBtn.onclick = () => window.generateSocialImage(imgPrompt);
         }
 
@@ -931,52 +948,28 @@ window.runSocialMediaGenerator = async function() {
     }
 }
 
-// 2. PLAATJE GENEREREN (MET KEUZE-LOGICA)
-window.generateSocialImage = async function(imagePrompt) {
+// 3. PLAATJE GENEREREN (Simpel & Direct)
+window.generateSocialImage = async function(finalPrompt) {
     const container = document.getElementById('social-image-container');
     const btn = document.getElementById('generate-social-image-btn');
     
-    // Check de UI settings
-    const usePersonaStyle = document.getElementById('social-use-persona-style')?.checked;
-    const customStylePrompt = document.getElementById('social-art-style')?.value;
-    const selectedPersona = document.getElementById('social-persona')?.value;
-
-    // 1. BEPAAL DE STIJL PREFIX
-    let stylePrefix = "";
-
-    if (usePersonaStyle) {
-        // Gebruik de Persona Vibe (Harde codering)
-        switch (selectedPersona) {
-            case "Ryan Reynolds": stylePrefix = "Cinematic advertisement, sharp focus, high contrast, witty composition, 8k: "; break;
-            case "Dry British": stylePrefix = "Understated elegant photography, natural diffused lighting, classic composition: "; break;
-            case "The Sommelier": stylePrefix = "Luxurious macro photography, liquid texture focus, cellar lighting, bokeh: "; break;
-            case "The Viking": stylePrefix = "Rustic, dark wood, warm firelight, rugged textures, ancient atmosphere: "; break;
-            default: stylePrefix = "Artisan craft mead photography, warm natural light, rustic background: "; break;
-        }
-    } else {
-        // Gebruik de Custom Style uit de Dropdown
-        if (customStylePrompt) {
-            stylePrefix = customStylePrompt + ", ";
-        } else {
-            // Fallback als er niets gekozen is in de dropdown
-            stylePrefix = "High quality photography, professional lighting, 8k resolution: "; 
-        }
-    }
+    // We gebruiken de prompt die de tekst-AI heeft gemaakt. 
+    // Die bevat nu al de mix van "Ryan Reynolds onderwerp" + "Pearl Jam Poster stijl".
     
-    // API Setup (zelfde als voorheen)
     let apiKey = state.userSettings.apiKey;
     if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.firebase) apiKey = CONFIG.firebase.apiKey;
     if (!apiKey) { showToast("No API Key.", "error"); return; }
 
     if (container) {
-        container.innerHTML = `<div class="loader"></div><p class="text-xs text-center mt-2 text-app-secondary animate-pulse">Generating...</p>`;
+        container.innerHTML = `<div class="loader"></div><p class="text-xs text-center mt-2 text-app-secondary animate-pulse">Painting...</p>`;
     }
+    if (btn) btn.classList.add('hidden'); // Verberg knop tijdens genereren
 
     const model = state.userSettings.imageModel || "imagen-3.0-generate-001";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
 
     const requestBody = {
-        instances: [{ prompt: stylePrefix + imagePrompt }],
+        instances: [{ prompt: finalPrompt }],
         parameters: { sampleCount: 1, aspectRatio: "1:1" }
     };
 
@@ -989,16 +982,18 @@ window.generateSocialImage = async function(imagePrompt) {
         if (data.predictions?.[0]?.bytesBase64Encoded) {
             const base64Img = data.predictions[0].bytesBase64Encoded;
             if (container) container.innerHTML = `<img src="data:image/png;base64,${base64Img}" class="w-full h-full object-cover rounded-xl shadow-inner animate-fade-in">`;
-            if (btn) btn.classList.add('hidden');
         } else {
             throw new Error("No image data received.");
         }
     } catch (e) {
         console.error(e);
         if (container) container.innerHTML = `<p class="text-red-500 text-xs p-4">${e.message}</p>`;
-        if (btn) btn.classList.remove('hidden');
+        // Toon knop weer als het mislukt, zodat je opnieuw kunt proberen
+        if (btn) btn.classList.remove('hidden'); 
     }
 }
+
+// (Verwijder window.toggleSocialStyleSelect uit de exports want die bestaat niet meer)
 
 // 3. Functie om tekst te kopiëren
 window.copySocialPost = function() {
@@ -1281,7 +1276,6 @@ window.saveUserSettings = saveUserSettings;
 window.calculateABV = calculateABV;
 window.calculateTOSNA = calculateTOSNA;
 window.runSocialMediaGenerator = runSocialMediaGenerator;
-window.toggleSocialStyleSelect = toggleSocialStyleSelect;
 window.loadSocialStyles = loadSocialStyles;
 window.generateSocialImage = generateSocialImage;
 window.handleWaterSourceChange = handleWaterSourceChange;

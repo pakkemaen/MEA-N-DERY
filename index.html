@@ -1214,15 +1214,11 @@
     </div>
     <div>
         <label class="block text-xs font-bold uppercase tracking-wider text-app-secondary mb-2">4. Image Style</label>
-        <div class="space-y-2">
-            <label class="flex items-center text-xs cursor-pointer">
-                <input type="checkbox" id="social-use-persona-style" class="mr-2 rounded text-app-brand" checked onchange="window.toggleSocialStyleSelect()">
-                Match Persona Vibe
-            </label>
-            <select id="social-art-style" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-header text-xs opacity-50 pointer-events-none transition-opacity">
-                <option value="">-- Loading Styles --</option>
+        <select id="social-art-style" class="w-full p-3 border rounded-md bg-app-tertiary border-app text-app-header text-sm">
+            <option value="none">🚫 No Image (Text Only)</option>
+            <option value="persona">✨ Match Persona Vibe (Default)</option>
             </select>
-        </div>
+    </div>
     </div>
 </div>
 

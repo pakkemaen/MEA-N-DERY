@@ -946,20 +946,53 @@ function populateSocialRecipeDropdown() {
     select.value = current;
 }
 
-// --- SOCIAL MEDIA STUDIO 2.0 LOGIC ---
+// --- SOCIAL MEDIA STUDIO 2.0 LOGIC (UPDATED) ---
 
-// 1. De hoofdfunctie om tekst te genereren
+// A. Helper: Toggle de dropdown op basis van de checkbox
+window.toggleSocialStyleSelect = function() {
+    const checkbox = document.getElementById('social-use-persona-style');
+    const select = document.getElementById('social-art-style');
+    
+    if (checkbox.checked) {
+        select.classList.add('opacity-50', 'pointer-events-none');
+    } else {
+        select.classList.remove('opacity-50', 'pointer-events-none');
+    }
+}
 
-async function runSocialMediaGenerator() {
+// B. Helper: Laad de Custom Art Styles (uit Label Forge settings)
+window.loadSocialStyles = async function() {
+    if (!state.userId) return;
+    const select = document.getElementById('social-art-style');
+    if (!select) return;
+
+    try {
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'labelAssets');
+        const docSnap = await getDoc(docRef);
+        
+        select.innerHTML = '<option value="">-- Choose Custom Style --</option>';
+        
+        if (docSnap.exists() && docSnap.data().styles) {
+            docSnap.data().styles.forEach(style => {
+                const opt = document.createElement('option');
+                opt.value = style.prompt; // We gebruiken de prompt direct als value
+                opt.textContent = style.name;
+                select.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.warn("Could not load styles for social:", e);
+    }
+}
+
+// 1. TEKST GENEREREN (ANTI-FLUFF UPDATE)
+window.runSocialMediaGenerator = async function() {
     const brewId = document.getElementById('social-recipe-select').value;
     const persona = document.getElementById('social-persona').value;
     const platform = document.getElementById('social-platform').value;
     const tweak = document.getElementById('social-tweak').value;
     
-    if (!brewId && !tweak) { 
-        showToast("Select a recipe OR type a topic.", "error"); 
-        return; 
-    }
+    if (!brewId && !tweak) { showToast("Select a recipe OR type a topic.", "error"); return; }
     
     const container = document.getElementById('social-content-container');
     const imageBtn = document.getElementById('generate-social-image-btn');
@@ -967,68 +1000,41 @@ async function runSocialMediaGenerator() {
     container.innerHTML = getLoaderHtml(`Channeling ${persona}...`);
     imageBtn.classList.add('hidden');
 
-    // Context ophalen (NU MET MEER DETAILS)
+    // Context ophalen
     let context = "";
     if (brewId) {
         const brew = state.brews.find(b => b.id === brewId);
-        // Probeer ABV te vinden (Final -> Target -> Unknown)
         const abv = brew.logData?.finalABV || brew.logData?.targetABV || "approx 12%";
-        
-        context = `
-        **PRODUCT:** Mead (Honey Wine).
-        **NAME:** ${brew.recipeName}
-        **STATS:** ABV: ${abv}.
-        **RECIPE DATA:** ${brew.recipeMarkdown.substring(0, 1000)}...
-        **USER NOTES:** ${tweak}
-        `;
+        context = `**PRODUCT:** Mead (Honey Wine). NAME: ${brew.recipeName}. STATS: ABV ${abv}. RECIPE: ${brew.recipeMarkdown.substring(0, 500)}... USER NOTES: ${tweak}`;
     } else {
         context = `**TOPIC:** ${tweak}`;
     }
 
-    // --- PERSONA DEFINITIES ---
+    // Persona Definities
     let toneInstruction = "";
-    if (persona === 'Ryan Reynolds') {
-        toneInstruction = `**TONE: RYAN REYNOLDS.** High energy, witty, sarcastic, break the fourth wall. Make fun of the effort.`;
-    } else if (persona === 'Dry British') {
-        toneInstruction = `**TONE: DRY BRITISH.** Understated, deadpan, cynical but charming. Use words like "splendid", "rather nice".`;
-    } else if (persona === 'The Sommelier') {
-        toneInstruction = `**TONE: THE SOMMELIER.** Elegant, sophisticated, sensory-focused. Use vocabulary like "bouquet", "finish", "notes of", "structure". No slang.`;
-    } else {
-        toneInstruction = `**TONE:** Bold, loud, enthusiastic like a Viking feast.`;
+    switch (persona) {
+        case 'Ryan Reynolds': toneInstruction = `TONE: Ryan Reynolds. Witty, sarcastic, meta-humor, high energy.`; break;
+        case 'Dry British': toneInstruction = `TONE: Dry British. Understated, cynical, charming, "splendid".`; break;
+        case 'The Sommelier': toneInstruction = `TONE: Sommelier. Elegant, sensory-focused, premium vocabulary.`; break;
+        default: toneInstruction = `TONE: Viking. Bold, loud, enthusiastic, glory & feasts.`; break;
     }
 
-    // --- PLATFORM DEFINITIES (AANGEPAST VOOR UNTAPPD) ---
-    let platformInstruction = "";
-    if (platform === 'Untappd') {
-        platformInstruction = `
-        **FORMAT: UNTAPPD DESCRIPTION (STRICT RULES):**
-        1. **NO MARKDOWN:** Do NOT use bold (**), italics (*), or bullet points. Plain text only.
-        2. **NO LISTS:** Do NOT list "Style: X" or "ABV: Y". Weave these facts naturally into the sentences (e.g., "This 12% Melomel features...").
-        3. **CONTENT:** A single, flowing, seductive paragraph about the flavor profile, mouthfeel, and ingredients.
-        4. **LENGTH:** Concise (max 100 words).
-        5. **FORBIDDEN:** No hashtags, no emojis, no links.
-        `;
-    } else {
-        // Instagram defaults
-        platformInstruction = `
-        **FORMAT: INSTAGRAM CAPTION.**
-        - Engaging hook.
-        - Use line breaks.
-        - Use relevant Emojis.
-        - End with 10-15 hashtags.
-        `;
-    }
+    // Platform Rules
+    let platformInstruction = platform === 'Untappd' 
+        ? `FORMAT: Untappd. Single paragraph (max 80 words). Pure flavor description. NO lists, NO markdown.` 
+        : `FORMAT: Instagram. Catchy hook. Line breaks. Emojis. 15 Hashtags at the end.`;
 
-    const prompt = `You are a Marketing Expert.
+    const prompt = `You are a Social Media Manager.
     
     ${context}
-    
     ${toneInstruction}
-    
     ${platformInstruction}
     
-    **TASK:** Write the content for ${platform}.
-    **EXTRA:** At the very end, provide a separate AI Image Prompt starting with "IMG_PROMPT:".
+    **CRITICAL OUTPUT RULES:**
+    1. Output ONLY the caption text. 
+    2. Do NOT write "Here is the post" or "Sure thing". Start directly with the content.
+    3. Do NOT include a title like "**Instagram Caption:**". Just the text.
+    4. At the VERY END, on a new line, add: "IMG_PROMPT: [A creative AI image prompt for this post]"
     `;
     
     try {
@@ -1043,20 +1049,16 @@ async function runSocialMediaGenerator() {
             imgPrompt = parts[1].trim();
         }
 
-        // --- SCHOONMAAK ACTIE ---
-        // Verwijder alle markdown sterretjes die de AI toch per ongeluk heeft toegevoegd
-        finalPost = finalPost.replace(/\*\*/g, '').replace(/\*/g, '').trim();
-
-        // Als Untappd: verwijder ook eventuele "Title:" prefixes die de AI soms verzint
-        if (platform === 'Untappd') {
-            finalPost = finalPost.replace(/^Title:\s*/i, '').replace(/^Description:\s*/i, '');
-        }
+        // Extra schoonmaak van de tekst
+        finalPost = finalPost.replace(/^["']|["']$/g, '') // Verwijder quotes om het geheel
+                             .replace(/^(Here is|Sure|Certainly|Of course).*?:/i, '') // Verwijder babbels
+                             .trim();
 
         container.innerText = finalPost; 
         
         if (imgPrompt) {
             imageBtn.classList.remove('hidden');
-            imageBtn.onclick = () => generateSocialImage(imgPrompt);
+            imageBtn.onclick = () => window.generateSocialImage(imgPrompt);
         }
 
     } catch (e) {
@@ -1064,109 +1066,71 @@ async function runSocialMediaGenerator() {
     }
 }
 
-// 2. De functie om een plaatje te maken
-
-async function generateSocialImage(imagePrompt) {
+// 2. PLAATJE GENEREREN (MET KEUZE-LOGICA)
+window.generateSocialImage = async function(imagePrompt) {
     const container = document.getElementById('social-image-container');
     const btn = document.getElementById('generate-social-image-btn');
     
-    // 1. HAAL DE GEKOZEN PERSONA OP
-    const personaSelect = document.getElementById('social-persona');
-    const selectedPersona = personaSelect ? personaSelect.value : '';
+    // Check de UI settings
+    const usePersonaStyle = document.getElementById('social-use-persona-style')?.checked;
+    const customStylePrompt = document.getElementById('social-art-style')?.value;
+    const selectedPersona = document.getElementById('social-persona')?.value;
 
-    // 2. KIES DE STIJL PREFIX OP BASIS VAN DE PERSONA
+    // 1. BEPAAL DE STIJL PREFIX
     let stylePrefix = "";
 
-    switch (selectedPersona) {
-        case "Ryan Reynolds":
-            // Stijl: Scherp, premium, een beetje 'te' perfect, high-contrast, filmisch.
-            stylePrefix = "Cinematic premium advertisement photography, sharp focus, high contrast lighting, witty composition, 8k resolution: ";
-            break;
-        case "Dry British":
-            // Stijl: Ingetogen, natuurlijk licht, klassiek, elegant, niet schreeuwerig.
-            stylePrefix = "Understated elegant photography, natural diffused lighting, classic composition, richly textured background, subtle and refined: ";
-            break;
-        case "The Sommelier":
-            // Stijl: Luxe, focus op details (macro), wijnkelder sfeer, rijk, diepe kleuren.
-            stylePrefix = "Luxurious macro photography, focus on liquid texture and details, ambient cellar lighting, rich bokeh background, high-end feel: ";
-            break;
-        case "The Viking":
-            // Stijl: Ruw, donker hout, vuurlicht, stoer, ambachtelijk, een beetje wild.
-            stylePrefix = "Rustic and bold photography, dark wood surfaces, warm firelight, rugged textures, ancient mead hall atmosphere, raw and powerful: ";
-            break;
-        default:
-            // De "Standaard" BrewBuddy stijl (Modern Artisan) als er niets is gekozen.
-            stylePrefix = "Artisan craft mead photography, warm natural light, rustic wooden background, highly detailed textures, inviting atmosphere, shallow depth of field: ";
-            break;
+    if (usePersonaStyle) {
+        // Gebruik de Persona Vibe (Harde codering)
+        switch (selectedPersona) {
+            case "Ryan Reynolds": stylePrefix = "Cinematic advertisement, sharp focus, high contrast, witty composition, 8k: "; break;
+            case "Dry British": stylePrefix = "Understated elegant photography, natural diffused lighting, classic composition: "; break;
+            case "The Sommelier": stylePrefix = "Luxurious macro photography, liquid texture focus, cellar lighting, bokeh: "; break;
+            case "The Viking": stylePrefix = "Rustic, dark wood, warm firelight, rugged textures, ancient atmosphere: "; break;
+            default: stylePrefix = "Artisan craft mead photography, warm natural light, rustic background: "; break;
+        }
+    } else {
+        // Gebruik de Custom Style uit de Dropdown
+        if (customStylePrompt) {
+            stylePrefix = customStylePrompt + ", ";
+        } else {
+            // Fallback als er niets gekozen is in de dropdown
+            stylePrefix = "High quality photography, professional lighting, 8k resolution: "; 
+        }
     }
     
-    // We hergebruiken de Google AI Key uit settings
+    // API Setup (zelfde als voorheen)
     let apiKey = state.userSettings.apiKey;
-    
-    // Fallback voor als settings leeg is
-    if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.firebase) {
-         apiKey = CONFIG.firebase.apiKey;
-    }
-
-    if (!apiKey) {
-        showToast("Geen Google API Key gevonden.", "error");
-        return;
-    }
+    if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.firebase) apiKey = CONFIG.firebase.apiKey;
+    if (!apiKey) { showToast("No API Key.", "error"); return; }
 
     if (container) {
-        // Laat even zien welke stijl we gebruiken in de loader tekst
-        const styleName = selectedPersona || "Default Artisan";
-        container.innerHTML = `<div class="loader"></div><p class="text-xs text-center mt-2 text-app-secondary animate-pulse">Painting in "${styleName}" style...</p>`;
+        container.innerHTML = `<div class="loader"></div><p class="text-xs text-center mt-2 text-app-secondary animate-pulse">Generating...</p>`;
     }
 
     const model = state.userSettings.imageModel || "imagen-3.0-generate-001";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
 
     const requestBody = {
-        instances: [
-            { 
-                // HIER COMBINEREN WE DE STIJL MET JOUW ONDERWERP
-                prompt: stylePrefix + imagePrompt 
-            }
-        ],
-        parameters: {
-            sampleCount: 1,
-            aspectRatio: "1:1"
-        }
+        instances: [{ prompt: stylePrefix + imagePrompt }],
+        parameters: { sampleCount: 1, aspectRatio: "1:1" }
     };
 
     try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || `Google Image Error (${response.status})`);
-        }
+        const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
+        if (!response.ok) throw new Error("Google Image API Error");
         
         const data = await response.json();
         
-        if (data.predictions && data.predictions.length > 0 && data.predictions[0].bytesBase64Encoded) {
+        if (data.predictions?.[0]?.bytesBase64Encoded) {
             const base64Img = data.predictions[0].bytesBase64Encoded;
-            if (container) {
-                container.innerHTML = `<img src="data:image/png;base64,${base64Img}" class="w-full h-full object-cover rounded-xl shadow-inner animate-fade-in">`;
-            }
+            if (container) container.innerHTML = `<img src="data:image/png;base64,${base64Img}" class="w-full h-full object-cover rounded-xl shadow-inner animate-fade-in">`;
             if (btn) btn.classList.add('hidden');
         } else {
-            throw new Error("Geen plaatje ontvangen van Google.");
+            throw new Error("No image data received.");
         }
-        
     } catch (e) {
-        console.error("Imagen Fout:", e);
-        let msg = "Generation Failed";
-        if (e.message.includes("403") || e.message.includes("permission")) msg = "API Key/Model toegang geweigerd.";
-        
-        if (container) {
-            container.innerHTML = `<div class="p-4 text-center flex flex-col items-center justify-center h-full"><p class="text-red-500 text-xs font-bold mb-1">${msg}</p><p class="text-[10px] text-gray-400 leading-tight">${e.message}</p></div>`;
-        }
+        console.error(e);
+        if (container) container.innerHTML = `<p class="text-red-500 text-xs p-4">${e.message}</p>`;
         if (btn) btn.classList.remove('hidden');
     }
 }
@@ -1452,6 +1416,9 @@ window.saveUserSettings = saveUserSettings;
 window.calculateABV = calculateABV;
 window.calculateTOSNA = calculateTOSNA;
 window.runSocialMediaGenerator = runSocialMediaGenerator;
+window.toggleSocialStyleSelect = toggleSocialStyleSelect;
+window.loadSocialStyles = loadSocialStyles;
+window.generateSocialImage = generateSocialImage;
 window.handleWaterSourceChange = handleWaterSourceChange;
 window.calculateRefractometerCorrection = calculateRefractometerCorrection;
 window.calculatePrimingSugar = calculatePrimingSugar;

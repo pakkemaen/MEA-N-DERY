@@ -65,7 +65,10 @@ export function switchSubView(viewName, parentViewId) {
 
     // Trigger specifieke logica (veilig via window check)
     if (viewName === 'brew-day-2' && window.renderBrewDay2) window.renderBrewDay2();
-    if (viewName === 'social' && window.populateSocialRecipeDropdown) window.populateSocialRecipeDropdown();
+    if (viewName === 'social') {
+        if(window.populateSocialRecipeDropdown) window.populateSocialRecipeDropdown();
+        if(window.loadSocialStyles) window.loadSocialStyles();
+    }
     if (viewName === 'creator' && window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();
     if (viewName === 'labels') {
         if(window.populateLabelRecipeDropdown) window.populateLabelRecipeDropdown();

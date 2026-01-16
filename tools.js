@@ -1265,9 +1265,85 @@ async function clearCollection(collectionName) {
     }
 }
 
+// --- WATER SOMMELIER LOGIC (BELGIAN EDITION) ---
+async function findCommercialWaterMatch() {
+    const resultsDiv = document.getElementById('water-brand-results');
+    
+    // We halen het recept op via het window object (gedeeld geheugen)
+    const recipeContext = window.currentRecipeMarkdown || "";
+
+    if (!resultsDiv) return;
+    
+    // Als er geen recept is, toon een melding
+    if (!recipeContext) {
+        resultsDiv.classList.remove('hidden');
+        resultsDiv.innerHTML = `<p class="text-amber-500 text-sm p-2">Please generate a recipe first so I can recommend matching water.</p>`;
+        return;
+    }
+
+    resultsDiv.classList.remove('hidden');
+    resultsDiv.innerHTML = getLoaderHtml("Scanning Belgian inventory...");
+
+    const lowerRecipe = recipeContext.toLowerCase();
+    const styleHint = lowerRecipe.includes('melomel') || lowerRecipe.includes('fruit') 
+        ? "Fruit Mead (Prefers soft/low mineral water to let fruit shine)" 
+        : "Traditional (Prefers some mineral structure for mouthfeel)";
+
+    const prompt = `You are a Water Sommelier for a Mead Brewer in BELGIUM. 
+    
+    **CONTEXT:** ${styleHint}
+    **USER TOOL:** The user uses a **Refractometer (Brix)**. Carbonation bubbles are NOT an issue for measuring.
+    
+    **TASK:** Recommend 3 real-world bottled water brands found in **BELGIAN SUPERMARKETS** (e.g. Colruyt, Delhaize, Carrefour).
+    
+    **SEARCH SCOPE:** - Do NOT stick to a pre-defined list. Search your knowledge base for widely available Belgian/European brands.
+    - **CRITICAL:** Do NOT recommend American brands. Only brands sold in Belgium/EU.
+
+    **GUIDELINES:** 1. **STILL vs SPARKLING:** - Standard recommendation: "Plat/Still" (safest baseline).
+       - Exception: If the style benefits from it, you MAY recommend a Sparkling variant.
+       - Requirement: If Sparkling is chosen, add note: "Degas sample before measuring final gravity".
+    2. **NO SALT ADDITIONS:** The user uses the water "as is". Find the perfect natural profile.
+    3. **SOURCE CHECK:** If recommending a brand with multiple sources (like Cristaline or generic supermarket brands), you **MUST** specify which specific source/catchment area on the label is required (e.g. "Source Eleanor").
+    
+    RECIPE: ${recipeContext.substring(0, 1000)}...
+    
+    OUTPUT: JSON Array: [{"brand": "Name", "reason": "Why this specific mineral profile fits", "tweak_instruction": "Specific usage advice"}]`;
+
+    const schema = {
+        type: "ARRAY",
+        items: {
+            type: "OBJECT",
+            properties: { "brand": { "type": "STRING" }, "reason": { "type": "STRING" }, "tweak_instruction": { "type": "STRING" } },
+            required: ["brand", "reason", "tweak_instruction"]
+        }
+    };
+
+    try {
+        const response = await performApiCall(prompt, schema);
+        const brands = JSON.parse(response);
+        let html = `<h5 class="font-bold mb-3 text-app-brand text-sm uppercase">Recommended Belgian Waters:</h5><div class="space-y-3">`;
+        brands.forEach(b => {
+            html += `<div class="p-3 card rounded border border-app-brand/30 shadow-sm flex flex-col gap-2">
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-app-header">${b.brand}</span>
+                            <button onclick="window.applyWaterTweak('${b.brand}', '${b.tweak_instruction.replace(/'/g, "\\'")}')" class="text-xs bg-app-tertiary hover:bg-app-secondary text-app-brand border border-app-brand py-1 px-2 rounded transition-colors font-bold uppercase tracking-wider">Select</button>
+                        </div>
+                        <p class="text-xs text-app-secondary">${b.reason}</p>
+                        <p class="text-[10px] text-green-600 font-mono mt-1">✓ ${b.tweak_instruction}</p>
+                     </div>`;
+        });
+        html += `</div>`;
+        resultsDiv.innerHTML = html;
+    } catch (error) {
+        console.error("Water match failed:", error);
+        resultsDiv.innerHTML = `<p class="text-red-500 text-sm">Could not find matching brands. Error: ${error.message}</p>`;
+    }
+}
+
 // --- EXPORTS ---
 window.importData = importData;
 window.saveWaterProfile = saveWaterProfile;
+window.findCommercialWaterMatch = findCommercialWaterMatch;
 window.findWaterProfileWithAI = findWaterProfileWithAI;
 window.exportHistory = exportHistory;
 window.exportInventory = exportInventory;

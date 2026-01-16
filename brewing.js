@@ -373,6 +373,7 @@ async function generateRecipe() {
 
         // Opslaan in module scope en tempState voor andere functies
         currentRecipeMarkdown = cleanedResponse;
+        window.currentRecipeMarkdown = cleanedResponse;
         tempState.currentRecipe = currentRecipeMarkdown;
 
         // Renderen (deze functie komt in de volgende stap)

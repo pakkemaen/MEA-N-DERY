@@ -844,7 +844,6 @@ function handleStyleChange() {
 // --- TUSSENTIJDSE EXPORTS ---
 // We koppelen deze nu alvast aan window, zodat de HTML in Creator mode werkt
 window.generateRecipe = generateRecipe;
-window.findCommercialWaterMatch = findCommercialWaterMatch;
 window.applyWaterTweak = applyWaterTweak;
 window.handleDescriptionInput = handleDescriptionInput;
 window.handleStyleChange = handleStyleChange;

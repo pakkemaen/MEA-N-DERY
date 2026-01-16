@@ -1288,7 +1288,6 @@ window.renderBrewDay2 = async function() {
     const agingBrews = state.brews.filter(b => b.primaryComplete && !b.isBottled);
     
     // 2. Bepaal welke we moeten laten zien (Lijst of Detail?)
-    // We gebruiken dezelfde tempState pointer, maar checken of hij in deze lijst zit
     const activeId = tempState.activeBrewId;
     const activeBrew = activeId ? agingBrews.find(b => b.id === activeId) : null;
 
@@ -1328,12 +1327,18 @@ window.renderBrewDay2 = async function() {
 
         const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(activeBrew.logData, activeBrew.id + '-sec') : '';
 
+        // HIER GING HET FOUT: De string was niet compleet. Nu wel:
         container.innerHTML = `
             <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
                 <div class="flex items-center justify-between mb-4 pb-2 border-b border-app-brand/10">
-                    <button onclick="window.closeSecondaryDetail()" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1">
-                        &larr; Back to Chamber
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="window.closeSecondaryDetail()" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1">
+                            &larr; Back
+                        </button>
+                        <button onclick="window.revertToPrimary('${activeBrew.id}')" class="text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-wider flex items-center gap-1 ml-2 border-l border-app-brand/10 pl-2" title="Send back to Primary">
+                            ↺ Undo Finish
+                        </button>
+                    </div>
                     <span class="text-[10px] font-bold uppercase tracking-widest text-app-brand opacity-60">Secondary Phase</span>
                 </div>
 
@@ -1356,32 +1361,24 @@ window.renderBrewDay2 = async function() {
                     <button onclick="window.updateBrewLog('${activeBrew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg btn font-bold uppercase tracking-wider text-xs">Save Log Notes</button>
                 </div>
             </div>`;
-        return;
+        return; // CRUCIAAL: Stop hier als we detail view hebben!
     }
 
     // --- SCENARIO B: LIJST WEERGAVE (VISUAL UPDATE) ---
     
     if (agingBrews.length === 0) {
         container.innerHTML = `
-            <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
-                <div class="flex items-center justify-between mb-4 pb-2 border-b border-app-brand/10">
-                    <div class="flex gap-2">
-                        <button onclick="window.closeSecondaryDetail()" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1">
-                            &larr; Back
-                        </button>
-                        
-                        <button onclick="window.revertToPrimary('${activeBrew.id}')" class="text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-wider flex items-center gap-1 ml-2 border-l border-app-brand/10 pl-2" title="Send back to Primary">
-                            ↺ Undo Finish
-                        </button>
-                    </div>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-app-brand opacity-60">Secondary Phase</span>
-                </div>
+            <div class="text-center py-12 px-4">
+                <div class="mb-4 text-app-brand opacity-20"><svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                <h2 class="text-2xl font-header font-bold mb-2 text-app-brand">Aging Chamber Empty</h2>
+                <p class="text-app-secondary mb-6 text-sm">No batches are currently aging.<br>Finish a primary fermentation to see it here.</p>
+            </div>`;
+        return;
     }
     
-    // Lijst renderen (deze keer in exact dezelfde stijl als Day 1)
+    // Lijst renderen
     const listHtml = agingBrews.map(b => {
         const startDate = b.logData?.brewDate || 'Unknown';
-        // Bereken totale dagen sinds start
         const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
         const dayLabel = days >= 0 ? `Day ${days}` : '?';
 

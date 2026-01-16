@@ -70,7 +70,24 @@ onAuthStateChanged(auth, async (user) => {
 // ----------------------------------------------------------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("🚀 Meandery V2.0 Modular System Active");
+    console.log("🚀 Meandery V2.4 Modular System Active");
+
+    // --- AUTH LOGIN KNOP ---
+    const loginBtn = document.getElementById('google-login-btn');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            console.log("Login button clicked, attempting sign in..."); // Debug log
+            signInWithPopup(auth, googleProvider)
+                .then((result) => {
+                    console.log("Login success:", result.user);
+                    // De onAuthStateChanged listener bovenin het bestand pikt dit automatisch op
+                })
+                .catch((error) => {
+                    console.error("Login failed:", error);
+                    showToast("Login failed: " + error.message, "error");
+                });
+        });
+    }
 
     // --- NAVIGATIE ---
     document.querySelectorAll('.main-nav-btn').forEach(btn => {

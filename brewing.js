@@ -262,8 +262,8 @@ function buildPrompt() {
         let waterContext = "";
         if (isNoWater) {
             waterContext = `**WATER RULE:** DO NOT ADD WATER. Liquid must come from fruit juice/maceration only.`;
-        } else if (currentWaterProfile) {
-            waterContext = `Use Water: ${currentWaterProfile.name}`;
+        } else if (window.currentWaterProfile) {  // <--- AANGEPAST
+            waterContext = `Use Water: ${window.currentWaterProfile.name}`;
         } else {
             waterContext = `Recommend Ideal Water Profile.`;
         }

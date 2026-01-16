@@ -1038,7 +1038,7 @@ function handleWaterSourceChange() {
     if (type === 'builtin') profile = BUILT_IN_WATER_PROFILES[id];
     else if (type === 'user') profile = userWaterProfiles.find(p => p.id === id);
     if (profile) {
-        currentWaterProfile = profile;
+        window.currentWaterProfile = profile;
         updateWaterProfileDisplay(profile);
     }
 }

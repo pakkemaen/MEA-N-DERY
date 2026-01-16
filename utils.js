@@ -76,6 +76,15 @@ export function switchSubView(viewName, parentViewId) {
         if(typeof window.setLabelTheme === 'function') window.setLabelTheme('standard');
     }
     if (viewName === 'troubleshoot' && window.resetTroubleshootChat) window.resetTroubleshootChat();
+    // Trigger specifieke acties bij het openen van tabs
+    if (tabId === 'shopping-list') {
+        if (typeof window.generateShoppingList === 'function') {
+            // Check of we in Creator mode zitten (geen actieve brew ID) of in History mode
+            // Voor nu: trigger hem gewoon, de functie zoekt zelf uit of er een recept is.
+            const activeBrewId = (typeof tempState !== 'undefined') ? tempState.activeBrewId : null;
+            window.generateShoppingList(activeBrewId);
+        }
+    }
 }
 
 // --- UI UTILITIES ---

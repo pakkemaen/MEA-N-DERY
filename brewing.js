@@ -944,21 +944,39 @@ function extractStepsFromMarkdown(markdown) {
     return { day1, day2 };
 }
 
-// --- START VIA SHOPPING LIST ---
+// --- SMART START: CHECK STOCK FIRST ---
 window.startBrewDay = async function(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    // Navigeer eerst naar de shopping list om de ingrediënten te controleren
-    // (Zorg dat generateShoppingList beschikbaar is in window, wsl in inventory.js)
-    switchMainView('brewing');
-    switchSubView('shopping-list', 'brewing-main-view');
+    // 1. Check de voorraad (zonder het scherm te tekenen, vandaar 'false')
+    let isStockComplete = false;
     
+    // We checken of de inventory module geladen is
     if (window.generateShoppingList) {
-        window.generateShoppingList(brewId, false);
+        isStockComplete = window.generateShoppingList(brewId, false);
     } else {
-        // Fallback als inventory module niet geladen is: direct starten
+        // Als inventory niet bestaat, gaan we voor de zekerheid door
+        isStockComplete = true; 
+    }
+
+    // 2. De Beslissing
+    if (isStockComplete) {
+        // A. Alles is er? -> Direct Brouwen! 🍺
+        console.log("Stock complete. Skipping shopping list.");
         window.startActualBrewDay(brewId);
+        showToast("Inventory complete! Starting Brew Day.", "success");
+    } else {
+        // B. Iets mist? -> Naar de Shopping List 🛒
+        console.log("Items missing. Redirecting to shopping list.");
+        switchMainView('brewing');
+        switchSubView('shopping-list', 'brewing-main-view');
+        
+        // Nu renderen we de lijst wél, zodat je ziet wat je moet kopen
+        if (window.generateShoppingList) {
+            window.generateShoppingList(brewId, true);
+        }
+        showToast("Some items are missing. Check list.", "warning");
     }
 }
 
@@ -1029,6 +1047,9 @@ function renderBrewDay(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
     if (!brew) return;
 
+    // Stappen laden of parsen (Cache mechanisme)
+    let primarySteps = brew.brewDaySteps || [];
+    
     // Stappen laden of parsen (Cache mechanisme)
     let primarySteps = brew.brewDaySteps || [];
     
@@ -1195,36 +1216,86 @@ window.closeSecondaryDetail = () => {
 // --- LOGIC: Timers & Checklist (Primary) ---
 
 window.startStepTimer = function(brewId, stepIndex, resumeTime = null) {
-    // Stop eventuele lopende timers
-    if (stepTimerInterval) clearInterval(stepTimerInterval);
-    
-    const brew = state.brews.find(b => b.id === brewId);
-    if (!brew) return;
-    
-    // Haal stappen op uit cache of globals
-    let allSteps = brew.brewDaySteps || [];
-    const step = allSteps[stepIndex];
-    if (!step) return;
+    console.log(`⏱️ Starting Timer: Brew ${brewId}, Step ${stepIndex}`);
 
-    // Bepaal starttijd
-    let timeLeft = resumeTime !== null ? resumeTime : step.duration;
+    // 1. Stop lopende timers
+    if (stepTimerInterval) {
+        clearInterval(stepTimerInterval);
+        stepTimerInterval = null;
+    }
     
+    // 2. Zoek het recept in het geheugen
+    const brew = state.brews.find(b => b.id === brewId);
+    if (!brew) {
+        console.error("Timer Error: Brew not found in state.");
+        alert("Error: Could not find active batch data. Please refresh the page.");
+        return;
+    }
+    
+    // 3. Haal de stappen op (Day 1)
+    // We moeten zeker weten dat brewDaySteps gevuld is
+    let allSteps = brew.brewDaySteps;
+    if (!allSteps || allSteps.length === 0) {
+        // Fallback: probeer ze opnieuw te parsen als ze ontbreken
+        console.warn("Timer Warning: Steps missing, reparsing...");
+        const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
+        allSteps = extracted.day1;
+        brew.brewDaySteps = allSteps; // Cache herstellen
+    }
+
+    const step = allSteps[stepIndex];
+    if (!step) {
+        console.error("Timer Error: Step not found at index", stepIndex);
+        return;
+    }
+
+    // 4. UI Elementen zoeken
     const timerDisplay = document.getElementById(`timer-${stepIndex}`);
     const controlsDiv = document.getElementById(`controls-${stepIndex}`);
 
-    // Update knoppen naar Pause/Skip
-    if (controlsDiv) controlsDiv.innerHTML = `<button onclick="window.pauseStepTimer('${brewId}', ${stepIndex})" class="text-xs bg-yellow-500 text-white py-1.5 px-3 rounded font-bold uppercase mr-1">Pause</button><button onclick="window.skipTimer('${brewId}', ${stepIndex})" class="text-xs bg-gray-500 text-white py-1.5 px-3 rounded font-bold uppercase">Skip</button>`;
+    if (!timerDisplay) {
+        console.error(`Timer Error: Display element 'timer-${stepIndex}' not found.`);
+        return;
+    }
 
-    // Start interval
+    // 5. Starttijd bepalen
+    let timeLeft = resumeTime !== null ? resumeTime : step.duration;
+    
+    // Direct updaten zodat je niet 1 seconde hoeft te wachten
+    timerDisplay.textContent = formatTime(timeLeft);
+    timerDisplay.classList.add('text-green-600', 'scale-110'); // Visuele feedback
+
+    // 6. Knoppen veranderen naar Pause
+    if (controlsDiv) {
+        controlsDiv.innerHTML = `
+            <button onclick="window.pauseStepTimer('${brewId}', ${stepIndex})" class="text-xs bg-yellow-500 text-white py-1.5 px-3 rounded font-bold uppercase mr-1 hover:bg-yellow-600">Pause</button>
+            <button onclick="window.skipTimer('${brewId}', ${stepIndex})" class="text-xs bg-gray-500 text-white py-1.5 px-3 rounded font-bold uppercase hover:bg-gray-600">Skip</button>
+        `;
+    }
+
+    // 7. De Interval Loop
     stepTimerInterval = setInterval(() => {
         timeLeft--;
+        
         if (timerDisplay) timerDisplay.textContent = formatTime(timeLeft);
         
+        // Opslaan in LocalStorage voor als de pagina ververst wordt (Mini-feature)
+        const timerState = { brewId, stepIndex, endTime: Date.now() + (timeLeft * 1000) };
+        localStorage.setItem('activeBrewDayTimer', JSON.stringify(timerState));
+
         if (timeLeft <= 0) {
             clearInterval(stepTimerInterval);
             stepTimerInterval = null;
-            if (timerDisplay) timerDisplay.textContent = "Done!";
-            if(navigator.vibrate) navigator.vibrate([200, 100, 200]); // Haptische feedback
+            localStorage.removeItem('activeBrewDayTimer');
+            
+            if (timerDisplay) {
+                timerDisplay.textContent = "Done!";
+                timerDisplay.classList.remove('text-green-600', 'scale-110');
+            }
+            
+            // Geluidje / Trillen
+            if(navigator.vibrate) navigator.vibrate([200, 100, 200]); 
+            
             window.completeStep(stepIndex, true); 
         }
     }, 1000);

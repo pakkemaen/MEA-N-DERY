@@ -494,6 +494,115 @@ window.bottleBatch = async function(e) {
 
 // --- INVENTORY MANAGEMENT FUNCTIONS ---
 
+// --- SHOPPING LIST GENERATOR ---
+window.generateShoppingList = function(brewId = null, renderToScreen = true) {
+    const listDiv = document.getElementById('shopping-list-items');
+    if (!listDiv && renderToScreen) return;
+
+    // 1. Bepaal welk recept we gebruiken
+    let markdown = "";
+    
+    // Als we in Creator mode zitten (nog geen ID)
+    if (!brewId && window.currentRecipeMarkdown) {
+        markdown = window.currentRecipeMarkdown;
+    } 
+    // Als we een bestaande brew openen
+    else if (brewId) {
+        const brew = state.brews.find(b => b.id === brewId);
+        if (brew) markdown = brew.recipeMarkdown;
+    }
+
+    if (!markdown) {
+        if (renderToScreen) listDiv.innerHTML = `<div class="text-center py-10 opacity-50"><p>Generate or select a recipe first.</p></div>`;
+        return;
+    }
+
+    // 2. Haal ingrediënten uit de Markdown (JSON blok)
+    const jsonRegex = /(?:```json\s*)?(\[\s*\{[\s\S]*?\}\s*\])(?:\s*```)?/;
+    const match = markdown.match(jsonRegex);
+    
+    if (!match) {
+        if (renderToScreen) listDiv.innerHTML = `<div class="text-center py-10 opacity-50"><p>No ingredients data found in recipe.</p></div>`;
+        return;
+    }
+
+    let ingredients = [];
+    try {
+        ingredients = JSON.parse(match[1]);
+    } catch (e) {
+        console.error("JSON Parse error:", e);
+        return;
+    }
+
+    // 3. Vergelijk met Inventory
+    let shoppingHtml = "";
+    let everythingInStock = true;
+
+    ingredients.forEach(req => {
+        // Zoek item in inventory (hoofdletterongevoelig)
+        const invItem = state.inventory.find(i => i.name.toLowerCase().includes(req.ingredient.toLowerCase()) || req.ingredient.toLowerCase().includes(i.name.toLowerCase()));
+        
+        let needToBuy = true;
+        let stockQty = 0;
+        let buyQty = parseFloat(req.quantity);
+        const unit = req.unit || '';
+
+        if (invItem) {
+            stockQty = parseFloat(invItem.qty);
+            
+            // Simpele eenheid conversie (kg -> g)
+            if (unit.toLowerCase() === 'kg' && invItem.unit.toLowerCase() === 'g') {
+                buyQty *= 1000; 
+            }
+            
+            // Hebben we genoeg?
+            if (stockQty >= buyQty) {
+                needToBuy = false;
+            } else {
+                buyQty = buyQty - stockQty; // Koop alleen het verschil
+            }
+        }
+
+        // Als we het moeten kopen (of als het niet in voorraad is)
+        if (needToBuy) {
+            everythingInStock = false;
+            // Afronden
+            const displayQty = buyQty % 1 === 0 ? buyQty : buyQty.toFixed(2);
+            
+            shoppingHtml += `
+            <div class="p-3 bg-app-secondary border-l-4 border-amber-500 rounded shadow-sm mb-2 flex justify-between items-center">
+                <div>
+                    <span class="font-bold text-app-header">${req.ingredient}</span>
+                    <div class="text-xs text-app-secondary">Need: ${req.quantity} ${unit} ${stockQty > 0 ? `(Have: ${stockQty})` : ''}</div>
+                </div>
+                <div class="text-right font-mono font-bold text-amber-600">
+                    Buy ${displayQty} ${unit}
+                </div>
+            </div>`;
+        } else {
+            // We hebben genoeg (optioneel: toon in groen of verberg)
+             shoppingHtml += `
+            <div class="p-3 bg-app-secondary border-l-4 border-green-500 rounded shadow-sm mb-2 flex justify-between items-center opacity-60 grayscale">
+                <div>
+                    <span class="font-bold text-app-header line-through">${req.ingredient}</span>
+                    <div class="text-xs text-app-secondary">In Stock (${stockQty} ${invItem.unit})</div>
+                </div>
+                <div class="text-right font-bold text-green-600 text-xs uppercase">
+                    Have Enough
+                </div>
+            </div>`;
+        }
+    });
+
+    if (everythingInStock) {
+        shoppingHtml = `<div class="p-6 bg-green-100 border border-green-300 rounded text-center text-green-800 font-bold mb-4">🎉 You have everything in stock!</div>` + shoppingHtml;
+    }
+
+    if (renderToScreen) listDiv.innerHTML = shoppingHtml;
+
+    return everythingInStock;
+}
+
 // --- BARCODE SCANNER FUNCTIONS ---
 function startScanner() {
     const container = document.getElementById('barcode-scanner-container');

@@ -1198,7 +1198,7 @@ window.renderBrewDay = function(forceId = null) {
         return;
     }
 
-    // --- SCENARIO B: LIJST WEERGAVE (Geen actief ID) ---
+// --- SCENARIO B: LIJST WEERGAVE (Geen actief ID) ---
     
     // 1. EERST de HTML genereren (zodat de variabele bestaat)
     const listHtml = activeBrews.map(b => {
@@ -1322,7 +1322,7 @@ window.closePrimaryDetail = function() {
     window.renderBrewDay(null);
 }
 
-/ --- RENDER: Brew Day 2 (Aging/Secondary) - FINAL FIX ---
+// --- RENDER: Brew Day 2 (Aging/Secondary) - FINAL FIX ---
 window.renderBrewDay2 = async function() {
     const container = document.getElementById('brew-day-2-view');
     if (!container) return;
@@ -1402,6 +1402,7 @@ window.renderBrewDay2 = async function() {
 
     // --- SCENARIO B: LIJST ---
     
+    // EERST HTML MAKEN (Zelfde fix als hierboven)
     const listHtml = agingBrews.map(b => {
         const startDate = b.logData?.brewDate || 'Unknown';
         const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));

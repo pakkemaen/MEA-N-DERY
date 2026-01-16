@@ -387,40 +387,314 @@ async function importData(event, collectionName) {
     reader.readAsText(file);
 }
 
-// --- MEAD MEDIC CHAT SYSTEM ---
+// --- MEAD MEDIC CHAT SYSTEM (MET GESCHIEDENIS) ---
 
-let chatHistory = []; // Houdt het gesprek bij
-let currentChatImageBase64 = null; // Houdt de geselecteerde foto vast
+let chatHistory = []; // De actieve berichten
+let currentChatImageBase64 = null; 
+let currentChatId = null; // Houdt bij of we in een bestaand of nieuw gesprek zitten
 
-// 1. Initialiseer / Reset
+// 1. Initialiseer de View (Met History Knop)
 window.resetTroubleshootChat = function() {
     chatHistory = [];
+    currentChatId = null;
+    currentChatImageBase64 = null;
+    
+    // UI Reset
     const chatBox = document.getElementById('chat-history');
+    const header = document.querySelector('#troubleshoot-view h3');
+    
+    // Voeg History knop toe aan de header als die er nog niet is
+    if(header && !document.getElementById('medic-history-btn')) {
+        const btnContainer = document.createElement('div');
+        btnContainer.innerHTML = `
+            <button id="medic-history-btn" onclick="window.toggleMedicHistory()" class="text-xs bg-app-tertiary border border-app-brand/30 px-2 py-1 rounded mr-2 hover:bg-app-secondary">
+                📂 History
+            </button>`;
+        header.insertBefore(btnContainer.firstElementChild, header.firstChild);
+        
+        // Voeg de lijst-container toe aan de HTML als die er nog niet is
+        const view = document.getElementById('troubleshoot-view');
+        if (!document.getElementById('medic-history-list')) {
+            const listDiv = document.createElement('div');
+            listDiv.id = 'medic-history-list';
+            listDiv.className = 'hidden absolute top-12 left-4 right-4 bg-app-secondary border border-app-brand/20 shadow-xl rounded-lg z-50 max-h-[60vh] overflow-y-auto p-2';
+            view.style.position = 'relative'; // Nodig voor absolute positioning
+            view.appendChild(listDiv);
+        }
+    }
+
     if(chatBox) {
         chatBox.innerHTML = `
         <div class="flex items-start gap-3">
             <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">DOC</div>
             <div class="bg-white dark:bg-gray-800 p-3 rounded-lg rounded-tl-none shadow-sm text-sm text-app-header border border-gray-100 dark:border-gray-700 max-w-[85%]">
-                Hi! I'm your Mead Medic. Describe your issue or upload a photo of your brew.
+                Hi! I'm your Mead Medic. Start a new diagnosis or upload a photo.
             </div>
         </div>`;
     }
     window.clearChatImage();
 }
 
-// 2. Foto Selectie Handling
+// 2. Toggle & Laad Geschiedenis Lijst
+window.toggleMedicHistory = async function() {
+    const listDiv = document.getElementById('medic-history-list');
+    if (!listDiv) return;
+    
+    if (!listDiv.classList.contains('hidden')) {
+        listDiv.classList.add('hidden');
+        return;
+    }
+
+    // Openen en laden
+    listDiv.classList.remove('hidden');
+    listDiv.innerHTML = getLoaderHtml("Loading records...");
+
+    if (!state.userId) {
+        listDiv.innerHTML = `<p class="p-4 text-center text-sm text-red-500">Log in to view history.</p>`;
+        return;
+    }
+
+    try {
+        const q = query(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'medicChats'));
+        const snapshot = await getDocs(q); // We gebruiken getDocs voor een eenmalige fetch (sneller dan snapshot listener hier)
+        
+        if (snapshot.empty) {
+            listDiv.innerHTML = `<div class="p-4 text-center text-sm text-app-secondary">No previous diagnoses found.</div><button onclick="document.getElementById('medic-history-list').classList.add('hidden')" class="w-full text-center py-2 text-xs font-bold uppercase border-t border-app-brand/10">Close</button>`;
+            return;
+        }
+
+        // Sorteren op datum (nieuwste eerst)
+        const chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+        let html = `<div class="flex justify-between items-center p-2 border-b border-app-brand/10 mb-2"><span class="font-bold text-sm">Past Diagnoses</span><button onclick="document.getElementById('medic-history-list').classList.add('hidden')" class="text-lg font-bold">&times;</button></div>`;
+        
+        html += chats.map(chat => {
+            const date = new Date(chat.updatedAt).toLocaleDateString();
+            return `
+            <div onclick="window.loadMedicChat('${chat.id}')" class="p-3 mb-2 bg-app-tertiary hover:bg-white dark:hover:bg-gray-700 rounded cursor-pointer border border-transparent hover:border-app-brand/30 transition-colors group relative">
+                <div class="font-bold text-sm text-app-header truncate pr-6">${chat.title || 'Untitled Issue'}</div>
+                <div class="text-xs text-app-secondary flex justify-between mt-1">
+                    <span>${date}</span>
+                    <span>${chat.messages.length} msgs</span>
+                </div>
+                <button onclick="event.stopPropagation(); window.deleteMedicChat('${chat.id}')" class="absolute top-2 right-2 text-gray-400 hover:text-red-500 hidden group-hover:block">&times;</button>
+            </div>`;
+        }).join('');
+
+        listDiv.innerHTML = html;
+
+    } catch (e) {
+        console.error(e);
+        listDiv.innerHTML = `<p class="p-4 text-red-500">Error loading history.</p>`;
+    }
+}
+
+// 3. Laad een specifiek gesprek
+window.loadMedicChat = async function(chatId) {
+    if (!state.userId) return;
+    
+    // Sluit lijst
+    document.getElementById('medic-history-list').classList.add('hidden');
+    
+    try {
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'medicChats', chatId);
+        const docSnap = await getDoc(docRef);
+        
+        if (!docSnap.exists()) return showToast("Chat not found.", "error");
+        
+        const data = docSnap.data();
+        currentChatId = chatId;
+        chatHistory = data.messages || [];
+        
+        // Render de chat opnieuw
+        const chatBox = document.getElementById('chat-history');
+        chatBox.innerHTML = ''; // Wis huidige view
+        
+        chatHistory.forEach(msg => {
+            const isUser = msg.role === 'user';
+            const align = isUser ? 'justify-end' : 'justify-start';
+            const color = isUser ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-app-header border border-gray-100 dark:border-gray-700';
+            const avatar = isUser ? 'src="logo.png"' : ''; 
+            const avatarDiv = isUser 
+                ? `<img src="logo.png" onerror="this.src='favicon.png'" class="w-8 h-8 rounded-full bg-app-tertiary p-0.5">`
+                : `<div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs flex-shrink-0">DOC</div>`;
+
+            // HTML Opbouwen (let op volgorde avatar/bericht)
+            let msgHtml = `
+            <div class="flex items-start gap-3 ${align} mb-4">
+                ${!isUser ? avatarDiv : ''}
+                <div class="${color} p-3 rounded-lg shadow-sm text-sm max-w-[85%] prose prose-sm max-w-none dark:prose-invert">
+                    ${isUser && msg.hasImage ? '<div class="mb-2"><span class="text-[10px] uppercase bg-white/20 px-1 rounded">📷 Image attached</span></div>' : ''}
+                    ${isUser ? msg.text : marked.parse(msg.text)}
+                </div>
+                ${isUser ? avatarDiv : ''}
+            </div>`;
+            
+            chatBox.insertAdjacentHTML('beforeend', msgHtml);
+        });
+        
+        chatBox.scrollTop = chatBox.scrollHeight;
+        showToast("History loaded.", "success");
+
+    } catch(e) {
+        console.error(e);
+        showToast("Failed to load chat.", "error");
+    }
+}
+
+// 4. Verwijder Gesprek
+window.deleteMedicChat = async function(chatId) {
+    if(!confirm("Delete this history?")) return;
+    try {
+        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'medicChats', chatId));
+        window.toggleMedicHistory(); // Ververs lijst
+        if(currentChatId === chatId) window.resetTroubleshootChat(); // Reset scherm als deze open stond
+    } catch(e) { console.error(e); }
+}
+
+// 5. Foto Selectie Handling (Ongewijzigd)
 window.handleChatImageSelect = function(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            currentChatImageBase64 = e.target.result.split(',')[1]; // Alleen de data, niet de prefix
-            
-            // Toon preview
+            currentChatImageBase64 = e.target.result.split(',')[1]; 
             document.getElementById('chat-preview-img').src = e.target.result;
             document.getElementById('chat-image-preview').classList.remove('hidden');
         }
         reader.readAsDataURL(input.files[0]);
     }
+}
+
+window.clearChatImage = function() {
+    currentChatImageBase64 = null;
+    document.getElementById('chat-image-input').value = '';
+    document.getElementById('chat-image-preview').classList.add('hidden');
+}
+
+// 6. Bericht Versturen (MET AUTO-SAVE)
+window.sendTroubleshootMessage = async function() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    const chatBox = document.getElementById('chat-history');
+    const sendBtn = document.getElementById('chat-send-btn');
+
+    if (!text && !currentChatImageBase64) return;
+
+    // A. Render USER bericht
+    let userHtml = `<div class="flex items-start gap-3 justify-end animate-fade-in mb-4">
+        <div class="bg-blue-600 text-white p-3 rounded-lg rounded-tr-none shadow-sm text-sm max-w-[85%]">
+            ${currentChatImageBase64 ? '<div class="mb-2"><span class="text-[10px] uppercase bg-white/20 px-1 rounded">📷 Image attached</span></div>' : ''}
+            ${text}
+        </div>
+        <img src="logo.png" onerror="this.src='favicon.png'" alt="Me" class="w-8 h-8 rounded-full bg-app-tertiary flex-shrink-0 object-contain border border-app-brand/20 p-0.5">
+    </div>`;
+    chatBox.insertAdjacentHTML('beforeend', userHtml);
+    
+    // Voeg toe aan tijdelijke geschiedenis
+    chatHistory.push({ role: "user", text: text, hasImage: !!currentChatImageBase64 });
+
+    // UI Updates
+    input.value = '';
+    const imageToSend = currentChatImageBase64; 
+    window.clearChatImage();
+    chatBox.scrollTop = chatBox.scrollHeight;
+    sendBtn.disabled = true;
+
+    // B. Render AI 'Typing...'
+    const loadingId = 'loading-' + Date.now();
+    chatBox.insertAdjacentHTML('beforeend', `
+        <div id="${loadingId}" class="flex items-start gap-3 animate-pulse mb-4">
+            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">DOC</div>
+            <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg rounded-tl-none text-xs text-gray-500">Thinking...</div>
+        </div>
+    `);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // C. API Call
+    try {
+        const response = await performChatApiCall(chatHistory, imageToSend);
+        
+        document.getElementById(loadingId).remove();
+
+        const aiHtml = `<div class="flex items-start gap-3 animate-fade-in mb-4">
+            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs flex-shrink-0">DOC</div>
+            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg rounded-tl-none shadow-sm text-sm text-app-header border border-gray-100 dark:border-gray-700 max-w-[90%] prose prose-sm max-w-none dark:prose-invert">
+                ${marked.parse(response)}
+            </div>
+        </div>`;
+        
+        chatBox.insertAdjacentHTML('beforeend', aiHtml);
+        chatHistory.push({ role: "model", text: response }); 
+
+        // --- D. AUTO-SAVE LOGIC ---
+        if (state.userId) {
+            const chatData = {
+                updatedAt: new Date().toISOString(),
+                messages: chatHistory
+            };
+
+            // Als dit een nieuw gesprek is, verzin een titel
+            if (!currentChatId) {
+                // Titel is de eerste 5 woorden van de user input
+                const title = chatHistory[0].text.split(' ').slice(0, 6).join(' ') + '...';
+                chatData.title = title;
+                chatData.createdAt = new Date().toISOString();
+                
+                const docRef = await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'medicChats'), chatData);
+                currentChatId = docRef.id;
+            } else {
+                // Update bestaand gesprek
+                await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'medicChats', currentChatId), chatData);
+            }
+        }
+
+    } catch (error) {
+        document.getElementById(loadingId)?.remove();
+        chatBox.insertAdjacentHTML('beforeend', `<div class="text-center text-red-500 text-xs my-2">Error: ${error.message}</div>`);
+    } finally {
+        sendBtn.disabled = false;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        input.focus(); 
+    }
+}
+
+// 7. De Speciale API functie (Ongewijzigd)
+async function performChatApiCall(history, base64Image) {
+    let apiKey = state.userSettings.apiKey;
+    if (!apiKey && typeof CONFIG !== 'undefined') apiKey = CONFIG.firebase.apiKey;
+    if (!apiKey) throw new Error("No API Key");
+
+    let model = "gemini-2.0-flash"; 
+    if (state.userSettings.chatModel) model = state.userSettings.chatModel;
+    else if (state.userSettings.aiModel) model = state.userSettings.aiModel;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    let promptContext = "You are an expert Mead Troubleshooter. Be concise, helpful, and scientific. Keep answers under 150 words unless asked for detail.\n\nCONVERSATION HISTORY:\n";
+    history.forEach(msg => {
+        promptContext += `${msg.role === 'user' ? 'USER' : 'AI'}: ${msg.text} ${msg.hasImage ? '[User uploaded an image]' : ''}\n`;
+    });
+    promptContext += `\nUSER'S NEWEST INPUT: `; 
+
+    const parts = [{ text: promptContext }];
+    if (base64Image) {
+        parts.push({ inline_data: { mime_type: "image/jpeg", data: base64Image } });
+    }
+
+    const requestBody = { contents: [{ parts: parts }] };
+
+    const response = await fetch(url, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+        if (response.status === 429) throw new Error("⛔ QUOTA BEREIKT: Je hebt te snel/veel gechat.");
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(`AI Error (${response.status}): ${errData.error?.message || response.statusText}`);
+    }
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
 }
 
 window.clearChatImage = function() {
@@ -1185,7 +1459,11 @@ window.calculateBlend = calculateBlend;
 window.calculateBacksweetening = calculateBacksweetening;
 window.calculateDilution = calculateDilution;
 window.correctHydrometer = correctHydrometer;
-window.populateSocialRecipeDropdown = populateSocialRecipeDropdown; // Ook deze moet beschikbaar zijn
+window.populateSocialRecipeDropdown = populateSocialRecipeDropdown;
 window.linkToBacksweetenCalc = linkToBacksweetenCalc;
 window.linkToDilutionCalc = linkToDilutionCalc;
 window.loadUserWaterProfiles = loadUserWaterProfiles;
+window.toggleMedicHistory = toggleMedicHistory;
+window.loadMedicChat = loadMedicChat;
+window.deleteMedicChat = deleteMedicChat;
+window.resetTroubleshootChat = resetTroubleshootChat;

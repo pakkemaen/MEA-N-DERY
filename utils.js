@@ -79,11 +79,15 @@ export function switchSubView(viewName, parentViewId) {
 }
 
 // --- UI UTILITIES ---
-export function getLoaderHtml(message = "Initializing...") {
-    return `<div class="flex flex-col items-center justify-center py-8">
-            <div class="honeycomb-loader" style="width:50px;height:50px;margin-bottom:10px;"></div>
-            <p class="text-center text-app-secondary/80 font-header tracking-wide animate-pulse mt-2 text-sm uppercase">${message}</p>
-        </div>`;
+export function getLoaderHtml(text = "Loading...") {
+    return `
+    <div class="flex flex-col items-center justify-center py-8">
+        <svg class="honeycomb-loader" viewBox="0 0 60 65" xmlns="http://www.w3.org/2000/svg">
+            <path class="honeycomb-path" d="M30,5 L55,18.75 L55,46.25 L30,60 L5,46.25 L5,18.75 Z" />
+            <circle class="honeycomb-core" cx="30" cy="32.5" r="6" />
+        </svg>
+        <p class="text-app-brand font-bold animate-pulse mt-2 text-sm uppercase tracking-wider">${text}</p>
+    </div>`;
 }
 
 // --- DANGER MODAL (Bevestiging) ---

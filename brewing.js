@@ -386,9 +386,7 @@ async function generateRecipe() {
     } catch (error) {
         if (thinkingInterval) clearInterval(thinkingInterval);
         console.error("Error calling Gemini API:", error);
-        if(recipeOutput) {
-            recipeOutput.innerHTML = `<div class="text-center p-4"><p class="text-red-600 font-bold">Sorry, your buddy is busy.</p><p class="text-xs text-app-secondary">${error.message}</p></div>`;
-        }
+        if(recipeOutput) recipeOutput.innerHTML = getLoaderHtml("Initializing Brewing Protocol...");
     } finally {
         if(generateBtn) {
             generateBtn.disabled = false;

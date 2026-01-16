@@ -925,3 +925,52 @@ input:focus, select:focus, textarea:focus {
         display: block !important;
     }
 }
+
+/* --- CUSTOM HONEYCOMB LOADER --- */
+.honeycomb-loader {
+    width: 60px;
+    height: 60px;
+    margin: 2rem auto;
+    display: block;
+    overflow: visible;
+}
+
+.honeycomb-path {
+    fill: none;
+    stroke: var(--brand-color, #d97706); /* Fallback kleur als var niet bestaat */
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 210; /* Omtrek van de hexagon */
+    stroke-dashoffset: 210;
+    animation: drawHex 2.5s ease-in-out infinite, glowHex 2.5s ease-in-out infinite;
+    transform-origin: center;
+}
+
+.honeycomb-core {
+    fill: var(--brand-color, #d97706);
+    opacity: 0;
+    animation: pulseCore 2.5s ease-in-out infinite;
+    transform-origin: center;
+    transform-box: fill-box;
+}
+
+/* DE ANIMATIES (Deze misten nog) */
+@keyframes drawHex {
+    0% { stroke-dashoffset: 210; }
+    40% { stroke-dashoffset: 0; }
+    70% { stroke-dashoffset: 0; opacity: 1; }
+    100% { stroke-dashoffset: -210; opacity: 0; }
+}
+
+@keyframes pulseCore {
+    0%, 30% { opacity: 0; transform: scale(0); }
+    50% { opacity: 1; transform: scale(1); }
+    70% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0); }
+}
+
+@keyframes glowHex {
+    0%, 100% { filter: drop-shadow(0 0 1px rgba(217, 119, 6, 0.3)); }
+    50% { filter: drop-shadow(0 0 5px rgba(217, 119, 6, 0.8)); }
+}

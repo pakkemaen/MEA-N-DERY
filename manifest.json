@@ -8,16 +8,16 @@
   "description": "AI-Powered Brewbuddy, Recipe Creator & Cellar Manager. Modular Edition.",
   "orientation": "portrait",
   "icons": [
-  {
-    "src": "new-logo.png",
-    "type": "image/png",
-    "sizes": "192x192"
-  },
-  {
-    "src": "new-logo.png",
-    "type": "image/png",
-    "sizes": "512x512"
-    "purpose": "any maskable"
-  }
- ]
+    {
+      "src": "new-logo.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "new-logo.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
 }

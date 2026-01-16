@@ -1058,92 +1058,220 @@ window.startActualBrewDay = async function(brewId) {
     renderBrewDay(brewId);
 }
 
-// --- RENDER: Brew Day 1 (Classic Logic) ---
-window.renderBrewDay = function(brewId) {
+// --- RENDER: Brew Day 1 (Dashboard / Detail Split) ---
+window.renderBrewDay = function(forceId = null) {
     const brewDayContent = document.getElementById('brew-day-content');
     if (!brewDayContent) return;
 
-    if (brewId === 'none' || !brewId) {
-        brewDayContent.innerHTML = `<div class="text-center mt-10"><h2 class="text-3xl font-header font-bold mb-4">Brew Day</h2><p class="text-app-secondary">Select a recipe to start.</p></div>`;
+    // 1. Bepaal Actieve Batch ID (Uit argument, State of Settings)
+    // We geven voorrang aan: ForceID > TempState > UserSettings
+    let activeId = forceId || tempState.activeBrewId;
+    
+    // Als we nog geen ID hebben, kijken we of er eentje in de settings stond
+    if (!activeId && state.userSettings?.currentBrewDay?.brewId) {
+        // Maar alleen als we NIET expliciet hebben gezegd dat we terug naar de lijst wilden (activeBrewId === null)
+        if (tempState.activeBrewId !== null) { 
+             activeId = state.userSettings.currentBrewDay.brewId;
+        }
+    }
+
+    // 2. Haal alle actieve primary batches op voor de lijst
+    const activeBrews = state.brews.filter(b => b.logData?.brewDate && !b.primaryComplete);
+
+    // --- SCENARIO A: DETAIL WEERGAVE (We hebben een ID) ---
+    if (activeId && activeId !== 'none') {
+        const brew = state.brews.find(b => b.id === activeId);
+        
+        // Als de batch niet gevonden is (of verwijderd), val terug naar lijst
+        if (!brew) {
+            tempState.activeBrewId = null;
+            return window.renderBrewDay(); 
+        }
+
+        // Update pointers
+        tempState.activeBrewId = activeId;
+        if(state.userSettings) { // Sla op zodat F5 refresh werkt
+             state.userSettings.currentBrewDay = { brewId: activeId };
+             if(window.saveUserSettings) window.saveUserSettings();
+        }
+
+        // --- STAPPEN OPHALEN (Bestaande Logica) ---
+        let primarySteps = brew.brewDaySteps || [];
+        if (primarySteps.length === 0 && brew.recipeMarkdown) {
+            const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
+            primarySteps = extracted.day1;
+            brew.brewDaySteps = extracted.day1; 
+            brew.secondarySteps = extracted.day2; 
+        }
+
+        // HTML Genereren voor Stappen
+        const stepsHtml = primarySteps.map((step, index) => {
+            const checklist = brew.checklist || {};
+            const stepData = checklist[`step-${index}`];
+            const isCompleted = stepData === true || (stepData && stepData.completed);
+            const savedAmount = (stepData && stepData.actualAmount) ? stepData.actualAmount : '';
+
+            // Input detectie
+            const amountMatch = (step.title + " " + step.description).match(/(\d+[.,]?\d*)\s*(kg|g|l|ml|oz|lbs)/i);
+            let inputHtml = '';
+            
+            if (amountMatch && !isCompleted) {
+                inputHtml = `
+                <div class="mt-2 flex items-center bg-app-primary rounded border border-app-brand/20 w-32">
+                    <span class="px-2 text-[9px] font-bold text-app-secondary uppercase border-r border-app-brand/10">Act</span>
+                    <input type="number" id="step-input-${index}" class="w-full bg-transparent border-none p-1 text-center font-bold text-sm" placeholder="${amountMatch[1]}" value="${amountMatch[1]}">
+                    <span class="pr-2 text-xs font-bold text-app-brand">${amountMatch[2]}</span>
+                </div>`;
+            } else if (isCompleted && savedAmount) {
+                 inputHtml = `<div class="mt-2 inline-flex items-center gap-2 px-2 py-1 rounded bg-green-500/10 border border-green-500/20"><span class="text-[9px] font-bold text-green-700 uppercase">Recorded:</span><span class="font-mono font-bold text-green-800 text-xs">${savedAmount}</span></div>`;
+            }
+
+            const timerHtml = step.duration > 0 
+                ? `<div class="timer-display my-2 text-sm font-mono font-bold text-app-brand bg-app-primary inline-block px-2 py-1 rounded border border-app-brand/20" id="timer-${index}">${formatTime(step.duration)}</div>` 
+                : '';
+            
+            const btnHtml = step.duration > 0 
+                ? `<button onclick="window.startStepTimer('${brew.id}', ${index})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn font-bold uppercase">Start Timer</button>` 
+                : `<button onclick="window.completeStep(${index})" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1.5 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase">Check</button>`;
+
+            return `
+            <div id="step-${index}" class="step-item p-4 border-b border-app-brand/10 ${isCompleted ? 'opacity-60 grayscale' : ''}">
+                <div class="flex justify-between items-start gap-4">
+                    <div class="flex-grow">
+                        <p class="font-bold text-sm text-app-header flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-app-tertiary text-[10px] flex items-center justify-center border border-app-brand/20">${index + 1}</span> 
+                            ${step.title}
+                        </p>
+                        <div class="pl-7">
+                            <p class="text-xs text-app-secondary mt-1 opacity-90">${step.description}</p>
+                            ${inputHtml}
+                            ${timerHtml}
+                        </div>
+                    </div>
+                    <div class="pt-1 flex flex-col items-end gap-1" id="controls-${index}">
+                        ${isCompleted 
+                            ? `<button onclick="window.undoStep(${index})" class="text-[10px] font-bold text-white bg-green-600 px-2 py-1 rounded shadow-sm hover:bg-red-500 transition-colors" title="Undo / Edit">DONE ↺</button>` 
+                            : btnHtml}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(brew.logData, brew.id) : '';
+
+        // DETAIL RENDER (Met Back Knop)
+        brewDayContent.innerHTML = `
+            <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
+                <div class="flex items-center justify-between mb-4 pb-2 border-b border-app-brand/10">
+                    <button onclick="window.closePrimaryDetail()" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1">
+                        &larr; Back to Overview
+                    </button>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-app-brand opacity-60">Active Session</span>
+                </div>
+
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-header font-bold text-app-brand mb-1">${brew.recipeName}</h2>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-app-secondary opacity-60">Primary Fermentation Protocol</p>
+                </div>
+
+                <div class="flex justify-between items-center mb-2 px-1">
+                    <span class="text-xs font-bold text-app-secondary uppercase tracking-wider">Checklist</span>
+                    <button onclick="window.resetBrewDay()" class="text-[10px] text-red-500 hover:text-red-700 hover:underline font-bold uppercase tracking-wider transition-colors">Reset</button>
+                </div>
+                
+                <div class="bg-app-secondary rounded-xl shadow-sm border border-app-brand/10 overflow-hidden mb-8">
+                    ${stepsHtml}
+                </div>
+                
+                ${logHtml}
+                
+                <div class="mt-6 space-y-3 pb-2 border-t border-app-brand/10 pt-4">
+                    <button onclick="window.finishPrimaryManual('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn font-bold shadow-md uppercase tracking-wider flex items-center justify-center gap-2">
+                        Finish Primary & Go to Aging &rarr;
+                    </button>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="bg-app-action text-white py-3 px-4 rounded-lg font-bold uppercase text-xs">Save Logs</button>
+                        <button onclick="window.deductActualsFromInventory('${brew.id}')" class="bg-app-tertiary text-app-secondary border border-app-brand/20 py-3 px-4 rounded-lg font-bold uppercase text-xs">Update Stock</button>
+                    </div>
+                </div>
+            </div>`;
         return;
     }
 
-    const brew = state.brews.find(b => b.id === brewId);
-    if (!brew) return;
-
-    // Stappen ophalen
-    let primarySteps = brew.brewDaySteps || [];
-    if (primarySteps.length === 0 && brew.recipeMarkdown) {
-        const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
-        primarySteps = extracted.day1;
-        brew.brewDaySteps = extracted.day1; 
-        brew.secondarySteps = extracted.day2; 
+    // --- SCENARIO B: LIJST WEERGAVE (Geen actief ID) ---
+    
+    // Lege staat?
+    if (activeBrews.length === 0) {
+        brewDayContent.innerHTML = `
+            <div class="text-center py-12 px-4">
+                <div class="mb-4 text-app-brand opacity-20"><svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></div>
+                <h2 class="text-2xl font-header font-bold mb-2 text-app-brand">No Active Brews</h2>
+                <p class="text-app-secondary mb-6 text-sm">Your fermentation chamber is empty.<br>Go to the Creator to start a new batch.</p>
+                <button onclick="window.switchSubView('creator', 'brewing-main-view')" class="bg-app-action text-white py-2 px-6 rounded-lg font-bold shadow-md hover:opacity-90 transition-transform hover:scale-105 uppercase tracking-wider text-sm">
+                    + Create New Recipe
+                </button>
+            </div>`;
+        return;
     }
 
-    // HTML Genereren
-    const stepsHtml = primarySteps.map((step, index) => {
-        const checklist = brew.checklist || {};
-        const stepData = checklist[`step-${index}`];
-        const isCompleted = stepData === true || (stepData && stepData.completed);
-        const savedAmount = (stepData && stepData.actualAmount) ? stepData.actualAmount : '';
-
-        // Input detectie
-        const amountMatch = (step.title + " " + step.description).match(/(\d+[.,]?\d*)\s*(kg|g|l|ml|oz|lbs)/i);
-        let inputHtml = '';
-        
-        if (amountMatch && !isCompleted) {
-            inputHtml = `<div class="mt-2 flex items-center bg-app-primary rounded border border-app-brand/20 w-32">
-                <span class="px-2 text-[9px] font-bold text-app-secondary uppercase border-r border-app-brand/10">Act</span>
-                <input type="number" id="step-input-${index}" class="w-full bg-transparent border-none p-1 text-center font-bold text-sm" placeholder="${amountMatch[1]}" value="${amountMatch[1]}">
-                <span class="pr-2 text-xs font-bold text-app-brand">${amountMatch[2]}</span>
-            </div>`;
-        } else if (isCompleted && savedAmount) {
-             inputHtml = `<div class="mt-2 text-xs font-bold text-green-700">Recorded: ${savedAmount}</div>`;
-        }
-
-        // Timer Display
-        const timerHtml = step.duration > 0 
-            ? `<div class="timer-display my-2 text-sm font-mono font-bold text-app-brand bg-app-primary inline-block px-2 py-1 rounded border border-app-brand/20" id="timer-${index}">${formatTime(step.duration)}</div>` 
-            : '';
-        
-        // Knoppen
-        const btnHtml = step.duration > 0 
-            ? `<button onclick="window.startStepTimer('${brew.id}', ${index})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn font-bold uppercase">Start Timer</button>` 
-            : `<button onclick="window.completeStep(${index})" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1.5 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase">Check</button>`;
+    // Lijst renderen
+    const listHtml = activeBrews.map(b => {
+        const startDate = b.logData?.brewDate || 'Unknown';
+        // Bereken dag nummer
+        const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
+        const dayLabel = days >= 0 ? `Day ${days + 1}` : 'Pending';
 
         return `
-        <div id="step-${index}" class="step-item p-4 border-b border-app-brand/10 ${isCompleted ? 'opacity-60 grayscale' : ''}">
-            <div class="flex justify-between items-start gap-4">
-                <div class="flex-grow">
-                    <p class="font-bold text-sm text-app-header flex items-center gap-2">
-                        <span class="w-5 h-5 rounded-full bg-app-tertiary text-[10px] flex items-center justify-center border border-app-brand/20">${index + 1}</span> 
-                        ${step.title}
-                    </p>
-                    <div class="pl-7">
-                        <p class="text-xs text-app-secondary mt-1 opacity-90">${step.description}</p>
-                        ${inputHtml}
-                        ${timerHtml}
+        <div onclick="window.openPrimaryDetail('${b.id}')" class="p-4 card rounded-xl cursor-pointer hover:bg-app-primary border-l-4 border-app-brand shadow-sm mb-3 transition-all group relative">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h4 class="font-bold text-lg font-header text-app-header group-hover:text-app-brand transition-colors leading-tight">${b.recipeName}</h4>
+                    <div class="flex items-center gap-3 mt-1.5">
+                        <span class="text-[10px] font-bold uppercase bg-app-tertiary text-app-secondary px-2 py-0.5 rounded border border-app-brand/10">${dayLabel}</span>
+                        <span class="text-xs text-app-secondary opacity-80">Started: ${startDate}</span>
                     </div>
                 </div>
-                <div class="pt-1" id="controls-${index}">
-                    ${isCompleted ? '<span class="text-[10px] font-bold text-white bg-green-600 px-2 py-1 rounded shadow-sm">DONE</span>' : btnHtml}
+                <div class="text-app-brand opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
                 </div>
             </div>
         </div>`;
     }).join('');
 
-    const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(brew.logData, brew.id) : '';
-
     brewDayContent.innerHTML = `
-        <div class="bg-app-secondary p-4 rounded-lg shadow-lg">
-            <div class="text-center mb-6"><h2 class="text-2xl font-header font-bold text-app-brand">${brew.recipeName}</h2></div>
-            <div class="bg-app-secondary rounded-xl shadow-sm border border-app-brand/10 overflow-hidden mb-8">${stepsHtml}</div>
-            ${logHtml}
-            <div class="mt-6 space-y-3 border-t border-app-brand/10 pt-4">
-                <button onclick="window.finishPrimaryManual('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-bold uppercase">Finish Primary</button>
-                <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg font-bold uppercase">Save Logs</button>
+        <div class="max-w-2xl mx-auto">
+            <div class="flex justify-between items-end mb-6 px-1">
+                <div>
+                    <h2 class="text-2xl font-header font-bold text-app-brand">Fermentation Chamber</h2>
+                    <p class="text-xs text-app-secondary uppercase tracking-wider font-bold opacity-60">${activeBrews.length} Active Batches</p>
+                </div>
+                <button onclick="window.switchSubView('creator', 'brewing-main-view')" class="text-xs bg-app-action text-white px-3 py-1.5 rounded font-bold shadow hover:opacity-90 transition-colors uppercase tracking-wide">
+                    + New
+                </button>
+            </div>
+            <div class="space-y-2">
+                ${listHtml}
             </div>
         </div>`;
+}
+
+// --- NIEUWE NAVIGATIE HELPERS (Onderaan toevoegen) ---
+
+window.openPrimaryDetail = function(brewId) {
+    // Scroll naar boven
+    document.getElementById('brewing-main-view').scrollIntoView({ behavior: 'smooth' });
+    // Render met ID
+    window.renderBrewDay(brewId);
+}
+
+window.closePrimaryDetail = function() {
+    // Reset state pointers
+    tempState.activeBrewId = null;
+    state.userSettings.currentBrewDay = { brewId: null };
+    if(window.saveUserSettings) window.saveUserSettings(); // Opslaan dat we niets actief hebben
+    
+    // Render zonder ID (toont lijst)
+    window.renderBrewDay(null);
 }
 
 // --- RENDER: Brew Day 2 (Aging/Secondary) ---
@@ -1332,14 +1460,19 @@ window.completeStep = async function(stepIndex, isSkipping = false) {
     
     if (!brew.checklist) brew.checklist = {};
     
-    // 1. Data Opslaan (Input values & Check status)
+    // 1. Data Opslaan
     const inputEl = document.getElementById(`step-input-${stepIndex}`);
     const actualAmount = inputEl ? inputEl.value : null;
+    
+    if (inputEl) {
+        inputEl.disabled = true; // Maak het veld onbruikbaar
+        inputEl.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-100'); // Visuele feedback
+    }
     
     brew.checklist[`step-${stepIndex}`] = { 
         completed: true, 
         actualAmount: actualAmount,
-        timestamp: new Date().toISOString() // Handig voor logboek later
+        timestamp: new Date().toISOString()
     };
 
     // 2. UI Update (Direct feedback: maak grijs en toon DONE)
@@ -2592,6 +2725,36 @@ window.showBrewPrompt = function(brewId) {
     }
 }
 
+window.undoStep = async function(stepIndex) {
+    const brewId = tempState.activeBrewId;
+    if (!brewId) return;
+    
+    // 1. Zoek de batch
+    const brew = state.brews.find(b => b.id === brewId);
+    if (!brew || !brew.checklist) return;
+
+    if (!confirm("Wil je deze stap heropenen om te wijzigen?")) return;
+
+    // 2. Verwijder de entry uit de checklist (zowel lokaal als DB)
+    delete brew.checklist[`step-${stepIndex}`];
+
+    try {
+        // Update Firestore: We sturen het hele checklist object opnieuw op (zonder deze stap)
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { 
+            checklist: brew.checklist
+        });
+        
+        // 3. UI Update: Herlaad het scherm
+        // Omdat de data nu weg is uit de checklist, zal renderBrewDay
+        // het inputveld weer gewoon wit en typbaar maken!
+        renderBrewDay(brewId);
+        
+    } catch (e) {
+        console.error("Undo failed:", e);
+        showToast("Kon stap niet herstellen.", "error");
+    }
+}
+
 // ============================================================================
 // FINAL EXPORTS (COMPLETE & VERIFIED)
 // ============================================================================
@@ -2628,6 +2791,9 @@ window.deductActualsFromInventory = deductActualsFromInventory;
 window.freeformTweakRecipe = freeformTweakRecipe;
 window.showBrewPrompt = showBrewPrompt;
 window.startBrewDay = startBrewDay;
+window.undoStep = undoStep;
+window.openPrimaryDetail
+window.closePrimaryDetail
 
 // Logging & Details
 window.showBrewDetail = showBrewDetail;

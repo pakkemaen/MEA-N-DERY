@@ -5,8 +5,6 @@
 
 MEA(N)DERY V2.4 is a significant evolution of my digital cellar master. Now refactored into a Modular Architecture, it combines strict brewing science with creative AI freedom. It handles everything from selecting the perfect Belgian supermarket water to generating "Ryan Reynolds-style" marketing copy for my batches.
 
-(Add a screenshot of your dashboard here)
-
 🚀 What's New in V2.4?
 Modular Codebase: Moved away from a monolithic app.js to a domain-driven structure (brewing.js, inventory.js, tools.js), improving stability and maintainability.
 

@@ -1200,8 +1200,7 @@ window.renderBrewDay = function(forceId = null) {
 
     // --- SCENARIO B: LIJST WEERGAVE (Geen actief ID) ---
     
-    // EERST: Definieer de HTML voor de lijst (zodat we die ook kunnen gebruiken in de lege staat check)
-    // Als er geen actieve batches zijn, is dit gewoon een lege string, dat is prima.
+    // 1. EERST de HTML genereren (zodat de variabele bestaat)
     const listHtml = activeBrews.map(b => {
         const startDate = b.logData?.brewDate || 'Unknown';
         const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
@@ -1224,7 +1223,7 @@ window.renderBrewDay = function(forceId = null) {
         </div>`;
     }).join('');
 
-    // DAN: Check of de lijst leeg is en toon de juiste HTML
+    // 2. DAN pas checken of hij leeg is
     if (activeBrews.length === 0) {
         brewDayContent.innerHTML = `
         <div class="max-w-2xl mx-auto">
@@ -1244,7 +1243,7 @@ window.renderBrewDay = function(forceId = null) {
         return;
     }
 
-    // ALS ER WEL ITEMS ZIJN: Toon de lijst
+    // 3. Anders de lijst tonen
     brewDayContent.innerHTML = `
         <div class="max-w-2xl mx-auto">
             <div class="flex justify-between items-end mb-6 px-1 border-b border-app-brand/10 pb-2">
@@ -1323,7 +1322,7 @@ window.closePrimaryDetail = function() {
     window.renderBrewDay(null);
 }
 
-// --- RENDER: Brew Day 2 (Aging/Secondary) - FINAL FIX ---
+/ --- RENDER: Brew Day 2 (Aging/Secondary) - FINAL FIX ---
 window.renderBrewDay2 = async function() {
     const container = document.getElementById('brew-day-2-view');
     if (!container) return;
@@ -1403,10 +1402,11 @@ window.renderBrewDay2 = async function() {
 
     // --- SCENARIO B: LIJST ---
     
-    // EERST HTML MAKEN (Zelfde fix als hierboven)
     const listHtml = agingBrews.map(b => {
         const startDate = b.logData?.brewDate || 'Unknown';
         const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
+        
+        // FIX: Hier zaten de quotes verkeerd in de vorige versie
         const dayLabel = days >= 0 ? `Day ${days}` : '?';
 
         return `

@@ -1,55 +1,78 @@
-# 🍯 MEA(N)DERY - Personal Brew Buddy (V2.1)
+🍯 MEA(N)DERY - Personal Brew Buddy (V2.4)
+"De AI is de Architect, de App is de Uitvoerder."
 
-![Status](https://img.shields.io/badge/status-personal_project-orange) ![Tech](https://img.shields.io/badge/powered%20by-Gemini%20AI-purple)
+⚠️ NOTE: This is a personal hobby project. This application is custom-built for my specific mead-making workflow and relies on a private Firebase backend. It is not intended for public use, distribution, or support. The source code is hosted here for archival and portfolio purposes only.
 
-> **⚠️ NOTE:** This is a **personal hobby project**. This application is custom-built for my specific mead-making workflow and relies on a private Firebase backend. It is **not** intended for public use, distribution, or support. The source code is hosted here for archival and portfolio purposes only.
+MEA(N)DERY V2.4 is a significant evolution of my digital cellar master. Now refactored into a Modular Architecture, it combines strict brewing science with creative AI freedom. It handles everything from selecting the perfect Belgian supermarket water to generating "Ryan Reynolds-style" marketing copy for my batches.
 
-**MEA(N)DERY** is a sophisticated, AI-powered Progressive Web App (PWA) designed to master the art of mead making. From generating scientifically accurate recipes to managing my cellar climate and designing labels, Meandery acts as my digital cellar master.
+(Add a screenshot of your dashboard here)
 
-![Dashboard Screenshot](https://via.placeholder.com/800x400?text=App+Dashboard+Preview)
-*(Add a screenshot of your dashboard here)*
+🚀 What's New in V2.4?
+Modular Codebase: Moved away from a monolithic app.js to a domain-driven structure (brewing.js, inventory.js, tools.js), improving stability and maintainability.
 
-## ✨ Features Overview
+Smart Recipe Parser V2.4: The app now "reads" the recipe text intelligently. It detects timelines ("Wait 24 hours") and creates timers automatically, even without strict tags.
 
-### 🧠 The Brewing Engine
-* **AI Recipe Creator:** Generates full recipes (Ingredients, Steps, Target SG) based on my prompt (e.g., "Spiced Cherry Melomel"). Includes "Fort Knox Protocols" for safety.
-* **Smart Brew Day:** Interactive checklists for Primary and Secondary fermentation with built-in timers.
-* **Auto-Calculations:** Automatically calculates ABV, sugar breaks, and nutrient schedules (TOSNA 2.0).
+Target vs. Actuals Logging: Restored the critical distinction between AI-calculated targets (Key Stats) and real-world measurements (Brew Log), essential for accurate ABV calculations and aging advice.
 
-### 📦 Inventory & Management
-* **Smart Inventory:** Tracks my honey, yeast, and nutrients. Includes a **Barcode Scanner** to quickly add items.
-* **The Cellar:** Manages my aging bottles. Includes an **AI Aging Manager** that calculates the "Peak Flavor Date" based on my specific cellar temperature.
-* **Financials:** Real-time tracking of asset value (Stock + Active Batches + Cellar).
+The "No-Chemistry" Water Sommelier: A specialized tool that recommends commercial bottled waters (available in BE/EU) that match a recipe's profile, removing the need for brewing salts/chemistry sets.
 
-### 🛠️ Tool Suite
-* **Label Forge:** Design printable bottle labels. Generates **AI Artwork** and descriptions based on the brew's history.
-* **Mead Medic:** An AI troubleshooter. I can upload a photo of my fermenter to get a scientific diagnosis.
-* **Social Studio:** Generates captions for my brewing logs or Untappd check-ins.
+✨ Features Overview
+🧠 The Brewing Engine
+AI Recipe Creator: Generates scientifically accurate recipes using "Fort Knox Protocols"—a strict set of system instructions that prevent the AI from suggesting unsafe practices or impossible physics.
 
-## ⚙️ Technical Architecture
+Dynamic TOSNA Scheduling: Automatically calculates nutrient additions (1, 2, or 3 steps) based on the specific ABV of the recipe.
 
-This project is built using a modern serverless stack:
+Smart Brew Day: Interactive step-by-step execution. Includes a "Look Ahead" feature that respects custom recipe steps before injecting automated logic.
 
-* **Frontend:** Vanilla JavaScript (ES6 Modules) & HTML5.
-* **Styling:** Tailwind CSS.
-* **Backend:** Google Firebase (Firestore Database, Authentication).
-* **AI Engine:** Google Gemini Pro & Flash (Text Logic), Imagen 3 (Image Generation).
-* **PWA:** Fully installable on iOS and Android with Service Worker support.
+📦 Inventory & Cellar
+Smart Inventory: Tracks Honey, Yeast, and Nutrients with Barcode Scanning (OpenFoodFacts API).
 
-## 🔒 Configuration & Security
+Auto-Deduction: One-click syncing between the Brew Log actuals and the Inventory stock.
 
-This repository is configured for automated deployment via GitHub Pages.
+The Cellar: Manages aging bottles with an AI Aging Manager. It calculates "Peak Flavor Dates" based on my specific cellar temperature and historical storage conditions.
 
-* **Credentials:** The application loads its configuration from `secrets.js`.
-* **Security Note:** The API keys included in this repository are **restricted** via Google Cloud Console. They are whitelisted to run *only* on the official domain of this web app.
-    * Cloning this repo or running it locally without providing your own keys will result in API errors.
-    * This setup allows the PWA to function on my personal devices while preventing unauthorized usage of my quotas.
+🛠️ Tool Suite
+Label Forge V2: A full design studio.
 
-## 📸 Gallery
+Style DNA Extractor: Analyzes an uploaded image to extract its artistic style prompt.
 
-| Recipe Creator | Label Forge | Mead Medic |
-|:---:|:---:|:---:|
-| ![Creator](https://via.placeholder.com/250x400?text=Creator) | ![Label](https://via.placeholder.com/250x400?text=Labels) | ![Medic](https://via.placeholder.com/250x400?text=Medic) |
+AI Art Generation: Uses Imagen 3 to generate high-res artwork.
 
----
-*© 2025 - Private Project. Code provided As-Is.*
+Auto-Fit Text: Dynamically adjusts font sizes to fit labels perfectly.
+
+Mead Medic: An AI troubleshooter with vision capabilities. I can upload a photo of a pellicle or foam, and the AI diagnoses infection vs. yeast rafts.
+
+Social Studio: Generates captions for Instagram or Untappd, with selectable personas (e.g., "The Viking", "Dry British", "Ryan Reynolds").
+
+🔬 Calculators
+Water Chemistry: Analyzes mineral profiles (Ca, Mg, HCO3) without requiring salt additions.
+
+Refractometer Correction: Converts Brix to SG during fermentation.
+
+Blending & Fortification: Calculates new ABV when blending meads or adding spirits.
+
+⚙️ Technical Architecture
+This project is built using a modern, serverless, and modular stack:
+
+Frontend: Vanilla JavaScript (ES6 Modules) & HTML5. No build steps, pure browser-native code.
+
+Styling: Tailwind CSS (CDN).
+
+Backend: Google Firebase (Firestore Database, Authentication, Storage).
+
+AI Engine:
+
+Logic: Google Gemini 2.5 Pro & Flash.
+
+Vision: Gemini 2.5 Pro (Multimodal).
+
+Art: Imagen 3.
+
+PWA: Fully installable on iOS and Android with Service Worker support and offline caching.
+
+🔒 Configuration & Security
+Deployment: Configured for automated deployment via GitHub Pages.
+
+Credentials: The application loads its configuration from secrets.js (git-ignored).
+
+Security Note: The API keys included in this repository are restricted via Google Cloud Console. They are whitelisted to run only on the official domain of this web app. Cloning this repo without providing your own keys will result in API errors.

@@ -22,7 +22,7 @@ const PACKAGING_ITEMS = [
 // --- INVENTORY ---
 async function loadInventory() {
     if (!state.userId) return;
-    const invCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'state.inventory');
+    const invCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'inventory');
     
     onSnapshot(query(invCol), (snapshot) => {
         state.inventory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -459,9 +459,9 @@ window.bottleBatch = async function(e) {
                 peakFlavorJustification: peakReason
             };
 
-            await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'state.cellar'), cellarData);
+            await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar'), cellarData);
 
-            await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'state.brews', currentBrewToBottleId), {
+            await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', currentBrewToBottleId), {
                 isBottled: true,
                 peakFlavorDate: peakDate,
                 ...volumeUpdatePayload
@@ -579,7 +579,7 @@ async function addInventoryItem(e) {
 
     try {
         const appId = 'meandery-aa05e';
-        const invCol = collection(db, 'artifacts', appId, 'users', state.userId, 'state.inventory');
+        const invCol = collection(db, 'artifacts', appId, 'users', state.userId, 'inventory');
         await addDoc(invCol, itemData);
         document.getElementById('inventory-form').reset();
         showToast("Ingredient added to inventory!", "success");
@@ -592,7 +592,7 @@ async function addInventoryItem(e) {
 window.deleteInventoryItem = async function(itemId) {
     if (!state.userId) return;
     try {
-        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'state.inventory', itemId));
+        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'inventory', itemId));
         showToast("Item deleted.", "success");
     } catch (error) { showToast("Error deleting item.", "error"); }
 }
@@ -625,7 +625,7 @@ window.updateInventoryItem = async function(itemId) {
         price: parseFloat(document.getElementById(`edit-price-${itemId}`).value)
     };
     try {
-        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'state.inventory', itemId), data);
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'inventory', itemId), data);
         showToast("Item updated!", "success");
         // Snapshot listener update de UI automatisch
     } catch (error) { showToast("Update failed.", "error"); }
@@ -643,7 +643,7 @@ window.performInventoryDeduction = async function(ingredientsArray) {
         if (item && !isNaN(qty)) {
             const newQty = item.qty - qty;
             if (newQty >= 0) {
-                batch.update(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'state.inventory', item.id), { qty: newQty });
+                batch.update(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'inventory', item.id), { qty: newQty });
                 updates++;
             } else notFound.push(`${req.name} (low stock)`);
         } else notFound.push(`${req.name} (not found)`);
@@ -825,7 +825,7 @@ async function addEquipmentProfile(e) {
 
     try {
         const appId = 'meandery-aa05e';
-        const equipCol = collection(db, 'artifacts', appId, 'users', state.userId, 'state.equipmentProfiles');
+        const equipCol = collection(db, 'artifacts', appId, 'users', state.userId, 'equipmentProfiles');
         await addDoc(equipCol, profileData);
         
         document.getElementById('equipment-profile-form').reset();
@@ -843,7 +843,7 @@ async function addEquipmentProfile(e) {
 function loadEquipmentProfiles() {
     if (!state.userId) return;
     const appId = 'meandery-aa05e';
-    const equipCol = collection(db, 'artifacts', appId, 'users', state.userId, 'state.equipmentProfiles');
+    const equipCol = collection(db, 'artifacts', appId, 'users', state.userId, 'equipmentProfiles');
     const q = query(equipCol);
 
     onSnapshot(q, (snapshot) => {
@@ -938,7 +938,7 @@ window.updateEquipmentProfile = async function(profileId, type) {
 
     try {
         const appId = 'meandery-aa05e';
-        const itemDocRef = doc(db, 'artifacts', appId, 'users', state.userId, 'state.equipmentProfiles', profileId);
+        const itemDocRef = doc(db, 'artifacts', appId, 'users', state.userId, 'equipmentProfiles', profileId);
         await updateDoc(itemDocRef, updatedData);
         showToast("Profile updated!", "success");
         // De onSnapshot listener regelt de refresh
@@ -949,7 +949,7 @@ window.deleteEquipmentProfile = async function(profileId) {
     if (!state.userId || !confirm('Delete this profile?')) return;
     try {
         const appId = 'meandery-aa05e';
-        await deleteDoc(doc(db, 'artifacts', appId, 'users', state.userId, 'state.equipmentProfiles', profileId));
+        await deleteDoc(doc(db, 'artifacts', appId, 'users', state.userId, 'equipmentProfiles', profileId));
         showToast("Deleted.", "success");
     } catch (error) { console.error(error); showToast("Delete failed.", "error"); }
 }
@@ -970,7 +970,7 @@ function populateEquipmentProfilesDropdown() {
 
 window.clearInventory = async function() {
     const action = async () => {
-        if (await clearCollection('state.inventory')) {
+        if (await clearCollection('inventory')) {
             showToast('Inventory cleared.', 'success');
             if(typeof loadInventory === 'function') loadInventory();
         } else {
@@ -989,7 +989,7 @@ window.clearInventory = async function() {
 
 function loadCellar() {
     if (!state.userId) return;
-    const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'state.cellar');
+    const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar');
     onSnapshot(query(cellarCol), (snapshot) => {
         state.cellar = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         if (typeof renderCellar === 'function') renderCellar();
@@ -1206,7 +1206,7 @@ window.saveAgingUpdate = async function(cellarId) {
     if (!date) return showToast("Pick a date first.", "error");
 
     try {
-        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'state.cellar', cellarId), {
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar', cellarId), {
             peakFlavorDate: date,
             peakFlavorJustification: reason,
             agingHistory: history // Nieuw veld in de database
@@ -1224,7 +1224,7 @@ window.saveAgingUpdate = async function(cellarId) {
 
 window.consumeBottle = async function(cellarId, size) {
     if (!state.userId) return;
-    const itemRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'state.cellar', cellarId);
+    const itemRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar', cellarId);
     const item = state.cellar.find(c => c.id === cellarId);
     if (!item) return;
     
@@ -1246,8 +1246,8 @@ window.consumeBottle = async function(cellarId, size) {
 }
 
 window.deleteCellarItem = async function(id, name) {
-    if(confirm(`Delete ${name} from state.cellar?`)) {
-        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'state.cellar', id));
+    if(confirm(`Delete ${name} from cellar?`)) {
+        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar', id));
     }
 }
 

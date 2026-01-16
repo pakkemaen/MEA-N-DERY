@@ -860,7 +860,7 @@ window.regenerateFlavorProfile = async function() {
 // brewing.js - BLOCK 3: BREW DAY ENGINE (PARSING & RENDER)
 // ============================================================================
 
-// --- HELPER: Parse Steps from AI Markdown ---
+// --- SMART PARSER V2.4: Clean Titles & Auto-Timers ---
 function extractStepsFromMarkdown(markdown) {
     if (!markdown) return { day1: [], day2: [] };
 
@@ -869,8 +869,8 @@ function extractStepsFromMarkdown(markdown) {
     const day2 = [];
     
     let isParsingInstructions = false;
-    
-    // Regexen voor sectie detectie
+
+    // Regexen
     const instructionHeaderRegex = /^(?:#+|__|\*\*)\s*(?:Instructions|Steps|Method|Procedure|Bereiding)(?:__|\*\*|:)?/i;
     const anyHeaderRegex = /^(?:#+|__|\*\*)\s*([a-zA-Z].*)/; 
     const prefixRegex = /^(?:Step\s+)?(\d+)[\.\)\s]\s*|^\s*[-*•]\s+/i;
@@ -879,68 +879,92 @@ function extractStepsFromMarkdown(markdown) {
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         let cleanLine = line.trim();
+        
         if (!cleanLine) continue;
 
-        // Header detectie: Starten we met instructies?
+        // Sectie detectie
         if (cleanLine.match(instructionHeaderRegex)) { isParsingInstructions = true; continue; }
-        
-        // Stoppen we? (Nieuwe sectie zoals Notes of Tips)
         if (isParsingInstructions && cleanLine.match(anyHeaderRegex)) {
             if (cleanLine.startsWith('#')) break; 
             if (cleanLine.match(/(Note|Tip|Profile|Summary|Data)/i)) break;
         }
-        
         if (!isParsingInstructions) continue;
         if (blackList.some(badWord => cleanLine.toLowerCase().includes(badWord))) continue;
 
-        // Opschonen (Nummers en bullets weg)
-        cleanLine = cleanLine.replace(prefixRegex, ''); 
-        cleanLine = cleanLine.replace(/^\*\*|\*\*$/g, '').trim(); 
+        // 1. Verwijder nummers en bullets
+        cleanLine = cleanLine.replace(prefixRegex, '');
+        cleanLine = cleanLine.replace(/^\*\*|\*\*$/g, '').trim();
 
         if (cleanLine) {
             const lower = cleanLine.toLowerCase();
+            
+            // --- TITEL vs OMSCHRIJVING ---
             let title = "Action"; 
             let description = cleanLine;
 
-            // Slimme titel split (Bold of Dubbele punt)
-            const boldSplit = cleanLine.match(/^\*\*([^*]+)\*\*\s*(.*)/);
             const colonSplit = cleanLine.match(/^([^:]+):\s*(.*)/);
+            const boldSplit = cleanLine.match(/^\*\*([^*]+)\*\*\s*(.*)/);
 
             if (boldSplit) {
-                title = boldSplit[1].replace(':', '').trim();
-                description = boldSplit[2] || boldSplit[1];
+                title = boldSplit[1].replace(':', '').trim(); 
+                description = boldSplit[2] || boldSplit[1]; 
             } else if (colonSplit && colonSplit[1].length < 50) {
                 title = colonSplit[1].trim();
                 description = colonSplit[2].trim();
             } else {
                 const words = cleanLine.split(' ');
-                title = words.length > 5 ? words.slice(0, 4).join(' ') + '...' : cleanLine;
-                if (words.length <= 5) description = "";
+                if (words.length > 5) title = words.slice(0, 4).join(' ') + '...';
+                else { title = cleanLine; description = ""; }
             }
 
-            // Timer extractie
+            // --- TIMER LOGICA (De "Slimme Lezer") ---
             let duration = 0;
-            const timerMatch = description.match(/\[TIMER:(\d{2}):(\d{2}):(\d{2})\]/);
+            
+            // 1. Probeer de officiële AI Tag (flexibeler gemaakt)
+            const timerMatch = description.match(/\[TIMER:\s*(\d+):(\d+):(\d+)\]/);
+            
             if (timerMatch) {
                 duration = (parseInt(timerMatch[1])*3600) + (parseInt(timerMatch[2])*60) + parseInt(timerMatch[3]);
                 description = description.replace(timerMatch[0], '').trim();
+                title = title.replace(/\[TIMER:.*?\]/, '').trim();
+            } 
+            // 2. FALLBACK: Zoek naar tekstuele aanwijzingen (Zoals in jouw voorbeeld!)
+            else {
+                const titleDesc = (title + " " + description).toLowerCase();
+                
+                // Check "24 Hours", "48 Hours" (Veelvoorkomend bij TOSNA)
+                if (titleDesc.includes('24 hours') || titleDesc.includes('24 uur')) duration = 86400;
+                else if (titleDesc.includes('48 hours') || titleDesc.includes('48 uur')) duration = 86400; 
+                else if (titleDesc.includes('72 hours') || titleDesc.includes('72 uur')) duration = 86400;
+                else if (titleDesc.includes('7 days') || titleDesc.includes('1 week')) duration = 604800;
+                
+                // Check minuten (bv "Wait 5 minutes")
+                const minMatch = titleDesc.match(/wait\s+(\d+)\s*min/);
+                if (minMatch) duration = parseInt(minMatch[1]) * 60;
             }
-            title = title.replace(/\[TIMER:.*?\]/, '').trim();
 
             const stepObj = { title, description, duration };
 
-            // Dag 1 vs Dag 2 detectie (Slimme filter)
+            // Fase bepalen
             const isSecondary = (
                 lower.includes('rack into') || lower.includes('siphon') || 
                 (lower.includes('secondary') && !lower.includes('primary')) || 
                 lower.includes('stabiliz') || lower.includes('backsweeten') || 
-                (lower.includes('bottle') && !lower.includes('clean')) || 
+                (lower.includes('bottle') && !lower.includes('clean')) || lower.includes('bottling') || 
                 (lower.includes('aging') && !lower.includes('yeast')) || lower.includes('wait for clear')
             );
 
             isSecondary ? day2.push(stepObj) : day1.push(stepObj);
         }
     }
+    
+    // Correctie voor als alles in Day 2 belandt
+    if (day1.length === 0 && day2.length > 0) {
+        const splitIndex = day2.findIndex(s => s.description.toLowerCase().includes('rack'));
+        if (splitIndex > 0) day1.push(...day2.splice(0, splitIndex));
+        else { day1.push(...day2); day2.length = 0; }
+    }
+
     return { day1, day2 };
 }
 
@@ -1034,63 +1058,55 @@ window.startActualBrewDay = async function(brewId) {
     renderBrewDay(brewId);
 }
 
-// --- RENDER: Brew Day 1 Screen ---
-function renderBrewDay(brewId) {
+// --- RENDER: Brew Day 1 (Classic Logic) ---
+window.renderBrewDay = function(brewId) {
     const brewDayContent = document.getElementById('brew-day-content');
     if (!brewDayContent) return;
 
     if (brewId === 'none' || !brewId) {
-        brewDayContent.innerHTML = `<div class="text-center mt-10"><h2 class="text-3xl font-header font-bold mb-4">Brew Day</h2><p class="text-app-secondary">Select a recipe from History or Creator to start.</p></div>`;
+        brewDayContent.innerHTML = `<div class="text-center mt-10"><h2 class="text-3xl font-header font-bold mb-4">Brew Day</h2><p class="text-app-secondary">Select a recipe to start.</p></div>`;
         return;
     }
 
     const brew = state.brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    // Stappen laden of parsen (Cache mechanisme)
+    // Stappen ophalen
     let primarySteps = brew.brewDaySteps || [];
-    
-    // Als er nog geen stappen zijn opgeslagen, parse ze uit de tekst
     if (primarySteps.length === 0 && brew.recipeMarkdown) {
         const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
         primarySteps = extracted.day1;
-        // Cache in memory object (voor timers)
         brew.brewDaySteps = extracted.day1; 
         brew.secondarySteps = extracted.day2; 
     }
-    
-    // Fallback
-    if (primarySteps.length === 0) primarySteps = [{ title: "Check Recipe", description: "Follow the full text instructions below." }];
 
-    // Checklist status ophalen uit DB object
-    const checklist = brew.checklist || {};
-
-    // HTML Genereren voor stappen
+    // HTML Genereren
     const stepsHtml = primarySteps.map((step, index) => {
-        const stepKey = `step-${index}`;
-        
-        // Ondersteuning voor oude (boolean) en nieuwe (object) checklist structuur
-        const stepData = checklist[stepKey];
+        const checklist = brew.checklist || {};
+        const stepData = checklist[`step-${index}`];
         const isCompleted = stepData === true || (stepData && stepData.completed);
         const savedAmount = (stepData && stepData.actualAmount) ? stepData.actualAmount : '';
-        
-        // Input detectie (bv: "5 kg Honey" -> maakt input veld)
+
+        // Input detectie
         const amountMatch = (step.title + " " + step.description).match(/(\d+[.,]?\d*)\s*(kg|g|l|ml|oz|lbs)/i);
         let inputHtml = '';
         
         if (amountMatch && !isCompleted) {
-            inputHtml = `<div class="mt-2 w-full max-w-[200px] flex items-center bg-app-primary rounded border border-app-brand/20">
-                <span class="px-2 py-1 text-[9px] font-bold text-app-secondary uppercase border-r border-app-brand/10">Actual</span>
-                <input type="number" id="step-input-${index}" class="w-full bg-transparent border-none p-1.5 text-right font-mono font-bold text-app-header focus:ring-0 text-sm" placeholder="${amountMatch[1]}" value="${amountMatch[1]}">
-                <span class="pr-2 pl-1 text-xs font-bold text-app-brand">${amountMatch[2]}</span>
+            inputHtml = `<div class="mt-2 flex items-center bg-app-primary rounded border border-app-brand/20 w-32">
+                <span class="px-2 text-[9px] font-bold text-app-secondary uppercase border-r border-app-brand/10">Act</span>
+                <input type="number" id="step-input-${index}" class="w-full bg-transparent border-none p-1 text-center font-bold text-sm" placeholder="${amountMatch[1]}" value="${amountMatch[1]}">
+                <span class="pr-2 text-xs font-bold text-app-brand">${amountMatch[2]}</span>
             </div>`;
         } else if (isCompleted && savedAmount) {
-             inputHtml = `<div class="mt-2 inline-flex items-center gap-2 px-2 py-1 rounded bg-green-500/10 border border-green-500/20"><span class="text-[9px] font-bold text-green-700">RECORDED:</span><span class="font-mono font-bold text-green-800 text-xs">${savedAmount}</span></div>`;
+             inputHtml = `<div class="mt-2 text-xs font-bold text-green-700">Recorded: ${savedAmount}</div>`;
         }
 
-        // Timer of Check knop?
-        const timerHtml = step.duration > 0 ? `<div class="timer-display my-2 text-sm font-mono font-bold text-app-brand bg-app-primary inline-block px-2 py-1 rounded border border-app-brand/20" id="timer-${index}">${formatTime(step.duration)}</div>` : '';
+        // Timer Display
+        const timerHtml = step.duration > 0 
+            ? `<div class="timer-display my-2 text-sm font-mono font-bold text-app-brand bg-app-primary inline-block px-2 py-1 rounded border border-app-brand/20" id="timer-${index}">${formatTime(step.duration)}</div>` 
+            : '';
         
+        // Knoppen
         const btnHtml = step.duration > 0 
             ? `<button onclick="window.startStepTimer('${brew.id}', ${index})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn font-bold uppercase">Start Timer</button>` 
             : `<button onclick="window.completeStep(${index})" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1.5 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase">Check</button>`;
@@ -1099,8 +1115,15 @@ function renderBrewDay(brewId) {
         <div id="step-${index}" class="step-item p-4 border-b border-app-brand/10 ${isCompleted ? 'opacity-60 grayscale' : ''}">
             <div class="flex justify-between items-start gap-4">
                 <div class="flex-grow">
-                    <p class="font-bold text-sm text-app-header flex items-center gap-2"><span class="w-5 h-5 rounded-full bg-app-tertiary text-[10px] flex items-center justify-center border border-app-brand/20">${index + 1}</span> ${step.title}</p>
-                    <div class="pl-7"><p class="text-xs text-app-secondary mt-1 opacity-90">${step.description}</p>${inputHtml}${timerHtml}</div>
+                    <p class="font-bold text-sm text-app-header flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-app-tertiary text-[10px] flex items-center justify-center border border-app-brand/20">${index + 1}</span> 
+                        ${step.title}
+                    </p>
+                    <div class="pl-7">
+                        <p class="text-xs text-app-secondary mt-1 opacity-90">${step.description}</p>
+                        ${inputHtml}
+                        ${timerHtml}
+                    </div>
                 </div>
                 <div class="pt-1" id="controls-${index}">
                     ${isCompleted ? '<span class="text-[10px] font-bold text-white bg-green-600 px-2 py-1 rounded shadow-sm">DONE</span>' : btnHtml}
@@ -1109,27 +1132,18 @@ function renderBrewDay(brewId) {
         </div>`;
     }).join('');
 
-    // Logs laden (Deze functie getBrewLogHtml komt in Deel 9, maar we roepen hem hier vast aan)
-    // Veiligheid: check of functie bestaat
-    const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(brew.logData, brew.id) : '<p class="text-xs text-center p-4">Logs loading...</p>';
+    const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(brew.logData, brew.id) : '';
 
     brewDayContent.innerHTML = `
-        <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
-            <div class="text-center mb-6"><h2 class="text-2xl font-header font-bold text-app-brand mb-1">${brew.recipeName}</h2><p class="text-[10px] font-bold uppercase tracking-widest text-app-secondary opacity-60">Phase 1: Primary</p></div>
-            <div class="flex justify-between items-center mb-2 px-1"><span class="text-xs font-bold text-app-secondary uppercase">Protocol</span><button onclick="window.resetBrewDay()" class="text-[10px] text-red-500 hover:text-red-700 font-bold uppercase">Reset</button></div>
+        <div class="bg-app-secondary p-4 rounded-lg shadow-lg">
+            <div class="text-center mb-6"><h2 class="text-2xl font-header font-bold text-app-brand">${brew.recipeName}</h2></div>
             <div class="bg-app-secondary rounded-xl shadow-sm border border-app-brand/10 overflow-hidden mb-8">${stepsHtml}</div>
-            <div class="relative my-8"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-app-brand/10"></div></div><div class="relative flex justify-center"><span class="px-3 bg-app-secondary text-xs font-bold text-app-brand uppercase tracking-widest">Logs</span></div></div>
             ${logHtml}
-            <div class="mt-6 space-y-3 pb-2 border-t border-app-brand/10 pt-4">
-                <button onclick="window.finishPrimaryManual('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn font-bold shadow-md uppercase">Finish Primary & Go to Aging</button>
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn text-xs font-bold uppercase">Save Logs</button>
-                </div>
+            <div class="mt-6 space-y-3 border-t border-app-brand/10 pt-4">
+                <button onclick="window.finishPrimaryManual('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-bold uppercase">Finish Primary</button>
+                <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg font-bold uppercase">Save Logs</button>
             </div>
         </div>`;
-
-    // START PERSISTENCE CHECK
-        initializeBrewDayState(brewId, primarySteps);
 }
 
 // --- RENDER: Brew Day 2 (Aging/Secondary) ---
@@ -1318,23 +1332,37 @@ window.completeStep = async function(stepIndex, isSkipping = false) {
     
     if (!brew.checklist) brew.checklist = {};
     
-    // Save input value if present (Actuele metingen)
+    // 1. Data Opslaan (Input values & Check status)
     const inputEl = document.getElementById(`step-input-${stepIndex}`);
-    if (inputEl) brew.checklist[`step-${stepIndex}`] = { completed: true, actualAmount: inputEl.value };
-    else brew.checklist[`step-${stepIndex}`] = true;
+    const actualAmount = inputEl ? inputEl.value : null;
+    
+    brew.checklist[`step-${stepIndex}`] = { 
+        completed: true, 
+        actualAmount: actualAmount,
+        timestamp: new Date().toISOString() // Handig voor logboek later
+    };
 
-    // Update UI Styles (Grijs maken en Vinkje tonen)
+    // 2. UI Update (Direct feedback: maak grijs en toon DONE)
     const stepDiv = document.getElementById(`step-${stepIndex}`);
     if(stepDiv) stepDiv.classList.add('opacity-60', 'grayscale');
+    
     const controls = document.getElementById(`controls-${stepIndex}`);
     if(controls) controls.innerHTML = `<span class="text-[10px] font-bold text-white bg-green-600 px-2 py-1 rounded shadow-sm">DONE</span>`;
 
-    // Save to DB
-    try { await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { checklist: brew.checklist }); } catch (e) { console.error(e); }
+    // 3. Opslaan in Database
+    try { 
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { 
+            checklist: brew.checklist
+        }); 
+    } catch (e) { console.error(e); }
 
-    // Auto-start next timer?
+    // 4. Auto-start de volgende timer? (Alleen bij korte timers)
     const allSteps = brew.brewDaySteps || [];
-    if (allSteps[stepIndex + 1] && allSteps[stepIndex + 1].duration > 0 && !isSkipping) {
+    const nextStep = allSteps[stepIndex + 1];
+    
+    // Als de volgende stap een timer heeft die KORTER is dan een uur (3600 sec), start hem dan automatisch.
+    // Bij 24 uur (86400 sec) wachten we liever tot de gebruiker zelf klikt.
+    if (nextStep && nextStep.duration > 0 && nextStep.duration < 3600 && !isSkipping) {
         window.startStepTimer(brewId, stepIndex + 1);
     }
 }

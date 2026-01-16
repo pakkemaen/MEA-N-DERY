@@ -1050,9 +1050,6 @@ function renderBrewDay(brewId) {
     // Stappen laden of parsen (Cache mechanisme)
     let primarySteps = brew.brewDaySteps || [];
     
-    // Stappen laden of parsen (Cache mechanisme)
-    let primarySteps = brew.brewDaySteps || [];
-    
     // Als er nog geen stappen zijn opgeslagen, parse ze uit de tekst
     if (primarySteps.length === 0 && brew.recipeMarkdown) {
         const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);

@@ -77,7 +77,7 @@ export function switchSubView(viewName, parentViewId) {
     }
     if (viewName === 'troubleshoot' && window.resetTroubleshootChat) window.resetTroubleshootChat();
     // Trigger specifieke acties bij het openen van tabs
-    if (tabId === 'shopping-list') {
+    if (viewName === 'shopping-list') {
         if (typeof window.generateShoppingList === 'function') {
             // Check of we in Creator mode zitten (geen actieve brew ID) of in History mode
             // Voor nu: trigger hem gewoon, de functie zoekt zelf uit of er een recept is.

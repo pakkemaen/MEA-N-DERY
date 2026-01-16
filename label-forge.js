@@ -1739,7 +1739,7 @@ window.saveLabelToBrew = async function() {
         const specificSettings = JSON.parse(JSON.stringify(rawSettings));
 
         // --- STAP B: DATABASE REPARATIE & OPSLAAN ---
-        doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId);
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId);
         
         // 1. Haal eerst het document op om de structuur te controleren
         const docSnap = await getDoc(docRef);

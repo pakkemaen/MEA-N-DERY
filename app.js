@@ -50,6 +50,7 @@ onAuthStateChanged(auth, async (user) => {
         safeInit('loadHistory');           // Dan data
         safeInit('loadInventory');
         safeInit('loadCellar');
+        safeInit('loadPackagingCosts');
         safeInit('loadEquipmentProfiles');
         safeInit('loadLabelAssets');
         safeInit('loadUserWaterProfiles');
@@ -96,10 +97,28 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.back-to-dashboard-btn').forEach(btn => {
         btn.addEventListener('click', () => switchMainView('dashboard'));
     });
+
     document.querySelectorAll('.sub-tab').forEach(tab => {
         tab.addEventListener('click', (e) => {
             const parentId = e.target.closest('[id$="-main-view"]').id;
-            switchSubView(e.target.id.replace('-sub-tab', ''), parentId);
+            // Haal 'brew-day-1' uit 'brew-day-1-sub-tab'
+            const viewName = e.target.id.replace('-sub-tab', '');
+            
+            switchSubView(viewName, parentId);
+
+            // EXTRA CHECK: Als we naar Brew Day 1 gaan, forceer een render van de actieve batch
+            if (viewName === 'brew-day-1') {
+                // Pak het ID uit de state (state wordt geïmporteerd in app.js)
+                const activeId = state.currentBrewDay?.brewId || (state.userSettings?.currentBrewDay?.brewId);
+                if (window.renderBrewDay) {
+                    window.renderBrewDay(activeId || 'none');
+                }
+            }
+            
+            // EXTRA CHECK: Als we naar Brew Day 2 gaan
+            if (viewName === 'brew-day-2' && window.renderBrewDay2) {
+                window.renderBrewDay2();
+            }
         });
     });
 
@@ -110,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- VOORRAAD ---
     document.getElementById('inventory-form')?.addEventListener('submit', (e) => window.addInventoryItem(e));
+    document.getElementById('packaging-add-form')?.addEventListener('submit', (e) => window.addPackagingStock(e));
     document.getElementById('scan-barcode-btn')?.addEventListener('click', () => window.startScanner());
     document.getElementById('close-scanner-btn')?.addEventListener('click', () => window.stopScanner());
     document.getElementById('equipment-profile-form')?.addEventListener('submit', (e) => window.addEquipmentProfile(e));

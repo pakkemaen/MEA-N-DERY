@@ -13,8 +13,26 @@ async function loadUserSettings() {
     if (!state.userId) return;
     const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
     const snap = await getDoc(docRef);
+    
     if (snap.exists()) {
         state.userSettings = snap.data();
+        
+        if (state.userSettings.currentBrewDay && state.userSettings.currentBrewDay.brewId) {
+            // 1. Zet de pointer terug in de globale state
+            state.currentBrewDay = state.userSettings.currentBrewDay;
+            
+            // 2. Zet ook de pointer voor de nieuwe brewing module (tempState)
+            if (window.tempState) {
+                window.tempState.activeBrewId = state.userSettings.currentBrewDay.brewId;
+            }
+
+            // 3. Probeer direct het scherm te renderen als we toevallig al op die tab staan
+            if (typeof window.renderBrewDay === 'function') {
+                console.log("🔄 Restoring active brew:", state.currentBrewDay.brewId);
+                window.renderBrewDay(state.currentBrewDay.brewId);
+            }
+        }
+
         applySettings();
     }
 }

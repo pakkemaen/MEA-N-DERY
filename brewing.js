@@ -1647,97 +1647,85 @@ function getActualIngredientsHtml(brew) {
     </div>`;
 }
 
-// --- VERVANG DE HUIDIGE getBrewLogHtml MET DEZE VERSIE ---
+// --- RESTORED V2.3 LOGBOOK: ACTUALS ONLY ---
 function getBrewLogHtml(logData, idSuffix) {
     const data = logData || {};
     const fermLog = data.fermentationLog || [];
-    
-    // 1. HAAL BLENDING DATA OP (Dit ontbrak)
     const blendingLog = data.blendingLog || []; 
 
     // Fermentatie Rijen
     const fermRows = fermLog.map(row => `<tr>
-        <td><input type="date" value="${row.date || ''}" class="w-full bg-transparent border-none focus:ring-0 text-sm"></td>
-        <td><input type="number" step="0.5" value="${row.temp || ''}" class="w-full bg-transparent border-none focus:ring-0 text-center text-sm" placeholder="20"></td>
-        <td><input type="number" step="0.001" value="${row.sg || ''}" class="w-full bg-transparent border-none focus:ring-0 text-center text-sm font-mono" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')"></td>
-        <td><input type="text" value="${row.notes || ''}" class="w-full bg-transparent border-none focus:ring-0 text-sm" placeholder="..."></td>
+        <td><input type="date" value="${row.date || ''}" class="w-full bg-transparent border-none focus:ring-0 text-xs"></td>
+        <td><input type="number" step="0.5" value="${row.temp || ''}" class="w-full bg-transparent border-none focus:ring-0 text-center text-xs" placeholder="20"></td>
+        <td><input type="number" step="0.001" value="${row.sg || ''}" class="w-full bg-transparent border-none focus:ring-0 text-center text-xs font-mono" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')"></td>
+        <td><input type="text" value="${row.notes || ''}" class="w-full bg-transparent border-none focus:ring-0 text-xs" placeholder="..."></td>
     </tr>`).join('');
 
-    // Blending Rijen (NIEUW: De HTML generatie hiervoor)
+    // Blending Rijen
     const blendingRows = blendingLog.map((row, idx) => `
         <tr>
-            <td><input type="date" value="${row.date || ''}" class="w-full bg-transparent border-none text-sm"></td>
-            <td><input type="text" value="${row.name || ''}" class="w-full bg-transparent border-none text-sm" placeholder="Spirit Name"></td>
-            <td><input type="number" step="0.01" value="${row.vol || ''}" class="w-full bg-transparent border-none text-center text-sm" oninput="window.recalcTotalABV('${idSuffix}')"></td>
-            <td><input type="number" step="0.1" value="${row.abv || ''}" class="w-full bg-transparent border-none text-center text-sm" oninput="window.recalcTotalABV('${idSuffix}')"></td>
+            <td><input type="date" value="${row.date || ''}" class="w-full bg-transparent border-none text-xs"></td>
+            <td><input type="text" value="${row.name || ''}" class="w-full bg-transparent border-none text-xs" placeholder="Spirit Name"></td>
+            <td><input type="number" step="0.01" value="${row.vol || ''}" class="w-full bg-transparent border-none text-center text-xs" oninput="window.recalcTotalABV('${idSuffix}')"></td>
+            <td><input type="number" step="0.1" value="${row.abv || ''}" class="w-full bg-transparent border-none text-center text-xs" oninput="window.recalcTotalABV('${idSuffix}')"></td>
             <td class="text-center"><button onclick="this.closest('tr').remove(); window.recalcTotalABV('${idSuffix}')" class="text-red-500 font-bold hover:text-red-700">&times;</button></td>
         </tr>`).join('');
 
     return `
-    <div class="brew-log-section mt-8 bg-app-secondary p-4 rounded-lg border border-app-brand/10" data-id="${idSuffix}">
-        <h3 class="font-header text-xl font-bold mb-4 text-app-brand">Brew Log</h3>
+    <div class="brew-log-section mt-6 bg-app-secondary p-4 rounded-lg border border-app-brand/10 shadow-sm" data-id="${idSuffix}">
+        <h3 class="font-header text-lg font-bold mb-4 text-app-brand uppercase tracking-wider flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            Brew Log (Actuals)
+        </h3>
         
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div><label class="text-xs font-bold text-app-secondary uppercase">OG (Start)</label><input type="number" step="0.001" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" class="w-full mt-1 p-2 border rounded bg-app-tertiary font-mono focus:ring-app-brand" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')"></div>
-            <div><label class="text-xs font-bold text-app-secondary uppercase">FG (End)</label><input type="number" step="0.001" id="actualFG-${idSuffix}" value="${data.actualFG || ''}" class="w-full mt-1 p-2 border rounded bg-app-tertiary font-mono focus:ring-app-brand" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')"></div>
-            <div><label class="text-xs font-bold text-app-secondary uppercase">Final ABV</label><input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}" class="w-full mt-1 p-2 border rounded bg-app-tertiary font-bold text-app-brand" placeholder="%"></div>
-            <div><label class="text-xs font-bold text-app-secondary uppercase">Brew Date</label><input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}" class="w-full mt-1 p-2 border rounded bg-app-tertiary"></div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-app-tertiary/30 rounded-lg border border-app-brand/5">
+            <div>
+                <label class="text-[10px] font-bold text-app-secondary uppercase tracking-wider">OG (Start)</label>
+                <input type="number" step="0.001" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" class="w-full mt-1 p-2 border rounded bg-app-primary font-mono font-bold text-app-header focus:ring-1 focus:ring-app-brand" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
+            </div>
+            <div>
+                <label class="text-[10px] font-bold text-app-secondary uppercase tracking-wider">FG (Current/End)</label>
+                <input type="number" step="0.001" id="actualFG-${idSuffix}" value="${data.actualFG || ''}" class="w-full mt-1 p-2 border rounded bg-app-primary font-mono font-bold text-app-header focus:ring-1 focus:ring-app-brand" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
+            </div>
+            <div>
+                <label class="text-[10px] font-bold text-app-secondary uppercase tracking-wider">Real ABV</label>
+                <input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}" class="w-full mt-1 p-2 border rounded bg-app-primary font-bold text-app-brand" placeholder="0.0%">
+            </div>
+            <div>
+                <label class="text-[10px] font-bold text-app-secondary uppercase tracking-wider">Brew Date</label>
+                <input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}" class="w-full mt-1 p-2 border rounded bg-app-primary text-sm">
+            </div>
         </div>
 
         <div class="mb-6">
-            <label class="text-xs font-bold text-app-secondary uppercase mb-2 block">Fermentation Readings</label>
-            <div class="overflow-x-auto rounded border border-app-brand/20">
+            <label class="text-xs font-bold text-app-secondary uppercase mb-2 block">Fermentation History</label>
+            <div class="overflow-x-auto rounded border border-app-brand/20 bg-app-primary">
                 <table class="w-full text-left text-sm" id="fermentationTable-${idSuffix}">
-                    <thead class="bg-app-tertiary text-xs uppercase text-app-secondary font-bold">
+                    <thead class="bg-app-tertiary text-[10px] uppercase text-app-secondary font-bold">
                         <tr><th class="p-2 w-32">Date</th><th class="p-2 w-20 text-center">Temp</th><th class="p-2 w-24 text-center">Gravity</th><th class="p-2">Notes</th></tr>
                     </thead>
-                    <tbody class="divide-y divide-app-brand/5 bg-app-primary">
+                    <tbody class="divide-y divide-app-brand/5">
                         ${fermRows}
-                        <tr>
-                            <td><input type="date" class="w-full bg-transparent border-none focus:ring-0 text-sm"></td>
-                            <td><input type="number" step="0.5" class="w-full bg-transparent border-none focus:ring-0 text-center text-sm" placeholder="-"></td>
-                            <td><input type="number" step="0.001" class="w-full bg-transparent border-none focus:ring-0 text-center text-sm font-mono" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')"></td>
-                            <td><input type="text" class="w-full bg-transparent border-none focus:ring-0 text-sm" placeholder="Add note..."></td>
+                        <tr class="bg-app-tertiary/10">
+                            <td><input type="date" class="w-full bg-transparent border-none focus:ring-0 text-xs"></td>
+                            <td><input type="number" step="0.5" class="w-full bg-transparent border-none focus:ring-0 text-center text-xs" placeholder="-"></td>
+                            <td><input type="number" step="0.001" class="w-full bg-transparent border-none focus:ring-0 text-center text-xs font-mono" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')"></td>
+                            <td><input type="text" class="w-full bg-transparent border-none focus:ring-0 text-xs" placeholder="Add measurement..."></td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-            <button onclick="window.addLogLine('${idSuffix}')" class="mt-2 text-xs font-bold text-app-brand hover:underline flex items-center gap-1"><span>+</span> Add Measurement Row</button>
-        </div>
-
-        <div class="mb-6 pt-4 border-t border-app-brand/10">
-            <div class="flex justify-between items-center mb-2">
-                <label class="text-xs font-bold text-app-secondary uppercase">Fortification / Blending</label>
-                <div class="flex items-center gap-2">
-                     <span class="text-[10px] text-app-secondary">Current Vol (L):</span>
-                     <input type="number" id="currentVol-${idSuffix}" value="${data.currentVolume || ''}" class="w-16 p-1 text-xs border rounded text-center" placeholder="Vol" oninput="window.recalcTotalABV('${idSuffix}')">
-                </div>
-            </div>
-            <div class="overflow-x-auto rounded border border-app-brand/20">
-                <table class="w-full text-left text-sm" id="blendingTable-${idSuffix}">
-                    <thead class="bg-app-tertiary text-xs uppercase text-app-secondary font-bold">
-                        <tr><th class="p-2">Date</th><th class="p-2">Spirit/Liquid</th><th class="p-2 text-center">Vol (L)</th><th class="p-2 text-center">ABV %</th><th class="p-2"></th></tr>
-                    </thead>
-                    <tbody class="divide-y divide-app-brand/5 bg-app-primary">
-                        ${blendingRows}
-                    </tbody>
-                </table>
-            </div>
-            <div class="flex justify-between items-center mt-2">
-                <button onclick="window.addBlendingRow('${idSuffix}')" class="text-xs font-bold text-app-brand hover:underline flex items-center gap-1"><span>+</span> Add Liquid</button>
-                <div id="blending-summary-${idSuffix}" class="text-xs font-bold text-app-header"></div>
-            </div>
+            <button onclick="window.addLogLine('${idSuffix}')" class="mt-2 text-[10px] font-bold text-app-brand hover:underline flex items-center gap-1 uppercase tracking-wider"><span>+</span> Add Row</button>
         </div>
 
         <div class="space-y-4 pt-4 border-t border-app-brand/10">
-            <div><label class="text-xs font-bold text-app-secondary uppercase">Aging / Process Notes</label><textarea id="agingNotes-${idSuffix}" rows="3" class="w-full mt-1 p-2 border rounded bg-app-tertiary text-sm focus:ring-app-brand">${data.agingNotes || ''}</textarea></div>
-            <div><label class="text-xs font-bold text-app-secondary uppercase">Bottling Notes</label><textarea id="bottlingNotes-${idSuffix}" rows="2" class="w-full mt-1 p-2 border rounded bg-app-tertiary text-sm focus:ring-app-brand" placeholder="Bottling date, sugar added, cork type...">${data.bottlingNotes || ''}</textarea></div>
-            <div><label class="text-xs font-bold text-app-secondary uppercase">Tasting Notes</label><textarea id="tastingNotes-${idSuffix}" rows="3" class="w-full mt-1 p-2 border rounded bg-app-tertiary text-sm focus:ring-app-brand">${data.tastingNotes || ''}</textarea></div>
+            <div><label class="text-xs font-bold text-app-secondary uppercase">Process Notes</label><textarea id="agingNotes-${idSuffix}" rows="2" class="w-full mt-1 p-2 border rounded bg-app-primary text-xs focus:ring-app-brand placeholder-gray-400" placeholder="Racking, stabilization, oak additions...">${data.agingNotes || ''}</textarea></div>
+            <div><label class="text-xs font-bold text-app-secondary uppercase">Tasting Notes</label><textarea id="tastingNotes-${idSuffix}" rows="2" class="w-full mt-1 p-2 border rounded bg-app-primary text-xs focus:ring-app-brand placeholder-gray-400" placeholder="Aroma, mouthfeel, sweetness, faults...">${data.tastingNotes || ''}</textarea></div>
         </div>
     </div>`;
 }
 
-// --- RENDER: Detail View (History) - COMPLETE VERSIE ---
+// --- RENDER: Detail View (RESTORED TARGET VS ACTUAL) ---
 window.showBrewDetail = function(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
     if (!brew) return;
@@ -1751,25 +1739,37 @@ window.showBrewDetail = function(brewId) {
     const cleanMarkdown = processedMarkdown.replace(/\[d:[\d:]+\]/g, '').replace(/^#\s.*$/m, '');
     const recipeHtml = marked.parse(cleanMarkdown);
 
-    // 2. Data Samenvoegen
-    const parsedTargets = parseRecipeData(brew.recipeMarkdown);
-    const combinedLogData = { ...parsedTargets, ...brew.logData };
+    // 2. DATA SPLITSEN (CRUCIAAL)
+    // A. Targets: Wat de AI berekende (uit Markdown)
+    const targets = parseRecipeData(brew.recipeMarkdown);
+    
+    // B. Actuals: Wat jij gemeten hebt (uit Database)
+    // Als Actuals leeg zijn, nemen we NIET de Targets over (behalve OG misschien als startpunt)
+    const logData = brew.logData || {};
+    
+    // 3. KEY STATS HTML (TARGETS)
+    const keyStatsHtml = `
+    <div class="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-app-brand/20 shadow-sm">
+        <h3 class="font-header text-lg font-bold mb-3 text-app-brand uppercase tracking-wider">Key Stats (Target)</h3>
+        <div class="grid grid-cols-4 gap-4 text-center">
+            <div><span class="block text-[10px] text-app-secondary uppercase font-bold">OG</span><span class="text-xl font-mono font-bold text-app-header">${targets.targetOG || '--'}</span></div>
+            <div><span class="block text-[10px] text-app-secondary uppercase font-bold">FG</span><span class="text-xl font-mono font-bold text-app-header">${targets.targetFG || '--'}</span></div>
+            <div><span class="block text-[10px] text-app-secondary uppercase font-bold">ABV</span><span class="text-xl font-mono font-bold text-app-header">${targets.targetABV ? targets.targetABV.replace('%','') + '%' : '--'}</span></div>
+            <div><span class="block text-[10px] text-app-secondary uppercase font-bold">Batch</span><span class="text-xl font-mono font-bold text-app-header">${brew.batchSize || 5}L</span></div>
+        </div>
+    </div>`;
 
-    // 3. Logboek Genereren
-    let logHtml = getBrewLogHtml(combinedLogData, brew.id);
-    logHtml += getActualIngredientsHtml(brew);
+    // 4. Logboek Genereren (Actuals)
+    let logHtml = getBrewLogHtml(logData, brew.id);
+    logHtml += getActualIngredientsHtml(brew); // De ingrediënten tabel
 
-    // 4. Kosten Info (Vroeger updateCostAnalysis)
+    // 5. Kosten Info
     const currency = state.userSettings?.currencySymbol || '€';
     let costHtml = '';
     if (brew.totalCost > 0) {
-        const realVol = (brew.logData?.currentVolume && parseFloat(brew.logData.currentVolume) > 0) 
-            ? parseFloat(brew.logData.currentVolume) : (brew.batchSize || 5);
+        const realVol = (logData.currentVolume && parseFloat(logData.currentVolume) > 0) ? parseFloat(logData.currentVolume) : (brew.batchSize || 5);
         const perL = realVol > 0 ? brew.totalCost / realVol : 0;
-        costHtml = `<div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-amber-900 text-sm flex justify-between items-center">
-            <span><strong>Total Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</span>
-            <span><strong>Cost/L:</strong> ${currency}${perL.toFixed(2)}</span>
-        </div>`;
+        costHtml = `<div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-amber-900 text-sm flex justify-between items-center shadow-sm"><span><strong>Total Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</span><span><strong>Cost/L:</strong> ${currency}${perL.toFixed(2)}</span></div>`;
     }
 
     const container = document.getElementById('history-detail-container');
@@ -1799,7 +1799,7 @@ window.showBrewDetail = function(brewId) {
             <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-600 text-white py-2 px-3 rounded btn font-bold shadow-sm hover:bg-red-700 text-xs uppercase tracking-wider">Delete</button>
         </div>
 
-        <div class="recipe-content prose dark:prose-invert max-w-none text-app-header bg-app-secondary p-4 rounded-lg shadow-sm border border-app-brand/5 mb-4">
+        ${keyStatsHtml} <div class="recipe-content prose dark:prose-invert max-w-none text-app-header bg-app-secondary p-4 rounded-lg shadow-sm border border-app-brand/5 mb-4">
             ${recipeHtml}
         </div>
         ${costHtml}

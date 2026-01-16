@@ -1203,16 +1203,21 @@ window.renderBrewDay = function(forceId = null) {
     // Lege staat?
     if (activeBrews.length === 0) {
         brewDayContent.innerHTML = `
-            <div class="text-center py-12 px-4">
-                <div class="mb-4 text-app-brand opacity-20"><svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></div>
-                <h2 class="text-2xl font-header font-bold mb-2 text-app-brand">No Active Brews</h2>
-                <p class="text-app-secondary mb-6 text-sm">Your fermentation chamber is empty.<br>Go to the Creator to start a new batch.</p>
-                <button onclick="window.switchSubView('creator', 'brewing-main-view')" class="bg-app-action text-white py-2 px-6 rounded-lg font-bold shadow-md hover:opacity-90 transition-transform hover:scale-105 uppercase tracking-wider text-sm">
-                    + Create New Recipe
+        <div class="max-w-2xl mx-auto">
+            <div class="flex justify-between items-end mb-6 px-1 border-b border-app-brand/10 pb-2">
+                <div>
+                    <h2 class="text-2xl font-header font-bold text-app-brand uppercase tracking-wider">Fermentation Chamber</h2>
+                    <p class="text-xs text-app-secondary uppercase tracking-wider font-bold opacity-60">${activeBrews.length} Active Batches</p>
+                </div>
+                <button onclick="window.promptNewBrewType()" class="text-xs bg-app-action text-white px-4 py-2 rounded font-bold shadow hover:opacity-90 transition-colors uppercase tracking-wide flex items-center gap-1">
+                    <span>+</span> New
                 </button>
-            </div>`;
-        return;
-    }
+            </div>
+            <div class="space-y-3">
+                ${listHtml}
+            </div>
+        </div>`;
+}
 
     // Lijst renderen
     const listHtml = activeBrews.map(b => {
@@ -1274,7 +1279,7 @@ window.closePrimaryDetail = function() {
     window.renderBrewDay(null);
 }
 
-// --- RENDER: Brew Day 2 (Aging/Secondary) ---
+// --- RENDER: Brew Day 2 (Aging/Secondary) - VISUAL UPDATE ---
 window.renderBrewDay2 = async function() {
     const container = document.getElementById('brew-day-2-view');
     if (!container) return;
@@ -1283,59 +1288,124 @@ window.renderBrewDay2 = async function() {
     const agingBrews = state.brews.filter(b => b.primaryComplete && !b.isBottled);
     
     // 2. Bepaal welke we moeten laten zien (Lijst of Detail?)
+    // We gebruiken dezelfde tempState pointer, maar checken of hij in deze lijst zit
     const activeId = tempState.activeBrewId;
     const activeBrew = activeId ? agingBrews.find(b => b.id === activeId) : null;
 
-    // --- SCENARIO A: LIJST WEERGAVE (Geen actieve selectie) ---
-    if (!activeBrew) {
-        if (agingBrews.length === 0) {
-            container.innerHTML = `<div class="text-center p-8 bg-app-secondary rounded-lg"><h3 class="text-xl font-bold text-app-brand">The Cellar is Quiet</h3><p class="text-app-secondary">No batches in aging.</p></div>`;
-            return;
+    // --- SCENARIO A: DETAIL WEERGAVE (Specifieke batch geselecteerd) ---
+    if (activeBrew) {
+        // Stappen ophalen
+        let steps = activeBrew.secondarySteps || [];
+        if (steps.length === 0 && activeBrew.recipeMarkdown) {
+            const extracted = extractStepsFromMarkdown(activeBrew.recipeMarkdown);
+            steps = extracted.day2;
+            activeBrew.secondarySteps = steps; // Cache update
         }
+        if (steps.length === 0) steps = [{ title: "Racking", description: "Transfer to secondary." }, { title: "Bottling", description: "Package when clear." }];
+
+        const checklist = activeBrew.checklist || {};
         
-        const listHtml = agingBrews.map(b => {
-            const startDate = b.logData?.brewDate || 'Unknown Date';
-            return `<div onclick="window.openSecondaryDetail('${b.id}')" class="p-4 card rounded-lg cursor-pointer hover:bg-app-primary border-l-4 border-purple-500 shadow-sm transition-all mb-3"><h4 class="font-bold text-lg">${b.recipeName}</h4><p class="text-xs text-app-secondary">Started: ${startDate}</p></div>`;
+        const stepsHtml = steps.map((step, idx) => {
+            const key = `sec-step-${idx}`;
+            const isChecked = checklist[key] === true;
+            
+            const btnHtml = isChecked 
+                ? `<span class="text-xs font-bold text-green-600 border border-green-600 px-2 py-0.5 rounded">DONE</span>` 
+                : `<button onclick="window.toggleSecondaryStep('${activeBrew.id}', '${key}')" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase">Check</button>`;
+            
+            return `
+            <div class="p-4 border-b border-app-brand/10 flex justify-between items-start gap-4 ${isChecked ? 'opacity-60 grayscale' : ''}">
+                <div class="flex-grow">
+                    <p class="font-bold text-sm text-app-header flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-app-tertiary text-[10px] flex items-center justify-center border border-app-brand/20">${idx + 1}</span> 
+                        ${step.title}
+                    </p>
+                    <p class="text-xs text-app-secondary mt-1 pl-7 opacity-90">${step.description}</p>
+                </div>
+                <div class="pt-1">${btnHtml}</div>
+            </div>`;
         }).join('');
-        
-        container.innerHTML = `<div class="bg-app-secondary p-4 rounded-lg shadow-lg"><h2 class="text-2xl font-bold mb-6 text-center">Secondary / Aging</h2><div class="space-y-2">${listHtml}</div></div>`;
+
+        const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(activeBrew.logData, activeBrew.id + '-sec') : '';
+
+        container.innerHTML = `
+            <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
+                <div class="flex items-center justify-between mb-4 pb-2 border-b border-app-brand/10">
+                    <button onclick="window.closeSecondaryDetail()" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1">
+                        &larr; Back to Chamber
+                    </button>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-app-brand opacity-60">Secondary Phase</span>
+                </div>
+
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-header font-bold text-app-brand mb-1">${activeBrew.recipeName}</h2>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-app-secondary opacity-60">Aging & Stabilization</p>
+                </div>
+
+                <div class="bg-app-secondary rounded-xl shadow-sm border border-app-brand/10 overflow-hidden mb-8">
+                    ${stepsHtml}
+                </div>
+
+                <div id="brew-day-2-log-container">${logHtml}</div>
+
+                <div class="mt-6 space-y-3 pb-2 border-t border-app-brand/10 pt-4">
+                    <button onclick="window.showBottlingModal('${activeBrew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn font-bold shadow-md uppercase tracking-wider flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                        Proceed to Bottling
+                    </button>
+                    <button onclick="window.updateBrewLog('${activeBrew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg btn font-bold uppercase tracking-wider text-xs">Save Log Notes</button>
+                </div>
+            </div>`;
         return;
     }
 
-    // --- SCENARIO B: DETAIL WEERGAVE (Specifieke batch) ---
-    // Stappen ophalen (uit geheugen of parsen)
-    let steps = activeBrew.secondarySteps || [];
-    if (steps.length === 0 && activeBrew.recipeMarkdown) {
-        steps = extractStepsFromMarkdown(activeBrew.recipeMarkdown).day2;
-        // Cache opslaan
-        activeBrew.secondarySteps = steps; 
-    }
-    // Fallback als er geen stappen zijn gevonden
-    if (steps.length === 0) steps = [{ title: "Racking", description: "Transfer to secondary vessel." }, { title: "Bottling", description: "Package when clear." }];
-
-    const checklist = activeBrew.checklist || {};
+    // --- SCENARIO B: LIJST WEERGAVE (VISUAL UPDATE) ---
     
-    const stepsHtml = steps.map((step, idx) => {
-        const key = `sec-step-${idx}`;
-        const isChecked = checklist[key] === true;
-        
-        const btnHtml = isChecked 
-            ? `<span class="text-xs font-bold text-green-600 border border-green-600 px-2 py-0.5 rounded">DONE</span>` 
-            : `<button onclick="window.toggleSecondaryStep('${activeBrew.id}', '${key}')" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase">Check</button>`;
-        
-        return `<div class="p-3 border-b border-app-brand/10 flex justify-between items-start gap-3 ${isChecked ? 'opacity-60' : ''}"><div class="flex-grow"><p class="font-bold text-sm">${idx + 1}. ${step.title}</p><p class="text-xs text-app-secondary">${step.description}</p></div><div class="pt-1">${btnHtml}</div></div>`;
+    if (agingBrews.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-12 px-4">
+                <div class="mb-4 text-app-brand opacity-20"><svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                <h2 class="text-2xl font-header font-bold mb-2 text-app-brand">Aging Chamber Empty</h2>
+                <p class="text-app-secondary mb-6 text-sm">No batches are currently aging.<br>Finish a primary fermentation to see it here.</p>
+            </div>`;
+        return;
+    }
+    
+    // Lijst renderen (deze keer in exact dezelfde stijl als Day 1)
+    const listHtml = agingBrews.map(b => {
+        const startDate = b.logData?.brewDate || 'Unknown';
+        // Bereken totale dagen sinds start
+        const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
+        const dayLabel = days >= 0 ? `Day ${days}` : '?';
+
+        return `
+        <div onclick="window.openSecondaryDetail('${b.id}')" class="p-4 card rounded-xl cursor-pointer hover:bg-app-primary border-l-4 border-purple-500 shadow-sm mb-3 transition-all group relative">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h4 class="font-bold text-lg font-header text-app-header group-hover:text-purple-600 transition-colors leading-tight">${b.recipeName}</h4>
+                    <div class="flex items-center gap-3 mt-1.5">
+                        <span class="text-[10px] font-bold uppercase bg-purple-100 text-purple-700 px-2 py-0.5 rounded border border-purple-200">Aging: ${dayLabel}</span>
+                        <span class="text-xs text-app-secondary opacity-80">Started: ${startDate}</span>
+                    </div>
+                </div>
+                <div class="text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </div>
+            </div>
+        </div>`;
     }).join('');
-
-    // Logs laden (Deel 9 functie)
-    const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(activeBrew.logData, activeBrew.id + '-sec') : '';
-
+    
     container.innerHTML = `
-        <div class="bg-app-secondary p-4 rounded-lg shadow-lg">
-            <div class="flex items-center justify-between mb-4 pb-2 border-b border-app-brand/10"><button onclick="window.closeSecondaryDetail()" class="text-xs font-bold text-app-secondary uppercase hover:text-app-brand">&larr; Back to List</button><span class="text-[10px] font-bold uppercase text-app-brand opacity-60">Phase 2</span></div>
-            <h2 class="text-2xl font-bold mb-6 text-center text-app-brand">${activeBrew.recipeName}</h2>
-            <div class="mb-6 bg-app-secondary rounded-lg shadow-sm border border-app-brand/10">${stepsHtml}</div>
-            <div id="brew-day-2-log-container">${logHtml}</div>
-            <div class="mt-6 space-y-3"><button onclick="window.updateBrewLog('${activeBrew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg hover:opacity-90 btn font-bold text-sm">Save Log</button><button onclick="window.showBottlingModal('${activeBrew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn font-bold text-sm">Proceed to Bottling</button></div>
+        <div class="max-w-2xl mx-auto">
+            <div class="flex justify-between items-end mb-6 px-1 border-b border-app-brand/10 pb-2">
+                <div>
+                    <h2 class="text-2xl font-header font-bold text-app-brand uppercase tracking-wider">Aging Chamber</h2>
+                    <p class="text-xs text-app-secondary uppercase tracking-wider font-bold opacity-60">${agingBrews.length} Batches Maturing</p>
+                </div>
+            </div>
+            <div class="space-y-3">
+                ${listHtml}
+            </div>
         </div>`;
 }
 
@@ -2755,6 +2825,48 @@ window.undoStep = async function(stepIndex) {
     }
 }
 
+// --- KEUZE MODAL VOOR NIEUWE BATCH ---
+window.promptNewBrewType = function() {
+    // Check of de modal al bestaat, zo niet, maak hem
+    let modal = document.getElementById('new-brew-modal');
+    
+    if (!modal) {
+        const modalHtml = `
+        <div id="new-brew-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden animate-fade-in">
+            <div class="bg-app-secondary p-6 rounded-xl shadow-2xl border border-app-brand/20 w-full max-w-sm relative">
+                <button onclick="document.getElementById('new-brew-modal').classList.add('hidden')" class="absolute top-3 right-4 text-app-secondary hover:text-red-500 font-bold text-xl">&times;</button>
+                
+                <h3 class="text-xl font-header font-bold text-center mb-6 text-app-brand">Start New Batch</h3>
+                
+                <div class="space-y-3">
+                    <button onclick="window.switchSubView('creator', 'brewing-main-view'); document.getElementById('new-brew-modal').classList.add('hidden');" 
+                        class="w-full p-4 rounded-lg border border-app-brand/20 bg-app-tertiary hover:bg-app-primary hover:border-app-brand transition-all group text-left flex items-center gap-4">
+                        <div class="bg-app-brand text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg">✨</div>
+                        <div>
+                            <div class="font-bold text-app-header">AI Creator</div>
+                            <div class="text-xs text-app-secondary">Generate a fresh recipe</div>
+                        </div>
+                    </button>
+
+                    <button onclick="window.switchSubView('history', 'brewing-main-view'); document.getElementById('new-brew-modal').classList.add('hidden');" 
+                        class="w-full p-4 rounded-lg border border-app-brand/20 bg-app-tertiary hover:bg-app-primary hover:border-app-brand transition-all group text-left flex items-center gap-4">
+                        <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg">📂</div>
+                        <div>
+                            <div class="font-bold text-app-header">From History</div>
+                            <div class="text-xs text-app-secondary">Clone/Brew existing recipe</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        modal = document.getElementById('new-brew-modal');
+    }
+    
+    // Toon de modal
+    modal.classList.remove('hidden');
+}
+
 // ============================================================================
 // FINAL EXPORTS (COMPLETE & VERIFIED)
 // ============================================================================
@@ -2794,6 +2906,7 @@ window.startBrewDay = startBrewDay;
 window.undoStep = undoStep;
 window.openPrimaryDetail
 window.closePrimaryDetail
+window.promptNewBrewType
 
 // Logging & Details
 window.showBrewDetail = showBrewDetail;

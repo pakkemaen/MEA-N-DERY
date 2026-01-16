@@ -2510,7 +2510,6 @@ window.handleStyleChange = handleStyleChange;
 window.handleEquipmentTypeChange = handleEquipmentTypeChange;
 
 // AI Tools
-window.findCommercialWaterMatch = findCommercialWaterMatch;
 window.applyWaterTweak = applyWaterTweak;
 window.regenerateFlavorProfile = regenerateFlavorProfile;
 window.getWaterAdvice = getWaterAdvice;

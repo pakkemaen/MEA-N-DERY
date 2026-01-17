@@ -1332,7 +1332,7 @@ window.renderBrewDay2 = async function() {
     const activeId = tempState.activeBrewId;
     const activeBrew = activeId ? agingBrews.find(b => b.id === activeId) : null;
 
-    // --- SCENARIO A: DETAIL ---
+    // --- SCENARIO A: DETAIL WEERGAVE (Specifieke batch) ---
     if (activeBrew) {
         let steps = activeBrew.secondarySteps || [];
         if (steps.length === 0 && activeBrew.recipeMarkdown) {
@@ -1397,17 +1397,14 @@ window.renderBrewDay2 = async function() {
                     <button onclick="window.updateBrewLog('${activeBrew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg btn font-bold uppercase tracking-wider text-xs">Save Log Notes</button>
                 </div>
             </div>`;
-        return;
+        return; // Belangrijk: Stop hier als we detail tonen
     }
 
-    // --- SCENARIO B: LIJST ---
+    // --- SCENARIO B: LIJST WEERGAVE ---
     
-    // EERST HTML MAKEN (Zelfde fix als hierboven)
     const listHtml = agingBrews.map(b => {
         const startDate = b.logData?.brewDate || 'Unknown';
         const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
-        
-        // FIX: Hier zaten de quotes verkeerd in de vorige versie
         const dayLabel = days >= 0 ? `Day ${days}` : '?';
 
         return `

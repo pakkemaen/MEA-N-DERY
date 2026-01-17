@@ -1192,7 +1192,7 @@ window.renderBrewDay = function(forceId = null) {
 
     // --- SCENARIO B: LIJST WEERGAVE (Geen actief ID) ---
     
-    // 1. EERST de variabele listHtml aanmaken
+    // EERST HTML genereren
     const listHtml = activeBrews.map(b => {
         const startDate = b.logData?.brewDate || 'Unknown';
         const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
@@ -1215,7 +1215,7 @@ window.renderBrewDay = function(forceId = null) {
         </div>`;
     }).join('');
 
-    // 2. DAN pas gebruiken
+    // DAN checken op leeg
     if (activeBrews.length === 0) {
         brewDayContent.innerHTML = `
             <div class="max-w-2xl mx-auto">
@@ -1235,6 +1235,7 @@ window.renderBrewDay = function(forceId = null) {
         return;
     }
 
+    // ANDERS lijst tonen
     brewDayContent.innerHTML = `
         <div class="max-w-2xl mx-auto">
             <div class="flex justify-between items-end mb-6 px-1 border-b border-app-brand/10 pb-2">
@@ -1250,66 +1251,6 @@ window.renderBrewDay = function(forceId = null) {
                 ${listHtml}
             </div>
         </div>`;
-}
-
-    // Lijst renderen
-    const listHtml = activeBrews.map(b => {
-        const startDate = b.logData?.brewDate || 'Unknown';
-        // Bereken dag nummer
-        const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
-        const dayLabel = days >= 0 ? `Day ${days + 1}` : 'Pending';
-
-        return `
-        <div onclick="window.openPrimaryDetail('${b.id}')" class="p-4 card rounded-xl cursor-pointer hover:bg-app-primary border-l-4 border-app-brand shadow-sm mb-3 transition-all group relative">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h4 class="font-bold text-lg font-header text-app-header group-hover:text-app-brand transition-colors leading-tight">${b.recipeName}</h4>
-                    <div class="flex items-center gap-3 mt-1.5">
-                        <span class="text-[10px] font-bold uppercase bg-app-tertiary text-app-secondary px-2 py-0.5 rounded border border-app-brand/10">${dayLabel}</span>
-                        <span class="text-xs text-app-secondary opacity-80">Started: ${startDate}</span>
-                    </div>
-                </div>
-                <div class="text-app-brand opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
-                </div>
-            </div>
-        </div>`;
-    }).join('');
-
-    brewDayContent.innerHTML = `
-        <div class="max-w-2xl mx-auto">
-            <div class="flex justify-between items-end mb-6 px-1">
-                <div>
-                    <h2 class="text-2xl font-header font-bold text-app-brand">Fermentation Chamber</h2>
-                    <p class="text-xs text-app-secondary uppercase tracking-wider font-bold opacity-60">${activeBrews.length} Active Batches</p>
-                </div>
-                <button onclick="window.switchSubView('creator', 'brewing-main-view')" class="text-xs bg-app-action text-white px-3 py-1.5 rounded font-bold shadow hover:opacity-90 transition-colors uppercase tracking-wide">
-                    + New
-                </button>
-            </div>
-            <div class="space-y-2">
-                ${listHtml}
-            </div>
-        </div>`;
-}
-
-// --- NIEUWE NAVIGATIE HELPERS (Onderaan toevoegen) ---
-
-window.openPrimaryDetail = function(brewId) {
-    // Scroll naar boven
-    document.getElementById('brewing-main-view').scrollIntoView({ behavior: 'smooth' });
-    // Render met ID
-    window.renderBrewDay(brewId);
-}
-
-window.closePrimaryDetail = function() {
-    // Reset state pointers
-    tempState.activeBrewId = null;
-    state.userSettings.currentBrewDay = { brewId: null };
-    if(window.saveUserSettings) window.saveUserSettings(); // Opslaan dat we niets actief hebben
-    
-    // Render zonder ID (toont lijst)
-    window.renderBrewDay(null);
 }
 
 // --- RENDER: Brew Day 2 (Aging/Secondary) - FINAL FIX ---
@@ -1395,8 +1336,6 @@ window.renderBrewDay2 = async function() {
     const listHtml = agingBrews.map(b => {
         const startDate = b.logData?.brewDate || 'Unknown';
         const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
-        
-        // FIX: Backticks toegevoegd rondom de string!
         const dayLabel = days >= 0 ? `Day ${days}` : '?';
 
         return `
@@ -1446,7 +1385,25 @@ window.renderBrewDay2 = async function() {
         </div>`;
 }
 
-// --- LOGIC: Navigation Helpers ---
+// --- NIEUWE NAVIGATIE HELPERS ---
+
+window.openPrimaryDetail = function(brewId) {
+    // Scroll naar boven
+    document.getElementById('brewing-main-view').scrollIntoView({ behavior: 'smooth' });
+    // Render met ID
+    window.renderBrewDay(brewId);
+}
+
+window.closePrimaryDetail = function() {
+    // Reset state pointers
+    tempState.activeBrewId = null;
+    state.userSettings.currentBrewDay = { brewId: null };
+    if(window.saveUserSettings) window.saveUserSettings(); // Opslaan dat we niets actief hebben
+    
+    // Render zonder ID (toont lijst)
+    window.renderBrewDay(null);
+}
+
 window.openSecondaryDetail = (brewId) => { 
     tempState.activeBrewId = brewId; 
     renderBrewDay2(); 

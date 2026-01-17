@@ -1063,39 +1063,34 @@ window.renderBrewDay = function(forceId = null) {
     const brewDayContent = document.getElementById('brew-day-content');
     if (!brewDayContent) return;
 
-    // 1. Bepaal Actieve Batch ID (Uit argument, State of Settings)
-    // We geven voorrang aan: ForceID > TempState > UserSettings
+    // 1. Bepaal Actieve Batch ID
     let activeId = forceId || tempState.activeBrewId;
     
     // Als we nog geen ID hebben, kijken we of er eentje in de settings stond
     if (!activeId && state.userSettings?.currentBrewDay?.brewId) {
-        // Maar alleen als we NIET expliciet hebben gezegd dat we terug naar de lijst wilden (activeBrewId === null)
         if (tempState.activeBrewId !== null) { 
              activeId = state.userSettings.currentBrewDay.brewId;
         }
     }
 
-    // 2. Haal alle actieve primary batches op voor de lijst
+    // 2. Haal alle actieve primary batches op
     const activeBrews = state.brews.filter(b => b.logData?.brewDate && !b.primaryComplete);
 
     // --- SCENARIO A: DETAIL WEERGAVE (We hebben een ID) ---
     if (activeId && activeId !== 'none') {
         const brew = state.brews.find(b => b.id === activeId);
         
-        // Als de batch niet gevonden is (of verwijderd), val terug naar lijst
         if (!brew) {
             tempState.activeBrewId = null;
             return window.renderBrewDay(); 
         }
 
-        // Update pointers
         tempState.activeBrewId = activeId;
-        if(state.userSettings) { // Sla op zodat F5 refresh werkt
+        if(state.userSettings) { 
              state.userSettings.currentBrewDay = { brewId: activeId };
              if(window.saveUserSettings) window.saveUserSettings();
         }
 
-        // --- STAPPEN OPHALEN (Bestaande Logica) ---
         let primarySteps = brew.brewDaySteps || [];
         if (primarySteps.length === 0 && brew.recipeMarkdown) {
             const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
@@ -1104,14 +1099,12 @@ window.renderBrewDay = function(forceId = null) {
             brew.secondarySteps = extracted.day2; 
         }
 
-        // HTML Genereren voor Stappen
         const stepsHtml = primarySteps.map((step, index) => {
             const checklist = brew.checklist || {};
             const stepData = checklist[`step-${index}`];
             const isCompleted = stepData === true || (stepData && stepData.completed);
             const savedAmount = (stepData && stepData.actualAmount) ? stepData.actualAmount : '';
 
-            // Input detectie
             const amountMatch = (step.title + " " + step.description).match(/(\d+[.,]?\d*)\s*(kg|g|l|ml|oz|lbs)/i);
             let inputHtml = '';
             
@@ -1159,7 +1152,6 @@ window.renderBrewDay = function(forceId = null) {
 
         const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(brew.logData, brew.id) : '';
 
-        // DETAIL RENDER (Met Back Knop)
         brewDayContent.innerHTML = `
             <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
                 <div class="flex items-center justify-between mb-4 pb-2 border-b border-app-brand/10">
@@ -1198,9 +1190,9 @@ window.renderBrewDay = function(forceId = null) {
         return;
     }
 
-// --- SCENARIO B: LIJST WEERGAVE (Geen actief ID) ---
+    // --- SCENARIO B: LIJST WEERGAVE (Geen actief ID) ---
     
-    // 1. EERST de HTML genereren (zodat de variabele bestaat)
+    // 1. EERST de variabele listHtml aanmaken
     const listHtml = activeBrews.map(b => {
         const startDate = b.logData?.brewDate || 'Unknown';
         const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
@@ -1223,27 +1215,26 @@ window.renderBrewDay = function(forceId = null) {
         </div>`;
     }).join('');
 
-    // 2. DAN pas checken of hij leeg is
+    // 2. DAN pas gebruiken
     if (activeBrews.length === 0) {
         brewDayContent.innerHTML = `
-        <div class="max-w-2xl mx-auto">
-            <div class="flex justify-between items-end mb-6 px-1 border-b border-app-brand/10 pb-2">
-                <div>
-                    <h2 class="text-2xl font-header font-bold text-app-brand uppercase tracking-wider">Fermentation Chamber</h2>
-                    <p class="text-xs text-app-secondary uppercase tracking-wider font-bold opacity-60">Empty</p>
+            <div class="max-w-2xl mx-auto">
+                <div class="flex justify-between items-end mb-6 px-1 border-b border-app-brand/10 pb-2">
+                    <div>
+                        <h2 class="text-2xl font-header font-bold text-app-brand uppercase tracking-wider">Fermentation Chamber</h2>
+                        <p class="text-xs text-app-secondary uppercase tracking-wider font-bold opacity-60">Empty</p>
+                    </div>
+                    <button onclick="window.promptNewBrewType()" class="text-xs bg-app-action text-white px-4 py-2 rounded font-bold shadow hover:opacity-90 transition-colors uppercase tracking-wide flex items-center gap-1">
+                        <span>+</span> New
+                    </button>
                 </div>
-                <button onclick="window.promptNewBrewType()" class="text-xs bg-app-action text-white px-4 py-2 rounded font-bold shadow hover:opacity-90 transition-colors uppercase tracking-wide flex items-center gap-1">
-                    <span>+</span> New
-                </button>
-            </div>
-            <div class="text-center py-12 px-4 opacity-60">
-                <p class="text-sm text-app-secondary">No active brews found.<br>Start a new batch above!</p>
-            </div>
-        </div>`;
+                <div class="text-center py-12 px-4 opacity-60">
+                    <p class="text-sm text-app-secondary">No active brews found.<br>Start a new batch above!</p>
+                </div>
+            </div>`;
         return;
     }
 
-    // 3. Anders de lijst tonen
     brewDayContent.innerHTML = `
         <div class="max-w-2xl mx-auto">
             <div class="flex justify-between items-end mb-6 px-1 border-b border-app-brand/10 pb-2">
@@ -1260,7 +1251,6 @@ window.renderBrewDay = function(forceId = null) {
             </div>
         </div>`;
 }
-
 
     // Lijst renderen
     const listHtml = activeBrews.map(b => {
@@ -1332,7 +1322,7 @@ window.renderBrewDay2 = async function() {
     const activeId = tempState.activeBrewId;
     const activeBrew = activeId ? agingBrews.find(b => b.id === activeId) : null;
 
-    // --- SCENARIO A: DETAIL WEERGAVE (Specifieke batch) ---
+    // --- SCENARIO A: DETAIL ---
     if (activeBrew) {
         let steps = activeBrew.secondarySteps || [];
         if (steps.length === 0 && activeBrew.recipeMarkdown) {
@@ -1397,14 +1387,16 @@ window.renderBrewDay2 = async function() {
                     <button onclick="window.updateBrewLog('${activeBrew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg btn font-bold uppercase tracking-wider text-xs">Save Log Notes</button>
                 </div>
             </div>`;
-        return; // Belangrijk: Stop hier als we detail tonen
+        return;
     }
 
-    // --- SCENARIO B: LIJST WEERGAVE ---
+    // --- SCENARIO B: LIJST ---
     
     const listHtml = agingBrews.map(b => {
         const startDate = b.logData?.brewDate || 'Unknown';
         const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
+        
+        // FIX: Backticks toegevoegd rondom de string!
         const dayLabel = days >= 0 ? `Day ${days}` : '?';
 
         return `
@@ -2979,9 +2971,6 @@ window.freeformTweakRecipe = freeformTweakRecipe;
 window.showBrewPrompt = showBrewPrompt;
 window.startBrewDay = startBrewDay;
 window.undoStep = undoStep;
-window.openPrimaryDetail
-window.closePrimaryDetail
-window.promptNewBrewType
 
 // Logging & Details
 window.showBrewDetail = showBrewDetail;

@@ -73,12 +73,20 @@ function getFortKnoxLaws(isNoWater = false, isBraggot = false, isHydromel = fals
 `;
 }
 
-// --- CORE: De Prompt Bouwer ---
+// --- CORE: De Prompt Bouwer (AANGEPAST: AUTO ABV) ---
 function buildPrompt() {
     try {
         // 1. Data Verzamelen
         const batchSize = parseFloat(document.getElementById('batchSize')?.value) || 5;
-        const targetABV = parseFloat(document.getElementById('abv')?.value) || 12;
+        
+        // AANGEPAST: We lezen de ruwe waarde om te zien of hij leeg is
+        const abvEl = document.getElementById('abv');
+        const rawABV = abvEl ? abvEl.value : ''; 
+        const isAutoABV = rawABV === '' || rawABV === '0'; // Leeg? Dan mag de AI kiezen.
+        
+        // Als er wel een getal is, gebruiken we dat. Anders voorlopig 12 voor interne fallback (wordt overschreven in tekst).
+        const targetABV = isAutoABV ? 12 : (parseFloat(rawABV) || 12);
+
         const sweetness = document.getElementById('sweetness')?.value;
         const styleSelect = document.getElementById('style');
         const style = styleSelect.selectedOptions.length > 0 ? styleSelect.selectedOptions[0].text : 'Traditional Mead';
@@ -100,10 +108,24 @@ function buildPrompt() {
              }
         }
 
-        // 2. Math Injection
-        const honeyGramsPerLiter = targetABV * 22; 
-        const totalHoneyKg = (honeyGramsPerLiter * batchSize) / 1000;
-        const estimatedYAN = Math.round(targetABV * 10); 
+        // 2. Math Injection (SLIMMER GEMAAKT)
+        let mathContext = "";
+
+        if (isAutoABV) {
+            // SCENARIO: AI MAG KIEZEN
+            mathContext = `
+            **CALCULATED TARGETS:**
+            - **Batch:** ${batchSize}L
+            - **Target ABV:** **OPEN / AI DECISION**.
+            - **TASK:** Please determine the optimal ABV for this specific style/description to get the best possible flavor.
+            - **HONEY CALCULATION:** You MUST calculate the required honey yourself based on your chosen ABV (Rule of thumb: ~22g honey/L per 1% ABV).
+            ${budgetContext}
+            `;
+        } else {
+            // SCENARIO: GEBRUIKER KIEST (Zoals vroeger)
+            const honeyGramsPerLiter = targetABV * 22; 
+            const totalHoneyKg = (honeyGramsPerLiter * batchSize) / 1000;
+            const estimatedYAN = Math.round(targetABV * 10);
         
         let mathContext = `
         **CALCULATED TARGETS:**

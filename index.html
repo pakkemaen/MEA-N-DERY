@@ -862,6 +862,10 @@
                         <input type="range" id="tuneStyleOffsetY" min="-500" max="500" value="0" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-app-brand">
                     </div>
                 </div>
+                <div class="flex items-center gap-2 pt-1 border-t border-app-brand/5">
+                    <input type="checkbox" id="tuneSpecsShadow" class="rounded text-app-brand" checked>
+                    <label class="text-[10px]">Text Shadow (Contrast)</label>
+                </div>
             </div>
 
             <div class="p-2 bg-app-tertiary/50 rounded-lg border border-app-brand/5 space-y-3">
@@ -1059,16 +1063,20 @@
 
         </aside>
         
-        <main class="w-full md:w-2/3 h-full bg-gray-800 rounded-lg shadow-inner flex flex-col items-center justify-center relative overflow-hidden border-4 border-gray-700">
+        <main class="w-full md:w-2/3 h-full bg-gray-800 rounded-lg shadow-inner flex flex-col relative overflow-hidden border-4 border-gray-700">
             
-            <p class="absolute top-4 left-4 text-xs font-bold text-gray-500 uppercase tracking-widest z-10">
-                Live Preview (Screen Zoomed)
-            </p>
+            <div class="w-full p-3 bg-gray-900/30 border-b border-gray-700 flex-shrink-0">
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest text-center">
+                    Live Preview (Screen Zoomed)
+                </p>
+            </div>
             
-            <div id="label-preview-container" class="bg-white text-black shadow-2xl relative overflow-hidden flex-shrink-0 origin-center" 
-                 style="width: 99.1mm; height: 67.7mm; padding: 0;">
-                 <div id="label-content" class="relative w-full h-full bg-white overflow-hidden flex font-sans">
+            <div class="flex-grow flex items-center justify-center overflow-hidden relative w-full p-8">
+                <div id="label-preview-container" class="bg-white text-black shadow-2xl relative overflow-hidden flex-shrink-0 origin-center" 
+                     style="width: 99.1mm; height: 67.7mm; padding: 0;">
+                     <div id="label-content" class="relative w-full h-full bg-white overflow-hidden flex font-sans">
                      </div>
+                </div>
             </div>
      
         </main>

@@ -179,6 +179,7 @@ function initLabelForge() {
         // Specs Tuning
         'tuneSpecsFont', 'tuneSpecsColor', 'tuneAllergenColor', 'tuneSpecsAlign',
         'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsRotate',
+        'tuneSpecsShadow',
         
         // Story Tuning
         'tuneDescFont', 'tuneDescColor', 'tuneDescAlign',
@@ -564,6 +565,8 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
         setVal('tuneSpecsColor', s.tuneSpecsColor || '#ffffff');
         restoreSlider('tuneSpecsRotate', s.tuneSpecsRotate, 0);
 
+        setCheck('tuneSpecsShadow', (s.tuneSpecsShadow !== undefined) ? s.tuneSpecsShadow : true);
+
         restoreSlider('tuneDescX', s.tuneDescX, 50);
         restoreSlider('tuneDescY', s.tuneDescY, 70);
         restoreSlider('tuneDescWidth', s.tuneDescWidth, 60);
@@ -646,7 +649,9 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
             restoreSlider('tuneLogoSize', 100); restoreSlider('tuneLogoX', 50); restoreSlider('tuneLogoY', 15);
             restoreSlider('tuneTitleX', 50); restoreSlider('tuneTitleY', 40);
             restoreSlider('tuneStyleGap', 50); restoreSlider('tuneStyleY', 55);
-            restoreSlider('tuneBorderWidth', 0); // Special heeft geen border
+            restoreSlider('tuneBorderWidth', 0);
+            
+            setCheck('tuneSpecsShadow', true);
         }
 
         // FEEDBACK: LATEN ZIEN DAT HET DEFAULTS ZIJN
@@ -951,7 +956,8 @@ function setLabelTheme(theme) {
        const allergenColor = getVal('tuneAllergenColor') || specsColor;
        const specsSize = getVal('tuneSpecsSize') || 4;
        const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
-       const specsAlign = getVal('tuneSpecsAlign') || 'center'; // <--- OPHALEN
+       const specsAlign = getVal('tuneSpecsAlign') || 'center'; 
+       const specsShadow = getCheck('tuneSpecsShadow');
 
        const artZoom = getVal('tuneArtZoom') || 1.0;
        const artX = getVal('tuneArtX') || 50; 
@@ -1092,7 +1098,9 @@ function setLabelTheme(theme) {
            <div class="absolute z-10 pointer-events-none" 
                 style="left: ${specsX}%; top: ${specsY}%; transform: translate(-50%, -50%) rotate(${specsRot}deg);
                        font-family: '${specsFont}', monospace;">
-                <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.8); text-align: ${specsAlign};">
+                <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; 
+                 text-shadow: ${specsShadow ? '0 1px 2px rgba(0,0,0,0.8)' : 'none'}; 
+                 text-align: ${specsAlign};">
                    
                    <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-bold justify-center" style="justify-content: ${specsAlign === 'left' ? 'start' : (specsAlign === 'right' ? 'end' : 'center')}">
                        <span class="opacity-70 ${gridLabelAlign}">ABV</span> <span class="${gridValueAlign}">${abv}%</span>

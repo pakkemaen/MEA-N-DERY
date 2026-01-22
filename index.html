@@ -1354,188 +1354,167 @@
         </div>
 
      <div id="settings-main-view" class="hidden">
-        <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
+    <button class="back-to-dashboard-btn mb-4 text-app-brand hover:underline no-print">&larr; Back to Dashboard</button>
+    
+    <div class="bg-app-secondary p-4 rounded-b-lg shadow-inner mb-6">
+        <nav class="flex space-x-2 overflow-x-auto whitespace-nowrap no-scrollbar">
+            <button id="settings-general-sub-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold" onclick="window.switchSubView('settings-general', 'settings-main-view')">General & AI</button>
+            <button id="settings-assets-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold" onclick="window.switchSubView('settings-assets', 'settings-main-view')">Label Assets</button>
+            <button id="settings-data-sub-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold" onclick="window.switchSubView('settings-data', 'settings-main-view')">Data Zone</button>
+        </nav>
+    </div>
+
+    <div id="settings-general-view" class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg settings-panel overflow-y-auto" style="max-height: 80vh;">
+        <h2 class="text-3xl font-header font-bold mb-6 text-center">System Settings</h2>
         
-        <div class="bg-app-secondary p-4 rounded-b-lg shadow-inner mb-6">
-            <nav class="flex space-x-2 overflow-x-auto whitespace-nowrap no-scrollbar">
-                <button id="settings-general-tab" class="sub-tab active px-4 py-2 rounded-md text-sm font-semibold" onclick="window.switchSubView('settings-general-view', 'settings-main-view')">General & AI</button>
-                <button id="settings-assets-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold" onclick="window.switchSubView('settings-assets-view', 'settings-main-view')">Label Assets</button>
-                <button id="settings-data-tab" class="sub-tab px-4 py-2 rounded-md text-sm font-semibold" onclick="window.switchSubView('settings-data-view', 'settings-main-view')">Data Zone</button>
-            </nav>
-        </div>
-
-        <div id="settings-general-view" class="bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg settings-panel overflow-y-auto" style="max-height: 80vh;">
-            <h2 class="text-3xl font-header font-bold mb-6 text-center">System Settings</h2>
+        <div class="max-w-xl mx-auto space-y-6">
             
-            <div class="max-w-xl mx-auto space-y-6">
-                
-                <div class="card p-6 rounded-lg border-l-4 border-blue-500">
-                    <h3 class="text-xl font-header font-bold mb-4">Brain Power (AI)</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-bold mb-2">Google AI Key</label>
-                            <input type="password" id="apiKeyInput" class="w-full p-2 border rounded-md bg-app-tertiary text-app-header">
-                        </div>
-                        
-                        <div class="pt-4 border-t border-app-brand/10">
-                            <div class="flex justify-between items-end mb-2">
-                                <p class="text-xs font-bold text-app-secondary uppercase">Active Models</p>
-                                <button id="fetchModelsBtn" class="bg-blue-600 text-white text-[10px] font-bold py-1 px-2 rounded hover:bg-blue-700 btn">
-                                    🔄 Scan Available
-                                </button>
-                            </div>
-                            <div class="grid grid-cols-1 gap-3">
-                                <div>
-                                    <p class="text-[10px] text-app-secondary mb-1">Recipe Engine</p>
-                                    <select id="aiModelInput" class="w-full p-2 border rounded bg-app-tertiary text-app-header text-sm">
-                                        <option value="gemini-2.0-flash">gemini-2.0-flash (Default)</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <p class="text-[10px] text-app-secondary mb-1">Chat Engine</p>
-                                    <select id="chatModelInput" class="w-full p-2 border rounded bg-app-tertiary text-app-header text-sm">
-                                        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <p class="text-[10px] text-app-secondary mb-1">Image Engine</p>
-                                    <select id="imageModelInput" class="w-full p-2 border rounded bg-app-tertiary text-app-header text-sm">
-                                        <option value="imagen-3.0-generate-001">imagen-3.0-generate-001</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card p-6 rounded-lg border-l-4 border-amber-500">
-                    <h3 class="text-xl font-header font-bold mb-4">Brewing Defaults</h3>
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="block text-sm font-bold mb-2">Batch Size (L)</label>
-                            <input type="number" id="defaultBatchSizeInput" class="w-full p-2 border rounded-md bg-app-tertiary text-app-header">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold mb-2">Currency</label>
-                            <input type="text" id="defaultCurrencyInput" class="w-full p-2 border rounded-md bg-app-tertiary text-app-header">
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-bold mb-2">Carbonation Method</label>
-                        <select id="defaultCarbonationInput" class="w-full p-3 border rounded-lg bg-app-tertiary border-app text-app-header focus:ring-2 focus:ring-amber-500 transition-all">
-                                <option value="bottle">Bottle Conditioning (Natural)</option>
-                                <option value="keg">Keg / Force Carbonation</option>
-                        </select>
-                        <p class="text-xs text-app-secondary mt-1">This teaches the AI how to handle stabilization & sweetening.</p>
-                    </div>
-                    
-                    <div class="pt-4 border-t border-app-brand/10 flex justify-between items-center">
-                        <label class="font-bold text-app-header">Dark Mode Interface</label>
-                        <label class="theme-switch">
-                            <input type="checkbox" id="theme-toggle-checkbox">
-                            <div class="slider round"></div>
-                        </label>
-                    </div>
-                </div>
-
-                <button id="saveSettingsBtn" class="w-full bg-blue-700 text-white font-bold py-3 px-4 rounded-lg btn shadow-md hover:bg-blue-800 transition-colors mt-6">
-                    Save System Settings
-                </button>
-            </div>
-        </div>
-
-        <div id="settings-assets-view" class="hidden bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg settings-panel overflow-y-auto" style="max-height: 80vh;">
-            <h2 class="text-3xl font-header font-bold mb-6 text-center">Label Studio Assets</h2>
-            <div class="max-w-xl mx-auto space-y-6">
-                
-                <div class="card p-6 rounded-lg border-2 border-pink-500/20">
-                    <h3 class="text-xl font-header font-bold mb-4 flex items-center gap-2 text-pink-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                        Prompt Engineer Tool
-                    </h3>
-                    <p class="text-xs text-app-secondary mb-4">Upload an image OR enter a designer name. AI will write a matching prompt for your label generation.</p>
-
-                    <div class="mb-4">
-                        <label class="block text-xs font-bold uppercase text-app-secondary mb-1">1. Designer / Artist / Style Name</label>
-                        <input type="text" id="prompt-engineer-artist" placeholder="e.g. Alphonse Mucha, Cyberpunk, Bauhaus..." class="w-full p-2 border rounded-md bg-app-tertiary text-app-header text-sm focus:ring-2 focus:ring-pink-500">
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-xs font-bold uppercase text-app-secondary mb-1">2. Reference Image (Optional)</label>
-                        <div class="flex items-center gap-4">
-                            <label class="cursor-pointer bg-app-tertiary border border-app hover:bg-app-secondary text-app-header px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
-                                <span>📂 Upload</span>
-                                <input type="file" id="prompt-engineer-upload" accept="image/*" class="hidden">
-                            </label>
-                            <div id="prompt-engineer-preview" class="w-12 h-12 bg-gray-100 rounded overflow-hidden hidden border border-gray-300">
-                                <img id="pe-preview-img" class="w-full h-full object-cover">
-                            </div>
-                            <button onclick="window.clearPromptEngineerImage()" id="pe-clear-btn" class="hidden text-xs text-red-500 font-bold hover:underline">Clear</button>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-xs font-bold uppercase text-app-secondary mb-1">3. Extra Context (Optional)</label>
-                        <input type="text" id="prompt-engineer-context" placeholder="e.g. Make it darker, add honeycombs..." class="w-full p-2 border rounded-md bg-app-tertiary text-app-header text-sm">
-                    </div>
-
-                    <button id="btn-analyze-prompt" class="w-full bg-pink-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-pink-700 btn mb-4 flex items-center justify-center gap-2">
-                        ✨ Generate Prompt
-                    </button>
-
-                    <div id="prompt-engineer-output" class="hidden">
-                        <label class="block text-xs font-bold uppercase text-app-secondary mb-1">Generated Prompt</label>
-                        <textarea id="pe-result-text" rows="3" class="w-full p-2 border rounded-md bg-app-primary border-pink-500/30 text-app-header text-sm font-mono" readonly></textarea>
-                        <button onclick="window.copyEngineerPrompt()" class="mt-2 text-xs text-pink-600 font-bold uppercase hover:underline">Copy to Clipboard</button>
-                    </div>
-                </div>
-
-                <div class="card p-6 rounded-lg border-2 border-purple-500/20">
-                    <h3 class="text-xl font-header font-bold mb-4 flex items-center gap-2 text-purple-600">
-                        Custom Assets
-                    </h3>
-                    
-                    <div class="mb-6">
-                        <h4 class="font-bold text-sm text-app-brand uppercase mb-2">A. Art Styles (Prompts)</h4>
-                        <div class="flex gap-2 mb-2">
-                            <input type="text" id="newStyleName" placeholder="Name (e.g. Dark Fantasy)" class="w-1/3 p-2 border rounded bg-app-tertiary text-xs text-app-header">
-                            <input type="text" id="newStylePrompt" placeholder="Prompt suffix..." class="flex-grow p-2 border rounded bg-app-tertiary text-xs text-app-header">
-                            <button id="addStyleBtn" class="bg-purple-600 text-white px-3 rounded text-xs font-bold hover:bg-purple-700">+</button>
-                        </div>
-                        <div id="settings-styles-list" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar bg-app-primary p-2 rounded border border-app-brand/10"></div>
-                    </div>
-
+            <div class="card p-6 rounded-lg border-l-4 border-blue-500">
+                <h3 class="text-xl font-header font-bold mb-4">Brain Power (AI)</h3>
+                <div class="space-y-4">
                     <div>
-                        <h4 class="font-bold text-sm text-app-brand uppercase mb-2">B. Typography (Google Fonts)</h4>
-                        <div class="flex gap-2 mb-2">
-                            <input type="text" id="newFontName" placeholder="Font Name (e.g. Playfair Display)" class="flex-grow p-2 border rounded bg-app-tertiary text-xs text-app-header">
-                            <button id="addFontBtn" class="bg-purple-600 text-white px-3 rounded text-xs font-bold hover:bg-purple-700">+</button>
-                        </div>
-                        <div id="settings-fonts-list" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar bg-app-primary p-2 rounded border border-app-brand/10"></div>
+                        <label class="block text-sm font-bold mb-2">Google AI Key</label>
+                        <input type="password" id="apiKeyInput" class="w-full p-2 border rounded-md bg-app-tertiary text-app-header">
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="settings-data-view" class="hidden bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg settings-panel overflow-y-auto" style="max-height: 80vh;">
-            <h2 class="text-3xl font-header font-bold mb-6 text-center text-red-600">Danger Zone</h2>
-            <div class="max-w-xl mx-auto">
-                <div class="mt-8 p-6 rounded-lg border-2 border-red-400 bg-app-tertiary">
-                    <h3 class="text-xl font-header text-red-600 mb-4 font-bold">Data Management</h3>
-                    <p class="text-sm text-app-secondary mb-4">Export your data to JSON for backup purposes, or clear your local database.</p>
                     
-                    <div class="grid grid-cols-2 gap-4">
-                        <button id="exportHistoryBtn" class="btn bg-gray-600 text-white hover:bg-gray-700 font-bold py-2 rounded">Export History</button>
-                        <button id="exportInventoryBtn" class="btn bg-gray-600 text-white hover:bg-gray-700 font-bold py-2 rounded">Export Inv</button>
-                    </div>
-                    <div class="mt-6 border-t-2 border-red-400/30 pt-4 space-y-3">
-                        <button id="clearHistoryBtn" class="w-full bg-red-700 text-white btn hover:bg-red-800 py-3 rounded font-bold">Delete ALL Brew History</button>
-                        <button id="clearInventoryBtn" class="w-full bg-red-700 text-white btn hover:bg-red-800 py-3 rounded font-bold">Delete ALL Inventory</button>
+                    <div class="pt-4 border-t border-app-brand/10">
+                        <div class="flex justify-between items-end mb-2">
+                            <p class="text-xs font-bold text-app-secondary uppercase">Active Models</p>
+                            <button id="fetchModelsBtn" class="bg-blue-600 text-white text-[10px] font-bold py-1 px-2 rounded hover:bg-blue-700 btn">
+                                🔄 Scan Available
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3">
+                            <div>
+                                <p class="text-[10px] text-app-secondary mb-1">Recipe Engine</p>
+                                <select id="aiModelInput" class="w-full p-2 border rounded bg-app-tertiary text-app-header text-sm">
+                                    <option value="gemini-2.0-flash">gemini-2.0-flash (Default)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-app-secondary mb-1">Chat Engine</p>
+                                <select id="chatModelInput" class="w-full p-2 border rounded bg-app-tertiary text-app-header text-sm">
+                                    <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                                </select>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-app-secondary mb-1">Image Engine</p>
+                                <select id="imageModelInput" class="w-full p-2 border rounded bg-app-tertiary text-app-header text-sm">
+                                    <option value="imagen-3.0-generate-001">imagen-3.0-generate-001</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
+            <div class="card p-6 rounded-lg border-l-4 border-amber-500">
+                <h3 class="text-xl font-header font-bold mb-4">Brewing Defaults</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Batch Size (L)</label>
+                        <input type="number" id="defaultBatchSizeInput" class="w-full p-2 border rounded-md bg-app-tertiary text-app-header">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Currency</label>
+                        <input type="text" id="defaultCurrencyInput" class="w-full p-2 border rounded-md bg-app-tertiary text-app-header">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-bold mb-2">Carbonation Method</label>
+                    <select id="defaultCarbonationInput" class="w-full p-3 border rounded-lg bg-app-tertiary border-app text-app-header focus:ring-2 focus:ring-amber-500 transition-all">
+                            <option value="bottle">Bottle Conditioning (Natural)</option>
+                            <option value="keg">Keg / Force Carbonation</option>
+                    </select>
+                    <p class="text-xs text-app-secondary mt-1">This teaches the AI how to handle stabilization & sweetening.</p>
+                </div>
+                
+                <div class="pt-4 border-t border-app-brand/10 flex justify-between items-center">
+                    <label class="font-bold text-app-header">Dark Mode Interface</label>
+                    <label class="theme-switch">
+                        <input type="checkbox" id="theme-toggle-checkbox">
+                        <div class="slider round"></div>
+                    </label>
+                </div>
+            </div>
+
+            <button id="saveSettingsBtn" class="w-full bg-blue-700 text-white font-bold py-3 px-4 rounded-lg btn shadow-md hover:bg-blue-800 transition-colors mt-6">
+                Save System Settings
+            </button>
+        </div>
+    </div>
+
+    <div id="settings-assets-view" class="hidden bg-app-secondary p-6 md:p-8 rounded-lg shadow-lg settings-panel overflow-y-auto" style="max-height: 80vh;">
+        <h2 class="text-3xl font-header font-bold mb-6 text-center">Label Studio Assets</h2>
+        <div class="max-w-xl mx-auto space-y-6">
+            
+            <div class="card p-6 rounded-lg border-2 border-pink-500/20">
+                <h3 class="text-xl font-header font-bold mb-4 flex items-center gap-2 text-pink-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    Prompt Engineer Tool
+                </h3>
+                <p class="text-xs text-app-secondary mb-4">Upload an image OR enter a designer name. AI will write a matching prompt for your label generation.</p>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold uppercase text-app-secondary mb-1">1. Designer / Artist / Style Name</label>
+                    <input type="text" id="prompt-engineer-artist" placeholder="e.g. Alphonse Mucha, Cyberpunk, Bauhaus..." class="w-full p-2 border rounded-md bg-app-tertiary text-app-header text-sm focus:ring-2 focus:ring-pink-500">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold uppercase text-app-secondary mb-1">2. Reference Image (Optional)</label>
+                    <div class="flex items-center gap-4">
+                        <label class="cursor-pointer bg-app-tertiary border border-app hover:bg-app-secondary text-app-header px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                            <span>📂 Upload</span>
+                            <input type="file" id="prompt-engineer-upload" accept="image/*" class="hidden">
+                        </label>
+                        <div id="prompt-engineer-preview" class="w-12 h-12 bg-gray-100 rounded overflow-hidden hidden border border-gray-300">
+                            <img id="pe-preview-img" class="w-full h-full object-cover">
+                        </div>
+                        <button onclick="window.clearPromptEngineerImage()" id="pe-clear-btn" class="hidden text-xs text-red-500 font-bold hover:underline">Clear</button>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold uppercase text-app-secondary mb-1">3. Extra Context (Optional)</label>
+                    <input type="text" id="prompt-engineer-context" placeholder="e.g. Make it darker, add honeycombs..." class="w-full p-2 border rounded-md bg-app-tertiary text-app-header text-sm">
+                </div>
+
+                <button id="btn-analyze-prompt" class="w-full bg-pink-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-pink-700 btn mb-4 flex items-center justify-center gap-2">
+                    ✨ Generate Prompt
+                </button>
+
+                <div id="prompt-engineer-output" class="hidden">
+                    <label class="block text-xs font-bold uppercase text-app-secondary mb-1">Generated Prompt</label>
+                    <textarea id="pe-result-text" rows="3" class="w-full p-2 border rounded-md bg-app-primary border-pink-500/30 text-app-header text-sm font-mono" readonly></textarea>
+                    <button onclick="window.copyEngineerPrompt()" class="mt-2 text-xs text-pink-600 font-bold uppercase hover:underline">Copy to Clipboard</button>
+                </div>
+            </div>
+
+            <div class="card p-6 rounded-lg border-2 border-purple-500/20">
+                <h3 class="text-xl font-header font-bold mb-4 flex items-center gap-2 text-purple-600">
+                    Custom Assets
+                </h3>
+                
+                <div class="mb-6">
+                    <h4 class="font-bold text-sm text-app-brand uppercase mb-2">A. Art Styles (Prompts)</h4>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="newStyleName" placeholder="Name (e.g. Dark Fantasy)" class="w-1/3 p-2 border rounded bg-app-tertiary text-xs text-app-header">
+                        <input type="text" id="newStylePrompt" placeholder="Prompt suffix..." class="flex-grow p-2 border rounded bg-app-tertiary text-xs text-app-header">
+                        <button id="addStyleBtn" class="bg-purple-600 text-white px-3 rounded text-xs font-bold hover:bg-purple-700">+</button>
+                    </div>
+                    <div id="settings-styles-list" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar bg-app-primary p-2 rounded border border-app-brand/10"></div>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-sm text-app-brand uppercase mb-2">B. Typography (Google Fonts)</h4>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="newFontName" placeholder="Font Name (e.g. Playfair Display)" class="flex-grow p-2 border rounded bg-app-tertiary text-xs text-app-header">
+                        <button id="addFontBtn" class="bg-purple-600 text-white px-3 rounded text-xs font-bold hover:bg-purple-700">+</button>
+                    </div>
+                    <div id="settings-fonts-list" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar bg-app-primary p-2 rounded border border-app-brand/10"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="bottling-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

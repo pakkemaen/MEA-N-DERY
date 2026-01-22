@@ -747,11 +747,29 @@ function setLabelTheme(theme) {
         const allergenColor = getVal('tuneAllergenColor') || '#000000';
         const specsAlign = getVal('tuneSpecsAlign') || 'center';
 
-        // Bepaal CSS classes voor specs uitlijning
+        // Bepaal CSS classes voor specs uitlijning (CONTAINER)
         let specsFlexAlign = 'items-center'; // Default center
         let specsTextAlign = 'text-center';
-        if (specsAlign === 'left') { specsFlexAlign = 'items-start'; specsTextAlign = 'text-left'; }
-        if (specsAlign === 'right') { specsFlexAlign = 'items-end'; specsTextAlign = 'text-right'; }
+        
+        // Bepaal CSS classes voor de kolommen (INHOUD)
+        // Default (Center): Labels rechts, waardes links (zorgt voor een mooie middellijn)
+        let gridLabelAlign = 'text-right'; 
+        let gridValueAlign = 'text-left'; 
+
+        if (specsAlign === 'left') { 
+            specsFlexAlign = 'items-start'; 
+            specsTextAlign = 'text-left'; 
+            // Bij links uitlijnen: alles links
+            gridLabelAlign = 'text-left';
+            gridValueAlign = 'text-left';
+        }
+        if (specsAlign === 'right') { 
+            specsFlexAlign = 'items-end'; 
+            specsTextAlign = 'text-right'; 
+            // Bij rechts uitlijnen: alles rechts
+            gridLabelAlign = 'text-right';
+            gridValueAlign = 'text-right';
+        }
 
         // Story Sliders
         const descX = getVal('tuneDescX') || 50;  
@@ -831,12 +849,12 @@ function setLabelTheme(theme) {
                         ${allergenText ? `<div class="leading-tight pt-1"><span class="uppercase font-bold" style="color: ${allergenColor}">${allergenText}</span></div>` : ''}
                     </div>` : ''}
                     
-                    <div class="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 font-bold uppercase tracking-wider text-left">
-                        ${abv ? `<div class="text-right opacity-60 whitespace-nowrap">ABV</div> <div class="whitespace-nowrap">${abv}%</div>` : ''}
-                        ${fg ? `<div class="text-right opacity-60 whitespace-nowrap">FG</div> <div class="whitespace-nowrap">${fg}</div>` : ''}
-                        ${vol ? `<div class="text-right opacity-60 whitespace-nowrap">Vol</div> <div class="whitespace-nowrap">${vol}ml</div>` : ''}
-                        ${dateVal ? `<div class="text-right opacity-60 whitespace-nowrap">Bottled</div> <div class="whitespace-nowrap">${dateVal}</div>` : ''}
-                        ${peakDateVal ? `<div class="text-right opacity-60 whitespace-nowrap">Peak</div> <div class="whitespace-nowrap">${peakDateVal}</div>` : ''}
+                    <div class="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 font-bold uppercase tracking-wider ${specsTextAlign}">
+                        ${abv ? `<div class="${gridLabelAlign} opacity-60 whitespace-nowrap">ABV</div> <div class="${gridValueAlign} whitespace-nowrap">${abv}%</div>` : ''}
+                        ${fg ? `<div class="${gridLabelAlign} opacity-60 whitespace-nowrap">FG</div> <div class="${gridValueAlign} whitespace-nowrap">${fg}</div>` : ''}
+                        ${vol ? `<div class="${gridLabelAlign} opacity-60 whitespace-nowrap">Vol</div> <div class="${gridValueAlign} whitespace-nowrap">${vol}ml</div>` : ''}
+                        ${dateVal ? `<div class="${gridLabelAlign} opacity-60 whitespace-nowrap">Bottled</div> <div class="${gridValueAlign} whitespace-nowrap">${dateVal}</div>` : ''}
+                        ${peakDateVal ? `<div class="${gridLabelAlign} opacity-60 whitespace-nowrap">Peak</div> <div class="${gridValueAlign} whitespace-nowrap">${peakDateVal}</div>` : ''}
                     </div>
                 </div>
             </div>
@@ -955,8 +973,21 @@ function setLabelTheme(theme) {
        if(descAlign === 'left') descFlex = 'items-start';
        if(descAlign === 'right') descFlex = 'items-end';
 
+       // --- GRID UITLIJNING LOGICA ---
+       let gridLabelAlign = 'text-right'; 
+       let gridValueAlign = 'text-left'; 
+
+       if (specsAlign === 'left') { 
+           gridLabelAlign = 'text-left';
+           gridValueAlign = 'text-left';
+       } else if (specsAlign === 'right') { 
+           gridLabelAlign = 'text-right';
+           gridValueAlign = 'text-right';
+       }
+
        // --- SPLIT LOGIC ---
        const splitBySlider = (text, breakVal) => {
+           // ... (deze functie blijft hetzelfde, niet aanpassen) ...
            const cleanText = text.replace(/\|/g, ''); 
            const words = cleanText.split(' ').filter(w => w.trim() !== '');
            if (breakVal >= 8 || breakVal >= words.length) return { l1: cleanText, l2: "", isSplit: false };
@@ -1064,10 +1095,10 @@ function setLabelTheme(theme) {
                 <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.8); text-align: ${specsAlign};">
                    
                    <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-bold justify-center" style="justify-content: ${specsAlign === 'left' ? 'start' : (specsAlign === 'right' ? 'end' : 'center')}">
-                       <span class="opacity-70">ABV</span> <span>${abv}%</span>
-                       ${fg ? `<span class="opacity-70">FG</span> <span>${fg}</span>` : ''}
-                       <span class="opacity-70">Vol</span> <span>${vol}ml</span>
-                       <span class="opacity-70">Date</span> <span>${dateVal}</span>
+                       <span class="opacity-70 ${gridLabelAlign}">ABV</span> <span class="${gridValueAlign}">${abv}%</span>
+                       ${fg ? `<span class="opacity-70 ${gridLabelAlign}">FG</span> <span class="${gridValueAlign}">${fg}</span>` : ''}
+                       <span class="opacity-70 ${gridLabelAlign}">Vol</span> <span class="${gridValueAlign}">${vol}ml</span>
+                       <span class="opacity-70 ${gridLabelAlign}">Date</span> <span class="${gridValueAlign}">${dateVal}</span>
                    </div>
 
                    ${extraInfoHtml ? `<div class="mb-2 border-t border-white/20 pt-1 space-y-0.5 font-sans">${extraInfoHtml}</div>` : ''}

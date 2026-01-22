@@ -114,7 +114,32 @@ function buildPrompt() {
              }
         }
 
-        // 2. Math Injection (SLIMMER GEMAAKT)
+        // --- CARBONATIE LOGICA ---
+        // Haal instelling op (standaard is bottle als er niets is opgeslagen)
+        const carbMethod = state.userSettings?.carbonationMethod || 'bottle';
+        let carbContext = "";
+
+        if (carbMethod === 'keg') {
+            carbContext = `
+            **CARBONATION METHOD: KEG (FORCE CARB).**
+            - **Stability:** You MAY stabilize (Sorbate/Metabisulphite) and backsweeten freely with fermentable sugars (Honey/Sugar).
+            - **Process:** Ferment -> Stabilize -> Backsweeten -> Keg -> Force Carbonate.
+            `;
+        } else {
+            // Flessen (Standaard)
+            carbContext = `
+            **CARBONATION METHOD: BOTTLE CONDITIONING.**
+            - **CRITICAL SAFETY:** The user puts this in glass bottles.
+            - **Stabilization:** DO NOT stabilize with Sorbate if carbonation is desired (yeast must remain alive).
+            - **Sweetness Dilemma:** IF the user wants "Sweet" AND "Carbonated":
+              1. You CANNOT add Honey/Sugar for sweetness at bottling (Bottle Bomb risk).
+              2. You MUST recommend non-fermentable sweeteners (Erythritol/Lactose) for sweetness.
+              3. OR recommend pasteurization (advanced).
+            - **Process:** Ferment Dry -> Add Priming Sugar -> Bottle.
+            `;
+        }
+
+        // 2. Math Injection
         let mathContext = "";
 
         if (isAutoABV) {
@@ -128,10 +153,20 @@ function buildPrompt() {
             ${budgetContext}
             `;
         } else {
-            // SCENARIO: GEBRUIKER KIEST (Zoals vroeger)
+            // SCENARIO: GEBRUIKER KIEST
             const honeyGramsPerLiter = targetABV * 22; 
             const totalHoneyKg = (honeyGramsPerLiter * batchSize) / 1000;
             const estimatedYAN = Math.round(targetABV * 10);
+        
+            // LET OP: Hier stond 'let mathContext', dat heb ik weggehaald!
+            mathContext = `
+            **CALCULATED TARGETS:**
+            - **Batch:** ${batchSize}L | **Target ABV:** ${targetABV}%
+            - **Honey Baseline:** ~${totalHoneyKg.toFixed(2)} kg (Assuming honey provides 100% of alcohol).
+            - **SHOPPING LIST RULE:** If target is **SWEET**, add ~15% extra honey to the JSON for backsweetening.
+            - **Nitrogen Target:** ~${estimatedYAN} PPM YAN.${budgetContext}
+            `;
+        }
         
         let mathContext = `
         **CALCULATED TARGETS:**
@@ -326,6 +361,7 @@ function buildPrompt() {
         return `You are "MEA(N)DERY", a master mazer. 
 
 ${mathContext}
+${carbContext}
 ${protocolContext}
 ${specificLaws}
 ${inventoryLogic}

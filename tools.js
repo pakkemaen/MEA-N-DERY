@@ -42,6 +42,9 @@ function applySettings() {
     const s = state.userSettings;
     if(document.getElementById('apiKeyInput')) document.getElementById('apiKeyInput').value = s.apiKey || '';
     if(document.getElementById('defaultBatchSizeInput')) document.getElementById('defaultBatchSizeInput').value = s.defaultBatchSize || 5;
+    if(document.getElementById('defaultCarbonationInput')) {
+        document.getElementById('defaultCarbonationInput').value = s.carbonationMethod || 'bottle';
+    }
     
     if (s.theme === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
@@ -52,6 +55,7 @@ async function saveUserSettings() {
     const newSettings = {
         apiKey: document.getElementById('apiKeyInput').value.trim(),
         defaultBatchSize: parseFloat(document.getElementById('defaultBatchSizeInput').value),
+        carbonationMethod: document.getElementById('defaultCarbonationInput').value,
         theme: document.getElementById('theme-toggle-checkbox').checked ? 'dark' : 'light'
     };
     

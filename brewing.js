@@ -134,6 +134,7 @@ function buildPrompt() {
         - **SHOPPING LIST RULE:** If target is **SWEET**, add ~15% extra honey to the JSON for backsweetening.
         - **Nitrogen Target:** ~${estimatedYAN} PPM YAN.${budgetContext}
         `;
+        }
 
         if (isNoWater) {
             mathContext += `\n- **PROTOCOL: NO-WATER MELOMEL.** 1. No added water. 2. Need ~1.8kg fruit/Liter. 3. **SUGAR ALERT:** Fruit adds sugar. REDUCE Honey Baseline significantly.`;

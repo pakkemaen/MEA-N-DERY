@@ -326,10 +326,16 @@ function buildPrompt() {
         let waterContext = "";
         if (isNoWater) {
             waterContext = `**WATER RULE:** DO NOT ADD WATER. Liquid must come from fruit juice/maceration only.`;
-        } else if (window.currentWaterProfile) {  // <--- AANGEPAST
+        } else if (window.currentWaterProfile) { 
             waterContext = `Use Water: ${window.currentWaterProfile.name}`;
         } else {
-            waterContext = `Recommend Ideal Water Profile.`;
+            // HIER IS DE WIJZIGING: Focus op type water, verbied chemie.
+            waterContext = `
+            **WATER INSTRUCTION (NO CHEMISTRY):**
+            1. **FORBIDDEN:** Do NOT recommend adding brewing salts (Gypsum, Epsom, etc.). The user uses bottled water.
+            2. **TASK:** Describe the *type* of water needed for this specific mead style (e.g., "Soft water to let delicate varietals shine" or "Mineral-rich water for structure").
+            3. **REFERENCE:** Mention a suitable **Belgian brand** ONLY as an example (e.g. "Use a soft water like Spa Reine" or "A mineral water like Chaudfontaine").
+            `;
         }
 
         // 7. Input Verwerking

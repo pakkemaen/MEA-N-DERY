@@ -73,24 +73,30 @@ function getFortKnoxLaws(isNoWater = false, isBraggot = false, isHydromel = fals
 `;
 }
 
-// --- CORE: De Prompt Bouwer (AANGEPAST: AUTO ABV) ---
+// --- CORE: De Prompt Bouwer (AANGEPAST: AUTO ABV & DESCRIPTION PRIORITY) ---
 function buildPrompt() {
     try {
         // 1. Data Verzamelen
         const batchSize = parseFloat(document.getElementById('batchSize')?.value) || 5;
         
-        // AANGEPAST: We lezen de ruwe waarde om te zien of hij leeg is
+        // EERST: Haal de beschrijving op
+        const customDescription = document.getElementById('customDescription')?.value.trim() || "";
+        const hasDescription = customDescription !== "";
+
+        // DAN: Haal de ABV op
         const abvEl = document.getElementById('abv');
         const rawABV = abvEl ? abvEl.value : ''; 
-        const isAutoABV = rawABV === '' || rawABV === '0'; // Leeg? Dan mag de AI kiezen.
         
-        // Als er wel een getal is, gebruiken we dat. Anders voorlopig 12 voor interne fallback (wordt overschreven in tekst).
+        // LOGICA: ABV is "Auto" als het veld leeg/0 is, OF als de gebruiker een beschrijving typt.
+        // Als er een beschrijving is, negeren we de slider/input volledig en laten we de AI de tekst interpreteren.
+        const isAutoABV = (rawABV === '' || rawABV === '0') || hasDescription;
+        
+        // Als het NIET auto is, gebruiken we het getal. Anders is het 12 (fallback voor berekeningen, AI overrulet dit).
         const targetABV = isAutoABV ? 12 : (parseFloat(rawABV) || 12);
 
         const sweetness = document.getElementById('sweetness')?.value;
         const styleSelect = document.getElementById('style');
         const style = styleSelect.selectedOptions.length > 0 ? styleSelect.selectedOptions[0].text : 'Traditional Mead';
-        const customDescription = document.getElementById('customDescription').value;
         
         // 1.5 Input Analyse
         const inputString = (customDescription + " " + style).toLowerCase();

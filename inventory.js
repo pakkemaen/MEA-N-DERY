@@ -63,25 +63,26 @@ function renderInventory() {
                 if(c.includes('honey')) catClass = 'cat-honey';
                 if(c.includes('fruit')) catClass = 'cat-fruit';
                 
-                html += `
-                <div id="item-${item.id}" class="p-4 card rounded-xl border-l-4 ${catClass.replace('cat-', 'border-')} shadow-sm hover:shadow-md transition-all bg-app-secondary group relative">
-                    <div class="flex justify-between items-start">
-                        <div class="pr-4">
-                            <div class="font-bold text-xl text-app-header leading-tight">${item.name}</div>
-                            <div class="text-xs text-app-secondary mt-1">Exp: ${expDateStr}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="inline-block bg-app-tertiary px-2 py-1 rounded-lg border border-app-brand/10 mb-2">
-                                <div class="font-mono font-bold text-app-header text-sm">${item.qty} <span class="text-xs font-normal text-app-secondary">${item.unit}</span></div>
-                            </div>
-                            <div class="text-xs text-app-secondary font-mono mb-3">${currency}${(item.price || 0).toFixed(2)}</div>
-                        </div>
-                    </div>
-                    <div class="flex justify-end gap-4 mt-2 pt-2 border-t border-app-brand/5">
-                        <button onclick="window.editInventoryItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-blue-600 uppercase">Edit</button>
-                        <button onclick="window.deleteInventoryItem('${item.id}')" class="text-xs font-bold text-app-secondary hover:text-red-600 uppercase">Delete</button>
-                    </div>
-                </div>`; 
+
+html += `
+<div id="item-${item.id}" class="p-4 card rounded-2xl border border-outline-variant shadow-none hover:shadow-elevation-1 transition-all bg-surface-container group relative">
+    <div class="flex justify-between items-start">
+        <div class="pr-4">
+            <div class="font-bold text-xl text-on-surface leading-tight">${item.name}</div>
+            <div class="text-xs text-on-surface-variant mt-1">Exp: ${expDateStr}</div>
+        </div>
+        <div class="text-right">
+            <div class="inline-block bg-surface-variant/20 px-2 py-1 rounded-lg border border-outline-variant/30 mb-2">
+                <div class="font-mono font-bold text-on-surface text-sm">${item.qty} <span class="text-xs font-normal text-on-surface-variant">${item.unit}</span></div>
+            </div>
+            <div class="text-xs text-on-surface-variant font-mono mb-3">${currency}${(item.price || 0).toFixed(2)}</div>
+        </div>
+    </div>
+    <div class="flex justify-end gap-4 mt-2 pt-2 border-t border-outline-variant/20">
+        <button onclick="window.editInventoryItem('${item.id}')" class="text-xs font-bold text-primary hover:brightness-110 uppercase tracking-wider">Edit</button>
+        <button onclick="window.deleteInventoryItem('${item.id}')" class="text-xs font-bold text-error hover:brightness-110 uppercase tracking-wider">Delete</button>
+    </div>
+</div>`; 
             });
             html += `</div>`;
         }
@@ -1365,7 +1366,7 @@ window.deleteCellarItem = async function(id, name) {
 window.updateCostAnalysis = function() {
     const currency = state.userSettings.currencySymbol || '€';
     
-    // 1. Bereken Totalen
+    // 1. Bereken Totalen (Ongewijzigd)
     let invValue = state.inventory.reduce((sum, item) => sum + (item.price || 0), 0);
     let activeValue = state.brews.filter(b => !b.isBottled).reduce((sum, b) => sum + (b.totalCost || 0), 0);
     let cellarValue = state.cellar.reduce((sum, c) => sum + (c.totalBatchCost || 0), 0);
@@ -1381,36 +1382,40 @@ window.updateCostAnalysis = function() {
     if(elCellar) elCellar.textContent = `${currency}${cellarValue.toFixed(2)}`;
     if(elGrand) elGrand.textContent = `${currency}${(invValue + activeValue + cellarValue).toFixed(2)}`;
     
-    // 2. Update de Grafiek met VASTE Kleuren
+    // 2. Update de Grafiek met MD3 THEMA KLEUREN
     const ctx = document.getElementById('cost-chart');
     if (ctx && window.Chart) {
         
-        // Data groeperen
         const spendByCategory = state.inventory.reduce((acc, item) => {
             const cat = item.category || 'Other';
             acc[cat] = (acc[cat] || 0) + (item.price || 0);
             return acc;
         }, {});
 
-        // Definieer vaste kleuren per categorie (zodat Fruit altijd rood is, etc.)
+        // We mappen categorieën aan jouw CSS Variabelen voor consistentie
+        // Helper: rgb(${window.getThemeColor('--md-sys-color-primary')})
+        const cPrimary = `rgb(${window.getThemeColor('--md-sys-color-primary')})`;
+        const cSecondary = `rgb(${window.getThemeColor('--md-sys-color-secondary')})`;
+        const cTertiary = `rgb(${window.getThemeColor('--md-sys-color-tertiary')})`;
+        const cError = `rgb(${window.getThemeColor('--md-sys-color-error')})`;
+        const cSurfaceVar = `rgb(${window.getThemeColor('--md-sys-color-surface-variant')})`;
+
         const categoryColors = {
-            'Honey': '#f59e0b',        // Goud/Amber
-            'Yeast': '#a16207',        // Donkergeel/Bruin
-            'Nutrient': '#65a30d',     // Frisgroen
-            'Malt Extract': '#7c2d12', // Donkerbruin (Mout)
-            'Fruit': '#dc2626',        // Rood
-            'Spice': '#ea580c',        // Oranje
-            'Adjunct': '#57534e',      // Grijs
-            'Chemical': '#2563eb',     // Blauw
-            'Water': '#0891b2',        // Cyaan
-            'Other': '#8F8C79'         // Je Brand Color
+            'Honey': cPrimary,           // Honey -> Primary (Amber)
+            'Yeast': cTertiary,          // Yeast -> Tertiary (Slate)
+            'Nutrient': cSecondary,      // Nutrient -> Secondary (Green)
+            'Malt Extract': '#7c2d12',   // Custom Brown (blijft mooi)
+            'Fruit': cError,             // Fruit -> Error (Red-ish)
+            'Spice': '#ea580c',          
+            'Adjunct': cSurfaceVar,
+            'Chemical': '#2563eb',
+            'Water': '#0891b2',
+            'Other': cSurfaceVar
         };
 
         const labels = Object.keys(spendByCategory);
         const data = Object.values(spendByCategory);
-        
-        // Wijs de kleuren toe op basis van de labelnaam
-        const backgroundColors = labels.map(cat => categoryColors[cat] || '#8F8C79');
+        const backgroundColors = labels.map(cat => categoryColors[cat] || cSurfaceVar);
 
         if (window.costChart) window.costChart.destroy();
         
@@ -1421,7 +1426,8 @@ window.updateCostAnalysis = function() {
                 datasets: [{ 
                     data: data, 
                     backgroundColor: backgroundColors,
-                    borderWidth: 0 // Geen witte randjes voor een strakker effect
+                    borderColor: `rgb(${window.getThemeColor('--md-sys-color-surface')})`, // Rand matcht achtergrond
+                    borderWidth: 2
                 }]
             },
             options: { 
@@ -1431,8 +1437,10 @@ window.updateCostAnalysis = function() {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            usePointStyle: true, // Bolletjes i.p.v. vierkantjes
-                            padding: 20
+                            usePointStyle: true,
+                            padding: 20,
+                            color: `rgb(${window.getThemeColor('--md-sys-color-on-surface')})`,
+                            font: { family: "'Barlow Semi Condensed', sans-serif" }
                         }
                     }
                 }

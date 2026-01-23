@@ -1,976 +1,430 @@
-/* --- 1. VARIABLES & THEME SETUP --- */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap');
+
+/* =========================================
+   1. DESIGN TOKENS (MATERIAL 3 - MEAD THEME)
+   ========================================= */
+:root {
+    /* --- COLOR PALETTE: HONEY & SLATE --- */
     
-    /* --- 1. VARIABLES & THEME SETUP (HIGH CONTRAST EDITION) --- */
+    /* LIGHT MODE */
+    /* Primary (Honey/Amber - Prominent) */
+    --md-sys-color-primary: 180 83 9;              /* amber-700 */
+    --md-sys-color-on-primary: 255 255 255;        /* white */
+    --md-sys-color-primary-container: 254 243 199; /* amber-100 */
+    --md-sys-color-on-primary-container: 69 26 3;  /* amber-900 */
+
+    /* Secondary (Herbal/Nature - Supporting) */
+    --md-sys-color-secondary: 77 124 15;           /* lime-700 */
+    --md-sys-color-on-secondary: 255 255 255;
+    --md-sys-color-secondary-container: 236 252 203; /* lime-100 */
+    --md-sys-color-on-secondary-container: 26 46 5;
+
+    /* Tertiary (Slate/Neutral) */
+    --md-sys-color-tertiary: 100 116 139;          /* slate-500 */
+    --md-sys-color-tertiary-container: 241 245 249; /* slate-100 */
+
+    /* Surface (Warm Off-Whites) */
+    --md-sys-color-surface: 255 251 245;           /* Warm white (Mead foam) */
+    --md-sys-color-on-surface: 28 25 23;           /* stone-900 (High contrast) */
+    --md-sys-color-on-surface-variant: 68 64 60;   /* stone-700 (Subtext) */
     
-    /* DEFAULT: LIGHT MODE */
-    :root {
-        /* Achtergronden (Behouden we, die zijn mooi) */
-        --bg-primary: #f4f1ea;       
-        --bg-secondary: #ffffff;     
-        --bg-tertiary: #ebe9e4;      
-        
-        /* Tekst - AANGEPAST: Veel donkerder/harder */
-        --text-primary: #000000;     /* Was donkergrijs, nu PUUR ZWART */
-        --text-secondary: #333333;   /* Was zachtgrijs, nu DONKERGRIJS (bijna zwart) */
-        --border-color: #a8a29e;     /* Iets donkerder randje voor duidelijkheid */
-        
-        /* Brand Colors */
-        --brand-color: #787565;      /* Iets donkerder olijf voor betere leesbaarheid */
-        --brand-dark: #4b493f;       
-        --action-color: #b45309;     
-        
-        /* Functional Colors */
-        --danger-color: #dc2626;
-        --success-color: #16a34a;
-        --info-color: #2563eb;
-        
-        /* Spacing & Radius */
-        --radius-md: 8px;
-        --radius-lg: 12px;
-        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    /* OVERRIDE: DARK MODE */
-    .dark {
-        /* Achtergronden (Diep zwart voor OLED schermen) */
-        --bg-primary: #000000;       /* Puur zwart */
-        --bg-secondary: #121212;     /* Heel donker grijs */
-        --bg-tertiary: #1e1e1e;      
-        
-        /* Tekst - AANGEPAST: Veel feller/witter */
-        --text-primary: #ffffff;     /* Puur wit (blijft hetzelfde) */
-        --text-secondary: #e0e0e0;   /* Was grijs, is nu BIJNA WIT (90% wit) */
-        --border-color: #404040;     
-        
-        /* Brand Colors (Lichter maken voor op zwart) */
-        --brand-color: #a3a08f;      /* Lichtere olijfkleur die 'gloeit' op zwart */
-        --brand-dark: #e5e5e5;       
-        --action-color: #f59e0b;     /* Feller amber */
-        
-        --shadow-md: 0 4px 6px -1px rgba(255, 255, 255, 0.05); /* Subtiele witte gloed */
-    }
-
-    body {
-        font-family: 'Barlow Semi Condensed', sans-serif;
-        background-color: var(--bg-primary);
-        color: var(--text-primary);
-        transition: background-color 0.3s, color 0.3s;
-        line-height: 1.6;
-        padding-bottom: env(safe-area-inset-bottom); /* Zorgt voor ruimte bij de swipe-bar */
-    }
-
-    /* Zorg dat placeholders leesbaar zijn in light mode */
-    ::placeholder {
-        color: #a8a29e; /* Een iets donkerder grijs */
-        opacity: 1;
-    }
-
-    .dark ::placeholder {
-        color: #525252; /* Iets lichter voor dark mode */
-    }
-
-    /* --- 2. TYPOGRAPHY (UNIFIED) --- */
-    /* Alle koppen krijgen nu de 'Recipe Style' */
-    h1, h2, h3, h4, .font-header {
-        font-family: 'Barlow Semi Condensed', sans-serif;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--text-primary);
-    }
-
-    h1 { font-size: 2.5rem; line-height: 1.1; }
-    h2 { font-size: 1.75rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; }
-    h3 { font-size: 1.25rem; margin-bottom: 1rem; color: var(--brand-color); }
-
-    .text-app-secondary { color: var(--text-secondary) !important; }
-    .text-app-brand { color: var(--brand-color) !important; }
-
-    /* --- 3. CARDS & CONTAINERS --- */
-    /* Maak alle vlakken consistent */
-    .card, .bg-app-secondary {
-        background-color: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-md);
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    /* Specifiek voor dashboard knoppen */
-    button.card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        border-color: var(--brand-color);
-    }
-
-    /* --- 4. FORMS & INPUTS (MODERN) --- */
-    input[type="text"], input[type="number"], input[type="date"], 
-    input[type="password"], select, textarea {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        background-color: var(--bg-tertiary);
-        color: var(--text-primary);
-        font-family: inherit;
-        font-size: 1rem;
-        transition: all 0.2s;
-        box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
-    }
-
-    input:focus, select:focus, textarea:focus {
-        outline: none;
-        border-color: var(--brand-color);
-        background-color: var(--bg-secondary);
-        box-shadow: 0 0 0 3px rgba(143, 140, 121, 0.15); /* Glow effect */
-    }
-
-    /* Dark mode fixes voor inputs */
-    .dark input, .dark select, .dark textarea {
-        background-color: var(--bg-tertiary) !important;
-        color: var(--text-primary) !important;
-    }
+    /* Surface Container (Cards) */
+    --md-sys-color-surface-container: 255 255 255; /* white */
+    --md-sys-color-surface-bright: 255 255 255;
     
-    /* Fix voor browser autofill (witte achtergrond) */
-    .dark input:-webkit-autofill {
-        -webkit-box-shadow: 0 0 0 30px var(--bg-tertiary) inset !important;
-        -webkit-text-fill-color: var(--text-primary) !important;
-    }
+    /* Outlines & Borders */
+    --md-sys-color-outline: 120 113 108;           /* stone-500 */
+    --md-sys-color-outline-variant: 214 211 209;   /* stone-200 */
 
-    /* --- 5. BUTTON SYSTEM --- */
+    /* State & Status */
+    --md-sys-color-error: 186 26 26;
+    --md-sys-color-error-container: 255 218 214;
     
-    /* Basis Knop Stijl */
-    .btn {
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        border-radius: var(--radius-md);
-        padding: 10px 20px;
-        transition: all 0.2s;
-        cursor: pointer;
-        border: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Subtiele schaduw voor diepte */
-    }
-    
-    .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.15); }
-    .btn:active { transform: translateY(0); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-    /* 1. PRIMARY ACTION (De belangrijkste knop: Generate, Save, Start) - AMBER/ORANJE */
-    .bg-app-action {
-        background-color: var(--action-color) !important; /* Amber/Oranje */
-        color: #ffffff !important;
-    }
-
-    /* 2. SECONDARY / BRAND (Neutrale acties: Navigatie, Info) - OLIVE/GREY */
-    .bg-app-brand, .bg-primary-btn {
-        background-color: var(--brand-color) !important; /* Olive */
-        color: #ffffff !important;
-    }
-
-    /* 3. FUNCTIONAL COLORS (Specifieke acties) */
-    .bg-green-600, .bg-green-700 { background-color: var(--success-color) !important; color: white !important; }
-    .bg-red-600, .bg-red-700     { background-color: var(--danger-color) !important; color: white !important; }
-    .bg-blue-600, .bg-blue-700   { background-color: var(--info-color) !important; color: white !important; }
-    .bg-purple-600, .bg-purple-700 { background-color: #9333ea !important; color: white !important; } /* AI Actions */
-
-    /* 4. TERTIARY / GHOST (Annuleren, Minder belangrijk) */
-    .bg-app-tertiary {
-        background-color: var(--bg-tertiary);
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
-        box-shadow: none;
-    }
-    .bg-app-tertiary:hover {
-        border-color: var(--brand-color);
-        background-color: var(--bg-secondary);
-    }
-
-    /* --- TEXTAREA FIXES --- */
-    textarea {
-        /* 1. Meer ademruimte: tekst en placeholder schuiven naar binnen */
-        padding: 16px !important; 
-        
-        /* 2. Verwijder het 'puntje' (resize handle) rechtsonder */
-        resize: none !important; 
-        
-        /* Zorg dat de tekst mooi leest */
-        line-height: 1.6 !important;
-    }
-
-    /* 5. NAVIGATION BUTTONS (Dashboard tegels) */
-    .main-nav-btn {
-        background-color: var(--bg-secondary);
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        transition: all 0.2s; /* Zorg voor soepele overgang */
-    }
-    
-    /* HOVER STAAT (AANGEPAST VOOR CONTRAST) */
-    .main-nav-btn:hover {
-        border-color: var(--brand-color);
-        background-color: var(--bg-tertiary); /* Iets donkerder dan wit */
-        color: var(--brand-color); /* Tekst wordt goud/olijf */
-        transform: translateY(-2px); /* Klein hupje */
-    }
-    
-    /* Zorg dat het icoon ook meekleurd bij hover */
-    .main-nav-btn:hover svg {
-        color: var(--brand-color);
-    }
-
-    /* --- 6. TABLES (CLEAN & TRANSPARENT) --- */
-    table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        margin: 1rem 0;
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        overflow: hidden;
-    }
-
-    th {
-        background-color: var(--text-primary);
-        color: var(--bg-primary);
-        font-weight: 700;
-        text-transform: uppercase;
-        font-size: 0.85rem;
-        padding: 12px 16px;
-        text-align: left;
-        letter-spacing: 0.05em;
-    }
-
-    td {
-        padding: 0; /* Geen padding in de cel zelf, de input vult hem op */
-        border-bottom: 1px solid var(--border-color);
-        font-size: 0.95rem;
-        height: 3rem; /* Vaste hoogte voor rust */
-        position: relative;
-    }
-
-    tr:last-child td { border-bottom: none; }
-    
-    /* Zebra striping */
-    tr:nth-child(even) { background-color: rgba(0,0,0,0.02); }
-    .dark tr:nth-child(even) { background-color: rgba(255,255,255,0.03); }
-
-    /* --- DE FIX: TRANSPARANTE INPUTS --- */
-    table input, table select {
-        background-color: transparent !important; /* Geen achtergrondkleur! */
-        border: none !important;
-        box-shadow: none !important;
-        border-radius: 0 !important;
-        
-        width: 100%;
-        height: 100%;
-        padding: 0 12px !important; /* Padding in de input zelf */
-        
-        color: var(--text-primary);
-        font-family: inherit;
-        font-size: 0.95rem;
-    }
-
-    /* Zorg dat datums en nummers niet verspringen */
-    table input[type="date"], 
-    table input[type="number"] {
-        text-align: left;
-        cursor: pointer; /* Laat zien dat het klikbaar is */
-    }
-
-    /* Centreer de nummers in de middelste kolommen als je dat wilt */
-    table td:not(:first-child):not(:last-child) input {
-        text-align: center;
-    }
-
-    /* Alleen als je erop klikt/typt krijg je een highlight */
-    table input:focus {
-        background-color: var(--bg-tertiary) !important; /* Lichte highlight */
-        outline: 2px solid var(--brand-color);
-        outline-offset: -2px; /* Randje binnenin */
-    }
-
-    /* 1. De Container (Het kader om alles heen) */
-    .log-container {
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-lg); /* Mooie ronde hoeken */
-        overflow: hidden; /* Zorgt dat de hoeken van de tabel niet uitsteken */
-        background-color: var(--bg-secondary); /* Achtergrondkleur */
-        margin-bottom: 0.5rem; /* Ruimte onder de tabel */
-    }
-
-    /* 2. De Tabel zelf resetten */
-    table.fermentation-table {
-        border: none !important; /* Geen dubbele randen */
-        border-radius: 0 !important;
-        margin: 0 !important; /* Geen marges binnen het kader */
-    }
-
-    /* 3. De Header Balk */
-    .fermentation-table th {
-        background-color: var(--text-primary); /* Zwart/Donker */
-        color: var(--bg-primary); /* Wit/Licht tekst */
-        border: none;
-    }
-
-    /* 4. De Rijen */
-    .fermentation-table td {
-        border-bottom: 1px solid var(--border-color);
-        /* Zorg dat de inputs transparant zijn zodat de rij-kleur zichtbaar blijft */
-    }
-
-    /* De allerlaatste rij mag geen lijntje onderaan hebben, anders ziet het er dubbel uit met het kader */
-    .fermentation-table tr:last-child td {
-        border-bottom: none;
-    }
-
-    /* --- TABEL KOLOMMEN FIX --- */
-    /* Voegt verticale lijntjes toe tussen de kolommen */
-    .fermentation-table th:not(:last-child),
-    .fermentation-table td:not(:last-child) {
-        border-right: 1px solid var(--border-color);
-    }
-
-    /* Zorg dat de input veldjes in de tabel niet tegen de lijntjes plakken */
-    .fermentation-table input {
-        text-align: center; /* Alles netjes in het midden */
-    }
-    
-    /* De eerste kolom (Datum) mag links uitgelijnd blijven */
-    .fermentation-table td:first-child input {
-        text-align: left;
-        padding-left: 8px !important;
-    }
-    
-    /* De laatste kolom (Notes) mag links uitgelijnd blijven */
-    .fermentation-table td:last-child input {
-        text-align: left;
-        padding-left: 8px !important;
-    }
-
-    /* --- 7. NAVIGATION TABS --- */
-    .sub-tab {
-        padding: 8px 16px;
-        border-radius: 20px; /* Pill shape */
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: var(--text-secondary); /* Dit is #6b655d in light mode - kan te licht zijn */
-    }
-
-    /* FIX: Maak de tekst donkerder bij hover in light mode */
-    .sub-tab:hover {
-        background-color: var(--bg-tertiary);
-        color: var(--brand-dark); /* Gebruik de donkere brand kleur (#6e6b5c) */
-    }
-
-    /* FIX: Zorg voor hard contrast bij actieve tab */
-    .sub-tab.active {
-        background-color: var(--text-primary); /* Donkergrijs in light mode */
-        color: #ffffff; /* Geforceerd wit voor leesbaarheid */
-        border-color: var(--text-primary);
-    }
-    
-    .dark .sub-tab.active {
-        background-color: var(--brand-color);
-        color: #000;
-        border-color: var(--brand-color);
-    }
-
-    /* --- 8. RECIPE CONTENT SPECIFICS (IMPROVED TYPOGRAPHY) --- */
-    
-    /* Basiscontainer voor het recept */
-    .recipe-content {
-        line-height: 1.7; /* Meer lucht tussen regels tekst */
-        font-size: 1.05rem; /* Iets groter voor leesbaarheid */
-    }
-
-    /* --- JUWELIERS FINISH: THE GRAND TITLE --- */
-    .recipe-content h1 {
-        font-family: 'Barlow Semi Condensed', sans-serif;
-        font-size: 3rem;       /* Veel groter (was standaard) */
-        font-weight: 800;      /* Extra dik */
-        color: var(--brand-color); /* Je huisstijl kleur */
-        text-transform: uppercase;
-        letter-spacing: 0.1em; /* Breed uitgesmeerd voor luxe */
-        line-height: 1.1;
-        
-        /* De "Underline" afwerking */
-        margin-bottom: 2rem;
-        padding-bottom: 1rem;
-        border-bottom: 4px double var(--border-color); /* Een dubbele, klassieke lijn */
-        
-        /* Subtiele schaduw voor diepte */
-        text-shadow: 2px 2px 0px rgba(0,0,0,0.05); 
-    }
-
-    /* Mobiele aanpassing zodat het niet van het scherm valt */
-    @media (max-width: 768px) {
-        .recipe-content h1 {
-            font-size: 2.2rem;
-            letter-spacing: 0.05em;
-        }
-    }
-
-    /* Koppen (H2, H3) - Duidelijke scheiding */
-    .recipe-content h2, .recipe-content h3 { 
-        color: var(--brand-color); 
-        margin-top: 2.5rem; /* Ruimte boven de kop */
-        margin-bottom: 1rem; /* Ruimte onder de kop */
-        font-family: 'Barlow Semi Condensed', sans-serif;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    
-    .recipe-content h2 { 
-        font-size: 1.8rem;
-        border-bottom: 2px solid var(--border-color); 
-        padding-bottom: 0.5rem; 
-    }
-
-    .recipe-content h3 {
-        font-size: 1.4rem;
-        border-bottom: 1px dashed var(--border-color); /* Subtiel lijntje onder H3 */
-        padding-bottom: 0.25rem;
-    }
-
-    /* Paragrafen - Niet meer in hokjes, maar vrijstaand met ruimte */
-    .recipe-content p {
-        margin-bottom: 1.25rem;
-        color: var(--text-primary);
-    }
-
-    /* Lijstjes (Ingrediënten, Stappen) - Dit lost het "op elkaar gepropt" probleem op */
-    .recipe-content ul, .recipe-content ol {
-        margin-bottom: 1.5rem;
-        padding-left: 1.5rem; /* Netjes inspringen */
-        background-color: var(--bg-tertiary); /* Het hele lijstje in 1 mooi vlak */
-        border-radius: var(--radius-md);
-        padding: 1.5rem 2rem; /* Ruimte binnen het vlak */
-        border: 1px solid var(--border-color);
-    }
-
-    /* De items in de lijst */
-    .recipe-content li { 
-        margin-bottom: 0.75rem; /* Ruimte TUSSEN de puntjes */
-        position: relative; 
-    }
-
-    /* Nummertjes voor geordende lijsten (Instructions) */
-    .recipe-content ol { 
-        list-style: none; 
-        counter-reset: recipe-counter; 
-    }
-    
-    .recipe-content ol li {
-        counter-increment: recipe-counter;
-        padding-left: 2rem;
-    }
-
-    .recipe-content ol li::before {
-        content: counter(recipe-counter);
-        position: absolute;
-        left: 0;
-        top: 0.1em;
-        width: 1.5rem;
-        height: 1.5rem;
-        background-color: var(--brand-color);
-        color: white;
-        border-radius: 50%;
-        text-align: center;
-        line-height: 1.5rem;
-        font-size: 0.85rem;
-        font-weight: bold;
-    }
-
-    /* Labels dikgedrukt (bijv "Target ABV:") - Meer ruimte rechts */
-    .recipe-content strong {
-        color: var(--text-primary);
-        font-weight: 700;
-        margin-right: 0.3rem; /* Ruimte tussen label en waarde */
-    }
-
-    /* Tabellen (voor ingrediënten als de AI die maakt) */
-    .recipe-content table {
-        width: 100%;
-        margin-bottom: 1.5rem;
-        border-collapse: collapse;
-    }
-    .recipe-content th, .recipe-content td {
-        padding: 0.75rem;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    /* --- JUWELIERS FINISH: STATS BAR & QUOTE --- */
-    
-    /* 1. De Inspiratie Quote (Het zinnetje met >) */
-    .recipe-content blockquote {
-        font-style: italic;
-        color: var(--brand-color);
-        border-left: 3px solid var(--brand-color);
-        padding-left: 1rem;
-        margin: 0 0 1.5rem 0;
-        font-size: 1.1rem;
-        background: transparent; /* Geen grijs vlak */
-    }
-
-    /* 2. De Vital Stats (Het eerste lijstje in het recept) */
-    /* We selecteren specifiek de EERSTE ul na de blockquote */
-    .recipe-content blockquote + ul {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* Responsive Grid */
-        gap: 0.75rem;
-        list-style: none !important; /* Geen bolletjes */
-        padding: 0 !important;       /* Geen inspringing */
-        margin-bottom: 2rem !important;
-        background: transparent !important; /* Geen container kleur */
-        border: none !important;
-    }
-
-    /* 3. De Tegels (Badges) */
-    .recipe-content blockquote + ul li {
-        background-color: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        padding: 0.75rem !important;
-        text-align: center;
-        box-shadow: var(--shadow-sm);
-        margin-bottom: 0 !important;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-    }
-
-    /* 4. Styling van de tekst in de tegels */
-    /* De AI doet "**Label:** Waarde". Wij stylen de **Label** apart. */
-    .recipe-content blockquote + ul li strong {
-        display: block;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        margin-bottom: 0.25rem;
-        margin-right: 0 !important;
-    }
-    
-    /* De Waarde (de tekst na de dubbele punt) */
-    .recipe-content blockquote + ul li {
-        color: var(--brand-color); /* Maak de waarde de brand kleur */
-        font-weight: 700;
-        font-size: 1.1rem;
-        font-family: 'Barlow Semi Condensed', sans-serif;
-    }
-
-    /* --- 9. UTILITIES & MOBILE --- */
-    .hidden { display: none !important; }
-    
-    /* --- JUWELIERS FINISH: INVISIBLE SCROLL (NUCLEAR OPTION V2) --- */
-    .no-scrollbar {
-        -ms-overflow-style: none !important;  /* IE and Edge */
-        scrollbar-width: none !important;  /* Firefox */
-    }
-    
-    /* Verberg de scrollbar zelf */
-    .no-scrollbar::-webkit-scrollbar {
-        display: none !important;
-        width: 0 !important;
-        height: 0 !important;
-        background: transparent !important;
-        -webkit-appearance: none !important;
-    }
-
-    /* Verberg de 'track' (de achtergrondbalk) */
-    .no-scrollbar::-webkit-scrollbar-track {
-        display: none !important;
-        background: transparent !important;
-    }
-
-    /* Verberg de 'thumb' (het schuifblokje) */
-    .no-scrollbar::-webkit-scrollbar-thumb {
-        display: none !important;
-        background: transparent !important;
-    }
-    
-    .loader {
-        border: 3px solid var(--bg-tertiary);
-        border-top: 3px solid var(--brand-color);
-        border-radius: 50%;
-        width: 30px; height: 30px;
-        animation: spin 1s linear infinite;
-        margin: 2rem auto;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-    /* --- DIAMOND POLISH: CUSTOM LOADER --- */
-    .honeycomb-loader {
-        width: 50px;
-        height: 50px;
-        margin: 2rem auto;
-        display: block;
-    }
-
-    .honeycomb-path {
-        fill: none;
-        stroke: var(--brand-color); /* Jouw Olive kleur */
-        stroke-width: 4;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        stroke-dasharray: 210; /* Omtrek van de hexagon */
-        stroke-dashoffset: 210;
-        animation: drawHex 2s linear infinite, glowHex 2s ease-in-out infinite;
-        transform-origin: center;
-    }
-
-    .honeycomb-core {
-        fill: var(--brand-color);
-        opacity: 0;
-        animation: pulseCore 2s ease-in-out infinite;
-        transform-origin: center;
-    }
-
-    @keyframes drawHex {
-        0% { stroke-dashoffset: 210; }
-        50% { stroke-dashoffset: 0; }
-        100% { stroke-dashoffset: -210; }
-    }
-
-    @keyframes pulseCore {
-        0%, 100% { transform: scale(0); opacity: 0; }
-        50% { transform: scale(0.5); opacity: 0.3; }
-    }
-
-    @keyframes glowHex {
-        0%, 100% { filter: drop-shadow(0 0 2px rgba(143, 140, 121, 0)); }
-        50% { filter: drop-shadow(0 0 8px rgba(143, 140, 121, 0.6)); }
-    } 
-
-    @media (max-width: 768px) {
-        h1 { font-size: 2rem; }
-        .card { padding: 1rem !important; } /* Minder padding op mobiel */
-        input, select, textarea { font-size: 16px !important; } /* Zoom fix */
-        th, td { padding: 8px 10px; font-size: 0.85rem; } /* Compactere tabellen */
-        
-        /* Sticky headers voor lange lijsten */
-        .inventory-panel th, .fermentation-table th {
-            position: sticky; top: 0; z-index: 10;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* --- MOBILE OPTIMIZATION FOR LISTS --- */
-    
-        /* 1. Minder lucht binnen het grijze kader */
-        .recipe-content ul, .recipe-content ol {
-           padding: 1rem 1rem !important; 
-       }
-
-       /* 2. Minder inspringen voor de tekst naast het nummer */
-       .recipe-content ol li {
-           padding-left: 1.75rem !important; /* Was 2rem */
-       }
-
-       /* 3. Het nummer-bolletje iets kleiner en dichterbij */
-       .recipe-content ol li::before {
-           width: 1.25rem !important;
-           height: 1.25rem !important;
-           line-height: 1.25rem !important;
-           font-size: 0.75rem !important;
-           top: 0.2em !important;
-       }
-
-       /* 4. CRUCIAAL: Geneste lijsten (lijst in een lijst) */
-       /* Dit lost het probleem in je screenshot op */
-       .recipe-content ol ol, 
-       .recipe-content ul ul,
-       .recipe-content ol ul,
-       .recipe-content ul ol {
-           margin-top: 0.5rem !important;
-           margin-bottom: 0.5rem !important;
-        
-           /* Reset de padding van het grijze vlak voor geneste lijsten */
-           padding-left: 0.5rem !important; 
-           padding-right: 0 !important;
-           padding-top: 0 !important;
-           padding-bottom: 0 !important;
-        
-           /* Geen dubbele kaders of achtergronden voor geneste lijsten */
-           background-color: transparent !important;
-           border: none !important;
-       }
-    }
-
-    /* --- JUWELIERS FINISH: LIVING BREW ANIMATION --- */
-    @keyframes softPulse {
-        0% { box-shadow: 0 0 0 0 rgba(143, 140, 121, 0.4); }
-        70% { box-shadow: 0 0 0 10px rgba(143, 140, 121, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(143, 140, 121, 0); }
-    }
-
-    .living-node {
-        animation: softPulse 2s infinite;
-        background-color: var(--brand-color) !important;
-        border-color: var(--bg-secondary) !important;
-    }
-    
-    /* Label Preview Styles (Behouden) */
-    #label-preview { transition: all 0.3s; }
-    .label-minimalist { background: #fff; color: #000; border: 1px solid #ccc; font-family: sans-serif; }
-    .label-industrial { background: #fff; color: #000; border: 2px solid #000; font-family: monospace; }
-    .label-professional { background: #fff; color: #2b2118; border: 4px double #2b2118; font-family: serif; }
-    
-    /* Timeline Styles (Behouden) */
-    .timeline-container { position: relative; display: flex; justify-content: space-between; padding: 1rem 0; }
-    /* Standaard connector stijl */
-    .timeline-connector { 
-        position: absolute; top: 50%; left: 0; right: 0; height: 4px; 
-        background: #d1cec4; /* Standaard donkerder voor light mode */
-        transform: translateY(-50%); z-index: 1; 
-    }
-    /* Dark mode override */
-    .dark .timeline-connector {
-        background-color: var(--border-color);
-    }
-
-    .timeline-progress { position: absolute; top: 0; left: 0; height: 100%; background: var(--brand-color); transition: width 0.5s; }
-    .timeline-item { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; width: 25%; }
-    .timeline-node { width: 20px; height: 20px; background: var(--bg-tertiary); border: 4px solid var(--border-color); border-radius: 50%; }
-    .timeline-item.active .timeline-node { background: var(--brand-color); border-color: var(--brand-color); }
-    .timeline-label { margin-top: 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
-    .timeline-item.active .timeline-label { color: var(--text-primary); }
-    
-    /* Progress Bar Styles */
-    .progress-bar-bg {
-        background-color: var(--border-color); /* Lichtgrijs in light, donkergrijs in dark */
-        overflow: hidden; /* Zorgt dat de vulling niet buiten de ronding komt */
-    }
-    
-    .progress-bar-fg {
-        background-color: var(--brand-color);
-        transition: width 0.5s ease-in-out;
-    }
-
-    /* Toggle Switch */
-    .theme-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
-    .theme-switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-    input:checked + .slider { background-color: var(--brand-color); }
-    input:checked + .slider:before { transform: translateX(24px); }
-    
-    /* Styling voor de checkbuttons in de shopping list */
-    input[type="checkbox"]:checked {
-        background-color: var(--brand-color) !important;
-        border-color: var(--brand-color) !important;
-        color: white !important;
-    }
-
-    input[type="checkbox"]:focus {
-        ring-color: var(--brand-color) !important;
-    }
-
-/* --- V2.0 BADGES & TAGS --- */
-.category-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 4px;
+    /* Legacy Vars Mapped to MD3 (Voor compatibiliteit) */
+    --brand-color: rgb(180, 83, 9);
+    --text-primary: rgb(28, 25, 23);
+    --bg-secondary: rgb(255, 255, 255);
 }
 
-/* Specifieke kleuren voor ingrediënten */
-.cat-honey { background-color: #fef3c7; color: #d97706; border: 1px solid #fcd34d; } /* Goud */
-.cat-yeast { background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; } /* Grijs */
-.cat-fruit { background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; } /* Rood */
-.cat-spice { background-color: #ffedd5; color: #c2410c; border: 1px solid #fdba74; } /* Oranje */
-.cat-nutrient { background-color: #ecfccb; color: #4d7c0f; border: 1px solid #bef264; } /* Groen */
-.cat-chemical { background-color: #e0e7ff; color: #4338ca; border: 1px solid #a5b4fc; } /* Blauw */
+.dark {
+    /* DARK MODE (Deep Stone/Amber) */
+    
+    /* Primary (Lighter Gold) */
+    --md-sys-color-primary: 251 191 36;            /* amber-400 */
+    --md-sys-color-on-primary: 69 26 3;            /* amber-950 */
+    --md-sys-color-primary-container: 146 64 14;   /* amber-800 */
+    --md-sys-color-on-primary-container: 253 230 138;
 
-/* Dark mode overrides voor badges */
-.dark .cat-honey { background-color: #451a03; color: #fbbf24; border-color: #92400e; }
-.dark .cat-yeast { background-color: #374151; color: #e5e7eb; border-color: #4b5563; }
-.dark .cat-fruit { background-color: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
-.dark .cat-nutrient { background-color: #1a2e05; color: #bef264; border-color: #365314; }
+    /* Secondary (Muted Green) */
+    --md-sys-color-secondary: 163 230 53;          /* lime-400 */
+    --md-sys-color-on-secondary: 26 46 5;
+    --md-sys-color-secondary-container: 54 83 20;  /* lime-900 */
+    --md-sys-color-on-secondary-container: 217 249 157;
 
-/* --- V2.0 MODERN UI POLISH --- */
+    /* Surface (Deep Warm Grey - Not Black) */
+    --md-sys-color-surface: 20 18 16;              /* Very dark warm grey */
+    --md-sys-color-on-surface: 231 229 228;        /* stone-200 */
+    --md-sys-color-on-surface-variant: 168 162 158; /* stone-400 */
+    
+    /* Surface Container (Cards - Slightly lighter than bg) */
+    --md-sys-color-surface-container: 28 25 23;    /* stone-900 */
+    --md-sys-color-surface-bright: 41 37 36;       /* stone-800 */
 
-/* 1. Zachtere Kaarten (Cards & Panelen) */
-/* Dit zorgt dat de witte vlakken niet meer zo 'hard' en blokkerig zijn */
+    /* Outlines */
+    --md-sys-color-outline: 87 83 78;              /* stone-600 */
+    --md-sys-color-outline-variant: 68 64 60;      /* stone-700 */
+
+    /* Legacy Mapping */
+    --brand-color: rgb(251, 191, 36);
+    --text-primary: rgb(231, 229, 228);
+    --bg-secondary: rgb(28, 25, 23);
+}
+
+/* =========================================
+   2. GLOBAL RESETS & TYPOGRAPHY
+   ========================================= */
+body {
+    background-color: rgb(var(--md-sys-color-surface));
+    color: rgb(var(--md-sys-color-on-surface));
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    line-height: 1.5;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Headings MD3 Style */
+h1, h2, h3, h4, .font-header {
+    font-weight: 500; 
+    letter-spacing: -0.01em;
+    color: rgb(var(--md-sys-color-on-surface));
+    font-family: 'Barlow Semi Condensed', sans-serif;
+}
+
+h1 { font-size: 3rem; line-height: 1.1; font-weight: 400; color: rgb(var(--md-sys-color-primary)); margin-bottom: 1rem; }
+h2 { font-size: 1.75rem; border-bottom: none !important; margin-bottom: 1.5rem; }
+h3 { font-size: 1.25rem; color: rgb(var(--md-sys-color-on-surface)); font-weight: 600; }
+
+.text-app-secondary { color: rgb(var(--md-sys-color-on-surface-variant)) !important; }
+.text-app-brand { color: rgb(var(--md-sys-color-primary)) !important; }
+
+/* =========================================
+   3. MODERN COMPONENT STYLES (MD3)
+   ========================================= */
+
+/* --- CARDS --- */
 .card, .bg-app-secondary {
-    border: 1px solid var(--border-color);
-    /* Een subtiele dubbele schaduw voor diepte */
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    border-radius: 16px; /* Veel ronder (was vaak 8px of 0) */
+    background-color: rgb(var(--md-sys-color-surface-container));
+    color: rgb(var(--md-sys-color-on-surface));
+    border-radius: 20px; /* MD3 Roundness */
+    border: none;
+    box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.10); /* Elevation 1 */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
 }
 
-/* 2. Moderne Inputs (Invulvelden) */
-/* Dit maakt typen fijner, vooral op mobiel */
-input[type="text"], input[type="number"], input[type="date"], 
-input[type="password"], select, textarea {
-    border-radius: 10px;       /* Rondere hoeken */
-    border: 1px solid var(--border-color);
-    padding: 12px 14px;        /* Meer 'ademruimte' binnen het vakje */
-    transition: all 0.2s ease; /* Zorgt voor een soepele animatie bij klikken */
-    background-color: var(--bg-tertiary);
-    font-size: 1rem;           /* Voorkomt dat iPhones inzoomen bij typen */
+.card:hover {
+    box-shadow: 0px 4px 8px 3px rgba(0, 0, 0, 0.10); /* Elevation 2 */
 }
 
-/* De 'Glow' als je op een veld klikt */
-input:focus, select:focus, textarea:focus {
-    outline: none;             /* Weg met de standaard blauwe rand */
-    transform: translateY(-1px); /* Het veldje komt ietsje omhoog */
-    border-color: var(--brand-color);
-    box-shadow: 0 4px 12px rgba(143, 140, 121, 0.25); /* Een gloed in jouw brand-color */
+.dark .card {
+    border: 1px solid rgb(var(--md-sys-color-outline-variant));
+    box-shadow: none; /* Dark mode uses borders/overlay, not shadow */
 }
 
-/* 3. Pill-Shape Buttons (Knoppen) */
-/* Maakt de knoppen ovaal/pilvormig voor een modernere uitstraling */
+/* --- BUTTONS --- */
 .btn {
-    border-radius: 9999px;     /* Zorgt altijd voor perfecte ronde uiteinden */
-    padding: 10px 24px;        /* Iets breder voor makkelijker klikken */
-    font-weight: 700;
-    letter-spacing: 0.05em;
+    border-radius: 9999px; /* Pill shape */
+    height: 44px;
+    padding: 0 24px;
+    font-weight: 600;
     text-transform: uppercase;
+    letter-spacing: 0.05em;
     font-size: 0.85rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-/* Hover effect voor knoppen */
-.btn:hover {
-    transform: translateY(-2px); /* Knop 'zweeft' omhoog */
-    box-shadow: 0 6px 8px rgba(0,0,0,0.15);
-    opacity: 1; /* Voorkom de standaard opacity verandering */
-    filter: brightness(1.1); /* Maak hem iets lichter/feller */
-}
-
-/* --- MEANDERY ORIGINAL LABEL STYLE --- */
-
-/* De container voor verticale tekst */
-.vertical-text-group {
-    writing-mode: vertical-rl; /* Tekst loopt van boven naar beneden */
-    transform: rotate(180deg); /* Draai om zodat het van beneden naar boven leest */
-    text-align: left;
-    display: flex;
-    gap: 12px; /* Ruimte tussen Titel en Subtitel */
-    align-items: center;
-}
-
-/* Het Meandery Logo Cirkeltje */
-.meandery-circle {
-    width: 80px;
-    height: 80px;
-    border: 2px solid currentColor; /* Neemt de tekstkleur over */
-    border-radius: 50%;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn:active { transform: scale(0.98); }
+
+/* Primary Actions */
+.bg-app-action, .bg-blue-600, .bg-green-600, .bg-purple-600, .bg-amber-600 {
+    background-color: rgb(var(--md-sys-color-primary)) !important;
+    color: rgb(var(--md-sys-color-on-primary)) !important;
+    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.bg-app-action:hover {
+    filter: brightness(1.1);
+    box-shadow: 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Secondary/Ghost Buttons */
+.bg-app-tertiary {
+    background-color: transparent;
+    border: 1px solid rgb(var(--md-sys-color-outline));
+    color: rgb(var(--md-sys-color-primary));
+}
+
+.bg-app-tertiary:hover {
+    background-color: rgb(var(--md-sys-color-primary-container));
+    color: rgb(var(--md-sys-color-on-primary-container));
+    border-color: transparent;
+}
+
+/* --- INPUTS (Outlined Text Fields) --- */
+input[type="text"], input[type="number"], input[type="date"], 
+input[type="password"], select, textarea {
+    background-color: transparent !important;
+    border: 1px solid rgb(var(--md-sys-color-outline));
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: rgb(var(--md-sys-color-on-surface));
+    font-family: inherit;
+    font-size: 1rem;
+    width: 100%;
+    transition: all 0.2s ease;
+    box-shadow: none !important; /* Remove old shadows */
+}
+
+input:hover, select:hover, textarea:hover {
+    border-color: rgb(var(--md-sys-color-on-surface));
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border: 2px solid rgb(var(--md-sys-color-primary));
+    background-color: rgb(var(--md-sys-color-surface-bright)) !important;
+    padding: 13px 15px; /* Compensate for 2px border */
+}
+
+::placeholder {
+    color: rgb(var(--md-sys-color-on-surface-variant));
+    opacity: 0.6;
+}
+
+/* --- NAVIGATION TABS (Segmented Button Look) --- */
+.sub-tab {
+    border-radius: 9999px;
+    padding: 8px 16px;
+    font-weight: 600;
+    color: rgb(var(--md-sys-color-on-surface-variant));
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    background: transparent;
+    font-size: 0.9rem;
+}
+
+.sub-tab:hover {
+    background-color: rgb(var(--md-sys-color-surface-variant) / 0.1);
+}
+
+.sub-tab.active {
+    background-color: rgb(var(--md-sys-color-secondary-container));
+    color: rgb(var(--md-sys-color-on-secondary-container));
+    border: none;
+}
+
+/* =========================================
+   4. APP SPECIFIC STYLES (PRESERVED & UPDATED)
+   ========================================= */
+
+/* --- TABLE STYLES --- */
+table {
+    border: 1px solid rgb(var(--md-sys-color-outline-variant));
+    border-radius: 16px;
+    overflow: hidden;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+th {
+    background-color: rgb(var(--md-sys-color-surface-container));
+    color: rgb(var(--md-sys-color-on-surface));
+    font-weight: 600;
+    text-transform: capitalize;
+    font-size: 0.85rem;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid rgb(var(--md-sys-color-outline-variant));
+}
+td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgb(var(--md-sys-color-outline-variant));
+    color: rgb(var(--md-sys-color-on-surface-variant));
+    font-size: 0.95rem;
+}
+tr:last-child td { border-bottom: none; }
+
+/* Table Inputs (Transparent) */
+table input, table select {
+    border: none !important;
+    padding: 0 !important;
+    height: auto !important;
+    border-radius: 0 !important;
+}
+table input:focus {
+    background: transparent !important;
+    border-bottom: 2px solid rgb(var(--md-sys-color-primary)) !important;
+}
+
+/* --- RECIPE AI CONTENT --- */
+.recipe-content { line-height: 1.7; font-size: 1.05rem; }
+
+.recipe-content h1 {
+    font-size: 2.5rem;
+    color: rgb(var(--md-sys-color-primary));
+    border-bottom: 2px solid rgb(var(--md-sys-color-outline-variant));
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.recipe-content h2, .recipe-content h3 {
+    color: rgb(var(--md-sys-color-primary));
+    margin-top: 2rem;
+    text-transform: uppercase;
+}
+
+.recipe-content blockquote {
+    font-style: italic;
+    color: rgb(var(--md-sys-color-secondary));
+    border-left: 4px solid rgb(var(--md-sys-color-secondary));
+    padding-left: 1rem;
+    margin: 1.5rem 0;
+    background: transparent;
+}
+
+/* Stats Badges in Recipe */
+.recipe-content blockquote + ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+    padding: 0 !important;
+    list-style: none !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+.recipe-content blockquote + ul li {
+    background-color: rgb(var(--md-sys-color-surface-container));
+    border: 1px solid rgb(var(--md-sys-color-outline-variant));
+    border-radius: 12px;
+    padding: 0.75rem !important;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.recipe-content ul, .recipe-content ol {
+    background-color: rgb(var(--md-sys-color-surface-container));
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    border: 1px solid rgb(var(--md-sys-color-outline-variant));
+}
+
+.recipe-content ol li::before {
+    background-color: rgb(var(--md-sys-color-primary));
+    color: rgb(var(--md-sys-color-on-primary));
+}
+
+/* --- LABEL CREATOR (PRESERVED) --- */
+.vertical-text-group {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    text-align: left;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.meandery-circle {
+    width: 80px; height: 80px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
     font-family: 'Barlow Semi Condensed', sans-serif;
     text-transform: uppercase;
-    font-weight: 400; /* Iets dunner zoals op je voorbeeld */
-    letter-spacing: 0.05em;
     font-size: 11px;
 }
 
-/* Zorgt dat de achtergrondafbeelding de hele label vult */
-.label-bg-image {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    z-index: 0;
-}
-
-/* Zorgt dat tekst bovenop de afbeelding ligt */
-.label-overlay {
-    position: relative;
-    z-index: 10;
-    width: 100%;
-    height: 100%;
-}
-
-/* --- SCREEN ONLY: MAXIMIZE PREVIEW --- */
-/* Maak de preview groter op het scherm voor betere leesbaarheid */
 #label-preview-container {
-    transform: scale(1.6); /* 60% Groter op scherm */
-    transition: transform 0.3s ease, width 0.3s, height 0.3s;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); /* Diepe schaduw */
+    transition: transform 0.3s ease;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
 }
 
-/* Mobiele aanpassing: iets minder groot zoomen op telefoons */
-@media (max-width: 768px) {
-    #label-preview-container {
-        transform: scale(0.9); /* Op mobiel juist passend maken */
-    }
-}
-
-/* --- PRINT RESET (CRUCIAAL) --- */
-/* Zorg dat de zoom NIET op de printer gebeurt */
-@media print {
-    #label-preview-container {
-        transform: none !important;
-        box-shadow: none !important;
-    }
-    /* Verberg de app structuur tijdens printen */
-    main {
-        background: white !important;
-        border: none !important;
-        position: static !important;
-        display: block !important;
-    }
-}
-
-/* --- CUSTOM HONEYCOMB LOADER --- */
-.honeycomb-loader {
-    width: 60px;
-    height: 60px;
-    margin: 2rem auto;
-    display: block;
-    overflow: visible;
-}
-
+/* --- CUSTOM LOADER --- */
+.honeycomb-loader { width: 50px; height: 50px; margin: 2rem auto; display: block; }
 .honeycomb-path {
     fill: none;
-    stroke: var(--brand-color, #d97706); /* Fallback kleur als var niet bestaat */
-    stroke-width: 3;
+    stroke: rgb(var(--md-sys-color-primary)); /* Updated to MD3 */
+    stroke-width: 4;
     stroke-linecap: round;
     stroke-linejoin: round;
-    stroke-dasharray: 210; /* Omtrek van de hexagon */
+    stroke-dasharray: 210;
     stroke-dashoffset: 210;
-    animation: drawHex 2.5s ease-in-out infinite, glowHex 2.5s ease-in-out infinite;
-    transform-origin: center;
+    animation: drawHex 2s linear infinite;
+}
+@keyframes drawHex { 0% { stroke-dashoffset: 210; } 50% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -210; } }
+
+/* --- UTILITIES --- */
+.hidden { display: none !important; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { 
+    background-color: rgb(var(--md-sys-color-outline-variant)); 
+    border-radius: 4px; 
 }
 
-.honeycomb-core {
-    fill: var(--brand-color, #d97706);
-    opacity: 0;
-    animation: pulseCore 2.5s ease-in-out infinite;
-    transform-origin: center;
-    transform-box: fill-box;
+/* Toggle Switch */
+.theme-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+.theme-switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgb(var(--md-sys-color-outline)); transition: .4s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: rgb(var(--md-sys-color-primary)); }
+input:checked + .slider:before { transform: translateX(24px); }
+
+/* --- PRINT RESET --- */
+@media print {
+    body { background: white; color: black; }
+    .no-print, header, .back-to-dashboard-btn, nav { display: none !important; }
+    #label-preview-container { transform: none !important; box-shadow: none !important; }
+    main, .bg-app-secondary { border: none !important; box-shadow: none !important; }
 }
 
-/* DE ANIMATIES (Deze misten nog) */
-@keyframes drawHex {
-    0% { stroke-dashoffset: 210; }
-    40% { stroke-dashoffset: 0; }
-    70% { stroke-dashoffset: 0; opacity: 1; }
-    100% { stroke-dashoffset: -210; opacity: 0; }
+/* Mobile Tweaks */
+@media (max-width: 768px) {
+    h1 { font-size: 2.5rem; }
+    .card { border-radius: 16px; padding: 1rem !important; }
 }
 
-@keyframes pulseCore {
-    0%, 30% { opacity: 0; transform: scale(0); }
-    50% { opacity: 1; transform: scale(1); }
-    70% { opacity: 1; transform: scale(1); }
-    100% { opacity: 0; transform: scale(0); }
+/* TOASTIFY MD3 OVERRIDE */
+.toastify {
+    background: rgb(var(--md-sys-color-on-surface)) !important;
+    color: rgb(var(--md-sys-color-surface)) !important;
+    border-radius: 8px !important; /* MD3 Snackbar radius is klein (4-8px) */
+    box-shadow: 0px 4px 8px 3px rgba(0, 0, 0, 0.15) !important;
+    font-family: 'Barlow Semi Condensed', sans-serif !important;
+    font-weight: 500 !important;
+    padding: 14px 24px !important;
+    max-width: 90vw !important;
 }
 
-@keyframes glowHex {
-    0%, 100% { filter: drop-shadow(0 0 1px rgba(217, 119, 6, 0.3)); }
-    50% { filter: drop-shadow(0 0 5px rgba(217, 119, 6, 0.8)); }
+/* Success variant (Groen) */
+.toastify.success {
+    background: rgb(var(--md-sys-color-secondary-container)) !important;
+    color: rgb(var(--md-sys-color-on-secondary-container)) !important;
+}
+
+/* Error variant (Rood) */
+.toastify.error {
+    background: rgb(var(--md-sys-color-error-container)) !important;
+    color: rgb(var(--md-sys-color-error)) !important;
 }

@@ -1493,17 +1493,13 @@ window.openArtGallery = function() {
                                   .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         grid.innerHTML = arts.map(art => `
-            <div class="relative group aspect-square rounded-lg overflow-hidden border border-app-brand/20 bg-black cursor-pointer shadow-md hover:shadow-xl transition-all hover:scale-[1.02]">
-                <img src="${art.imageSrc}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100" onclick="window.selectFromGallery('${art.imageSrc}')">
+            <div class="relative group aspect-square rounded-2xl overflow-hidden border border-outline-variant bg-surface-container cursor-pointer shadow-sm hover:shadow-elevation-2 transition-all hover:scale-[1.02]">
+                <img src="${art.imageSrc}" class="w-full h-full object-cover transition-opacity duration-300" onclick="window.selectFromGallery('${art.imageSrc}')">
                 
-                <div class="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[10px] p-2 truncate">
-                    ${art.name}
+                <div class="absolute bottom-0 left-0 right-0 bg-surface-container/90 backdrop-blur-sm p-2 border-t border-outline-variant flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="text-[10px] font-bold text-on-surface truncate pr-2">${art.name}</span>
+                    <button onclick="window.deleteFromGallery('${art.id}', '${art.storagePath || ''}')" class="text-error hover:text-red-700 font-bold px-2">&times;</button>
                 </div>
-                
-        <button onclick="window.deleteFromGallery('${art.id}', '${art.storagePath || ''}')" class="...">
-            &times;
-        </button>
-
             </div>
         `).join('');
     });
@@ -2000,12 +1996,15 @@ function renderLabelAssetsSettings() {
     // A. RENDER STYLES (Art Prompts)
     if (stylesList) {
         stylesList.innerHTML = labelAssets.styles.map((s, idx) => `
-            <div class="flex justify-between items-center p-2 bg-app-tertiary rounded border border-app-brand/5 group mb-1">
-                <span class="font-bold text-sm text-app-header pl-1">
-                    ${s.name}
-                </span>
-                
-                <button onclick="window.deleteLabelAsset('styles', ${idx})" class="text-red-400 hover:text-red-600 font-bold px-3 text-xl leading-none">&times;</button>
+            <div class="flex justify-between items-center p-3 mb-2 bg-surface-container rounded-xl border border-outline-variant hover:border-primary group transition-all">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">🎨</span>
+                    <div>
+                        <p class="font-bold text-sm text-on-surface">${s.name}</p>
+                        <p class="text-xs text-on-surface-variant truncate w-48 opacity-70">${s.prompt}</p>
+                    </div>
+                </div>
+                <button onclick="window.deleteLabelAsset('styles', ${idx})" class="w-8 h-8 rounded-full flex items-center justify-center text-error hover:bg-error-container transition-colors">&times;</button>
             </div>
         `).join('');
     }
@@ -2013,12 +2012,14 @@ function renderLabelAssetsSettings() {
     // B. RENDER FONTS (Typography)
     if (fontsList) {
         fontsList.innerHTML = labelAssets.fonts.map((f, idx) => `
-            <div class="flex justify-between items-center p-2 bg-app-tertiary rounded border border-app-brand/5 group mb-1">
-                <p class="text-lg text-app-header pl-1" style="font-family: '${f.name}', sans-serif;">
-                    ${f.name}
-                </p>
-                
-                <button onclick="window.deleteLabelAsset('fonts', ${idx})" class="text-red-400 hover:text-red-600 font-bold px-3 text-xl leading-none">&times;</button>
+            <div class="flex justify-between items-center p-3 mb-2 bg-surface-container rounded-xl border border-outline-variant hover:border-primary group transition-all">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs">Ab</span>
+                    <p class="text-lg text-on-surface" style="font-family: '${f.name}', sans-serif;">
+                        ${f.name}
+                    </p>
+                </div>
+                <button onclick="window.deleteLabelAsset('fonts', ${idx})" class="w-8 h-8 rounded-full flex items-center justify-center text-error hover:bg-error-container transition-colors">&times;</button>
             </div>
         `).join('');
     }

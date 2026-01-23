@@ -1264,16 +1264,16 @@ window.renderBrewDay = function(forceId = null) {
         const dayLabel = days >= 0 ? `Day ${days + 1}` : 'Pending';
 
         return `
-        <div onclick="window.openPrimaryDetail('${b.id}')" class="p-4 card rounded-xl cursor-pointer hover:bg-app-primary border-l-4 border-app-brand shadow-sm mb-3 transition-all group relative">
+        <div onclick="window.openPrimaryDetail('${b.id}')" class="p-4 card rounded-2xl cursor-pointer bg-surface-container border border-outline-variant hover:border-primary hover:shadow-elevation-1 mb-3 transition-all group relative">
             <div class="flex justify-between items-center">
                 <div>
-                    <h4 class="font-bold text-lg font-header text-app-header group-hover:text-app-brand transition-colors leading-tight">${b.recipeName}</h4>
+                    <h4 class="font-bold text-lg font-header text-on-surface group-hover:text-primary transition-colors leading-tight">${b.recipeName}</h4>
                     <div class="flex items-center gap-3 mt-1.5">
-                        <span class="text-[10px] font-bold uppercase bg-app-tertiary text-app-secondary px-2 py-0.5 rounded border border-app-brand/10">${dayLabel}</span>
-                        <span class="text-xs text-app-secondary opacity-80">Started: ${startDate}</span>
+                        <span class="text-[10px] font-bold uppercase bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded-full border border-outline-variant/30">${dayLabel}</span>
+                        <span class="text-xs text-on-surface-variant opacity-80">Started: ${startDate}</span>
                     </div>
                 </div>
-                <div class="text-app-brand opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+                <div class="text-primary opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
                 </div>
             </div>
@@ -1284,31 +1284,31 @@ window.renderBrewDay = function(forceId = null) {
     if (activeBrews.length === 0) {
         brewDayContent.innerHTML = `
             <div class="max-w-2xl mx-auto">
-                <div class="flex justify-between items-end mb-6 px-1 border-b border-app-brand/10 pb-2">
+                <div class="flex justify-between items-end mb-6 px-1 border-b border-outline-variant/50 pb-2">
                     <div>
-                        <h2 class="text-2xl font-header font-bold text-app-brand uppercase tracking-wider">Fermentation Chamber</h2>
-                        <p class="text-xs text-app-secondary uppercase tracking-wider font-bold opacity-60">Empty</p>
+                        <h2 class="text-2xl font-header font-bold text-primary uppercase tracking-wider">Fermentation Chamber</h2>
+                        <p class="text-xs text-on-surface-variant uppercase tracking-wider font-bold opacity-60">Empty</p>
                     </div>
-                    <button onclick="window.promptNewBrewType()" class="text-xs bg-app-action text-white px-4 py-2 rounded font-bold shadow hover:opacity-90 transition-colors uppercase tracking-wide flex items-center gap-1">
+                    <button onclick="window.promptNewBrewType()" class="text-xs bg-primary text-on-primary px-4 py-2 rounded-full font-bold shadow-elevation-1 hover:brightness-110 transition-all uppercase tracking-wide flex items-center gap-1">
                         <span>+</span> New
                     </button>
                 </div>
                 <div class="text-center py-12 px-4 opacity-60">
-                    <p class="text-sm text-app-secondary">No active brews found.<br>Start a new batch above!</p>
+                    <p class="text-sm text-on-surface-variant">No active brews found.<br>Start a new batch above!</p>
                 </div>
             </div>`;
         return;
     }
 
-    // ANDERS lijst tonen
+    // ANDERS lijst tonen (Als er wél items zijn)
     brewDayContent.innerHTML = `
         <div class="max-w-2xl mx-auto">
-            <div class="flex justify-between items-end mb-6 px-1 border-b border-app-brand/10 pb-2">
+            <div class="flex justify-between items-end mb-6 px-1 border-b border-outline-variant/50 pb-2">
                 <div>
-                    <h2 class="text-2xl font-header font-bold text-app-brand uppercase tracking-wider">Fermentation Chamber</h2>
-                    <p class="text-xs text-app-secondary uppercase tracking-wider font-bold opacity-60">${activeBrews.length} Active Batches</p>
+                    <h2 class="text-2xl font-header font-bold text-primary uppercase tracking-wider">Fermentation Chamber</h2>
+                    <p class="text-xs text-on-surface-variant uppercase tracking-wider font-bold opacity-60">${activeBrews.length} Active Batches</p>
                 </div>
-                <button onclick="window.promptNewBrewType()" class="text-xs bg-app-action text-white px-4 py-2 rounded font-bold shadow hover:opacity-90 transition-colors uppercase tracking-wide flex items-center gap-1">
+                <button onclick="window.promptNewBrewType()" class="text-xs bg-primary text-on-primary px-4 py-2 rounded-full font-bold shadow-elevation-1 hover:brightness-110 transition-all uppercase tracking-wide flex items-center gap-1">
                     <span>+</span> New
                 </button>
             </div>
@@ -2454,11 +2454,41 @@ function renderFermentationGraph(brewId) {
 
     if(window[`chart_${brewId}`]) window[`chart_${brewId}`].destroy();
 
+    // MD3 Kleuren ophalen
+    const cPrimary = `rgb(${window.getThemeColor('--md-sys-color-primary')})`;
+    const cSurface = `rgb(${window.getThemeColor('--md-sys-color-surface')})`;
+    const cOnSurface = `rgb(${window.getThemeColor('--md-sys-color-on-surface')})`;
+    const cGrid = `rgb(${window.getThemeColor('--md-sys-color-outline-variant')})`;
+
     window[`chart_${brewId}`] = new Chart(ctx, {
         type: 'line',
         data: {
             labels: data.map(d => d.date),
-            datasets: [{ label: 'Gravity', data: data.map(d => d.sg), borderColor: '#d97706', tension: 0.1 }]
+            datasets: [{ 
+                label: 'Gravity', 
+                data: data.map(d => d.sg), 
+                borderColor: cPrimary, 
+                backgroundColor: cPrimary,
+                tension: 0.3,
+                pointBackgroundColor: cSurface,
+                pointBorderWidth: 2,
+                pointRadius: 4
+            }]
+        },
+        options: {
+            scales: {
+                x: { 
+                    grid: { color: cGrid, tickColor: 'transparent' },
+                    ticks: { color: cOnSurface, font: { family: "'Barlow Semi Condensed'" } }
+                },
+                y: { 
+                    grid: { color: cGrid, tickColor: 'transparent' },
+                    ticks: { color: cOnSurface, font: { family: "'Barlow Semi Condensed'" } }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
         }
     });
 }
@@ -2470,10 +2500,16 @@ function renderFlavorWheel(brewId, labels, data) {
     container.innerHTML = `<canvas id="flavorChart-${brewId}"></canvas>`;
     const ctx = document.getElementById(`flavorChart-${brewId}`);
 
-    const brandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand-color').trim() || '#d97706';
-    const isDarkMode = document.documentElement.classList.contains('dark');
-    const textColor = isDarkMode ? '#e0e0e0' : '#4a3c2c';
-    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+    // MD3 Kleuren
+    const cPrimary = `rgb(${window.getThemeColor('--md-sys-color-primary')})`;
+    const cOnSurface = `rgb(${window.getThemeColor('--md-sys-color-on-surface')})`;
+    const cOutline = `rgb(${window.getThemeColor('--md-sys-color-outline-variant')})`; // Grid lijnen
+
+    // Transparante fill (Primary kleur met 0.2 opacity)
+    // Omdat getThemeColor "R G B" teruggeeft (zonder commas in sommige browsers of met), 
+    // is het veiliger om de CSS variabele direct in rgba te gebruiken als je tailwind config dat toestaat, 
+    // of hier een kleine hack te doen:
+    const cFill = cPrimary.replace('rgb', 'rgba').replace(')', ', 0.2)');
 
     new Chart(ctx, {
         type: 'radar',
@@ -2482,19 +2518,20 @@ function renderFlavorWheel(brewId, labels, data) {
             datasets: [{
                 label: 'Flavor Profile',
                 data: data,
-                backgroundColor: brandColor + '4D',
-                borderColor: brandColor,
+                backgroundColor: cFill,
+                borderColor: cPrimary,
                 borderWidth: 2,
-                pointBackgroundColor: brandColor
+                pointBackgroundColor: cPrimary,
+                pointBorderColor: '#fff',
             }]
         },
         options: {
             responsive: true,
             scales: {
                 r: {
-                    angleLines: { color: gridColor },
-                    grid: { color: gridColor },
-                    pointLabels: { color: textColor, font: { size: 11 } },
+                    angleLines: { color: cOutline },
+                    grid: { color: cOutline },
+                    pointLabels: { color: cOnSurface, font: { size: 12, family: "'Barlow Semi Condensed'" } },
                     ticks: { display: false, max: 5 },
                     suggestedMin: 0, suggestedMax: 5
                 }

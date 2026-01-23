@@ -94,26 +94,47 @@ export function switchSubView(viewName, parentViewId) {
     }
 
     // Management
-    if (viewName === 'inventory' && window.renderInventory) window.renderInventory();
-    if (viewName === 'cellar' && window.renderCellar) window.renderCellar();
-    if (viewName === 'financials' && window.updateCostAnalysis) window.updateCostAnalysis();
-    if (viewName === 'equipment' && window.renderEquipmentProfiles) window.renderEquipmentProfiles();
-    if (viewName === 'packaging' && window.renderPackagingUI) window.renderPackagingUI();
+if (viewName === 'inventory' && window.renderInventory) {
+    // Wacht heel even zodat de browser de div kan 'zien' voordat we hem vullen
+    setTimeout(() => window.renderInventory(), 50);
+}
+if (viewName === 'cellar' && window.renderCellar) {
+    setTimeout(() => window.renderCellar(), 50);
+}
+if (viewName === 'financials' && window.updateCostAnalysis) {
+    setTimeout(() => window.updateCostAnalysis(), 50);
+}
+if (viewName === 'equipment' && window.renderEquipmentProfiles) {
+    setTimeout(() => window.renderEquipmentProfiles(), 50);
+}
+if (viewName === 'packaging' && window.renderPackagingUI) {
+    setTimeout(() => window.renderPackagingUI(), 50);
+}
 
     // Tools
     if (viewName === 'social') {
-        if(window.populateSocialRecipeDropdown) window.populateSocialRecipeDropdown();
-        if(window.loadSocialStyles) window.loadSocialStyles();
+        setTimeout(() => {
+            if(window.populateSocialRecipeDropdown) window.populateSocialRecipeDropdown();
+            if(window.loadSocialStyles) window.loadSocialStyles();
+        }, 50);
     }
-    if (viewName === 'labels') {
-        if(window.populateLabelRecipeDropdown) window.populateLabelRecipeDropdown();
-        if(window.updateLabelPreviewDimensions) window.updateLabelPreviewDimensions();
-        if(typeof window.setLabelTheme === 'function') window.setLabelTheme('standard');
-    }
-    if (viewName === 'troubleshoot' && window.resetTroubleshootChat) window.resetTroubleshootChat();
     
-    // Settings
-    if (viewName === 'settings-assets' && window.renderLabelAssetsSettings) window.renderLabelAssetsSettings();
+    if (viewName === 'labels') {
+        setTimeout(() => {
+            if(window.populateLabelRecipeDropdown) window.populateLabelRecipeDropdown();
+            if(window.updateLabelPreviewDimensions) window.updateLabelPreviewDimensions();
+            if(typeof window.setLabelTheme === 'function') window.setLabelTheme('standard');
+        }, 50);
+    }
+    
+    if (viewName === 'troubleshoot' && window.resetTroubleshootChat) {
+        setTimeout(() => window.resetTroubleshootChat(), 50);
+    }
+    
+    // Settings (ook meteen meegenomen voor de zekerheid)
+    if (viewName === 'settings-assets' && window.renderLabelAssetsSettings) {
+        setTimeout(() => window.renderLabelAssetsSettings(), 50);
+    }
 }
 
 // --- UI UTILITIES ---

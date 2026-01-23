@@ -12,7 +12,7 @@ import './tools.js';
 
 // 2. CORE IMPORTS
 import { auth, onAuthStateChanged, signInWithPopup, googleProvider, db } from './firebase-init.js';
-import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { state } from './state.js';
 import { showToast } from './utils.js';
 
@@ -186,6 +186,38 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('generateBtn')?.addEventListener('click', () => window.generateRecipe());
     document.getElementById('customDescription')?.addEventListener('input', () => window.handleDescriptionInput());
     document.getElementById('style')?.addEventListener('change', () => window.handleStyleChange());
+
+    // --- ARCHIVE BREW (Move to History, remove from Active) ---
+    window.archiveBrew = async function(brewId, brewName) {
+       if(!confirm(`📦 ARCHIVE: "${brewName}"?\n\nThis will mark the batch as 'Completed'.\nIt will disappear from your Dashboard and Active lists,\nbut remains safe in your History.`)) return;
+
+    try {
+        // 1. Update Firestore: Zet archived op true (en voor de zekerheid primaryComplete/isBottled ook, zodat hij zeker weg is uit actieve lijsten)
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), {
+            archived: true,
+            primaryComplete: true, // Zorgt dat hij uit Brew Day 1 gaat
+            isBottled: true        // Zorgt dat hij uit Brew Day 2 gaat
+        });
+        
+        // 2. Update lokale state direct
+        const brew = state.brews.find(b => b.id === brewId);
+        if(brew) {
+            brew.archived = true;
+            brew.primaryComplete = true;
+            brew.isBottled = true;
+        }
+        
+        // 3. Ververs Dashboard en Lijsten
+        if (window.updateDashboardInsights) window.updateDashboardInsights();
+        if (window.renderBrewDay) window.renderBrewDay();
+        if (window.renderBrewDay2) window.renderBrewDay2();
+        
+        showToast(`📦 "${brewName}" archived to History.`, "success");
+    } catch (e) {
+        console.error(e);
+        showToast("Error archiving: " + e.message, "error");
+       }
+    }
 
     // --- GHOST BREW REMOVER ---
     window.deleteGhostBrew = async function(brewId, brewName) {

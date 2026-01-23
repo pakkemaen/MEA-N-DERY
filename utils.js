@@ -213,43 +213,56 @@ export function updateDashboardInsights() {
         }
     });
 
-    // 3. CHECK ACTIEVE BATCHES (Met Ghost Delete Knop)
+    // 3. CHECK ACTIEVE BATCHES (Slimme versie)
     state.brews.forEach(brew => {
-        // We genereren een delete knopje HTML string voor hergebruik
-        // Let op de ' ' quotes rond de ID en Naam in de onclick!
-        const deleteBtn = `<button onclick="window.deleteGhostBrew('${brew.id}', '${brew.recipeName}')" class="float-right ml-2 text-gray-400 hover:text-red-600 font-bold" title="Force Delete Ghost Brew">✕</button>`;
+        // Filter 1: Is het gearchiveerd of al gebotteld? -> Negeer
+        if (brew.archived || brew.bottledDate) return;
 
-        if (!brew.archived && !brew.bottledDate) {
-            const startDate = brew.createdAt ? new Date(brew.createdAt.toDate()) : new Date();
-            const ageDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+        // Filter 2: Heeft het überhaupt een startdatum? 
+        // Als logData.brewDate leeg is, is het een 'Planned Recipe' -> Negeer op dashboard
+        const hasStarted = brew.logData && brew.logData.brewDate;
+        if (!hasStarted) return; 
 
-            // A. TOSNA Reminder (Dag 3-5)
-            if (ageDays >= 3 && ageDays <= 5) {
-                const li = document.createElement('li');
-                li.innerHTML = `${deleteBtn} <span class="text-green-600 font-bold text-xs uppercase">💊 Nutrient Check</span><br> <b>${brew.recipeName}</b> is on Day ${ageDays}. Have you added the final nutrients?`;
-                li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
-                list.appendChild(li);
-                alertsCount++;
-            }
+        // Nu weten we zeker dat het een actieve poging tot brouwen is
+        const startDate = new Date(brew.logData.brewDate);
+        const ageDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+
+        // Delete knop (Alleen voor echte fouten/ghosts)
+        // We noemen het nu 'Stop Tracking' om aan te geven dat het uit het dashboard gaat
+        const deleteBtn = `<button onclick="window.deleteGhostBrew('${brew.id}', '${brew.recipeName}')" class="float-right ml-2 text-gray-300 hover:text-red-500 font-bold px-1" title="Delete from Database">✕</button>`;
+
+        // A. TOSNA Reminder (Dag 3-5)
+        if (ageDays >= 3 && ageDays <= 5) {
+            const li = document.createElement('li');
+            li.innerHTML = `<span class="text-green-600 font-bold text-xs uppercase">💊 Nutrient Check</span><br> <b>${brew.recipeName}</b> is on Day ${ageDays}. Have you added the final nutrients?`;
+            li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
+            list.appendChild(li);
+            alertsCount++;
+        }
+        
+        // B. Secondary Reminder (Dag 14-20)
+        if (ageDays >= 14 && ageDays <= 20) {
+            const li = document.createElement('li');
+            li.innerHTML = `<span class="text-blue-600 font-bold text-xs uppercase">🍺 Racking Check</span><br> <b>${brew.recipeName}</b> (Day ${ageDays}). Ready for Secondary? Check gravity.`;
+            li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
+            list.appendChild(li);
+            alertsCount++;
+        }
+
+        // C. GHOST CATCHER (Ouder dan 60 dagen)
+        if (ageDays > 60) {
+            // We maken twee knoppen:
+            // 📦 Archiefdoos: Bewaren maar stoppen met zeuren
+            // ✕ Kruisje: Echt verwijderen (foutje)
             
-            // B. Secondary Reminder (Dag 14-20)
-            if (ageDays >= 14 && ageDays <= 20) {
-                const li = document.createElement('li');
-                li.innerHTML = `${deleteBtn} <span class="text-blue-600 font-bold text-xs uppercase">🍺 Racking Check</span><br> <b>${brew.recipeName}</b> (Day ${ageDays}). Ready for Secondary? Check gravity.`;
-                li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
-                list.appendChild(li);
-                alertsCount++;
-            }
+            const archiveBtn = `<button onclick="window.archiveBrew('${brew.id}', '${brew.recipeName}')" class="float-right ml-2 text-blue-400 hover:text-blue-600 font-bold px-1" title="Archive (Keep in History)">📦</button>`;
+            const deleteBtn = `<button onclick="window.deleteGhostBrew('${brew.id}', '${brew.recipeName}')" class="float-right ml-1 text-gray-300 hover:text-red-500 font-bold px-1" title="Delete Permanently">✕</button>`;
 
-            // C. GHOST CATCHER: Oude actieve batches (Ouder dan 60 dagen en nog steeds in Primary?)
-            // Dit vangt waarschijnlijk jouw "Alpine Decay" (Day 20) en anderen als ze ouder worden
-            if (ageDays > 60) {
-                 const li = document.createElement('li');
-                li.innerHTML = `${deleteBtn} <span class="text-gray-500 font-bold text-xs uppercase">👻 Ghost / Old</span><br> <b>${brew.recipeName}</b> is active for ${ageDays} days. Forgot to archive?`;
-                li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
-                list.appendChild(li);
-                alertsCount++;
-            }
+            const li = document.createElement('li');
+            li.innerHTML = `${deleteBtn} ${archiveBtn} <span class="text-gray-400 font-bold text-xs uppercase">👻 Ghost / Stalled</span><br> <b>${brew.recipeName}</b> started ${ageDays} days ago. Still active?`;
+            li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
+            list.appendChild(li);
+            alertsCount++;
         }
     });
 

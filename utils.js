@@ -53,32 +53,38 @@ export function switchSubView(viewName, parentViewId) {
     const parentView = document.getElementById(parentViewId);
     if(!parentView) return;
     
-    // UI Reset
+    // 1. Reset alle tabs en views binnen deze sectie
     parentView.querySelectorAll('[id$="-view"]').forEach(v => v.classList.add('hidden'));
     parentView.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
 
+    // 2. Zoek de nieuwe view en tab
     const viewToShow = document.getElementById(`${viewName}-view`);
     const tabToActivate = document.getElementById(`${viewName}-sub-tab`);
 
+    // 3. Activeer ze
     if (viewToShow) viewToShow.classList.remove('hidden');
     if (tabToActivate) tabToActivate.classList.add('active');
 
-    // --- TRIGGER RENDER LOGICA (Belangrijk voor data laden!) ---
+    // 4. TRIGGER LOGICA (Dit zorgt dat de data geladen wordt!)
     if (viewName === 'brew-day-2' && window.renderBrewDay2) window.renderBrewDay2();
     
     if (viewName === 'cellar' && window.renderCellar) window.renderCellar();
     if (viewName === 'financials' && window.updateCostAnalysis) window.updateCostAnalysis();
-    
+
     if (viewName === 'social') {
+        // Let op: hier stond een typfoutje 'populates', dat is nu weggehaald
         if(window.populateSocialRecipeDropdown) window.populateSocialRecipeDropdown();
         if(window.loadSocialStyles) window.loadSocialStyles();
     }
+    
     if (viewName === 'creator' && window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();
+    
     if (viewName === 'labels') {
         if(window.populateLabelRecipeDropdown) window.populateLabelRecipeDropdown();
         if(window.updateLabelPreviewDimensions) window.updateLabelPreviewDimensions();
         if(typeof window.setLabelTheme === 'function') window.setLabelTheme('standard');
     }
+    
     if (viewName === 'troubleshoot' && window.resetTroubleshootChat) window.resetTroubleshootChat();
     
     if (viewName === 'shopping-list') {

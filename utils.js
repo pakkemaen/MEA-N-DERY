@@ -66,10 +66,10 @@ export function switchMainView(viewName, targetSubView = null) {
 
 export function switchSubView(viewName, parentViewId) {
     const parentView = document.getElementById(parentViewId);
-    if(!parentView) return;
-    
+    if (!parentView) return;
+
     // 1. Reset UI: Verberg alle views die eindigen op '-view' BINNEN deze parent
-    // We gebruiken :scope om zeker te weten dat we alleen children pakken
+    // We gebruiken :scope om zeker te weten dat we alleen directe kinderen of diepe kinderen binnen deze sectie pakken
     const children = parentView.querySelectorAll('[id$="-view"]');
     children.forEach(v => v.classList.add('hidden'));
 
@@ -77,63 +77,72 @@ export function switchSubView(viewName, parentViewId) {
     parentView.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
 
     // 2. Toon nieuwe view en activeer tab
+    // Dit gebeurt direct, zodat de gebruiker instant feedback ziet
     const viewToShow = document.getElementById(`${viewName}-view`);
     const tabToActivate = document.getElementById(`${viewName}-sub-tab`);
 
     if (viewToShow) viewToShow.classList.remove('hidden');
     if (tabToActivate) tabToActivate.classList.add('active');
 
-    // 3. Trigger Renderers (Alleen als de functie bestaat)
-    // Brewing
+    // 3. Trigger Renderers (MET VERTRAAGING)
+    // We wachten 50ms. Dit geeft de browser precies genoeg tijd om de CSS 'display: block' 
+    // te verwerken en het scherm te tekenen, voordat de zware data-functies draaien.
+    const renderDelay = 50; 
+
+    // --- BREWING ---
+    // Brew Day 1 & 2 laten we direct, omdat die vaak al in het geheugen zitten en snel moeten voelen.
     if (viewName === 'brew-day-1' && window.renderBrewDay) window.renderBrewDay();
     if (viewName === 'brew-day-2' && window.renderBrewDay2) window.renderBrewDay2();
-    if (viewName === 'history' && window.renderHistoryList) window.renderHistoryList();
+    
+    // History en Shopping List kunnen zwaar zijn, dus die vertragen we ook
+    if (viewName === 'history' && window.renderHistoryList) {
+        setTimeout(() => window.renderHistoryList(), renderDelay);
+    }
     if (viewName === 'shopping-list' && window.generateShoppingList) {
-        const activeBrewId = (typeof window.state !== 'undefined' && window.state.currentBrewDay) ? window.state.currentBrewDay.brewId : null;
-        window.generateShoppingList(activeBrewId);
+        setTimeout(() => {
+            const activeBrewId = (typeof window.state !== 'undefined' && window.state.currentBrewDay) ? window.state.currentBrewDay.brewId : null;
+            window.generateShoppingList(activeBrewId);
+        }, renderDelay);
     }
 
-    // Management
-if (viewName === 'inventory' && window.renderInventory) {
-    // Wacht heel even zodat de browser de div kan 'zien' voordat we hem vullen
-    setTimeout(() => window.renderInventory(), 50);
-}
-if (viewName === 'cellar' && window.renderCellar) {
-    setTimeout(() => window.renderCellar(), 50);
-}
-if (viewName === 'financials' && window.updateCostAnalysis) {
-    setTimeout(() => window.updateCostAnalysis(), 50);
-}
-if (viewName === 'equipment' && window.renderEquipmentProfiles) {
-    setTimeout(() => window.renderEquipmentProfiles(), 50);
-}
-if (viewName === 'packaging' && window.renderPackagingUI) {
-    setTimeout(() => window.renderPackagingUI(), 50);
-}
+    // --- MANAGEMENT (De probleemveroorzakers) ---
+    if (viewName === 'inventory' && window.renderInventory) {
+        setTimeout(() => window.renderInventory(), renderDelay);
+    }
+    if (viewName === 'cellar' && window.renderCellar) {
+        setTimeout(() => window.renderCellar(), renderDelay);
+    }
+    if (viewName === 'financials' && window.updateCostAnalysis) {
+        setTimeout(() => window.updateCostAnalysis(), renderDelay);
+    }
+    if (viewName === 'equipment' && window.renderEquipmentProfiles) {
+        setTimeout(() => window.renderEquipmentProfiles(), renderDelay);
+    }
+    if (viewName === 'packaging' && window.renderPackagingUI) {
+        setTimeout(() => window.renderPackagingUI(), renderDelay);
+    }
 
-    // Tools
+    // --- TOOLS ---
     if (viewName === 'social') {
         setTimeout(() => {
             if(window.populateSocialRecipeDropdown) window.populateSocialRecipeDropdown();
             if(window.loadSocialStyles) window.loadSocialStyles();
-        }, 50);
+        }, renderDelay);
     }
-    
     if (viewName === 'labels') {
         setTimeout(() => {
             if(window.populateLabelRecipeDropdown) window.populateLabelRecipeDropdown();
             if(window.updateLabelPreviewDimensions) window.updateLabelPreviewDimensions();
             if(typeof window.setLabelTheme === 'function') window.setLabelTheme('standard');
-        }, 50);
+        }, renderDelay);
     }
-    
     if (viewName === 'troubleshoot' && window.resetTroubleshootChat) {
-        setTimeout(() => window.resetTroubleshootChat(), 50);
+        setTimeout(() => window.resetTroubleshootChat(), renderDelay);
     }
     
-    // Settings (ook meteen meegenomen voor de zekerheid)
+    // --- SETTINGS ---
     if (viewName === 'settings-assets' && window.renderLabelAssetsSettings) {
-        setTimeout(() => window.renderLabelAssetsSettings(), 50);
+        setTimeout(() => window.renderLabelAssetsSettings(), renderDelay);
     }
 }
 

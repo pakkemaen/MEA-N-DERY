@@ -1364,6 +1364,7 @@ async function findCommercialWaterMatch() {
 
 // --- EXPORTS ---
 window.importData = importData;
+window.getThemeColor = getThemeColor;
 window.saveWaterProfile = saveWaterProfile;
 window.findCommercialWaterMatch = findCommercialWaterMatch;
 window.findWaterProfileWithAI = findWaterProfileWithAI;

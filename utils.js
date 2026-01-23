@@ -274,17 +274,12 @@ export function updateDashboardInsights() {
     }
 }
 
-// --- EXPORTS TO WINDOW (Voor HTML onclick support) ---
-window.showToast = showToast;
-window.getLoaderHtml = getLoaderHtml;
-window.switchMainView = switchMainView;
-window.switchSubView = switchSubView;
-window.showDangerModal = showDangerModal;
-window.hideDangerModal = hideDangerModal;
-window.checkDangerConfirmation = checkDangerConfirmation;
-window.executeDangerAction = executeDangerAction;
-window.updateDashboardInsights = updateDashboardInsights;
-
+// --- GLOBAL HELPER: CSS THEME COLORS ---
+// Deze functie haalt de actuele kleur op uit je CSS variabalen (voor Chart.js)
+function getThemeColor(variableName) {
+    if (typeof window === 'undefined' || !document) return '#000000'; // Veiligheid
+    return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+}
 
 // Start thinking animation toevoegen (die hadden we bovenaan weggehaald)
 window.startThinkingAnimation = function(elementId) {
@@ -303,3 +298,19 @@ window.startThinkingAnimation = function(elementId) {
         element.textContent = messages[index];
     }, 1800); 
 }
+
+// --- EXPORTS TO WINDOW (Voor HTML onclick support) ---
+window.showToast = showToast;
+window.getLoaderHtml = getLoaderHtml;
+window.switchMainView = switchMainView;
+window.switchSubView = switchSubView;
+window.showDangerModal = showDangerModal;
+window.hideDangerModal = hideDangerModal;
+window.checkDangerConfirmation = checkDangerConfirmation;
+window.executeDangerAction = executeDangerAction;
+window.updateDashboardInsights = updateDashboardInsights;
+window.getThemeColor = getThemeColor;
+
+
+
+

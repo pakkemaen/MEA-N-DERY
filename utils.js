@@ -33,34 +33,34 @@ export function showToast(message, type = 'info', duration = 4000) {
     }
 }
 
-// --- NAVIGATION (DE GROTE FIX ZIT HIERONDER) ---
-export function switchMainView(viewName) {
+// --- NAVIGATION FIXED ---
+export function switchMainView(viewName, targetSubView = null) {
     if (window.hideBottlingModal) window.hideBottlingModal();
     
     // 1. Verberg alle hoofd-views
     const views = ['dashboard', 'brewing', 'management', 'tools', 'settings'];
-    views.forEach(v => document.getElementById(`${v}-main-view`)?.classList.add('hidden'));
+    views.forEach(v => {
+        const el = document.getElementById(`${v}-main-view`);
+        if (el) el.classList.add('hidden');
+    });
     
-    // 2. Toon de gekozen view
+    // 2. Toon de gekozen hoofd-view
     const viewToShow = document.getElementById(`${viewName}-main-view`);
     if (viewToShow) viewToShow.classList.remove('hidden');
     
-    // 3. AUTO-SELECT DEFAULT SUB-TAB (Dit lost het lege scherm op!)
-    // Als we op een hoofdknop klikken, moeten we ook meteen een sub-pagina laden.
-    if (viewName === 'management') {
-        switchSubView('inventory', 'management-main-view');
-    }
-    else if (viewName === 'tools') {
-        switchSubView('calculators', 'tools-main-view');
-    }
-    else if (viewName === 'settings') {
-        switchSubView('settings-general', 'settings-main-view');
-    }
-    else if (viewName === 'brewing') {
-        // Bij brewing gaan we standaard naar de Creator, tenzij er al iets actief was
-        if (window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();
-        // Optioneel: switchSubView('creator', 'brewing-main-view'); 
-        // (Maar brewing wordt vaak via specifieke knoppen aangeroepen, dus dit laten we even zo)
+    // 3. SLIMME NAVIGATIE
+    // Als er een specifieke sub-view is gevraagd (via dashboard knop), ga daarheen.
+    // Zo niet (via footer menu), gebruik dan de defaults.
+    if (targetSubView) {
+        switchSubView(targetSubView, `${viewName}-main-view`);
+    } else {
+        // Default fallbacks (alleen als er geen doel is opgegeven)
+        if (viewName === 'management') switchSubView('inventory', 'management-main-view');
+        else if (viewName === 'tools') switchSubView('calculators', 'tools-main-view');
+        else if (viewName === 'settings') switchSubView('settings-general', 'settings-main-view');
+        else if (viewName === 'brewing') {
+            if (window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();
+        }
     }
 }
 
@@ -68,8 +68,12 @@ export function switchSubView(viewName, parentViewId) {
     const parentView = document.getElementById(parentViewId);
     if(!parentView) return;
     
-    // 1. Reset UI (Verberg alle sub-views en deselecteer tabs)
-    parentView.querySelectorAll('[id$="-view"]').forEach(v => v.classList.add('hidden'));
+    // 1. Reset UI: Verberg alle views die eindigen op '-view' BINNEN deze parent
+    // We gebruiken :scope om zeker te weten dat we alleen children pakken
+    const children = parentView.querySelectorAll('[id$="-view"]');
+    children.forEach(v => v.classList.add('hidden'));
+
+    // Reset Tabs
     parentView.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
 
     // 2. Toon nieuwe view en activeer tab
@@ -79,19 +83,17 @@ export function switchSubView(viewName, parentViewId) {
     if (viewToShow) viewToShow.classList.remove('hidden');
     if (tabToActivate) tabToActivate.classList.add('active');
 
-    // --- 3. TRIGGER RENDER LOGICA (CRUCIAAL!) ---
-    // Hier zorgen we dat de data ook echt op het scherm komt
-    
+    // 3. Trigger Renderers (Alleen als de functie bestaat)
     // Brewing
     if (viewName === 'brew-day-1' && window.renderBrewDay) window.renderBrewDay();
     if (viewName === 'brew-day-2' && window.renderBrewDay2) window.renderBrewDay2();
     if (viewName === 'history' && window.renderHistoryList) window.renderHistoryList();
     if (viewName === 'shopping-list' && window.generateShoppingList) {
-        const activeBrewId = (typeof tempState !== 'undefined') ? tempState.activeBrewId : null;
+        const activeBrewId = (typeof window.state !== 'undefined' && window.state.currentBrewDay) ? window.state.currentBrewDay.brewId : null;
         window.generateShoppingList(activeBrewId);
     }
 
-    // Management (HIER GING HET FOUT BIJ STOCK/CELLAR)
+    // Management
     if (viewName === 'inventory' && window.renderInventory) window.renderInventory();
     if (viewName === 'cellar' && window.renderCellar) window.renderCellar();
     if (viewName === 'financials' && window.updateCostAnalysis) window.updateCostAnalysis();
@@ -112,10 +114,6 @@ export function switchSubView(viewName, parentViewId) {
     
     // Settings
     if (viewName === 'settings-assets' && window.renderLabelAssetsSettings) window.renderLabelAssetsSettings();
-    if (viewName === 'settings-data') { /* Geen init nodig */ }
-    
-    // Creator
-    if (viewName === 'creator' && window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();
 }
 
 // --- UI UTILITIES ---

@@ -149,7 +149,7 @@
                 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     
-    <div onclick="switchMainView('brewing'); switchSubView('brew-day-1', 'brewing-main-view')" 
+    <div onclick="switchMainView('brewing', 'brew-day-1')"
          class="card p-5 cursor-pointer hover:shadow-lg transition-all duration-200 group flex flex-col items-center justify-center relative overflow-hidden">
         <svg class="absolute -right-4 -bottom-4 w-24 h-24 text-primary opacity-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M9.5,2C5.9,2 3,4.9 3,8.5C3,12.1 5.9,15 9.5,15C13.1,15 16,12.1 16,8.5C16,4.9 13.1,2 9.5,2M9.5,13C7,13 5,11 5,8.5C5,6 7,4 9.5,4C12,4 14,6 14,8.5C14,11 12,13 9.5,13Z"></path></svg>
         
@@ -157,7 +157,7 @@
         <p id="stat-primary-batches" class="text-4xl font-header font-medium text-primary z-10">--</p>
     </div>
 
-    <div onclick="switchMainView('brewing'); switchSubView('brew-day-2', 'brewing-main-view')" 
+    <div onclick="switchMainView('brewing', 'brew-day-2')" 
          class="card p-5 cursor-pointer hover:shadow-lg transition-all duration-200 group flex flex-col items-center justify-center relative overflow-hidden">
         <svg class="absolute -right-4 -bottom-4 w-24 h-24 text-primary opacity-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"></path></svg>
         
@@ -165,7 +165,7 @@
         <p id="stat-aging-batches" class="text-4xl font-header font-medium text-primary z-10">--</p>
     </div>
 
-    <div onclick="switchMainView('management'); switchSubView('cellar', 'management-main-view'); if(window.renderCellar) window.renderCellar();" 
+    <div onclick="switchMainView('management', 'cellar')" 
          class="card p-5 cursor-pointer hover:shadow-lg transition-all duration-200 group flex flex-col items-center justify-center relative overflow-hidden">
         <svg class="absolute -right-4 -bottom-4 w-24 h-24 text-secondary opacity-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M7,2H17A2,2 0 0,1 19,4V20A2,2 0 0,1 17,22H7A2,2 0 0,1 5,20V4A2,2 0 0,1 7,2M7,4V8H17V4H7M7,10V14H17V10H7M7,16V20H17V16H7Z"></path></svg>
         
@@ -173,7 +173,7 @@
         <p id="stat-bottles" class="text-4xl font-header font-medium text-secondary z-10">--</p>
     </div>
 
-    <div onclick="switchMainView('management'); switchSubView('financials', 'management-main-view'); if(window.updateCostAnalysis) window.updateCostAnalysis();" 
+    <div onclick="switchMainView('management', 'financials')" 
          class="card p-5 cursor-pointer hover:shadow-lg transition-all duration-200 group flex flex-col items-center justify-center relative overflow-hidden">
         <svg class="absolute -right-4 -bottom-4 w-24 h-24 text-tertiary opacity-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M5,6H23V18H5V6M14,9A3,3 0 0,1 17,12A3,3 0 0,1 14,15A3,3 0 0,1 11,12A3,3 0 0,1 14,9M9,8A2,2 0 0,1 7,10V14A2,2 0 0,1 9,16H19A2,2 0 0,1 21,14V10A2,2 0 0,1 19,8H9M1,10H3V20H19V22H1V10Z"></path></svg>
         
@@ -199,7 +199,7 @@
 
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
     
-    <button onclick="switchMainView('brewing'); switchSubView('creator', 'brewing-main-view'); if(window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();" 
+    <button onclick="switchMainView('brewing', 'creator')" 
             class="group bg-surface-container border border-outline-variant hover:border-primary hover:bg-primary-container p-4 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 shadow-sm hover:shadow-elevation-1">
         <div class="p-2 rounded-full bg-secondary-container text-on-secondary-container group-hover:bg-primary group-hover:text-on-primary transition-colors">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
@@ -207,7 +207,7 @@
         <span class="text-xs font-bold text-on-surface uppercase tracking-wide group-hover:text-primary-on-container">Brew</span>
     </button>
 
-    <button onclick="switchMainView('management'); switchSubView('inventory', 'management-main-view'); if(window.renderInventory) window.renderInventory();" 
+    <button onclick="switchMainView('management', 'inventory')" 
             class="group bg-surface-container border border-outline-variant hover:border-primary hover:bg-primary-container p-4 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 shadow-sm hover:shadow-elevation-1">
         <div class="p-2 rounded-full bg-tertiary-container text-on-tertiary-container group-hover:bg-primary group-hover:text-on-primary transition-colors">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
@@ -215,7 +215,7 @@
         <span class="text-xs font-bold text-on-surface uppercase tracking-wide group-hover:text-primary-on-container">Stock</span>
     </button>
 
-    <button onclick="switchMainView('tools'); switchSubView('calculators', 'tools-main-view');" 
+    <button onclick="switchMainView('tools', 'calculators')" 
             class="group bg-surface-container border border-outline-variant hover:border-primary hover:bg-primary-container p-4 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 shadow-sm hover:shadow-elevation-1">
         <div class="p-2 rounded-full bg-surface-variant text-on-surface-variant group-hover:bg-primary group-hover:text-on-primary transition-colors">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -223,7 +223,7 @@
         <span class="text-xs font-bold text-on-surface uppercase tracking-wide group-hover:text-primary-on-container">Tools</span>
     </button>
 
-    <button onclick="switchMainView('settings'); switchSubView('settings-general', 'settings-main-view');" 
+    <button onclick="switchMainView('settings', 'settings-general')" 
             class="group bg-surface-container border border-outline-variant hover:border-primary hover:bg-primary-container p-4 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 shadow-sm hover:shadow-elevation-1">
         <div class="p-2 rounded-full bg-surface-variant text-on-surface-variant group-hover:bg-primary group-hover:text-on-primary transition-colors">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>

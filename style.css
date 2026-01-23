@@ -461,19 +461,3 @@ input:checked + .slider:before { transform: translateX(24px); }
     opacity: 1 !important;
     pointer-events: auto !important;
 }
-
-/* DEBUG STIJLEN - VERWIJDER DIT LATER */
-#management-main-view {
-    display: block !important;
-    min-height: 500px !important;
-    background-color: red !important; /* Rood = Hoofd container */
-    border: 5px solid black !important;
-}
-
-#inventory-view {
-    display: block !important;
-    min-height: 400px !important;
-    background-color: yellow !important; /* Geel = Sub container */
-    border: 5px solid blue !important;
-    opacity: 1 !important;
-}

@@ -33,22 +33,34 @@ export function showToast(message, type = 'info', duration = 4000) {
     }
 }
 
-// --- NAVIGATION ---
+// --- NAVIGATION (DE GROTE FIX ZIT HIERONDER) ---
 export function switchMainView(viewName) {
     if (window.hideBottlingModal) window.hideBottlingModal();
     
-    // Verberg alle views
+    // 1. Verberg alle hoofd-views
     const views = ['dashboard', 'brewing', 'management', 'tools', 'settings'];
     views.forEach(v => document.getElementById(`${v}-main-view`)?.classList.add('hidden'));
     
-    // Toon gekozen view
+    // 2. Toon de gekozen view
     const viewToShow = document.getElementById(`${viewName}-main-view`);
     if (viewToShow) viewToShow.classList.remove('hidden');
     
-    // Specifieke inits bij het openen van een hoofdsectie
-    if (viewName === 'brewing') {
-        // Zorg dat equipment dropdown gevuld is voor de Creator
-        if(window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();
+    // 3. AUTO-SELECT DEFAULT SUB-TAB (Dit lost het lege scherm op!)
+    // Als we op een hoofdknop klikken, moeten we ook meteen een sub-pagina laden.
+    if (viewName === 'management') {
+        switchSubView('inventory', 'management-main-view');
+    }
+    else if (viewName === 'tools') {
+        switchSubView('calculators', 'tools-main-view');
+    }
+    else if (viewName === 'settings') {
+        switchSubView('settings-general', 'settings-main-view');
+    }
+    else if (viewName === 'brewing') {
+        // Bij brewing gaan we standaard naar de Creator, tenzij er al iets actief was
+        if (window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();
+        // Optioneel: switchSubView('creator', 'brewing-main-view'); 
+        // (Maar brewing wordt vaak via specifieke knoppen aangeroepen, dus dit laten we even zo)
     }
 }
 
@@ -68,26 +80,25 @@ export function switchSubView(viewName, parentViewId) {
     if (tabToActivate) tabToActivate.classList.add('active');
 
     // --- 3. TRIGGER RENDER LOGICA (CRUCIAAL!) ---
-    // Hier zorgen we dat de inhoud daadwerkelijk getekend wordt.
+    // Hier zorgen we dat de data ook echt op het scherm komt
     
-    // Brewing Sectie
-    if (viewName === 'brew-day-1' && window.renderBrewDay) window.renderBrewDay(); // <--- DEZE ONTBRAK!
+    // Brewing
+    if (viewName === 'brew-day-1' && window.renderBrewDay) window.renderBrewDay();
     if (viewName === 'brew-day-2' && window.renderBrewDay2) window.renderBrewDay2();
     if (viewName === 'history' && window.renderHistoryList) window.renderHistoryList();
     if (viewName === 'shopping-list' && window.generateShoppingList) {
-        // Als er een actieve brew is, gebruik die, anders algemeen
         const activeBrewId = (typeof tempState !== 'undefined') ? tempState.activeBrewId : null;
         window.generateShoppingList(activeBrewId);
     }
 
-    // Management Sectie
-    if (viewName === 'inventory' && window.renderInventory) window.renderInventory(); // <--- DEZE ONTBRAK!
+    // Management (HIER GING HET FOUT BIJ STOCK/CELLAR)
+    if (viewName === 'inventory' && window.renderInventory) window.renderInventory();
     if (viewName === 'cellar' && window.renderCellar) window.renderCellar();
     if (viewName === 'financials' && window.updateCostAnalysis) window.updateCostAnalysis();
     if (viewName === 'equipment' && window.renderEquipmentProfiles) window.renderEquipmentProfiles();
     if (viewName === 'packaging' && window.renderPackagingUI) window.renderPackagingUI();
 
-    // Tools Sectie
+    // Tools
     if (viewName === 'social') {
         if(window.populateSocialRecipeDropdown) window.populateSocialRecipeDropdown();
         if(window.loadSocialStyles) window.loadSocialStyles();
@@ -99,7 +110,11 @@ export function switchSubView(viewName, parentViewId) {
     }
     if (viewName === 'troubleshoot' && window.resetTroubleshootChat) window.resetTroubleshootChat();
     
-    // Creator Sectie
+    // Settings
+    if (viewName === 'settings-assets' && window.renderLabelAssetsSettings) window.renderLabelAssetsSettings();
+    if (viewName === 'settings-data') { /* Geen init nodig */ }
+    
+    // Creator
     if (viewName === 'creator' && window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();
 }
 

@@ -11,9 +11,10 @@ import './label-forge.js';
 import './tools.js';
 
 // 2. CORE IMPORTS
-import { auth, onAuthStateChanged, signInWithPopup, googleProvider } from './firebase-init.js';
+import { auth, onAuthStateChanged, signInWithPopup, googleProvider, db } from './firebase-init.js';
+import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { state } from './state.js';
-import { showToast } from './utils.js'; // switchMainView wordt via HTML aangeroepen, dus window.
+import { showToast } from './utils.js';
 
 // 3. SAFE LOADER HELPER
 // Deze functie voorkomt dat de app crasht als één module nog niet klaar is.
@@ -185,6 +186,27 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('generateBtn')?.addEventListener('click', () => window.generateRecipe());
     document.getElementById('customDescription')?.addEventListener('input', () => window.handleDescriptionInput());
     document.getElementById('style')?.addEventListener('change', () => window.handleStyleChange());
+
+    // --- GHOST BREW REMOVER ---
+    window.deleteGhostBrew = async function(brewId, brewName) {
+       if(!confirm(`⚠️ FORCE DELETE: "${brewName}"?\n\nThis will permanently remove this ghost brew from the database. This cannot be undone.`)) return;
+
+    try {
+        // 1. Verwijder uit Firestore
+        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId));
+        
+        // 2. Verwijder uit lokale state (zodat hij direct verdwijnt zonder refresh)
+        state.brews = state.brews.filter(b => b.id !== brewId);
+        
+        // 3. Update dashboard direct
+        if (window.updateDashboardInsights) window.updateDashboardInsights();
+        
+        showToast(`👻 Ghost brew "${brewName}" busted!`, "success");
+    } catch (e) {
+        console.error(e);
+        showToast("Error deleting ghost brew: " + e.message, "error");
+       }
+    }
     
     // --- VOORRAAD ---
     document.getElementById('inventory-form')?.addEventListener('submit', (e) => window.addInventoryItem(e));

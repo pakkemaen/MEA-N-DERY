@@ -1230,7 +1230,10 @@ window.renderBrewDay = function(forceId = null) {
 
                 <div class="flex justify-between items-center mb-2 px-1">
                     <span class="text-xs font-bold text-app-secondary uppercase tracking-wider">Checklist</span>
-                    <button onclick="window.resetBrewDay()" class="text-[10px] text-red-500 hover:text-red-700 hover:underline font-bold uppercase tracking-wider transition-colors">Reset</button>
+                    <div class="flex gap-3">
+                                                               <button onclick="window.resetBrewDay()" class="text-[10px] text-orange-500 hover:text-orange-700 hover:underline font-bold uppercase tracking-wider transition-colors">Restart</button>
+                                                               <button onclick="window.deleteBrew('${brew.id}')" class="text-[10px] text-red-600 hover:text-red-800 hover:underline font-bold uppercase tracking-wider transition-colors">Delete</button>
+                                                    </div>
                 </div>
                 
                 <div class="bg-app-secondary rounded-xl shadow-sm border border-app-brand/10 overflow-hidden mb-8">

@@ -66,7 +66,6 @@ export function switchSubView(viewName, parentViewId) {
     // --- TRIGGER RENDER LOGICA (Belangrijk voor data laden!) ---
     if (viewName === 'brew-day-2' && window.renderBrewDay2) window.renderBrewDay2();
     
-    // Fix voor jouw lege schermen:
     if (viewName === 'cellar' && window.renderCellar) window.renderCellar();
     if (viewName === 'financials' && window.updateCostAnalysis) window.updateCostAnalysis();
     

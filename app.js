@@ -54,9 +54,13 @@ onAuthStateChanged(auth, async (user) => {
         safeInit('loadEquipmentProfiles');
         safeInit('loadLabelAssets');
         safeInit('loadUserWaterProfiles');
-        
-        // Initialiseer UI componenten
         safeInit('initLabelForge');
+        
+        // Initialiseer UI componente
+        safeInit('initLabelForge');
+    
+        // START DE DASHBOARD UPDATER (Wacht even 1 sec zodat data zeker binnen is)
+        setTimeout(() => safeInit('updateDashboardInsights'), 1500);
 
     } else {
         console.log("🔒 No user.");

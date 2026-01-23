@@ -176,6 +176,77 @@ export async function performApiCall(prompt, schema = null) {
     return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
+// --- DASHBOARD WIDGET LOGIC ---
+export function updateDashboardInsights() {
+    // 1. Zoek de elementen
+    const list = document.getElementById('next-action-list');
+    const widget = document.getElementById('next-action-widget');
+    
+    // Veiligheid: stop als elementen of data ontbreken
+    // We checken 'state.inventory' en 'state.brews' uit jouw state.js import
+    if (!list || !widget || !state.inventory || !state.brews) return;
+
+    list.innerHTML = ''; // Schoonmaken
+    let alertsCount = 0;
+    const today = new Date();
+
+    // 2. CHECK VOORRAAD (Vervalt binnen 30 dagen)
+    state.inventory.forEach(item => {
+        if (item.expirationDate) {
+            const expDate = new Date(item.expirationDate);
+            const diffTime = expDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays <= 30 && diffDays >= 0) {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="text-amber-600 font-bold text-xs uppercase">⚠️ Expiry Warning</span><br> <span class="font-semibold">${item.name}</span> expires in ${diffDays} days.`;
+                li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
+                list.appendChild(li);
+                alertsCount++;
+            } else if (diffDays < 0) {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="text-red-600 font-bold text-xs uppercase">⛔ Expired</span><br> <span class="font-semibold">${item.name}</span> is ${Math.abs(diffDays)} days over date!`;
+                li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
+                list.appendChild(li);
+                alertsCount++;
+            }
+        }
+    });
+
+    // 3. CHECK ACTIEVE BATCHES (Simpele reminders)
+    state.brews.forEach(brew => {
+        if (!brew.archived && !brew.bottledDate) {
+            const startDate = brew.createdAt ? new Date(brew.createdAt.toDate()) : new Date();
+            const ageDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+
+            // TOSNA Reminder (Dag 3/4)
+            if (ageDays >= 3 && ageDays <= 5) {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="text-green-600 font-bold text-xs uppercase">💊 Nutrient Check</span><br> <b>${brew.recipeName}</b> is on Day ${ageDays}. Have you added the final nutrients?`;
+                li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
+                list.appendChild(li);
+                alertsCount++;
+            }
+            
+            // Secondary Reminder (Dag 14-20)
+            if (ageDays >= 14 && ageDays <= 20) {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="text-blue-600 font-bold text-xs uppercase">🍺 Racking Check</span><br> <b>${brew.recipeName}</b> (Day ${ageDays}). Ready for Secondary? Check gravity.`;
+                li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
+                list.appendChild(li);
+                alertsCount++;
+            }
+        }
+    });
+
+    // 4. TONEN / VERBERGEN
+    if (alertsCount > 0) {
+        widget.classList.remove('hidden');
+    } else {
+        widget.classList.add('hidden');
+    }
+}
+
 // --- EXPORTS TO WINDOW (Voor HTML onclick support) ---
 window.showToast = showToast;
 window.getLoaderHtml = getLoaderHtml;
@@ -185,6 +256,8 @@ window.showDangerModal = showDangerModal;
 window.hideDangerModal = hideDangerModal;
 window.checkDangerConfirmation = checkDangerConfirmation;
 window.executeDangerAction = executeDangerAction;
+window.updateDashboardInsights = updateDashboardInsights;
+
 
 // Start thinking animation toevoegen (die hadden we bovenaan weggehaald)
 window.startThinkingAnimation = function(elementId) {

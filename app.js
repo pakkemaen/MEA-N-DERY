@@ -75,61 +75,6 @@ onAuthStateChanged(auth, async (user) => {
 // 2. GLOBAL EVENT LISTENERS
 // ----------------------------------------------------------------------------
 
-// --- SLIMME DASHBOARD NAVIGATIE ---
-window.setupDashboardLinks = function() {
-    // 1. Zoek de "Primary" kaart (via het ID van het getal)
-    const primStat = document.getElementById('stat-primary-batches');
-    const primCard = primStat ? primStat.closest('.card') || primStat.parentElement : null; // Zoek de kaart om het getal heen
-
-    if (primCard) {
-        primCard.style.cursor = 'pointer'; // Maak duidelijk dat het klikbaar is
-        primCard.onclick = () => {
-            // A. Ga naar de hoofdpagina
-            switchMainView('brewing');
-            
-            // B. Ga naar de juiste sub-tab
-            // Let op: we roepen switchSubView aan, die nu (dankzij onze vorige fix)
-            // óók renderBrewDay() aanroept.
-            switchSubView('brew-day-1', 'brewing-main-view');
-            
-            // C. VEILIGHEID: Forceer render als switchSubView dat niet deed 
-            // (bijv. als de tab al actief was)
-            if (typeof window.renderBrewDay === 'function') {
-                window.renderBrewDay(); 
-            }
-        };
-    }
-
-    // 2. Zoek de "Aging" kaart
-    const ageStat = document.getElementById('stat-aging-batches');
-    const ageCard = ageStat ? ageStat.closest('.card') || ageStat.parentElement : null;
-
-    if (ageCard) {
-        ageCard.style.cursor = 'pointer';
-        ageCard.onclick = () => {
-            switchMainView('brewing');
-            switchSubView('brew-day-2', 'brewing-main-view');
-            
-            if (typeof window.renderBrewDay2 === 'function') {
-                window.renderBrewDay2();
-            }
-        };
-    }
-    
-    // 3. Zoek de "Cellar/Value" kaart (Optioneel, naar inventory of kelder)
-    const cellarStat = document.getElementById('stat-bottles');
-    const cellarCard = cellarStat ? cellarStat.closest('.card') || cellarStat.parentElement : null;
-    
-    if (cellarCard) {
-        cellarCard.style.cursor = 'pointer';
-        cellarCard.onclick = () => {
-            switchMainView('management');
-            switchSubView('cellar', 'management-main-view');
-            if (typeof window.renderCellar === 'function') window.renderCellar();
-        };
-    }
-};
-
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🚀 Meandery V2.4 Modular System Active");
 
@@ -333,5 +278,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup Timers & Listeners from Modules
     if(window.setupBrewDayEventListeners) window.setupBrewDayEventListeners();
     if(window.setupPromptEngineer) window.setupPromptEngineer();
-    if(window.setupDashboardLinks) window.setupDashboardLinks();
 });

@@ -45,54 +45,62 @@ export function switchMainView(viewName) {
     const viewToShow = document.getElementById(`${viewName}-main-view`);
     if (viewToShow) viewToShow.classList.remove('hidden');
     
-    // Specifieke inits
-    if (viewName === 'brewing' && window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();
+    // Specifieke inits bij het openen van een hoofdsectie
+    if (viewName === 'brewing') {
+        // Zorg dat equipment dropdown gevuld is voor de Creator
+        if(window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();
+    }
 }
 
 export function switchSubView(viewName, parentViewId) {
     const parentView = document.getElementById(parentViewId);
     if(!parentView) return;
     
-    // 1. Reset alle tabs en views binnen deze sectie
+    // 1. Reset UI (Verberg alle sub-views en deselecteer tabs)
     parentView.querySelectorAll('[id$="-view"]').forEach(v => v.classList.add('hidden'));
     parentView.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
 
-    // 2. Zoek de nieuwe view en tab
+    // 2. Toon nieuwe view en activeer tab
     const viewToShow = document.getElementById(`${viewName}-view`);
     const tabToActivate = document.getElementById(`${viewName}-sub-tab`);
 
-    // 3. Activeer ze
     if (viewToShow) viewToShow.classList.remove('hidden');
     if (tabToActivate) tabToActivate.classList.add('active');
 
-    // 4. TRIGGER LOGICA (Dit zorgt dat de data geladen wordt!)
-    if (viewName === 'brew-day-2' && window.renderBrewDay2) window.renderBrewDay2();
+    // --- 3. TRIGGER RENDER LOGICA (CRUCIAAL!) ---
+    // Hier zorgen we dat de inhoud daadwerkelijk getekend wordt.
     
+    // Brewing Sectie
+    if (viewName === 'brew-day-1' && window.renderBrewDay) window.renderBrewDay(); // <--- DEZE ONTBRAK!
+    if (viewName === 'brew-day-2' && window.renderBrewDay2) window.renderBrewDay2();
+    if (viewName === 'history' && window.renderHistoryList) window.renderHistoryList();
+    if (viewName === 'shopping-list' && window.generateShoppingList) {
+        // Als er een actieve brew is, gebruik die, anders algemeen
+        const activeBrewId = (typeof tempState !== 'undefined') ? tempState.activeBrewId : null;
+        window.generateShoppingList(activeBrewId);
+    }
+
+    // Management Sectie
+    if (viewName === 'inventory' && window.renderInventory) window.renderInventory(); // <--- DEZE ONTBRAK!
     if (viewName === 'cellar' && window.renderCellar) window.renderCellar();
     if (viewName === 'financials' && window.updateCostAnalysis) window.updateCostAnalysis();
+    if (viewName === 'equipment' && window.renderEquipmentProfiles) window.renderEquipmentProfiles();
+    if (viewName === 'packaging' && window.renderPackagingUI) window.renderPackagingUI();
 
+    // Tools Sectie
     if (viewName === 'social') {
-        // Let op: hier stond een typfoutje 'populates', dat is nu weggehaald
         if(window.populateSocialRecipeDropdown) window.populateSocialRecipeDropdown();
         if(window.loadSocialStyles) window.loadSocialStyles();
     }
-    
-    if (viewName === 'creator' && window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();
-    
     if (viewName === 'labels') {
         if(window.populateLabelRecipeDropdown) window.populateLabelRecipeDropdown();
         if(window.updateLabelPreviewDimensions) window.updateLabelPreviewDimensions();
         if(typeof window.setLabelTheme === 'function') window.setLabelTheme('standard');
     }
-    
     if (viewName === 'troubleshoot' && window.resetTroubleshootChat) window.resetTroubleshootChat();
     
-    if (viewName === 'shopping-list') {
-        if (typeof window.generateShoppingList === 'function') {
-            const activeBrewId = (typeof tempState !== 'undefined') ? tempState.activeBrewId : null;
-            window.generateShoppingList(activeBrewId);
-        }
-    }
+    // Creator Sectie
+    if (viewName === 'creator' && window.populateEquipmentProfilesDropdown) window.populateEquipmentProfilesDropdown();
 }
 
 // --- UI UTILITIES ---
@@ -107,7 +115,7 @@ export function getLoaderHtml(text = "Loading...") {
     </div>`;
 }
 
-// --- DANGER MODAL (Bevestiging) ---
+// --- DANGER MODAL ---
 let dangerAction = null; 
 
 export function showDangerModal(action, confirmationText) {
@@ -180,7 +188,7 @@ export async function performApiCall(prompt, schema = null) {
     return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
-// --- DASHBOARD WIDGET LOGIC (BEHOUDEN) ---
+// --- DASHBOARD WIDGET ---
 export function updateDashboardInsights() {
     const list = document.getElementById('next-action-list');
     const widget = document.getElementById('next-action-widget');
@@ -248,13 +256,13 @@ export function updateDashboardInsights() {
     if (alertsCount > 0) widget.classList.remove('hidden'); else widget.classList.add('hidden');
 }
 
-// --- GLOBAL HELPER: CSS THEME COLORS (VOOR CHART.JS) ---
+// --- GLOBAL HELPER: CSS THEME COLORS ---
 function getThemeColor(variableName) {
     if (typeof window === 'undefined' || !document) return '#000000';
     return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
 }
 
-// --- THINKING ANIMATION (BEHOUDEN) ---
+// --- THINKING ANIMATION ---
 window.startThinkingAnimation = function(elementId) {
     const messages = [
         "Analyzing flavor constraints...", "Consulting Scott Labs Handbook...",
@@ -272,7 +280,7 @@ window.startThinkingAnimation = function(elementId) {
     }, 1800); 
 }
 
-// --- EXPORTS TO WINDOW (BELANGRIJK VOOR HTML ONCLICK) ---
+// --- EXPORTS TO WINDOW ---
 window.showToast = showToast;
 window.getLoaderHtml = getLoaderHtml;
 window.switchMainView = switchMainView;

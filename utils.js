@@ -63,8 +63,13 @@ export function switchSubView(viewName, parentViewId) {
     if (viewToShow) viewToShow.classList.remove('hidden');
     if (tabToActivate) tabToActivate.classList.add('active');
 
-    // Trigger specifieke logica (veilig via window check)
+    // --- TRIGGER RENDER LOGICA (Belangrijk voor data laden!) ---
     if (viewName === 'brew-day-2' && window.renderBrewDay2) window.renderBrewDay2();
+    
+    // Fix voor jouw lege schermen:
+    if (viewName === 'cellar' && window.renderCellar) window.renderCellar();
+    if (viewName === 'financials' && window.updateCostAnalysis) window.updateCostAnalysis();
+    
     if (viewName === 'social') {
         if(window.populateSocialRecipeDropdown) window.populateSocialRecipeDropdown();
         if(window.loadSocialStyles) window.loadSocialStyles();
@@ -76,11 +81,9 @@ export function switchSubView(viewName, parentViewId) {
         if(typeof window.setLabelTheme === 'function') window.setLabelTheme('standard');
     }
     if (viewName === 'troubleshoot' && window.resetTroubleshootChat) window.resetTroubleshootChat();
-    // Trigger specifieke acties bij het openen van tabs
+    
     if (viewName === 'shopping-list') {
         if (typeof window.generateShoppingList === 'function') {
-            // Check of we in Creator mode zitten (geen actieve brew ID) of in History mode
-            // Voor nu: trigger hem gewoon, de functie zoekt zelf uit of er een recept is.
             const activeBrewId = (typeof tempState !== 'undefined') ? tempState.activeBrewId : null;
             window.generateShoppingList(activeBrewId);
         }
@@ -140,10 +143,7 @@ export function executeDangerAction() {
 
 // --- AI CORE ---
 export async function performApiCall(prompt, schema = null) {
-    // 1. Haal key op uit State
     let apiKey = state.userSettings.apiKey;
-    
-    // Fallback naar CONFIG (als aanwezig)
     const CONFIG = window.CONFIG || {};
     if (!apiKey && CONFIG.firebase && CONFIG.firebase.apiKey) {
         apiKey = CONFIG.firebase.apiKey;
@@ -155,7 +155,6 @@ export async function performApiCall(prompt, schema = null) {
         ? state.userSettings.aiModel : "gemini-1.5-flash";
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    
     const requestBody = { contents: [{ parts: [{ text: prompt }] }] };
 
     if (schema) {
@@ -176,21 +175,16 @@ export async function performApiCall(prompt, schema = null) {
     return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
-// --- DASHBOARD WIDGET LOGIC ---
+// --- DASHBOARD WIDGET LOGIC (BEHOUDEN) ---
 export function updateDashboardInsights() {
-    // 1. Zoek de elementen
     const list = document.getElementById('next-action-list');
     const widget = document.getElementById('next-action-widget');
-    
-    // Veiligheid: stop als elementen of data ontbreken
-    // We checken 'state.inventory' en 'state.brews' uit jouw state.js import
     if (!list || !widget || !state.inventory || !state.brews) return;
 
-    list.innerHTML = ''; // Schoonmaken
+    list.innerHTML = ''; 
     let alertsCount = 0;
     const today = new Date();
 
-    // 2. CHECK VOORRAAD (Vervalt binnen 30 dagen)
     state.inventory.forEach(item => {
         if (item.expirationDate) {
             const expDate = new Date(item.expirationDate);
@@ -213,51 +207,31 @@ export function updateDashboardInsights() {
         }
     });
 
-    // 3. CHECK ACTIEVE BATCHES (Slimme versie)
     state.brews.forEach(brew => {
-        // Filter 1: Is het gearchiveerd of al gebotteld? -> Negeer
         if (brew.archived || brew.bottledDate) return;
-
-        // Filter 2: Heeft het überhaupt een startdatum? 
-        // Als logData.brewDate leeg is, is het een 'Planned Recipe' -> Negeer op dashboard
         const hasStarted = brew.logData && brew.logData.brewDate;
         if (!hasStarted) return; 
 
-        // Nu weten we zeker dat het een actieve poging tot brouwen is
         const startDate = new Date(brew.logData.brewDate);
         const ageDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+        const archiveBtn = `<button onclick="window.archiveBrew('${brew.id}', '${brew.recipeName}')" class="float-right ml-2 text-blue-400 hover:text-blue-600 font-bold px-1" title="Archive">📦</button>`;
+        const deleteBtn = `<button onclick="window.deleteGhostBrew('${brew.id}', '${brew.recipeName}')" class="float-right ml-1 text-gray-300 hover:text-red-500 font-bold px-1" title="Delete">✕</button>`;
 
-        // Delete knop (Alleen voor echte fouten/ghosts)
-        // We noemen het nu 'Stop Tracking' om aan te geven dat het uit het dashboard gaat
-        const deleteBtn = `<button onclick="window.deleteGhostBrew('${brew.id}', '${brew.recipeName}')" class="float-right ml-2 text-gray-300 hover:text-red-500 font-bold px-1" title="Delete from Database">✕</button>`;
-
-        // A. TOSNA Reminder (Dag 3-5)
         if (ageDays >= 3 && ageDays <= 5) {
             const li = document.createElement('li');
-            li.innerHTML = `<span class="text-green-600 font-bold text-xs uppercase">💊 Nutrient Check</span><br> <b>${brew.recipeName}</b> is on Day ${ageDays}. Have you added the final nutrients?`;
+            li.innerHTML = `<span class="text-green-600 font-bold text-xs uppercase">💊 Nutrient Check</span><br> <b>${brew.recipeName}</b> (Day ${ageDays}).`;
             li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
             list.appendChild(li);
             alertsCount++;
         }
-        
-        // B. Secondary Reminder (Dag 14-20)
         if (ageDays >= 14 && ageDays <= 20) {
             const li = document.createElement('li');
-            li.innerHTML = `<span class="text-blue-600 font-bold text-xs uppercase">🍺 Racking Check</span><br> <b>${brew.recipeName}</b> (Day ${ageDays}). Ready for Secondary? Check gravity.`;
+            li.innerHTML = `<span class="text-blue-600 font-bold text-xs uppercase">🍺 Racking Check</span><br> <b>${brew.recipeName}</b> (Day ${ageDays}).`;
             li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
             list.appendChild(li);
             alertsCount++;
         }
-
-        // C. GHOST CATCHER (Ouder dan 60 dagen)
         if (ageDays > 60) {
-            // We maken twee knoppen:
-            // 📦 Archiefdoos: Bewaren maar stoppen met zeuren
-            // ✕ Kruisje: Echt verwijderen (foutje)
-            
-            const archiveBtn = `<button onclick="window.archiveBrew('${brew.id}', '${brew.recipeName}')" class="float-right ml-2 text-blue-400 hover:text-blue-600 font-bold px-1" title="Archive (Keep in History)">📦</button>`;
-            const deleteBtn = `<button onclick="window.deleteGhostBrew('${brew.id}', '${brew.recipeName}')" class="float-right ml-1 text-gray-300 hover:text-red-500 font-bold px-1" title="Delete Permanently">✕</button>`;
-
             const li = document.createElement('li');
             li.innerHTML = `${deleteBtn} ${archiveBtn} <span class="text-gray-400 font-bold text-xs uppercase">👻 Ghost / Stalled</span><br> <b>${brew.recipeName}</b> started ${ageDays} days ago. Still active?`;
             li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
@@ -266,22 +240,16 @@ export function updateDashboardInsights() {
         }
     });
 
-    // 4. TONEN / VERBERGEN
-    if (alertsCount > 0) {
-        widget.classList.remove('hidden');
-    } else {
-        widget.classList.add('hidden');
-    }
+    if (alertsCount > 0) widget.classList.remove('hidden'); else widget.classList.add('hidden');
 }
 
-// --- GLOBAL HELPER: CSS THEME COLORS ---
-// Deze functie haalt de actuele kleur op uit je CSS variabalen (voor Chart.js)
+// --- GLOBAL HELPER: CSS THEME COLORS (VOOR CHART.JS) ---
 function getThemeColor(variableName) {
-    if (typeof window === 'undefined' || !document) return '#000000'; // Veiligheid
+    if (typeof window === 'undefined' || !document) return '#000000';
     return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
 }
 
-// Start thinking animation toevoegen (die hadden we bovenaan weggehaald)
+// --- THINKING ANIMATION (BEHOUDEN) ---
 window.startThinkingAnimation = function(elementId) {
     const messages = [
         "Analyzing flavor constraints...", "Consulting Scott Labs Handbook...",
@@ -299,7 +267,7 @@ window.startThinkingAnimation = function(elementId) {
     }, 1800); 
 }
 
-// --- EXPORTS TO WINDOW (Voor HTML onclick support) ---
+// --- EXPORTS TO WINDOW (BELANGRIJK VOOR HTML ONCLICK) ---
 window.showToast = showToast;
 window.getLoaderHtml = getLoaderHtml;
 window.switchMainView = switchMainView;
@@ -310,7 +278,3 @@ window.checkDangerConfirmation = checkDangerConfirmation;
 window.executeDangerAction = executeDangerAction;
 window.updateDashboardInsights = updateDashboardInsights;
 window.getThemeColor = getThemeColor;
-
-
-
-

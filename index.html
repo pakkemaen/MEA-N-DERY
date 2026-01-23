@@ -501,7 +501,7 @@
             <button id="financials-sub-tab" class="sub-tab">Financials</button>
         </nav>
     </div>
-            <div id="inventory-view" class="mt-6">
+            <div id="inventory-view" class="hidden mt-6 animate-fade-in">
         <div class="flex flex-col lg:flex-row gap-6">
             
             <aside class="lg:w-1/3 card p-6 shadow-elevation-1 border border-outline-variant/50">
@@ -565,7 +565,7 @@
         </div>
     </div>
 
-            <div id="packaging-view" class="hidden mt-6">
+            <div id="packaging-view" class="hidden mt-6 animate-fade-in">
         <div class="flex flex-col lg:flex-row gap-6">
             <aside class="lg:w-1/3 card p-6 border border-outline-variant/50">
                 <h2 class="text-2xl text-primary font-normal mb-6">Packaging Stock</h2>
@@ -594,7 +594,7 @@
         </div>
     </div>             
 
-    <div id="equipment-view" class="hidden mt-6">
+    <div id="equipment-view" class="hidden mt-6 animate-fade-in">
         <div class="flex flex-col lg:flex-row gap-6">
             <aside class="lg:w-1/3 card p-6 border border-outline-variant/50">
                 <h2 class="text-2xl text-primary font-normal mb-6">Add Equipment</h2>
@@ -637,14 +637,14 @@
         </div>
     </div>
 
-            <div id="cellar-view" class="hidden mt-6">
+            <div id="cellar-view" class="hidden mt-6 animate-fade-in">
         <div class="card p-6 md:p-8 shadow-elevation-1 border border-outline-variant/30 overflow-y-auto" style="max-height: 75vh;">
             <h2 class="text-2xl text-primary font-normal mb-6">My Cellar</h2>
             <div id="cellar-list" class="space-y-4"></div>
         </div>
     </div>
 
-    <div id="financials-view" class="hidden mt-6">
+    <div id="financials-view" class="hidden mt-6 animate-fade-in">
         <div class="card p-6 md:p-8 shadow-elevation-1 border border-outline-variant/30 overflow-y-auto" style="max-height: 75vh;">
              <h2 class="text-2xl text-primary font-normal mb-6">Financial Overview</h2>
              
@@ -712,7 +712,7 @@
         </nav>
     </div>
     
-    <div id="calculators-view" class="bg-surface-container card p-6 md:p-8 shadow-elevation-1 overflow-y-auto" style="max-height: 80vh;">
+    <div id="calculators-view" class="hidden bg-surface-container card p-6 md:p-8 shadow-elevation-1 overflow-y-auto animate-fade-in" style="max-height: 80vh;">
         <h2 class="text-3xl font-header font-normal mb-6 text-center text-primary">Calculators</h2>
         
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -853,7 +853,7 @@
         </div>
     </div>
  
-    <div id="labels-view" class="hidden mt-6">
+    <div id="labels-view" class="hidden mt-6 animate-fade-in">
         <span id="displayLabelYeast" class="hidden"></span>
         <span id="displayLabelHoney" class="hidden"></span>
         <input type="hidden" id="labelDetails">
@@ -949,7 +949,7 @@
         </div>
     </div>
 
-    <div id="water-view" class="hidden mt-6">
+    <div id="water-view" class="hidden mt-6 animate-fade-in">
         <div class="flex flex-col lg:flex-row gap-6">
             <aside class="lg:w-1/3 card p-6 border border-outline-variant/50">
                 <h2 class="text-2xl text-primary font-normal mb-6">Water Chemistry</h2>
@@ -1005,7 +1005,7 @@
         </div>
     </div>
 
-    <div id="troubleshoot-view" class="hidden h-[75vh] flex flex-col">
+    <div id="troubleshoot-view" class="hidden h-[75vh] flex flex-col animate-fade-in">
         <div class="card flex-grow flex flex-col p-4 shadow-elevation-1 border border-outline-variant/30 overflow-hidden">
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
                 <h3 class="text-lg font-bold text-primary flex items-center gap-2">Mead Medic AI</h3>
@@ -1040,7 +1040,7 @@
         </div>
     </div>
 
-    <div id="social-view" class="hidden mt-6">
+    <div id="social-view" class="hidden mt-6 animate-fade-in">
         <div class="flex flex-col lg:flex-row gap-6">
             <aside class="lg:w-1/3 card p-6 border border-outline-variant/50">
                 <h2 class="text-2xl text-primary font-normal mb-6">Social Studio</h2>
@@ -1067,7 +1067,7 @@
         </div>
     </div>
 
-    <div id="library-view" class="hidden mt-6">
+    <div id="library-view" class="hidden mt-6 animate-fade-in">
         <div class="card p-6 md:p-8 shadow-elevation-1 overflow-y-auto" style="max-height: 80vh;">
             <h2 class="text-3xl font-header font-normal mb-2 text-center text-primary">The Great Library</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
@@ -1107,7 +1107,7 @@
         </nav>
     </div>
 
-    <div id="settings-general-view" class="card p-6 md:p-8 shadow-elevation-1 border border-outline-variant/30 overflow-y-auto" style="max-height: 80vh;">
+    <div id="settings-general-view" class="hidden card p-6 md:p-8 shadow-elevation-1 border border-outline-variant/30 overflow-y-auto animate-fade-in" style="max-height: 80vh;">
         <h2 class="text-3xl font-header font-normal mb-6 text-center text-primary">System Settings</h2>
         
         <div class="max-w-xl mx-auto space-y-6">
@@ -1178,7 +1178,7 @@
         </div>
     </div>
 
-    <div id="settings-assets-view" class="hidden card p-6 md:p-8 shadow-elevation-1 border border-outline-variant/30 overflow-y-auto" style="max-height: 80vh;">
+    <div id="settings-assets-view" class="hidden card p-6 md:p-8 shadow-elevation-1 border border-outline-variant/30 overflow-y-auto animate-fade-in" style="max-height: 80vh;">
         <h2 class="text-3xl font-header font-normal mb-6 text-center text-primary">Label Assets</h2>
         <div class="max-w-xl mx-auto space-y-6">
             
@@ -1235,7 +1235,7 @@
         </div>
     </div> 
 
-    <div id="settings-data-view" class="hidden card p-6 md:p-8 shadow-elevation-1 border border-outline-variant/30 overflow-y-auto" style="max-height: 80vh;">
+    <div id="settings-data-view" class="hidden card p-6 md:p-8 shadow-elevation-1 border border-outline-variant/30 overflow-y-auto animate-fade-in" style="max-height: 80vh;">
         <h2 class="text-3xl font-header font-normal mb-6 text-center text-error">Danger Zone</h2>
         <div class="max-w-xl mx-auto">
             <div class="mt-4 p-6 rounded-3xl border border-error bg-error-container/10">

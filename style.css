@@ -448,3 +448,10 @@ input:checked + .slider:before { transform: translateX(24px); }
     opacity: 0;
     pointer-events: none;
 }
+
+/* NOODREM: Als een element NIET hidden is, MOET het zichtbaar zijn.
+   Dit overschrijft eventuele animatie-glitches die opacity op 0 houden. */
+.animate-fade-in:not(.hidden) {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}

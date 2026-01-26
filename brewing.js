@@ -1909,20 +1909,21 @@ function getActualIngredientsHtml(brew) {
     </div>`;
 }
 
-// --- LOGBOOK: 2-LINE MOBILE LAYOUT (FIXED WIDTHS) ---
+// --- LOGBOOK: 2-LINE MOBILE LAYOUT (FIXED OVERFLOW) ---
 function getBrewLogHtml(logData, idSuffix) {
     const data = logData || {};
     const fermLog = data.fermentationLog || [];
 
     // CSS Definitions
+    // !h-8 en !p-1 voor compactheid
     const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary !p-1 !h-8";
     
-    // VERANDERD: 'flex-1' dwingt de datum om alle rest-ruimte te pakken
+    // VERANDERD: 'flex-1' pakt alle ruimte die overblijft
     const dateClass = `${inputBase} flex-1 min-w-0`; 
     
-    // VERANDERD: 'flex-none !w-16' dwingt een vaste breedte af (groeit niet mee)
-    const tempClass = `${inputBase} flex-none !w-14 text-center font-mono font-bold text-primary`;
-    const sgClass = `${inputBase} flex-none !w-18 text-center font-mono font-bold text-primary`; // Iets breder voor 1.000
+    // VERANDERD: Geldige tailwind classes (!w-16 en !w-20) zodat ze niet 'springen' naar 100% breedte
+    const tempClass = `${inputBase} flex-none !w-16 text-center font-mono font-bold text-primary`;
+    const sgClass = `${inputBase} flex-none !w-20 text-center font-mono font-bold text-primary`; 
     
     const noteClass = `${inputBase} flex-grow min-w-0 italic text-on-surface-variant`; 
 
@@ -1996,17 +1997,17 @@ function getBrewLogHtml(logData, idSuffix) {
     </div>`;
 }
 
-// --- HELPER: Nieuwe log-regel (Fixed Widths) ---
+// --- HELPER: Nieuwe log-regel (Fixed Overflow) ---
 window.addLogLine = function(idSuffix) {
     const container = document.getElementById(`fermentationContainer-${idSuffix}`);
     if(!container) return;
 
     const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary !p-1 !h-8";
     
-    // Zelfde logica: Datum Flex-1, de rest Flex-None en vaste width
+    // Zelfde logica als in de render functie
     const dateClass = `${inputBase} flex-1 min-w-0`;
-    const tempClass = `${inputBase} flex-none !w-14 text-center font-mono font-bold text-primary`;
-    const sgClass = `${inputBase} flex-none !w-18 text-center font-mono font-bold text-primary`;
+    const tempClass = `${inputBase} flex-none !w-16 text-center font-mono font-bold text-primary`;
+    const sgClass = `${inputBase} flex-none !w-20 text-center font-mono font-bold text-primary`;
     const noteClass = `${inputBase} flex-grow min-w-0 italic text-on-surface-variant`;
     
     const today = new Date().toISOString().split('T')[0];

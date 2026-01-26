@@ -1909,21 +1909,36 @@ function getActualIngredientsHtml(brew) {
     </div>`;
 }
 
-// --- LOGBOOK: 2-LINE MOBILE LAYOUT (FIXED OVERFLOW) ---
+// --- LOGBOOK: 2-LINE MOBILE LAYOUT (NO ICON & COMPACT) ---
 function getBrewLogHtml(logData, idSuffix) {
+    // 1. CSS Injectie: Verberg het kalender icoon (eenmalig)
+    if (!document.getElementById('hide-date-icon-style')) {
+        const style = document.createElement('style');
+        style.id = 'hide-date-icon-style';
+        style.innerHTML = `
+            .date-no-icon::-webkit-calendar-picker-indicator { 
+                display: none !important; 
+                -webkit-appearance: none;
+            }
+            .date-no-icon {
+                background: transparent; /* Voorkomt witte achtergrond op sommige mobiele browsers */
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     const data = logData || {};
     const fermLog = data.fermentationLog || [];
 
     // CSS Definitions
-    // !h-8 en !p-1 voor compactheid
     const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary !p-1 !h-8";
     
-    // VERANDERD: 'flex-1' pakt alle ruimte die overblijft
-    const dateClass = `${inputBase} flex-1 min-w-0`; 
+    // VERANDERD: 'date-no-icon' class toegevoegd & flex-1 voor maximale ruimte
+    const dateClass = `${inputBase} flex-1 min-w-0 date-no-icon`; 
     
-    // VERANDERD: Geldige tailwind classes (!w-16 en !w-20) zodat ze niet 'springen' naar 100% breedte
-    const tempClass = `${inputBase} flex-none !w-16 text-center font-mono font-bold text-primary`;
-    const sgClass = `${inputBase} flex-none !w-20 text-center font-mono font-bold text-primary`; 
+    // VERANDERD: Nóg smaller (!w-12 = 48px, !w-16 = 64px)
+    const tempClass = `${inputBase} flex-none !w-12 text-center font-mono font-bold text-primary`;
+    const sgClass = `${inputBase} flex-none !w-16 text-center font-mono font-bold text-primary`; 
     
     const noteClass = `${inputBase} flex-grow min-w-0 italic text-on-surface-variant`; 
 
@@ -1966,7 +1981,7 @@ function getBrewLogHtml(logData, idSuffix) {
             </div>
             <div>
                 <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Brew Date</label>
-                <input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}" class="w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant">
+                <input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}" class="w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant date-no-icon">
             </div>
         </div>
 
@@ -1997,17 +2012,17 @@ function getBrewLogHtml(logData, idSuffix) {
     </div>`;
 }
 
-// --- HELPER: Nieuwe log-regel (Fixed Overflow) ---
+// --- HELPER: Nieuwe log-regel (Ultra Compact) ---
 window.addLogLine = function(idSuffix) {
     const container = document.getElementById(`fermentationContainer-${idSuffix}`);
     if(!container) return;
 
     const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary !p-1 !h-8";
     
-    // Zelfde logica als in de render functie
-    const dateClass = `${inputBase} flex-1 min-w-0`;
-    const tempClass = `${inputBase} flex-none !w-16 text-center font-mono font-bold text-primary`;
-    const sgClass = `${inputBase} flex-none !w-20 text-center font-mono font-bold text-primary`;
+    // Zelfde classes als in getBrewLogHtml
+    const dateClass = `${inputBase} flex-1 min-w-0 date-no-icon`;
+    const tempClass = `${inputBase} flex-none !w-12 text-center font-mono font-bold text-primary`;
+    const sgClass = `${inputBase} flex-none !w-16 text-center font-mono font-bold text-primary`;
     const noteClass = `${inputBase} flex-grow min-w-0 italic text-on-surface-variant`;
     
     const today = new Date().toISOString().split('T')[0];

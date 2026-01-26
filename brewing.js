@@ -1909,32 +1909,33 @@ function getActualIngredientsHtml(brew) {
     </div>`;
 }
 
-// --- LOGBOOK: 2-LINE MOBILE LAYOUT (OPTIMIZED DATE SPACE) ---
+// --- LOGBOOK: 2-LINE MOBILE LAYOUT (FIXED WIDTHS) ---
 function getBrewLogHtml(logData, idSuffix) {
     const data = logData || {};
     const fermLog = data.fermentationLog || [];
 
-    // CSS classes: Compact (!h-8 !p-1) en Responsive
+    // CSS Definitions
     const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary !p-1 !h-8";
     
-    // Date krijgt nu ALLE overgebleven ruimte
-    const dateClass = `${inputBase} flex-grow min-w-0`; 
-    // Temp en SG krijgen een vaste, smallere breedte (bijv 3.5rem / 14 tailwind units)
-    const numClass = `${inputBase} w-14 text-center font-mono font-bold text-primary`;
+    // VERANDERD: 'flex-1' dwingt de datum om alle rest-ruimte te pakken
+    const dateClass = `${inputBase} flex-1 min-w-0`; 
     
-    // Notes deelt ruimte met delete knop op regel 2
+    // VERANDERD: 'flex-none !w-16' dwingt een vaste breedte af (groeit niet mee)
+    const tempClass = `${inputBase} flex-none !w-14 text-center font-mono font-bold text-primary`;
+    const sgClass = `${inputBase} flex-none !w-18 text-center font-mono font-bold text-primary`; // Iets breder voor 1.000
+    
     const noteClass = `${inputBase} flex-grow min-w-0 italic text-on-surface-variant`; 
 
     const fermRows = fermLog.map(row => `
     <div class="log-entry p-2 border-b border-outline-variant/30 last:border-0">
         <div class="flex items-center gap-2 mb-1.5">
             <input type="date" value="${row.date || ''}" class="${dateClass}">
-            <input type="number" step="0.5" value="${row.temp || ''}" class="${numClass}" placeholder="°C">
-            <input type="number" step="0.001" value="${row.sg || ''}" class="${numClass} sg-input" placeholder="SG" oninput="window.syncLogToFinal('${idSuffix}')">
+            <input type="number" step="0.5" value="${row.temp || ''}" class="${tempClass}" placeholder="°C">
+            <input type="number" step="0.001" value="${row.sg || ''}" class="${sgClass} sg-input" placeholder="SG" oninput="window.syncLogToFinal('${idSuffix}')">
         </div>
         
         <div class="flex items-center gap-2">
-            <input type="text" value="${row.notes || ''}" class="${noteClass}" placeholder="Notes (e.g. bubbles slow...)">
+            <input type="text" value="${row.notes || ''}" class="${noteClass}" placeholder="Notes...">
             <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-error hover:bg-error-container p-1 rounded transition-colors flex-shrink-0" title="Delete Entry">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             </button>
@@ -1995,17 +1996,17 @@ function getBrewLogHtml(logData, idSuffix) {
     </div>`;
 }
 
-/// --- HELPER: Nieuwe log-regel (Updated Layout) ---
+// --- HELPER: Nieuwe log-regel (Fixed Widths) ---
 window.addLogLine = function(idSuffix) {
     const container = document.getElementById(`fermentationContainer-${idSuffix}`);
     if(!container) return;
 
-    // CSS Definitions (consistent met getBrewLogHtml)
     const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary !p-1 !h-8";
     
-    // Zelfde verdeling als hierboven
-    const dateClass = `${inputBase} flex-grow min-w-0`;
-    const numClass = `${inputBase} w-14 text-center font-mono font-bold text-primary`;
+    // Zelfde logica: Datum Flex-1, de rest Flex-None en vaste width
+    const dateClass = `${inputBase} flex-1 min-w-0`;
+    const tempClass = `${inputBase} flex-none !w-14 text-center font-mono font-bold text-primary`;
+    const sgClass = `${inputBase} flex-none !w-18 text-center font-mono font-bold text-primary`;
     const noteClass = `${inputBase} flex-grow min-w-0 italic text-on-surface-variant`;
     
     const today = new Date().toISOString().split('T')[0];
@@ -2015,8 +2016,8 @@ window.addLogLine = function(idSuffix) {
     newEntry.innerHTML = `
         <div class="flex items-center gap-2 mb-1.5">
             <input type="date" value="${today}" class="${dateClass}">
-            <input type="number" step="0.5" class="${numClass}" placeholder="°C">
-            <input type="number" step="0.001" class="${numClass} sg-input" placeholder="SG" oninput="window.syncLogToFinal('${idSuffix}')">
+            <input type="number" step="0.5" class="${tempClass}" placeholder="°C">
+            <input type="number" step="0.001" class="${sgClass} sg-input" placeholder="SG" oninput="window.syncLogToFinal('${idSuffix}')">
         </div>
         <div class="flex items-center gap-2">
             <input type="text" class="${noteClass}" placeholder="Notes...">

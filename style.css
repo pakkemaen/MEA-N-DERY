@@ -183,29 +183,58 @@ h3 { font-size: 1.25rem; color: rgb(var(--md-sys-color-on-surface)); font-weight
 }
 
 /* --- INPUTS (Outlined Text Fields) --- */
+/* style.css - Padding & Ruimte Fix (Verbeterd) */
+
 input[type="text"], input[type="number"], input[type="date"], 
 input[type="password"], select, textarea {
     background-color: transparent !important;
     border: 1px solid rgb(var(--md-sys-color-outline));
     border-radius: 12px;
-    padding: 14px 16px;
+    
+    /* MEER PADDING: Zorgt dat tekst niet tegen de rand plakt */
+    padding: 16px 20px !important; 
+    
     color: rgb(var(--md-sys-color-on-surface));
     font-family: inherit;
     font-size: 1rem;
     width: 100%;
     transition: all 0.2s ease;
-    box-shadow: none !important; /* Remove old shadows */
+    box-shadow: none !important;
+    line-height: 1.6; /* Prettiger lezen in textareas */
+    
+    /* Zorgt dat dropdowns er overal hetzelfde uitzien */
+    -webkit-appearance: none; 
+    -moz-appearance: none;
+    appearance: none;
+    
+    /* Voeg een custom pijl toe voor dropdowns (optioneel, maar mooi) */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1em;
 }
 
-input:hover, select:hover, textarea:hover {
-    border-color: rgb(var(--md-sys-color-on-surface));
+/* Zorg dat input velden geen pijl krijgen */
+input[type="text"], input[type="number"], input[type="date"], input[type="password"], textarea {
+    background-image: none !important;
+}
+
+/* Zorgt dat je in de textarea niet direct tegen de bovenrand typt */
+textarea {
+    min-height: 120px;
+    resize: vertical;
 }
 
 input:focus, select:focus, textarea:focus {
     outline: none;
     border: 2px solid rgb(var(--md-sys-color-primary));
     background-color: rgb(var(--md-sys-color-surface-bright)) !important;
-    padding: 13px 15px; /* Compensate for 2px border */
+    /* Iets minder padding bij focus om te compenseren voor de dikkere rand (2px vs 1px) */
+    padding: 15px 19px !important; 
+}
+
+input:hover, select:hover, textarea:hover {
+    border-color: rgb(var(--md-sys-color-on-surface));
 }
 
 ::placeholder {

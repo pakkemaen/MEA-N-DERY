@@ -241,6 +241,28 @@ export function updateDashboardInsights() {
     let alertsCount = 0;
     const today = new Date();
 
+    // SVG ICONEN (Geen Emojis meer)
+    const iconExpired = `<svg class="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    const iconWarning = `<svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+    const iconCheck = `<svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    const iconGhost = `<svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>`;
+
+    // Helper voor stijlvolle kaarten
+    const createAlert = (icon, title, desc, bgClass = "bg-surface-container") => {
+        const li = document.createElement('li');
+        li.className = "mb-2 last:mb-0";
+        li.innerHTML = `
+            <div class="flex items-start gap-3 p-3 rounded-xl border border-outline-variant/30 ${bgClass}">
+                <div class="mt-0.5 flex-shrink-0">${icon}</div>
+                <div class="flex-grow">
+                    <p class="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">${title}</p>
+                    <p class="text-sm font-medium leading-snug">${desc}</p>
+                </div>
+            </div>`;
+        return li;
+    };
+
+    // INVENTORY CHECKS
     state.inventory.forEach(item => {
         if (item.expirationDate) {
             const expDate = new Date(item.expirationDate);
@@ -248,21 +270,26 @@ export function updateDashboardInsights() {
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
             if (diffDays <= 30 && diffDays >= 0) {
-                const li = document.createElement('li');
-                li.innerHTML = `<span class="text-amber-600 font-bold text-xs uppercase">⚠️ Expiry Warning</span><br> <span class="font-semibold">${item.name}</span> expires in ${diffDays} days.`;
-                li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
-                list.appendChild(li);
+                list.appendChild(createAlert(
+                    iconWarning, 
+                    "Expiry Warning", 
+                    `<b>${item.name}</b> expires in ${diffDays} days.`,
+                    "bg-amber-50 dark:bg-amber-900/20"
+                ));
                 alertsCount++;
             } else if (diffDays < 0) {
-                const li = document.createElement('li');
-                li.innerHTML = `<span class="text-red-600 font-bold text-xs uppercase">⛔ Expired</span><br> <span class="font-semibold">${item.name}</span> is ${Math.abs(diffDays)} days over date!`;
-                li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
-                list.appendChild(li);
+                list.appendChild(createAlert(
+                    iconExpired, 
+                    "Expired Item", 
+                    `<b>${item.name}</b> is ${Math.abs(diffDays)} days over date.`,
+                    "bg-error-container/30"
+                ));
                 alertsCount++;
             }
         }
     });
 
+    // BREWING CHECKS
     state.brews.forEach(brew => {
         if (brew.archived || brew.bottledDate) return;
         const hasStarted = brew.logData && brew.logData.brewDate;
@@ -270,28 +297,26 @@ export function updateDashboardInsights() {
 
         const startDate = new Date(brew.logData.brewDate);
         const ageDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
-        const archiveBtn = `<button onclick="window.archiveBrew('${brew.id}', '${brew.recipeName}')" class="float-right ml-2 text-blue-400 hover:text-blue-600 font-bold px-1" title="Archive">📦</button>`;
-        const deleteBtn = `<button onclick="window.deleteGhostBrew('${brew.id}', '${brew.recipeName}')" class="float-right ml-1 text-gray-300 hover:text-red-500 font-bold px-1" title="Delete">✕</button>`;
+        
+        // Knoppen HTML (zonder functionaliteit wijziging, alleen styling)
+        const archiveBtn = `<button onclick="window.archiveBrew('${brew.id}', '${brew.recipeName}')" class="text-blue-500 font-bold hover:underline ml-2">Archive</button>`;
+        const deleteBtn = `<button onclick="window.deleteGhostBrew('${brew.id}', '${brew.recipeName}')" class="text-red-500 font-bold hover:underline ml-2">Delete</button>`;
 
         if (ageDays >= 3 && ageDays <= 5) {
-            const li = document.createElement('li');
-            li.innerHTML = `<span class="text-green-600 font-bold text-xs uppercase">💊 Nutrient Check</span><br> <b>${brew.recipeName}</b> (Day ${ageDays}).`;
-            li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
-            list.appendChild(li);
+            list.appendChild(createAlert(iconCheck, "Nutrient Schedule", `Add nutrients to <b>${brew.recipeName}</b> (Day ${ageDays}).`, "bg-green-50 dark:bg-green-900/20"));
             alertsCount++;
         }
         if (ageDays >= 14 && ageDays <= 20) {
-            const li = document.createElement('li');
-            li.innerHTML = `<span class="text-blue-600 font-bold text-xs uppercase">🍺 Racking Check</span><br> <b>${brew.recipeName}</b> (Day ${ageDays}).`;
-            li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
-            list.appendChild(li);
+            list.appendChild(createAlert(iconCheck, "Racking Window", `Check <b>${brew.recipeName}</b> for racking (Day ${ageDays}).`, "bg-blue-50 dark:bg-blue-900/20"));
             alertsCount++;
         }
         if (ageDays > 60) {
-            const li = document.createElement('li');
-            li.innerHTML = `${deleteBtn} ${archiveBtn} <span class="text-gray-400 font-bold text-xs uppercase">👻 Ghost / Stalled</span><br> <b>${brew.recipeName}</b> started ${ageDays} days ago. Still active?`;
-            li.className = "mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0";
-            list.appendChild(li);
+            list.appendChild(createAlert(
+                iconGhost, 
+                "Ghost Batch Detected", 
+                `<b>${brew.recipeName}</b> active for ${ageDays} days. Update status? <div class="mt-1 flex justify-end text-[10px] uppercase tracking-wider">${archiveBtn} ${deleteBtn}</div>`,
+                "bg-surface-variant/30"
+            ));
             alertsCount++;
         }
     });

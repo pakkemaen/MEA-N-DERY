@@ -414,19 +414,23 @@
     </details>
 
     <div class="mt-6">
-        <button id="generateBtn" class="w-full bg-primary text-on-primary font-bold py-4 px-6 rounded-full hover:shadow-elevation-2 active:scale-95 transition-all text-lg tracking-widest uppercase">
-            Generate Recipe
-        </button>
+        <button id="generateBtn" class="w-full bg-primary text-on-primary font-bold py-4 px-6 rounded-2xl shadow-elevation-1 hover:shadow-elevation-2 hover:scale-[1.02] active:scale-[0.98] transition-all text-lg tracking-widest uppercase flex items-center justify-center gap-3">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+    Generate Recipe
+</button>
     </div>
 </aside>
 
             <main class="lg:w-2/3 card p-8 shadow-elevation-1 overflow-y-auto border border-outline-variant/30" style="max-height: 75vh;">
-                <div id="recipe-output" class="prose max-w-none text-on-surface">
-                    <div class="flex flex-col items-center justify-center h-64 text-on-surface-variant opacity-50">
-                        <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                        <p class="text-lg">Ready to brew. Configure your mead and click Generate.</p>
-                    </div>
-                </div>
+                <div id="recipe-output" class="prose max-w-none text-on-surface h-full flex flex-col">
+    <div class="flex flex-col items-center justify-center flex-grow p-8 text-center border-2 border-dashed border-outline-variant/50 rounded-3xl bg-surface-container-low/50 min-h-[400px]">
+        <div class="w-24 h-24 bg-surface-container rounded-full flex items-center justify-center mb-6 shadow-sm">
+            <svg class="w-12 h-12 text-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-on-surface mb-2">Ready to Brew?</h3>
+        <p class="text-on-surface-variant max-w-xs mx-auto">Configure your preferences in the sidebar and click <span class="font-bold text-primary">Generate</span> to let the AI craft your recipe.</p>
+    </div>
+</div>
             </main>
         </div>
     </div>

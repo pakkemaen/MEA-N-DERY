@@ -1909,82 +1909,103 @@ function getActualIngredientsHtml(brew) {
     </div>`;
 }
 
-// --- RESTORED V2.3 LOGBOOK: ACTUALS ONLY ---
+// --- RESTORED V2.3 LOGBOOK: ACTUALS ONLY (MOBILE FIXED) ---
 function getBrewLogHtml(logData, idSuffix) {
     const data = logData || {};
     const fermLog = data.fermentationLog || [];
     const blendingLog = data.blendingLog || []; 
 
+    // Helper voor compacte inputs (overruled de globale style.css settings met !classes)
+    const compactInput = "w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary";
+
     // Fermentatie Rijen
     const fermRows = fermLog.map(row => `<tr>
-        <td><input type="date" value="${row.date || ''}" class="w-full bg-transparent border-none focus:ring-0 text-xs"></td>
-        <td><input type="number" step="0.5" value="${row.temp || ''}" class="w-full bg-transparent border-none focus:ring-0 text-center text-xs" placeholder="20"></td>
-        <td><input type="number" step="0.001" value="${row.sg || ''}" class="w-full bg-transparent border-none focus:ring-0 text-center text-xs font-mono" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')"></td>
-        <td><input type="text" value="${row.notes || ''}" class="w-full bg-transparent border-none focus:ring-0 text-xs" placeholder="..."></td>
+        <td class="p-1"><input type="date" value="${row.date || ''}" class="${compactInput}"></td>
+        <td class="p-1"><input type="number" step="0.5" value="${row.temp || ''}" class="${compactInput} text-center" placeholder="20"></td>
+        <td class="p-1"><input type="number" step="0.001" value="${row.sg || ''}" class="${compactInput} text-center font-mono" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')"></td>
+        <td class="p-1"><input type="text" value="${row.notes || ''}" class="${compactInput}" placeholder="..."></td>
+        <td class="p-1 text-center"><button onclick="this.closest('tr').remove()" class="text-error font-bold px-2">&times;</button></td>
     </tr>`).join('');
 
-    // Blending Rijen
-    const blendingRows = blendingLog.map((row, idx) => `
-        <tr>
-            <td><input type="date" value="${row.date || ''}" class="w-full bg-transparent border-none text-xs"></td>
-            <td><input type="text" value="${row.name || ''}" class="w-full bg-transparent border-none text-xs" placeholder="Spirit Name"></td>
-            <td><input type="number" step="0.01" value="${row.vol || ''}" class="w-full bg-transparent border-none text-center text-xs" oninput="window.recalcTotalABV('${idSuffix}')"></td>
-            <td><input type="number" step="0.1" value="${row.abv || ''}" class="w-full bg-transparent border-none text-center text-xs" oninput="window.recalcTotalABV('${idSuffix}')"></td>
-            <td class="text-center"><button onclick="this.closest('tr').remove(); window.recalcTotalABV('${idSuffix}')" class="text-red-500 font-bold hover:text-red-700">&times;</button></td>
-        </tr>`).join('');
-
     return `
-    <div class="brew-log-section mt-6 bg-app-secondary p-4 rounded-lg border border-app-brand/10 shadow-sm" data-id="${idSuffix}">
-        <h3 class="font-header text-lg font-bold mb-4 text-app-brand uppercase tracking-wider flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+    <div class="brew-log-section mt-6 bg-surface-container p-4 rounded-xl border border-outline-variant/30 shadow-sm" data-id="${idSuffix}">
+        <h3 class="font-header text-lg font-bold mb-4 text-primary uppercase tracking-wider flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
             Brew Log (Actuals)
         </h3>
         
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-app-tertiary/30 rounded-lg border border-app-brand/5">
+        <div class="grid grid-cols-2 gap-3 mb-4 p-3 bg-surface-variant/20 rounded-lg border border-outline-variant/20">
             <div>
-                <label class="text-[10px] font-bold text-app-secondary uppercase tracking-wider">OG (Start)</label>
-                <input type="number" step="0.001" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" class="w-full mt-1 p-2 border rounded bg-app-primary font-mono font-bold text-app-header focus:ring-1 focus:ring-app-brand" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
+                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">OG (Start)</label>
+                <input type="number" step="0.001" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" class="${compactInput} font-bold text-primary" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
             </div>
             <div>
-                <label class="text-[10px] font-bold text-app-secondary uppercase tracking-wider">FG (Current/End)</label>
-                <input type="number" step="0.001" id="actualFG-${idSuffix}" value="${data.actualFG || ''}" class="w-full mt-1 p-2 border rounded bg-app-primary font-mono font-bold text-app-header focus:ring-1 focus:ring-app-brand" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
+                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">FG (Current)</label>
+                <input type="number" step="0.001" id="actualFG-${idSuffix}" value="${data.actualFG || ''}" class="${compactInput} font-bold text-primary" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
             </div>
             <div>
-                <label class="text-[10px] font-bold text-app-secondary uppercase tracking-wider">Real ABV</label>
-                <input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}" class="w-full mt-1 p-2 border rounded bg-app-primary font-bold text-app-brand" placeholder="0.0%">
+                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Real ABV</label>
+                <input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}" class="${compactInput} font-bold text-tertiary" placeholder="0.0%" readonly>
             </div>
             <div>
-                <label class="text-[10px] font-bold text-app-secondary uppercase tracking-wider">Brew Date</label>
-                <input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}" class="w-full mt-1 p-2 border rounded bg-app-primary text-sm">
+                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Brew Date</label>
+                <input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}" class="${compactInput}">
             </div>
         </div>
 
-        <div class="mb-6">
-            <label class="text-xs font-bold text-app-secondary uppercase mb-2 block">Fermentation History</label>
-            <div class="overflow-x-auto rounded border border-app-brand/20 bg-app-primary">
-                <table class="w-full text-left text-sm" id="fermentationTable-${idSuffix}">
-                    <thead class="bg-app-tertiary text-[10px] uppercase text-app-secondary font-bold">
-                        <tr><th class="p-2 w-32">Date</th><th class="p-2 w-20 text-center">Temp</th><th class="p-2 w-24 text-center">Gravity</th><th class="p-2">Notes</th></tr>
-                    </thead>
-                    <tbody class="divide-y divide-app-brand/5">
-                        ${fermRows}
-                        <tr class="bg-app-tertiary/10">
-                            <td><input type="date" class="w-full bg-transparent border-none focus:ring-0 text-xs"></td>
-                            <td><input type="number" step="0.5" class="w-full bg-transparent border-none focus:ring-0 text-center text-xs" placeholder="-"></td>
-                            <td><input type="number" step="0.001" class="w-full bg-transparent border-none focus:ring-0 text-center text-xs font-mono" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')"></td>
-                            <td><input type="text" class="w-full bg-transparent border-none focus:ring-0 text-xs" placeholder="Add measurement..."></td>
+        <div class="mb-4">
+            <label class="text-xs font-bold text-primary uppercase mb-2 block ml-1">Fermentation History</label>
+            
+            <div class="overflow-x-auto rounded-lg border border-outline-variant/30 bg-surface-container-low">
+                <table class="w-full text-left text-sm" id="fermentationTable-${idSuffix}" style="min-width: 400px;">
+                    <thead class="bg-surface-variant/30 text-[10px] uppercase text-on-surface-variant font-bold">
+                        <tr>
+                            <th class="p-2 w-28">Date</th>
+                            <th class="p-2 w-16 text-center">°C</th>
+                            <th class="p-2 w-20 text-center">SG</th>
+                            <th class="p-2">Notes</th>
+                            <th class="p-2 w-8"></th>
                         </tr>
+                    </thead>
+                    <tbody class="divide-y divide-outline-variant/10">
+                        ${fermRows}
                     </tbody>
                 </table>
             </div>
-            <button onclick="window.addLogLine('${idSuffix}')" class="mt-2 text-[10px] font-bold text-app-brand hover:underline flex items-center gap-1 uppercase tracking-wider"><span>+</span> Add Row</button>
+            <button onclick="window.addLogLine('${idSuffix}')" class="mt-2 text-xs font-bold text-primary hover:text-primary-container hover:bg-primary hover:text-on-primary px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 uppercase tracking-wider border border-primary/20">
+                <span>+</span> Add Measurement
+            </button>
         </div>
 
-        <div class="space-y-4 pt-4 border-t border-app-brand/10">
-            <div><label class="text-xs font-bold text-app-secondary uppercase">Process Notes</label><textarea id="agingNotes-${idSuffix}" rows="2" class="w-full mt-1 p-2 border rounded bg-app-primary text-xs focus:ring-app-brand placeholder-gray-400" placeholder="Racking, stabilization, oak additions...">${data.agingNotes || ''}</textarea></div>
-            <div><label class="text-xs font-bold text-app-secondary uppercase">Tasting Notes</label><textarea id="tastingNotes-${idSuffix}" rows="2" class="w-full mt-1 p-2 border rounded bg-app-primary text-xs focus:ring-app-brand placeholder-gray-400" placeholder="Aroma, mouthfeel, sweetness, faults...">${data.tastingNotes || ''}</textarea></div>
+        <div class="space-y-3 pt-4 border-t border-outline-variant/20">
+            <div>
+                <label class="text-xs font-bold text-on-surface-variant uppercase ml-1">Process Notes</label>
+                <textarea id="agingNotes-${idSuffix}" rows="2" class="w-full mt-1 !p-2 !min-h-[60px] text-xs border rounded bg-surface-container-highest focus:ring-primary placeholder-outline" placeholder="Racking, stabilization, oak additions...">${data.agingNotes || ''}</textarea>
+            </div>
+            <div>
+                <label class="text-xs font-bold text-on-surface-variant uppercase ml-1">Tasting Notes</label>
+                <textarea id="tastingNotes-${idSuffix}" rows="2" class="w-full mt-1 !p-2 !min-h-[60px] text-xs border rounded bg-surface-container-highest focus:ring-primary placeholder-outline" placeholder="Aroma, mouthfeel, sweetness, faults...">${data.tastingNotes || ''}</textarea>
+            </div>
         </div>
     </div>`;
+}
+
+// Helper voor nieuwe rij (moet ook compacte classes hebben!)
+window.addLogLine = function(idSuffix) {
+    const tbody = document.querySelector(`#fermentationTable-${idSuffix} tbody`);
+    if(tbody) {
+        const compactInput = "w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary";
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="p-1"><input type="date" class="${compactInput}"></td>
+            <td class="p-1"><input type="number" step="0.5" class="${compactInput} text-center" placeholder="-"></td>
+            <td class="p-1"><input type="number" step="0.001" class="${compactInput} text-center font-mono" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')"></td>
+            <td class="p-1"><input type="text" class="${compactInput}" placeholder="..."></td>
+            <td class="p-1 text-center"><button onclick="this.closest('tr').remove()" class="text-error font-bold px-2">&times;</button></td>
+        `;
+        tbody.appendChild(row);
+    }
 }
 
 // --- RENDER: Detail View (RESTORED TARGET VS ACTUAL) ---

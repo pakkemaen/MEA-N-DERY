@@ -1917,11 +1917,12 @@ function getBrewLogHtml(logData, idSuffix) {
     // CSS classes: Compact (!h-8 !p-1) en Responsive
     const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary !p-1 !h-8";
     
-    // Date krijgt nu alle ruimte op regel 1
+    // Date krijgt nu ALLE overgebleven ruimte
     const dateClass = `${inputBase} flex-grow min-w-0`; 
-    const numClass = `${inputBase} w-16 text-center font-mono font-bold text-primary`;
+    // Temp en SG krijgen een vaste, smallere breedte (bijv 3.5rem / 14 tailwind units)
+    const numClass = `${inputBase} w-14 text-center font-mono font-bold text-primary`;
     
-    // Notes deelt nu ruimte met de delete knop op regel 2
+    // Notes deelt ruimte met delete knop op regel 2
     const noteClass = `${inputBase} flex-grow min-w-0 italic text-on-surface-variant`; 
 
     const fermRows = fermLog.map(row => `
@@ -1994,15 +1995,17 @@ function getBrewLogHtml(logData, idSuffix) {
     </div>`;
 }
 
-// --- HELPER: Nieuwe log-regel (Updated Layout) ---
+/// --- HELPER: Nieuwe log-regel (Updated Layout) ---
 window.addLogLine = function(idSuffix) {
     const container = document.getElementById(`fermentationContainer-${idSuffix}`);
     if(!container) return;
 
     // CSS Definitions (consistent met getBrewLogHtml)
     const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary !p-1 !h-8";
+    
+    // Zelfde verdeling als hierboven
     const dateClass = `${inputBase} flex-grow min-w-0`;
-    const numClass = `${inputBase} w-16 text-center font-mono font-bold text-primary`;
+    const numClass = `${inputBase} w-14 text-center font-mono font-bold text-primary`;
     const noteClass = `${inputBase} flex-grow min-w-0 italic text-on-surface-variant`;
     
     const today = new Date().toISOString().split('T')[0];

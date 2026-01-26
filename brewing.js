@@ -1909,31 +1909,35 @@ function getActualIngredientsHtml(brew) {
     </div>`;
 }
 
-// --- LOGBOOK: 2-LINE MOBILE LAYOUT ---
+// --- LOGBOOK: 2-LINE MOBILE LAYOUT (OPTIMIZED DATE SPACE) ---
 function getBrewLogHtml(logData, idSuffix) {
     const data = logData || {};
     const fermLog = data.fermentationLog || [];
 
-    // CSS classes voor de input velden (herbruikbaar)
-    const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary p-1.5";
-    const dateClass = `${inputBase} flex-grow min-w-0`; // Datum mag groeien/krimpen
-    const numClass = `${inputBase} w-16 text-center font-mono font-bold text-primary`; // Vaste breedte voor cijfers
-    const noteClass = `${inputBase} w-full mt-1 italic text-on-surface-variant`; // Notities op nieuwe regel
+    // CSS classes: Compact (!h-8 !p-1) en Responsive
+    const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary !p-1 !h-8";
+    
+    // Date krijgt nu alle ruimte op regel 1
+    const dateClass = `${inputBase} flex-grow min-w-0`; 
+    const numClass = `${inputBase} w-16 text-center font-mono font-bold text-primary`;
+    
+    // Notes deelt nu ruimte met de delete knop op regel 2
+    const noteClass = `${inputBase} flex-grow min-w-0 italic text-on-surface-variant`; 
 
-    // Genereer de rijen (nu als DIVs in plaats van TRs)
     const fermRows = fermLog.map(row => `
     <div class="log-entry p-2 border-b border-outline-variant/30 last:border-0">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 mb-1.5">
             <input type="date" value="${row.date || ''}" class="${dateClass}">
-            
             <input type="number" step="0.5" value="${row.temp || ''}" class="${numClass}" placeholder="°C">
             <input type="number" step="0.001" value="${row.sg || ''}" class="${numClass} sg-input" placeholder="SG" oninput="window.syncLogToFinal('${idSuffix}')">
-            
-            <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-error hover:bg-error-container p-1 rounded transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <input type="text" value="${row.notes || ''}" class="${noteClass}" placeholder="Notes (e.g. bubbles slow...)">
+            <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-error hover:bg-error-container p-1 rounded transition-colors flex-shrink-0" title="Delete Entry">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             </button>
         </div>
-        <input type="text" value="${row.notes || ''}" class="${noteClass}" placeholder="Notes (e.g. bubbles slow, racked...)">
     </div>
     `).join('');
 
@@ -1966,9 +1970,6 @@ function getBrewLogHtml(logData, idSuffix) {
         <div class="mb-4">
             <div class="flex justify-between items-center mb-2 px-1">
                 <label class="text-xs font-bold text-primary uppercase">Fermentation History</label>
-                <div class="flex gap-4 text-[10px] font-bold text-on-surface-variant opacity-60 uppercase tracking-wider">
-                    <span>Date</span> <span>°C / SG</span>
-                </div>
             </div>
             
             <div id="fermentationContainer-${idSuffix}" class="rounded-lg border border-outline-variant/30 bg-surface-container-low flex flex-col">
@@ -1993,32 +1994,33 @@ function getBrewLogHtml(logData, idSuffix) {
     </div>`;
 }
 
-// --- HELPER: Nieuwe log-regel (Div Based) ---
+// --- HELPER: Nieuwe log-regel (Updated Layout) ---
 window.addLogLine = function(idSuffix) {
     const container = document.getElementById(`fermentationContainer-${idSuffix}`);
     if(!container) return;
 
-    // We gebruiken dezelfde styles als in de render functie voor consistentie
-    const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary p-1.5";
+    // CSS Definitions (consistent met getBrewLogHtml)
+    const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary !p-1 !h-8";
     const dateClass = `${inputBase} flex-grow min-w-0`;
     const numClass = `${inputBase} w-16 text-center font-mono font-bold text-primary`;
-    const noteClass = `${inputBase} w-full mt-1 italic text-on-surface-variant`;
+    const noteClass = `${inputBase} flex-grow min-w-0 italic text-on-surface-variant`;
     
-    // Default datum is vandaag
     const today = new Date().toISOString().split('T')[0];
 
     const newEntry = document.createElement('div');
     newEntry.className = "log-entry p-2 border-b border-outline-variant/30 last:border-0 animate-fade-in";
     newEntry.innerHTML = `
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 mb-1.5">
             <input type="date" value="${today}" class="${dateClass}">
             <input type="number" step="0.5" class="${numClass}" placeholder="°C">
             <input type="number" step="0.001" class="${numClass} sg-input" placeholder="SG" oninput="window.syncLogToFinal('${idSuffix}')">
-            <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-error hover:bg-error-container p-1 rounded transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </div>
+        <div class="flex items-center gap-2">
+            <input type="text" class="${noteClass}" placeholder="Notes...">
+            <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-error hover:bg-error-container p-1 rounded transition-colors flex-shrink-0" title="Delete Entry">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             </button>
         </div>
-        <input type="text" class="${noteClass}" placeholder="Notes...">
     `;
     container.appendChild(newEntry);
 }

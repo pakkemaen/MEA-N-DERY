@@ -1909,23 +1909,33 @@ function getActualIngredientsHtml(brew) {
     </div>`;
 }
 
-// --- RESTORED V2.3 LOGBOOK: ACTUALS ONLY (MOBILE FIXED) ---
+// --- LOGBOOK: 2-LINE MOBILE LAYOUT ---
 function getBrewLogHtml(logData, idSuffix) {
     const data = logData || {};
     const fermLog = data.fermentationLog || [];
-    const blendingLog = data.blendingLog || []; 
 
-    // Helper voor compacte inputs (overruled de globale style.css settings met !classes)
-    const compactInput = "w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary";
+    // CSS classes voor de input velden (herbruikbaar)
+    const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary p-1.5";
+    const dateClass = `${inputBase} flex-grow min-w-0`; // Datum mag groeien/krimpen
+    const numClass = `${inputBase} w-16 text-center font-mono font-bold text-primary`; // Vaste breedte voor cijfers
+    const noteClass = `${inputBase} w-full mt-1 italic text-on-surface-variant`; // Notities op nieuwe regel
 
-    // Fermentatie Rijen
-    const fermRows = fermLog.map(row => `<tr>
-        <td class="p-1"><input type="date" value="${row.date || ''}" class="${compactInput}"></td>
-        <td class="p-1"><input type="number" step="0.5" value="${row.temp || ''}" class="${compactInput} text-center" placeholder="20"></td>
-        <td class="p-1"><input type="number" step="0.001" value="${row.sg || ''}" class="${compactInput} text-center font-mono" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')"></td>
-        <td class="p-1"><input type="text" value="${row.notes || ''}" class="${compactInput}" placeholder="..."></td>
-        <td class="p-1 text-center"><button onclick="this.closest('tr').remove()" class="text-error font-bold px-2">&times;</button></td>
-    </tr>`).join('');
+    // Genereer de rijen (nu als DIVs in plaats van TRs)
+    const fermRows = fermLog.map(row => `
+    <div class="log-entry p-2 border-b border-outline-variant/30 last:border-0">
+        <div class="flex items-center gap-2">
+            <input type="date" value="${row.date || ''}" class="${dateClass}">
+            
+            <input type="number" step="0.5" value="${row.temp || ''}" class="${numClass}" placeholder="°C">
+            <input type="number" step="0.001" value="${row.sg || ''}" class="${numClass} sg-input" placeholder="SG" oninput="window.syncLogToFinal('${idSuffix}')">
+            
+            <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-error hover:bg-error-container p-1 rounded transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <input type="text" value="${row.notes || ''}" class="${noteClass}" placeholder="Notes (e.g. bubbles slow, racked...)">
+    </div>
+    `).join('');
 
     return `
     <div class="brew-log-section mt-6 bg-surface-container p-4 rounded-xl border border-outline-variant/30 shadow-sm" data-id="${idSuffix}">
@@ -1937,43 +1947,36 @@ function getBrewLogHtml(logData, idSuffix) {
         <div class="grid grid-cols-2 gap-3 mb-4 p-3 bg-surface-variant/20 rounded-lg border border-outline-variant/20">
             <div>
                 <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">OG (Start)</label>
-                <input type="number" step="0.001" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" class="${compactInput} font-bold text-primary" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
+                <input type="number" step="0.001" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" class="w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant focus:border-primary font-bold text-primary" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
             </div>
             <div>
                 <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">FG (Current)</label>
-                <input type="number" step="0.001" id="actualFG-${idSuffix}" value="${data.actualFG || ''}" class="${compactInput} font-bold text-primary" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
+                <input type="number" step="0.001" id="actualFG-${idSuffix}" value="${data.actualFG || ''}" class="w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant focus:border-primary font-bold text-primary" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
             </div>
             <div>
                 <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Real ABV</label>
-                <input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}" class="${compactInput} font-bold text-tertiary" placeholder="0.0%" readonly>
+                <input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}" class="w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant font-bold text-tertiary" placeholder="0.0%" readonly>
             </div>
             <div>
                 <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Brew Date</label>
-                <input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}" class="${compactInput}">
+                <input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}" class="w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant">
             </div>
         </div>
 
         <div class="mb-4">
-            <label class="text-xs font-bold text-primary uppercase mb-2 block ml-1">Fermentation History</label>
-            
-            <div class="overflow-x-auto rounded-lg border border-outline-variant/30 bg-surface-container-low">
-                <table class="w-full text-left text-sm" id="fermentationTable-${idSuffix}" style="min-width: 400px;">
-                    <thead class="bg-surface-variant/30 text-[10px] uppercase text-on-surface-variant font-bold">
-                        <tr>
-                            <th class="p-2 w-28">Date</th>
-                            <th class="p-2 w-16 text-center">°C</th>
-                            <th class="p-2 w-20 text-center">SG</th>
-                            <th class="p-2">Notes</th>
-                            <th class="p-2 w-8"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-outline-variant/10">
-                        ${fermRows}
-                    </tbody>
-                </table>
+            <div class="flex justify-between items-center mb-2 px-1">
+                <label class="text-xs font-bold text-primary uppercase">Fermentation History</label>
+                <div class="flex gap-4 text-[10px] font-bold text-on-surface-variant opacity-60 uppercase tracking-wider">
+                    <span>Date</span> <span>°C / SG</span>
+                </div>
             </div>
-            <button onclick="window.addLogLine('${idSuffix}')" class="mt-2 text-xs font-bold text-primary hover:text-primary-container hover:bg-primary hover:text-on-primary px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 uppercase tracking-wider border border-primary/20">
-                <span>+</span> Add Measurement
+            
+            <div id="fermentationContainer-${idSuffix}" class="rounded-lg border border-outline-variant/30 bg-surface-container-low flex flex-col">
+                ${fermRows}
+            </div>
+            
+            <button onclick="window.addLogLine('${idSuffix}')" class="mt-2 w-full text-xs font-bold text-primary hover:bg-primary-container/50 py-2 rounded-lg transition-colors border border-dashed border-primary/30 uppercase tracking-wider">
+                + Add Measurement
             </button>
         </div>
 
@@ -1990,22 +1993,34 @@ function getBrewLogHtml(logData, idSuffix) {
     </div>`;
 }
 
-// Helper voor nieuwe rij (moet ook compacte classes hebben!)
+// --- HELPER: Nieuwe log-regel (Div Based) ---
 window.addLogLine = function(idSuffix) {
-    const tbody = document.querySelector(`#fermentationTable-${idSuffix} tbody`);
-    if(tbody) {
-        const compactInput = "w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary";
-        
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td class="p-1"><input type="date" class="${compactInput}"></td>
-            <td class="p-1"><input type="number" step="0.5" class="${compactInput} text-center" placeholder="-"></td>
-            <td class="p-1"><input type="number" step="0.001" class="${compactInput} text-center font-mono" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')"></td>
-            <td class="p-1"><input type="text" class="${compactInput}" placeholder="..."></td>
-            <td class="p-1 text-center"><button onclick="this.closest('tr').remove()" class="text-error font-bold px-2">&times;</button></td>
-        `;
-        tbody.appendChild(row);
-    }
+    const container = document.getElementById(`fermentationContainer-${idSuffix}`);
+    if(!container) return;
+
+    // We gebruiken dezelfde styles als in de render functie voor consistentie
+    const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary p-1.5";
+    const dateClass = `${inputBase} flex-grow min-w-0`;
+    const numClass = `${inputBase} w-16 text-center font-mono font-bold text-primary`;
+    const noteClass = `${inputBase} w-full mt-1 italic text-on-surface-variant`;
+    
+    // Default datum is vandaag
+    const today = new Date().toISOString().split('T')[0];
+
+    const newEntry = document.createElement('div');
+    newEntry.className = "log-entry p-2 border-b border-outline-variant/30 last:border-0 animate-fade-in";
+    newEntry.innerHTML = `
+        <div class="flex items-center gap-2">
+            <input type="date" value="${today}" class="${dateClass}">
+            <input type="number" step="0.5" class="${numClass}" placeholder="°C">
+            <input type="number" step="0.001" class="${numClass} sg-input" placeholder="SG" oninput="window.syncLogToFinal('${idSuffix}')">
+            <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-error hover:bg-error-container p-1 rounded transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <input type="text" class="${noteClass}" placeholder="Notes...">
+    `;
+    container.appendChild(newEntry);
 }
 
 // --- RENDER: Detail View (RESTORED TARGET VS ACTUAL) ---
@@ -2206,15 +2221,27 @@ window.updateBrewLog = async function(brewId, containerId) {
         const container = document.getElementById(containerId);
         const suffix = container.querySelector('.brew-log-section').dataset.id;
         
-        // 1. Fermentation Log Scrapen
-        const rows = Array.from(container.querySelectorAll(`#fermentationTable-${suffix} tbody tr`));
-        const fermentationLog = rows.map(r => {
-            const inputs = r.querySelectorAll('input');
+        // --- AANPASSING START ---
+        // 1. Fermentation Log Scrapen (DIV BASED)
+        // We zoeken nu naar de container 'fermentationContainer' en de divs met class 'log-entry'
+        // in plaats van de oude tabelstructuur.
+        const entryDivs = Array.from(container.querySelectorAll(`#fermentationContainer-${suffix} .log-entry`));
+        
+        const fermentationLog = entryDivs.map(div => {
+            const inputs = div.querySelectorAll('input');
+            // Volgorde in HTML is: 0=Date, 1=Temp, 2=SG, 3=Notes
             if(inputs.length < 4) return null; 
-            return { date: inputs[0].value, temp: inputs[1].value, sg: inputs[2].value, notes: inputs[3].value };
+            return { 
+                date: inputs[0].value, 
+                temp: inputs[1].value, 
+                sg: inputs[2].value, 
+                notes: inputs[3].value 
+            };
         }).filter(x => x && (x.date || x.sg));
+        // --- AANPASSING EIND ---
 
-        // 2. Blending Log Scrapen (DIT ONTBRAK IN DE NIEUWE FILE)
+        // 2. Blending Log Scrapen
+        // (Deze laten we staan voor het geval je blending gebruikt, zoekt nog wel in een tabel)
         const blendRows = Array.from(container.querySelectorAll(`#blendingTable-${suffix} tbody tr`));
         const blendingLog = blendRows.map(r => {
             const inputs = r.querySelectorAll('input');
@@ -2232,17 +2259,16 @@ window.updateBrewLog = async function(brewId, containerId) {
             actualFG: container.querySelector(`#actualFG-${suffix}`)?.value || '',
             finalABV: container.querySelector(`#finalABV-${suffix}`)?.value || '',
             brewDate: container.querySelector(`#brewDate-${suffix}`)?.value || '',
-            // Nieuw veld:
             currentVolume: container.querySelector(`#currentVol-${suffix}`)?.value || '', 
             agingNotes: container.querySelector(`#agingNotes-${suffix}`)?.value || '',
             bottlingNotes: container.querySelector(`#bottlingNotes-${suffix}`)?.value || '',
             tastingNotes: container.querySelector(`#tastingNotes-${suffix}`)?.value || '',
             fermentationLog: fermentationLog,
-            blendingLog: blendingLog, // Toevoegen aan save object
+            blendingLog: blendingLog,
             actualIngredients: actualIngredients
         };
 
-        // 5. Database Update (Safety Lock: Eerst lezen, dan mergen)
+        // 5. Database Update
         const brewRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId);
         const snap = await getDoc(brewRef);
         
@@ -2257,7 +2283,7 @@ window.updateBrewLog = async function(brewId, containerId) {
             if(idx > -1) state.brews[idx].logData = merged;
             
             showToast("Log saved successfully!", "success");
-            // Ververs grafiek direct
+            
             if (typeof renderFermentationGraph === 'function') renderFermentationGraph(brewId);
         }
     } catch(e) { 
@@ -2597,10 +2623,20 @@ window.autoCalculateABV = function(idSuffix) {
     }
 };
 
+// --- SYNC HELPER (Updated Selector) ---
 window.syncLogToFinal = function(idSuffix) {
-    const inputs = document.querySelectorAll(`#fermentationTable-${idSuffix} tbody tr td:nth-child(3) input`);
+    // Zoek binnen de container naar inputs met de class 'sg-input'
+    const container = document.getElementById(`fermentationContainer-${idSuffix}`);
+    if (!container) return;
+
+    const sgInputs = container.querySelectorAll('.sg-input');
     let lastVal = "";
-    inputs.forEach(inp => { if(inp.value) lastVal = inp.value; });
+    
+    // Pak de laatste ingevulde waarde
+    sgInputs.forEach(inp => { 
+        if(inp.value) lastVal = inp.value; 
+    });
+    
     const finalFg = document.getElementById(`actualFG-${idSuffix}`);
     if(finalFg && lastVal) {
         finalFg.value = lastVal;

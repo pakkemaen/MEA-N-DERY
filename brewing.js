@@ -2001,15 +2001,32 @@ window.showBrewDetail = function(brewId) {
     const cleanMarkdown = processedMarkdown.replace(/\[d:[\d:]+\]/g, '').replace(/^#\s.*$/m, '');
     const recipeHtml = marked.parse(cleanMarkdown);
 
-    // 2. DATA SPLITSEN (CRUCIAAL)
-    // A. Targets: Wat de AI berekende (uit Markdown)
+    // 2. DATA SPLITSEN
     const targets = parseRecipeData(brew.recipeMarkdown);
-    
-    // B. Actuals: Wat jij gemeten hebt (uit Database)
-    // Als Actuals leeg zijn, nemen we NIET de Targets over (behalve OG misschien als startpunt)
     const logData = brew.logData || {};
     
-    // 3. KEY STATS HTML (TARGETS)
+    // 3. FLAVOR PROFILE HTML VOORBEREIDEN (De Fix)
+    let flavorHtml = '';
+    const hasFlavorData = brew.flavorProfile && (brew.flavorProfile.sweetness !== undefined || brew.flavorProfile.body_mouthfeel !== undefined);
+
+    if (hasFlavorData) {
+        // Data aanwezig: Maak ruimte voor canvas
+        flavorHtml = `<div id="flavor-wheel-container-${brew.id}" class="h-64 flex items-center justify-center"><canvas id="flavorChart-${brew.id}"></canvas></div>`;
+    } else {
+        // Geen data: Toon Generate knop MET brewId
+        flavorHtml = `
+           <div id="flavor-wheel-container-${brew.id}" class="h-64 flex flex-col items-center justify-center text-center p-4">
+               <div class="w-12 h-12 bg-surface-variant/30 rounded-full flex items-center justify-center mb-2">
+                   <svg class="w-6 h-6 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+               </div>
+               <p class="text-xs text-on-surface-variant italic mb-3">No flavor profile data available.</p>
+               <button onclick="window.regenerateFlavorProfile('${brew.id}')" class="bg-primary text-on-primary font-bold py-2 px-4 rounded-full text-xs shadow-sm hover:shadow-md transition-all">
+                   Generate Analysis
+               </button>
+           </div>`;
+    }
+
+    // 4. KEY STATS HTML
     const keyStatsHtml = `
     <div class="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-app-brand/20 shadow-sm">
         <h3 class="font-header text-lg font-bold mb-3 text-app-brand uppercase tracking-wider">Key Stats (Target)</h3>
@@ -2021,11 +2038,10 @@ window.showBrewDetail = function(brewId) {
         </div>
     </div>`;
 
-    // 4. Logboek Genereren (Actuals)
+    // 5. Logboek & Kosten
     let logHtml = getBrewLogHtml(logData, brew.id);
-    logHtml += getActualIngredientsHtml(brew); // De ingrediënten tabel
+    logHtml += getActualIngredientsHtml(brew);
 
-    // 5. Kosten Info
     const currency = state.userSettings?.currencySymbol || '€';
     let costHtml = '';
     if (brew.totalCost > 0) {
@@ -2034,6 +2050,7 @@ window.showBrewDetail = function(brewId) {
         costHtml = `<div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-amber-900 text-sm flex justify-between items-center shadow-sm"><span><strong>Total Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</span><span><strong>Cost/L:</strong> ${currency}${perL.toFixed(2)}</span></div>`;
     }
 
+    // 6. BUILD HTML
     const container = document.getElementById('history-detail-container');
     const listContainer = document.getElementById('history-list-container');
     
@@ -2061,7 +2078,8 @@ window.showBrewDetail = function(brewId) {
             <button onclick="window.deleteBrew('${brew.id}')" class="bg-red-600 text-white py-2 px-3 rounded btn font-bold shadow-sm hover:bg-red-700 text-xs uppercase tracking-wider">Delete</button>
         </div>
 
-        ${keyStatsHtml} <div class="recipe-content prose dark:prose-invert max-w-none text-app-header bg-app-secondary p-4 rounded-lg shadow-sm border border-app-brand/5 mb-4">
+        ${keyStatsHtml} 
+        <div class="recipe-content prose dark:prose-invert max-w-none text-app-header bg-app-secondary p-4 rounded-lg shadow-sm border border-app-brand/5 mb-4">
             ${recipeHtml}
         </div>
         ${costHtml}
@@ -2073,7 +2091,7 @@ window.showBrewDetail = function(brewId) {
             </div>
             <div class="bg-white dark:bg-gray-800 p-2 rounded-lg border border-app-brand/10 shadow-sm">
                 <h4 class="text-xs font-bold text-center uppercase text-app-secondary mb-2">Flavor Profile</h4>
-                <div id="flavor-wheel-container-${brew.id}" class="h-full flex items-center justify-center"></div>
+                ${flavorHtml}
             </div>
         </div>
 
@@ -2100,17 +2118,18 @@ window.showBrewDetail = function(brewId) {
     listContainer.classList.add('hidden');
     container.classList.remove('hidden');
 
-    // Render Charts
+    // 7. RENDER CHARTS
     renderFermentationGraph(brew.id);
-    if (brew.flavorProfile && Object.keys(brew.flavorProfile).length > 0) {
-        renderFlavorWheel(brew.id, ['Sweetness', 'Acidity', 'Fruity', 'Spicy', 'Earthy', 'Body'], [brew.flavorProfile.sweetness, brew.flavorProfile.acidity, brew.flavorProfile.fruity_floral, brew.flavorProfile.spiciness, brew.flavorProfile.earthy_woody, brew.flavorProfile.body_mouthfeel]);
-    } else {
-       document.getElementById(`flavor-wheel-container-${brew.id}`).innerHTML = `
-           <div class="text-center">
-               <p class="text-xs text-app-secondary italic mb-2">No profile data.</p>
-               <button onclick="window.regenerateFlavorProfile()" class="text-xs bg-purple-600 text-white px-3 py-1 rounded">Generate Analysis</button>
-               <div id="flavor-generation-status"></div>
-           </div>`;
+    
+    // Alleen renderen als er data is, anders staat de knop er al
+    if (hasFlavorData) {
+        // Timeout om zeker te weten dat canvas in DOM zit
+        setTimeout(() => {
+            renderFlavorWheel(brew.id, 
+                ['Sweetness', 'Acidity', 'Fruity', 'Spicy', 'Earthy', 'Body'], 
+                [brew.flavorProfile.sweetness, brew.flavorProfile.acidity, brew.flavorProfile.fruity_floral, brew.flavorProfile.spiciness, brew.flavorProfile.earthy_woody, brew.flavorProfile.body_mouthfeel]
+            );
+        }, 50);
     }
     
     setTimeout(() => { if(window.syncLogToFinal) window.syncLogToFinal(brew.id); }, 100);
@@ -2993,6 +3012,83 @@ window.revertToPrimary = async function(brewId) {
     }
 }
 
+// --- ROBUST REGENERATOR ---
+window.regenerateFlavorProfile = async function(brewId) {
+    // 1. Validatie
+    if (!brewId) return showToast("Error: No brew ID found.", "error");
+    
+    // 2. UI Feedback
+    const container = document.getElementById(`flavor-wheel-container-${brewId}`);
+    if (container) {
+        container.innerHTML = getLoaderHtml("AI Sommelier is tasting...");
+    }
+
+    // 3. Data Ophalen
+    const brew = state.brews.find(b => b.id === brewId);
+    if (!brew || !brew.recipeMarkdown) {
+        if(container) container.innerHTML = `<p class="text-error text-sm">No recipe text found to analyze.</p>`;
+        return;
+    }
+
+    // 4. API Call
+    const prompt = `You are a professional mead sommelier. Analyze this recipe and PREDICT its final flavor profile. 
+    Assign a score from 0 to 5 for: Sweetness, Acidity, Fruity/Floral, Spiciness, Earthy/Woody, Body/Mouthfeel. 
+    
+    RECIPE:
+    ${brew.recipeMarkdown.substring(0, 2000)}
+    
+    Output ONLY JSON.`;
+    
+    const schema = {
+        type: "OBJECT",
+        properties: { 
+            "sweetness": { "type": "NUMBER" }, 
+            "acidity": { "type": "NUMBER" }, 
+            "fruity_floral": { "type": "NUMBER" }, 
+            "spiciness": { "type": "NUMBER" }, 
+            "earthy_woody": { "type": "NUMBER" }, 
+            "body_mouthfeel": { "type": "NUMBER" } 
+        },
+        required: ["sweetness", "acidity", "fruity_floral", "spiciness", "earthy_woody", "body_mouthfeel"]
+    };
+
+    try {
+        const jsonResponse = await performApiCall(prompt, schema);
+        const profileData = JSON.parse(jsonResponse);
+
+        // 5. OPSLAAN IN DATABASE (Cruciaal!)
+        // We importeren updateDoc en doc bovenaan brewing.js, zorg dat die beschikbaar zijn.
+        // Als ze niet direct beschikbaar zijn via import, gebruik de globale firebase objecten.
+        const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), {
+            flavorProfile: profileData
+        });
+
+        // 6. Update Lokale State
+        brew.flavorProfile = profileData;
+
+        // 7. Render Grafiek
+        if (container) {
+            container.innerHTML = `<canvas id="flavorChart-${brewId}"></canvas>`;
+            
+            // Wacht heel even tot canvas in DOM zit
+            setTimeout(() => {
+                renderFlavorWheel(brewId, 
+                    ['Sweetness', 'Acidity', 'Fruity', 'Spicy', 'Earthy', 'Body'], 
+                    [profileData.sweetness, profileData.acidity, profileData.fruity_floral, profileData.spiciness, profileData.earthy_woody, profileData.body_mouthfeel]
+                );
+            }, 50);
+        }
+        
+        showToast("Analysis saved permanently!", "success");
+
+    } catch (error) {
+        console.error("Flavor Gen Error:", error);
+        if(container) container.innerHTML = `<p class="text-error text-sm">Analysis failed. Try again.</p><button onclick="window.regenerateFlavorProfile('${brewId}')" class="btn bg-primary text-white mt-2">Retry</button>`;
+    }
+};
+
 // ============================================================================
 // FINAL EXPORTS (COMPLETE & VERIFIED)
 // ============================================================================
@@ -3007,7 +3103,6 @@ window.handleEquipmentTypeChange = handleEquipmentTypeChange;
 
 // AI Tools
 window.applyWaterTweak = applyWaterTweak;
-window.regenerateFlavorProfile = regenerateFlavorProfile;
 window.getWaterAdvice = getWaterAdvice;
 window.getYeastAdvice = getYeastAdvice;
 window.showLastPrompt = showLastPrompt;

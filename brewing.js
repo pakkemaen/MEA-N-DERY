@@ -1909,52 +1909,41 @@ function getActualIngredientsHtml(brew) {
     </div>`;
 }
 
-// --- LOGBOOK: 2-LINE MOBILE LAYOUT (NO ICON & COMPACT) ---
+// --- LOGBOOK: CARD LAYOUT (Mobile Friendly) ---
 function getBrewLogHtml(logData, idSuffix) {
-    // 1. CSS Injectie: Verberg het kalender icoon (eenmalig)
-    if (!document.getElementById('hide-date-icon-style')) {
-        const style = document.createElement('style');
-        style.id = 'hide-date-icon-style';
-        style.innerHTML = `
-            .date-no-icon::-webkit-calendar-picker-indicator { 
-                display: none !important; 
-                -webkit-appearance: none;
-            }
-            .date-no-icon {
-                background: transparent; /* Voorkomt witte achtergrond op sommige mobiele browsers */
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
     const data = logData || {};
     const fermLog = data.fermentationLog || [];
 
-    // CSS Definitions
-    const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary !p-1 !h-8";
-    
-    // VERANDERD: 'date-no-icon' class toegevoegd & flex-1 voor maximale ruimte
-    const dateClass = `${inputBase} flex-1 min-w-0 date-no-icon`; 
-    
-    // VERANDERD: Nóg smaller (!w-12 = 48px, !w-16 = 64px)
-    const tempClass = `${inputBase} flex-none !w-12 text-center font-mono font-bold text-primary`;
-    const sgClass = `${inputBase} flex-none !w-16 text-center font-mono font-bold text-primary`; 
-    
-    const noteClass = `${inputBase} flex-grow min-w-0 italic text-on-surface-variant`; 
+    // CSS Definitions: Iets hoger (!h-10) voor makkelijker tikken op mobiel
+    const inputBase = "bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary !p-2 !h-10 w-full";
+    const labelBase = "text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block ml-1";
 
     const fermRows = fermLog.map(row => `
-    <div class="log-entry p-2 border-b border-outline-variant/30 last:border-0">
-        <div class="flex items-center gap-2 mb-1.5">
-            <input type="date" value="${row.date || ''}" class="${dateClass}">
-            <input type="number" step="0.5" value="${row.temp || ''}" class="${tempClass}" placeholder="°C">
-            <input type="number" step="0.001" value="${row.sg || ''}" class="${sgClass} sg-input" placeholder="SG" oninput="window.syncLogToFinal('${idSuffix}')">
-        </div>
+    <div class="log-entry bg-surface-container-low p-3 rounded-xl border border-outline-variant/30 mb-3 shadow-sm animate-fade-in relative group">
         
-        <div class="flex items-center gap-2">
-            <input type="text" value="${row.notes || ''}" class="${noteClass}" placeholder="Notes...">
-            <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-error hover:bg-error-container p-1 rounded transition-colors flex-shrink-0" title="Delete Entry">
+        <div class="flex justify-between items-end mb-3">
+            <div class="flex-grow mr-4">
+                <label class="${labelBase}">Date</label>
+                <input type="date" value="${row.date || ''}" class="${inputBase} font-medium">
+            </div>
+            <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-on-surface-variant hover:text-error hover:bg-error-container/20 p-2 rounded-lg transition-colors mb-[1px]" title="Delete Entry">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+                <label class="${labelBase}">Temp (°C)</label>
+                <input type="number" step="0.5" value="${row.temp || ''}" class="${inputBase} text-center font-mono font-bold text-primary" placeholder="20">
+            </div>
+            <div>
+                <label class="${labelBase}">Gravity (SG)</label>
+                <input type="number" step="0.001" value="${row.sg || ''}" class="${inputBase} text-center font-mono font-bold text-primary sg-input" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')">
+            </div>
+        </div>
+        
+        <div>
+             <input type="text" value="${row.notes || ''}" class="${inputBase} italic text-on-surface-variant" placeholder="Add notes (e.g. bubbling stopped)...">
         </div>
     </div>
     `).join('');
@@ -1966,80 +1955,87 @@ function getBrewLogHtml(logData, idSuffix) {
             Brew Log (Actuals)
         </h3>
         
-        <div class="grid grid-cols-2 gap-3 mb-4 p-3 bg-surface-variant/20 rounded-lg border border-outline-variant/20">
+        <div class="grid grid-cols-2 gap-3 mb-6 p-3 bg-surface-variant/20 rounded-lg border border-outline-variant/20">
             <div>
-                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">OG (Start)</label>
-                <input type="number" step="0.001" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" class="w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant focus:border-primary font-bold text-primary" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
+                <label class="${labelBase}">OG (Start)</label>
+                <input type="number" step="0.001" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" class="bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary w-full p-2 font-bold text-primary" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
             </div>
             <div>
-                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">FG (Current)</label>
-                <input type="number" step="0.001" id="actualFG-${idSuffix}" value="${data.actualFG || ''}" class="w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant focus:border-primary font-bold text-primary" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
+                <label class="${labelBase}">FG (Current)</label>
+                <input type="number" step="0.001" id="actualFG-${idSuffix}" value="${data.actualFG || ''}" class="bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary w-full p-2 font-bold text-primary" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
             </div>
             <div>
-                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Real ABV</label>
-                <input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}" class="w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant font-bold text-tertiary" placeholder="0.0%" readonly>
+                <label class="${labelBase}">Real ABV</label>
+                <input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}" class="bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary w-full p-2 font-bold text-tertiary" placeholder="0.0%" readonly>
             </div>
             <div>
-                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Brew Date</label>
-                <input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}" class="w-full !p-1 !h-8 text-xs border rounded bg-surface-container-highest border-outline-variant date-no-icon">
+                <label class="${labelBase}">Brew Date</label>
+                <input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}" class="bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary w-full p-2">
             </div>
         </div>
 
         <div class="mb-4">
-            <div class="flex justify-between items-center mb-2 px-1">
-                <label class="text-xs font-bold text-primary uppercase">Fermentation History</label>
-            </div>
-            
-            <div id="fermentationContainer-${idSuffix}" class="rounded-lg border border-outline-variant/30 bg-surface-container-low flex flex-col">
+            <div id="fermentationContainer-${idSuffix}" class="space-y-3">
                 ${fermRows}
             </div>
             
-            <button onclick="window.addLogLine('${idSuffix}')" class="mt-2 w-full text-xs font-bold text-primary hover:bg-primary-container/50 py-2 rounded-lg transition-colors border border-dashed border-primary/30 uppercase tracking-wider">
-                + Add Measurement
+            <button onclick="window.addLogLine('${idSuffix}')" class="mt-4 w-full text-xs font-bold text-primary hover:bg-primary-container/50 py-3 rounded-xl transition-colors border border-dashed border-primary/30 uppercase tracking-wider flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Add Measurement
             </button>
         </div>
 
-        <div class="space-y-3 pt-4 border-t border-outline-variant/20">
+        <div class="space-y-4 pt-4 border-t border-outline-variant/20">
             <div>
-                <label class="text-xs font-bold text-on-surface-variant uppercase ml-1">Process Notes</label>
-                <textarea id="agingNotes-${idSuffix}" rows="2" class="w-full mt-1 !p-2 !min-h-[60px] text-xs border rounded bg-surface-container-highest focus:ring-primary placeholder-outline" placeholder="Racking, stabilization, oak additions...">${data.agingNotes || ''}</textarea>
+                <label class="${labelBase}">Process Notes</label>
+                <textarea id="agingNotes-${idSuffix}" rows="2" class="w-full bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary p-3" placeholder="Racking, stabilization, oak additions...">${data.agingNotes || ''}</textarea>
             </div>
             <div>
-                <label class="text-xs font-bold text-on-surface-variant uppercase ml-1">Tasting Notes</label>
-                <textarea id="tastingNotes-${idSuffix}" rows="2" class="w-full mt-1 !p-2 !min-h-[60px] text-xs border rounded bg-surface-container-highest focus:ring-primary placeholder-outline" placeholder="Aroma, mouthfeel, sweetness, faults...">${data.tastingNotes || ''}</textarea>
+                <label class="${labelBase}">Tasting Notes</label>
+                <textarea id="tastingNotes-${idSuffix}" rows="2" class="w-full bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary p-3" placeholder="Aroma, mouthfeel, sweetness, faults...">${data.tastingNotes || ''}</textarea>
             </div>
         </div>
     </div>`;
 }
 
-// --- HELPER: Nieuwe log-regel (Ultra Compact) ---
+// --- HELPER: Nieuwe log-regel (Card Style) ---
 window.addLogLine = function(idSuffix) {
     const container = document.getElementById(`fermentationContainer-${idSuffix}`);
     if(!container) return;
 
-    const inputBase = "bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary !p-1 !h-8";
-    
-    // Zelfde classes als in getBrewLogHtml
-    const dateClass = `${inputBase} flex-1 min-w-0 date-no-icon`;
-    const tempClass = `${inputBase} flex-none !w-12 text-center font-mono font-bold text-primary`;
-    const sgClass = `${inputBase} flex-none !w-16 text-center font-mono font-bold text-primary`;
-    const noteClass = `${inputBase} flex-grow min-w-0 italic text-on-surface-variant`;
+    // Zelfde styling
+    const inputBase = "bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary !p-2 !h-10 w-full";
+    const labelBase = "text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block ml-1";
     
     const today = new Date().toISOString().split('T')[0];
 
     const newEntry = document.createElement('div');
-    newEntry.className = "log-entry p-2 border-b border-outline-variant/30 last:border-0 animate-fade-in";
+    newEntry.className = "log-entry bg-surface-container-low p-3 rounded-xl border border-outline-variant/30 mb-3 shadow-sm animate-fade-in relative group";
+    
     newEntry.innerHTML = `
-        <div class="flex items-center gap-2 mb-1.5">
-            <input type="date" value="${today}" class="${dateClass}">
-            <input type="number" step="0.5" class="${tempClass}" placeholder="°C">
-            <input type="number" step="0.001" class="${sgClass} sg-input" placeholder="SG" oninput="window.syncLogToFinal('${idSuffix}')">
-        </div>
-        <div class="flex items-center gap-2">
-            <input type="text" class="${noteClass}" placeholder="Notes...">
-            <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-error hover:bg-error-container p-1 rounded transition-colors flex-shrink-0" title="Delete Entry">
+        <div class="flex justify-between items-end mb-3">
+            <div class="flex-grow mr-4">
+                <label class="${labelBase}">Date</label>
+                <input type="date" value="${today}" class="${inputBase} font-medium">
+            </div>
+            <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-on-surface-variant hover:text-error hover:bg-error-container/20 p-2 rounded-lg transition-colors mb-[1px]" title="Delete Entry">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+                <label class="${labelBase}">Temp (°C)</label>
+                <input type="number" step="0.5" class="${inputBase} text-center font-mono font-bold text-primary" placeholder="20">
+            </div>
+            <div>
+                <label class="${labelBase}">Gravity (SG)</label>
+                <input type="number" step="0.001" class="${inputBase} text-center font-mono font-bold text-primary sg-input" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')">
+            </div>
+        </div>
+        
+        <div>
+             <input type="text" class="${inputBase} italic text-on-surface-variant" placeholder="Add notes...">
         </div>
     `;
     container.appendChild(newEntry);

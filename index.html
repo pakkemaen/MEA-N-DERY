@@ -140,7 +140,6 @@
              class="h-14 w-auto object-contain drop-shadow-md dark:brightness-90" 
              alt="Mea(n)dery Brewbuddy">
          </div>
-    <p class="text-[9px] uppercase tracking-[0.2em] text-primary font-bold mt-1 opacity-80">AI Brew Assistant</p>
 </header>
 
 <div id="dashboard-main-view">
@@ -254,166 +253,172 @@
     <div id="creator-view">
         <div class="flex flex-col lg:flex-row gap-6 mt-4">
             
-            <aside class="lg:w-1/3 card p-6 control-panel overflow-y-auto border border-outline-variant/50" style="max-height: 75vh;">
-                <h2 class="text-2xl text-primary font-normal mb-6 flex items-center gap-2">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                    Craft Your Mead
-                </h2>
-                
-                <div class="mb-6 relative group">
-                    <label for="customDescription" class="block text-xs font-bold text-primary uppercase mb-2 ml-1 tracking-wider">Dream Description</label>
-                    <textarea id="customDescription" rows="4" placeholder="Describe your perfect mead (e.g. 'A sparkling cherry melomel with vanilla, 10% ABV')" class="w-full resize-none"></textarea>
-                    <p id="description-priority-warning" class="hidden text-xs text-center text-secondary mt-2 bg-secondary-container p-2 rounded-lg">Using AI Description Mode. Manual settings below will be ignored.</p>
+            <aside class="lg:w-1/3 card p-5 md:p-6 control-panel overflow-y-auto border border-outline-variant/50" style="max-height: 75vh;">
+    <h2 class="text-2xl text-primary font-normal mb-6 flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+        Craft Your Mead
+    </h2>
+    
+    <div class="mb-6 relative group">
+        <label for="customDescription" class="block text-xs font-bold text-primary uppercase mb-2 ml-1 tracking-wider">Dream Description</label>
+        <textarea id="customDescription" rows="4" placeholder="Describe your perfect mead (e.g. 'A sparkling cherry melomel with vanilla, 10% ABV')" class="w-full resize-none p-4"></textarea>
+        <p id="description-priority-warning" class="hidden text-xs text-center text-secondary mt-2 bg-secondary-container p-2 rounded-lg">Using AI Description Mode. Manual settings below will be ignored.</p>
+    </div>
+
+    <details class="group mb-3 bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden open:shadow-sm transition-all" open>
+        <summary class="font-bold text-sm cursor-pointer p-4 flex justify-between items-center select-none text-on-surface hover:bg-surface-variant/10 transition-colors">
+            <span class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                </span>
+                Base Stats
+            </span>
+            <svg class="w-5 h-5 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </summary>
+        <div class="p-4 pt-0 space-y-4 border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+            <div>
+                <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block ml-1">Batch Size (L)</label>
+                <input type="number" id="batchSize" placeholder="5">
+            </div>
+            <div>
+                <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block ml-1">Target ABV (%)</label>
+                <input type="number" id="abv" placeholder="12">
+            </div>
+            <div>
+                <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block ml-1">Style</label>
+                <select id="style">
+                    <option value="Traditional">Traditional</option>
+                    <option value="Melomel">Melomel (Fruit)</option>
+                    <option value="Metheglin">Metheglin (Spices)</option>
+                    <option value="Bochet">Bochet (Caramelized)</option>
+                    <option value="Cyser">Cyser (Apple)</option>
+                    <option value="Pyment">Pyment (Grape)</option>
+                    <option value="Braggot">Braggot (Malt)</option>
+                    <option value="Hydromel">Hydromel (Low ABV)</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block ml-1">Sweetness</label>
+                <select id="sweetness">
+                    <option value="dry">Dry</option>
+                    <option value="semi-sweet">Semi-Sweet</option>
+                    <option value="sweet">Sweet</option>
+                    <option value="dessert">Dessert</option>
+                </select>
+            </div>
+        </div>
+    </details>
+
+    <details class="group mb-3 bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden open:shadow-sm transition-all">
+        <summary class="font-bold text-sm cursor-pointer p-4 flex justify-between items-center select-none text-on-surface hover:bg-surface-variant/10 transition-colors">
+            <span class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                </span>
+                Ingredients
+            </span>
+            <svg class="w-5 h-5 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </summary>
+        <div class="p-4 pt-0 space-y-4 border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+            <div>
+                <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block ml-1">Honey Variety</label>
+                <select id="honeyVariety">
+                    <option value="Wildflower">Wildflower</option>
+                    <option value="Acacia">Acacia</option>
+                    <option value="Orange Blossom">Orange Blossom</option>
+                    <option value="Clover">Clover</option>
+                    <option value="Buckwheat">Buckwheat</option>
+                    <option value="Linden">Linden (Lime)</option>
+                    <option value="other">Other</option>
+                </select>
+                <input type="text" id="honeyVarietyOther" placeholder="Specify honey..." class="hidden mt-2">
+            </div>
+
+            <div id="fruit-section" class="hidden p-3 bg-surface-container rounded-lg border border-outline-variant">
+                <label class="block text-xs font-bold mb-2 uppercase text-primary ml-1">Fruit Selection</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="fruit_apples" class="rounded text-primary focus:ring-primary w-4 h-4 border-outline"> Apples</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="fruit_cherries" class="rounded text-primary focus:ring-primary w-4 h-4 border-outline"> Cherries</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="fruit_berries" class="rounded text-primary focus:ring-primary w-4 h-4 border-outline"> Berries</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="fruit_citrus" class="rounded text-primary focus:ring-primary w-4 h-4 border-outline"> Citrus</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="fruit_stone" class="rounded text-primary focus:ring-primary w-4 h-4 border-outline"> Stone Fruit</label>
                 </div>
-
-                <details class="group mb-3 bg-surface rounded-xl border border-outline-variant overflow-hidden open:shadow-elevation-1 transition-all" open>
-                    <summary class="font-bold text-sm cursor-pointer p-4 flex justify-between items-center select-none text-on-surface hover:bg-surface-variant/10 transition-colors">
-                        <span class="flex items-center gap-3">
-                            <span class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-xs">📊</span>
-                            Base Stats
-                        </span>
-                        <svg class="w-5 h-5 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </summary>
-                    <div class="p-4 pt-0 space-y-4 border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
-                        <div>
-                            <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block">Batch Size (L)</label>
-                            <input type="number" id="batchSize" placeholder="5">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block">Target ABV (%)</label>
-                            <input type="number" id="abv" placeholder="12">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block">Style</label>
-                            <select id="style">
-                                <option value="Traditional">Traditional</option>
-                                <option value="Melomel">Melomel (Fruit)</option>
-                                <option value="Metheglin">Metheglin (Spices)</option>
-                                <option value="Bochet">Bochet (Caramelized)</option>
-                                <option value="Cyser">Cyser (Apple)</option>
-                                <option value="Pyment">Pyment (Grape)</option>
-                                <option value="Braggot">Braggot (Malt)</option>
-                                <option value="Hydromel">Hydromel (Low ABV)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block">Sweetness</label>
-                            <select id="sweetness">
-                                <option value="dry">Dry</option>
-                                <option value="semi-sweet">Semi-Sweet</option>
-                                <option value="sweet">Sweet</option>
-                                <option value="dessert">Dessert</option>
-                            </select>
-                        </div>
-                    </div>
-                </details>
-
-                <details class="group mb-3 bg-surface rounded-xl border border-outline-variant overflow-hidden open:shadow-elevation-1 transition-all">
-                    <summary class="font-bold text-sm cursor-pointer p-4 flex justify-between items-center select-none text-on-surface hover:bg-surface-variant/10 transition-colors">
-                        <span class="flex items-center gap-3">
-                            <span class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-xs">🍯</span>
-                            Ingredients
-                        </span>
-                        <svg class="w-5 h-5 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </summary>
-                    <div class="p-4 pt-0 space-y-4 border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
-                        <div>
-                            <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block">Honey Variety</label>
-                            <select id="honeyVariety">
-                                <option value="Wildflower">Wildflower</option>
-                                <option value="Acacia">Acacia</option>
-                                <option value="Orange Blossom">Orange Blossom</option>
-                                <option value="Clover">Clover</option>
-                                <option value="Buckwheat">Buckwheat</option>
-                                <option value="Linden">Linden (Lime)</option>
-                                <option value="other">Other</option>
-                            </select>
-                            <input type="text" id="honeyVarietyOther" placeholder="Specify honey..." class="hidden mt-2">
-                        </div>
-
-                        <div id="fruit-section" class="hidden p-3 bg-surface-container rounded-lg border border-outline-variant">
-                            <label class="block text-xs font-bold mb-2 uppercase text-primary">Fruit Selection</label>
-                            <div class="grid grid-cols-2 gap-3">
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="fruit_apples" class="rounded text-primary focus:ring-primary w-4 h-4 border-outline"> Apples</label>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="fruit_cherries" class="rounded text-primary focus:ring-primary w-4 h-4 border-outline"> Cherries</label>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="fruit_berries" class="rounded text-primary focus:ring-primary w-4 h-4 border-outline"> Berries</label>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="fruit_citrus" class="rounded text-primary focus:ring-primary w-4 h-4 border-outline"> Citrus</label>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="fruit_stone" class="rounded text-primary focus:ring-primary w-4 h-4 border-outline"> Stone Fruit</label>
-                            </div>
-                            <input type="text" id="fruitOther" placeholder="Other fruits..." class="mt-3">
-                            <div class="mt-3 pt-2 border-t border-outline-variant">
-                                <label class="flex items-center text-xs font-bold text-error gap-2">
-                                    <input type="checkbox" id="isNoWaterCheckbox" class="rounded text-error focus:ring-error w-4 h-4 border-error"> 
-                                    No-Water Method (Pure Juice)
-                                </label>
-                            </div>
-                        </div>
-
-                        <div id="spice-section" class="hidden p-3 bg-surface-container rounded-lg border border-outline-variant">
-                            <label class="block text-xs font-bold mb-2 uppercase text-primary">Spices & Herbs</label>
-                            <div class="grid grid-cols-2 gap-3">
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="spice_cinnamon" class="rounded text-primary w-4 h-4 border-outline"> Cinnamon</label>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="spice_vanilla" class="rounded text-primary w-4 h-4 border-outline"> Vanilla</label>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="spice_cloves" class="rounded text-primary w-4 h-4 border-outline"> Cloves</label>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="spice_ginger" class="rounded text-primary w-4 h-4 border-outline"> Ginger</label>
-                            </div>
-                            <input type="text" id="spiceOther" placeholder="Other spices (e.g. Lavender)..." class="mt-3">
-                        </div>
-
-                        <div id="braggot-section" class="hidden">
-                             <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block">Beer Style Base</label>
-                             <input type="text" id="braggotStyle" placeholder="e.g. Stout, IPA, Wheat...">
-                        </div>
-                        
-                        <div class="flex items-center gap-2 p-3 bg-surface-variant/20 rounded-lg">
-                            <input type="checkbox" id="addOak" class="h-5 w-5 text-primary rounded border-outline focus:ring-primary">
-                            <label for="addOak" class="text-sm font-medium text-on-surface">Include Oak Aging</label>
-                        </div>
-                        
-                        <div>
-                             <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block">Special / Other</label>
-                             <input type="text" id="specialIngredients" placeholder="e.g. Maple Syrup, Coffee...">
-                        </div>
-                    </div>
-                </details>
-
-                <details class="group mb-6 bg-surface rounded-xl border border-outline-variant overflow-hidden open:shadow-elevation-1 transition-all">
-                    <summary class="font-bold text-sm cursor-pointer p-4 flex justify-between items-center select-none text-on-surface hover:bg-surface-variant/10 transition-colors">
-                        <span class="flex items-center gap-3">
-                            <span class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center text-xs">📦</span>
-                            Stock & Budget
-                        </span>
-                        <svg class="w-5 h-5 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </summary>
-                    <div class="p-4 pt-0 space-y-3 border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
-                        <p class="text-xs text-on-surface-variant mb-2">Check to prioritize using from inventory:</p>
-                        <div id="inventory-options-container" class="grid grid-cols-2 gap-3 text-sm text-on-surface">
-                            <label class="flex items-center gap-2"><input type="checkbox" id="useInventory_Honey" class="inventory-toggle rounded text-primary w-4 h-4 border-outline"> Honey</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" id="useInventory_Yeast" class="inventory-toggle rounded text-primary w-4 h-4 border-outline"> Yeast</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" id="useInventory_Nutrients" class="inventory-toggle rounded text-primary w-4 h-4 border-outline"> Nutrients</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" id="useInventory_Fruits" class="inventory-toggle rounded text-primary w-4 h-4 border-outline"> Fruit</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" id="useInventory_Spices" class="inventory-toggle rounded text-primary w-4 h-4 border-outline"> Spices</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" id="useInventory_Other" class="inventory-toggle rounded text-primary w-4 h-4 border-outline"> Other</label>
-                        </div>
-                        
-                        <div id="budget-section" class="hidden mt-2 pt-2 border-t border-outline-variant">
-                            <label class="flex items-center text-xs font-bold mb-2 text-on-surface gap-2">
-                                <input type="checkbox" id="useBudget" class="rounded text-primary w-4 h-4 border-outline"> 
-                                Set Budget Limit
-                            </label>
-                            <div id="budget-input-container" class="hidden">
-                                <input type="number" id="maxBudget" placeholder="€20.00">
-                            </div>
-                        </div>
-                    </div>
-                </details>
-
-                <div class="mt-6">
-                    <button id="generateBtn" class="w-full bg-primary text-on-primary font-bold py-4 px-6 rounded-full hover:shadow-elevation-2 active:scale-95 transition-all text-lg tracking-widest uppercase">
-                        Generate Recipe
-                    </button>
+                <input type="text" id="fruitOther" placeholder="Other fruits..." class="mt-3">
+                <div class="mt-3 pt-2 border-t border-outline-variant">
+                    <label class="flex items-center text-xs font-bold text-error gap-2">
+                        <input type="checkbox" id="isNoWaterCheckbox" class="rounded text-error focus:ring-error w-4 h-4 border-error"> 
+                        No-Water Method (Pure Juice)
+                    </label>
                 </div>
-            </aside>
+            </div>
+
+            <div id="spice-section" class="hidden p-3 bg-surface-container rounded-lg border border-outline-variant">
+                <label class="block text-xs font-bold mb-2 uppercase text-primary ml-1">Spices & Herbs</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="spice_cinnamon" class="rounded text-primary w-4 h-4 border-outline"> Cinnamon</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="spice_vanilla" class="rounded text-primary w-4 h-4 border-outline"> Vanilla</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="spice_cloves" class="rounded text-primary w-4 h-4 border-outline"> Cloves</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="spice_ginger" class="rounded text-primary w-4 h-4 border-outline"> Ginger</label>
+                </div>
+                <input type="text" id="spiceOther" placeholder="Other spices..." class="mt-3">
+            </div>
+
+            <div id="braggot-section" class="hidden">
+                 <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block ml-1">Beer Style Base</label>
+                 <input type="text" id="braggotStyle" placeholder="e.g. Stout, IPA, Wheat...">
+            </div>
+            
+            <div class="flex items-center gap-2 p-3 bg-surface-variant/20 rounded-lg">
+                <input type="checkbox" id="addOak" class="h-5 w-5 text-primary rounded border-outline focus:ring-primary">
+                <label for="addOak" class="text-sm font-medium text-on-surface">Include Oak Aging</label>
+            </div>
+            
+            <div>
+                 <label class="text-xs font-bold uppercase text-on-surface-variant mb-1 block ml-1">Special / Other</label>
+                 <input type="text" id="specialIngredients" placeholder="e.g. Maple Syrup, Coffee...">
+            </div>
+        </div>
+    </details>
+
+    <details class="group mb-6 bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden open:shadow-sm transition-all">
+        <summary class="font-bold text-sm cursor-pointer p-4 flex justify-between items-center select-none text-on-surface hover:bg-surface-variant/10 transition-colors">
+            <span class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                </span>
+                Stock & Budget
+            </span>
+            <svg class="w-5 h-5 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </summary>
+        <div class="p-4 pt-0 space-y-3 border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+            <p class="text-xs text-on-surface-variant mb-2">Check to prioritize using from inventory:</p>
+            <div id="inventory-options-container" class="grid grid-cols-2 gap-3 text-sm text-on-surface">
+                <label class="flex items-center gap-2"><input type="checkbox" id="useInventory_Honey" class="inventory-toggle rounded text-primary w-4 h-4 border-outline"> Honey</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="useInventory_Yeast" class="inventory-toggle rounded text-primary w-4 h-4 border-outline"> Yeast</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="useInventory_Nutrients" class="inventory-toggle rounded text-primary w-4 h-4 border-outline"> Nutrients</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="useInventory_Fruits" class="inventory-toggle rounded text-primary w-4 h-4 border-outline"> Fruit</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="useInventory_Spices" class="inventory-toggle rounded text-primary w-4 h-4 border-outline"> Spices</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="useInventory_Other" class="inventory-toggle rounded text-primary w-4 h-4 border-outline"> Other</label>
+            </div>
+            
+            <div id="budget-section" class="hidden mt-2 pt-2 border-t border-outline-variant">
+                <label class="flex items-center text-xs font-bold mb-2 text-on-surface gap-2">
+                    <input type="checkbox" id="useBudget" class="rounded text-primary w-4 h-4 border-outline"> 
+                    Set Budget Limit
+                </label>
+                <div id="budget-input-container" class="hidden">
+                    <input type="number" id="maxBudget" placeholder="€20.00">
+                </div>
+            </div>
+        </div>
+    </details>
+
+    <div class="mt-6">
+        <button id="generateBtn" class="w-full bg-primary text-on-primary font-bold py-4 px-6 rounded-full hover:shadow-elevation-2 active:scale-95 transition-all text-lg tracking-widest uppercase">
+            Generate Recipe
+        </button>
+    </div>
+</aside>
 
             <main class="lg:w-2/3 card p-8 shadow-elevation-1 overflow-y-auto border border-outline-variant/30" style="max-height: 75vh;">
                 <div id="recipe-output" class="prose max-w-none text-on-surface">

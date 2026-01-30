@@ -103,30 +103,32 @@
 
 <body class="bg-surface text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container h-full">
 
-    <div id="login-view" class="fixed inset-0 z-50 flex items-center justify-center bg-surface p-4 transition-opacity duration-500">
+    <div id="login-view" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-surface p-4 transition-opacity duration-500">
+    
+    <div class="w-full max-w-sm flex flex-col items-center">
         
-        <div class="bg-surface-container-low p-8 rounded-3xl shadow-xl border border-outline-variant/20 w-full max-w-sm relative text-center mx-auto">
-            
-            <div class="text-5xl mb-5 animate-bounce-slow">🍻</div>
-        
-            <h2 class="text-3xl font-header font-bold text-primary mb-2">
-                Hey Brewer
-            </h2>
-            
-            <p id="login-subtitle" class="text-sm text-on-surface-variant mb-8 px-2 leading-relaxed opacity-80 min-h-[40px] flex items-center justify-center">
-                Loading fermentation protocols...
-            </p>
-        
-            <button id="google-signin-btn" class="w-full bg-primary hover:bg-primary-container hover:text-on-primary-container text-on-primary font-bold py-4 px-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-3 group active:scale-95">
-                <svg class="w-5 h-5 transition-transform group-hover:rotate-12" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
-                <span>Let me in</span>
-            </button>
-            
-            <p class="mt-8 text-[10px] text-on-surface-variant/40 uppercase tracking-[0.2em]">
-                Mea(n)dery v2.4
-            </p>
+        <div class="mb-8 relative">
+            <div class="absolute inset-0 bg-primary/20 blur-xl rounded-full opacity-20"></div> <img src="logo.png" class="h-24 w-auto object-contain relative z-10 drop-shadow-sm" alt="Logo">
         </div>
-        </div> 
+
+        <h1 class="text-2xl font-header font-bold text-on-surface tracking-widest uppercase mb-2">
+            Mea(n)dery
+        </h1>
+        <p class="text-xs text-on-surface-variant tracking-[0.3em] uppercase opacity-60 mb-10">
+            Brewing Assistant
+        </p>
+
+        <button id="google-signin-btn" class="w-full bg-on-surface text-surface hover:bg-primary hover:text-on-primary font-medium py-4 px-6 rounded-lg transition-all duration-300 shadow-sm flex items-center justify-center gap-3 group border border-transparent">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
+            <span class="tracking-wide">Sign in with Google</span>
+        </button>
+
+        <div class="mt-12 text-center">
+            <p class="text-[10px] text-outline-variant">v2.4 &bull; Private Build</p>
+        </div>
+
+    </div>
+</div> 
     <div id="app-content" class="container mx-auto p-4 md:p-8 max-w-7xl hidden min-h-screen flex flex-col">
         
         <header class="text-center mt-2 mb-4 no-print flex flex-col justify-center items-center py-2 relative">

@@ -1404,16 +1404,25 @@ window.renderBrewDay2 = async function() {
         const dayLabel = days >= 0 ? `Day ${days}` : '?';
 
         return `
-        <div onclick="window.openSecondaryDetail('${b.id}')" class="p-4 card rounded-xl cursor-pointer hover:bg-app-primary border-l-4 border-purple-500 shadow-sm mb-3 transition-all group relative">
+        <div onclick="window.openSecondaryDetail('${b.id}')" 
+             class="p-4 rounded-xl cursor-pointer bg-surface-container border border-outline-variant/60 border-l-4 border-l-purple-500 shadow-sm hover:shadow-md hover:border-purple-500/50 hover:scale-[1.01] transition-all mb-3 relative group">
+            
             <div class="flex justify-between items-center">
                 <div>
-                    <h4 class="font-bold text-lg font-header text-app-header group-hover:text-purple-600 transition-colors leading-tight">${b.recipeName}</h4>
-                    <div class="flex items-center gap-3 mt-1.5">
-                        <span class="text-[10px] font-bold uppercase bg-purple-100 text-purple-700 px-2 py-0.5 rounded border border-purple-200">Aging: ${dayLabel}</span>
-                        <span class="text-xs text-app-secondary opacity-80">Started: ${startDate}</span>
+                    <h4 class="font-bold text-lg font-header text-on-surface group-hover:text-purple-600 transition-colors leading-tight">
+                        ${b.recipeName}
+                    </h4>
+                    <div class="flex items-center gap-3 mt-2">
+                        <span class="text-[10px] font-bold uppercase bg-purple-100 text-purple-700 px-2 py-0.5 rounded border border-purple-200">
+                            Aging: ${dayLabel}
+                        </span>
+                        <span class="text-xs text-on-surface-variant opacity-80">
+                            Started: ${startDate}
+                        </span>
                     </div>
                 </div>
-                <div class="text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+                
+                <div class="text-on-surface-variant/30 group-hover:text-purple-500 group-hover:translate-x-1 transition-all">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </div>
             </div>

@@ -78,18 +78,18 @@ onAuthStateChanged(auth, async (user) => {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🚀 Meandery V2.4 Modular System Active");
 
-// --- GLOBAL AUTH FUNCTION (Nodig voor de HTML onclick) ---
-window.signInWithGoogle = async function() {
-    console.log("🔐 Starting Google Sign-In...");
-    try {
-        const result = await signInWithPopup(auth, googleProvider);
-        console.log("✅ Login Success:", result.user.uid);
-        // We hoeven hier niets te doen, de onAuthStateChanged listener pikt dit op!
-    } catch (error) {
-        console.error("❌ Login Failed:", error);
-        showToast("Login failed: " + error.message, "error");
-    }
-};
+    // --- GLOBAL AUTH FUNCTION (Nodig voor de HTML onclick) ---
+    window.signInWithGoogle = async function() {
+        console.log("🔐 Starting Google Sign-In...");
+        try {
+            const result = await signInWithPopup(auth, googleProvider);
+            console.log("✅ Login Success:", result.user.uid);
+            // We hoeven hier niets te doen, de onAuthStateChanged listener pikt dit op!
+        } catch (error) {
+            console.error("❌ Login Failed:", error);
+            showToast("Login failed: " + error.message, "error");
+        }
+    };
 
     // --- NAVIGATIE ---
     document.querySelectorAll('.main-nav-btn').forEach(btn => {

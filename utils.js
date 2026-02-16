@@ -324,6 +324,35 @@ export function updateDashboardInsights() {
     if (alertsCount > 0) widget.classList.remove('hidden'); else widget.classList.add('hidden');
 }
 
+// --- BLACK BOX LOGGING SYSTEM ---
+export async function logSystemError(error, context = 'General', severity = 'ERROR') {
+    // 1. Altijd ook in de console tonen voor development
+    console.error(`[${context}]`, error);
+
+    // 2. Als we geen user ID hebben, kunnen we niet opslaan in zijn mapje
+    if (!state.userId) return;
+
+    try {
+        const logEntry = {
+            timestamp: new Date().toISOString(),
+            version: "v2.4", // Pas dit aan als je updatet
+            severity: severity, // 'ERROR', 'WARN', 'INFO'
+            context: context,
+            message: error.message || error.toString(),
+            stack: error.stack || 'No stack trace',
+            userAgent: navigator.userAgent // Handig om te weten of het iPhone of Android was
+        };
+
+        // We slaan dit op in een APARTE collectie 'systemLogs' zodat het je recepten niet vervuilt
+        const { addDoc, collection } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        
+        await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'systemLogs'), logEntry);
+        
+    } catch (loggingError) {
+        console.warn("Kon fout niet naar database sturen:", loggingError);
+    }
+}
+
 // --- GLOBAL HELPER: CSS THEME COLORS ---
 function getThemeColor(variableName) {
     if (typeof window === 'undefined' || !document) return '#000000';
@@ -359,3 +388,4 @@ window.checkDangerConfirmation = checkDangerConfirmation;
 window.executeDangerAction = executeDangerAction;
 window.updateDashboardInsights = updateDashboardInsights;
 window.getThemeColor = getThemeColor;
+window.logSystemError = logSystemError;

@@ -16,6 +16,15 @@ import { doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10
 import { state } from './state.js';
 import { showToast } from './utils.js';
 
+// --- AUTO-LOGGER (Vangt onverwachte crashes) ---
+window.addEventListener('error', (event) => {
+    window.logSystemError(event.error, 'Uncaught Crash', 'FATAL');
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    window.logSystemError(event.reason, 'Unhandled Promise (Network/Async)', 'ERROR');
+});
+
 // 3. SAFE LOADER HELPER
 // Deze functie voorkomt dat de app crasht als één module nog niet klaar is.
 const safeInit = (functionName) => {
@@ -24,11 +33,12 @@ const safeInit = (functionName) => {
             window[functionName]();
             console.log(`✅ Module loaded: ${functionName}`);
         } catch (err) {
-            console.error(`❌ Error executing ${functionName}:`, err);
+            // HIER GEBRUIKEN WE NU DE LOGGER:
+            window.logSystemError(err, `Init Module: ${functionName}`);
             showToast(`Error loading module: ${functionName}`, 'error');
         }
     } else {
-        console.warn(`⚠️ Module function missing: ${functionName}. Check imports.`);
+        console.warn(`⚠️ Module function missing: ${functionName}`);
     }
 };
 

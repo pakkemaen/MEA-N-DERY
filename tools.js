@@ -1,7 +1,7 @@
 import { db } from './firebase-init.js';
 import { state } from './state.js';
 import { showToast, performApiCall, getLoaderHtml, switchMainView, switchSubView } from './utils.js';
-import { doc, getDoc, setDoc, updateDoc, collection, addDoc, deleteDoc, query, onSnapshot, getDocs, writeBatch, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, getDoc, setDoc, updateDoc, collection, addDoc, deleteDoc, query, onSnapshot, getDocs, writeBatch, arrayUnion, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // Fallback als CONFIG niet globaal beschikbaar is (wat in modules vaak zo is)
 const CONFIG = window.CONFIG || { firebase: { apiKey: "" } };
@@ -733,7 +733,7 @@ window.clearChatImage = function() {
 window.fetchAvailableModels = async function() {
     const apiKey = document.getElementById('apiKeyInput').value.trim();
     const textSelect = document.getElementById('aiModelInput');
-    const chatSelect = document.getElementById('chatModelInput'); // NIEUW
+    const chatSelect = document.getElementById('chatModelInput');
     const imageSelect = document.getElementById('imageModelInput');
     const btn = document.getElementById('fetchModelsBtn');
 
@@ -754,6 +754,21 @@ window.fetchAvailableModels = async function() {
             m.supportedGenerationMethods.includes("generateContent") &&
             m.name.toLowerCase().includes("gemini")
         );
+
+        // --- 1.5 FORCEER THINKING MODEL (Handmatige injectie) ---
+        // Dit ontbrak in je bestand:
+        const thinkingModelId = "models/gemini-2.0-flash-thinking-exp-01-21"; 
+        
+        // Check of hij er al tussen staat, zo niet: voeg toe
+        if (!textModels.some(m => m.name === thinkingModelId)) {
+            textModels.push({ name: thinkingModelId });
+        }
+        // Voeg ook de generieke pointer toe (veiliger voor toekomst)
+        if (!textModels.some(m => m.name === "models/gemini-2.0-flash-thinking-exp")) {
+            textModels.push({ name: "models/gemini-2.0-flash-thinking-exp" });
+        }
+        // -------------------------------------------------------
+
         textModels.sort((a, b) => b.name.localeCompare(a.name));
 
         // 2. FILTER VOOR BEELD (Imagen)
@@ -769,18 +784,17 @@ window.fetchAvailableModels = async function() {
             const cleanName = model.name.replace('models/', '');
             const opt = document.createElement('option');
             opt.value = cleanName;
-            opt.text = cleanName;
+            opt.text = cleanName.includes('thinking') ? `🧠 ${cleanName}` : cleanName;
             textSelect.appendChild(opt);
         });
 
-        // --- VUL DROPDOWN 2: CHAT ENGINE (NIEUW) ---
-        // We gebruiken dezelfde lijst als voor recepten (want het zijn beide tekstmodellen)
+        // --- VUL DROPDOWN 2: CHAT ENGINE ---
         chatSelect.innerHTML = '';
         textModels.forEach(model => {
             const cleanName = model.name.replace('models/', '');
             const opt = document.createElement('option');
             opt.value = cleanName;
-            opt.text = cleanName;
+            opt.text = cleanName.includes('thinking') ? `🧠 ${cleanName}` : cleanName;
             chatSelect.appendChild(opt);
         });
 
@@ -1364,6 +1378,38 @@ async function findCommercialWaterMatch() {
     } catch (error) {
         console.error("Water match failed:", error);
         resultsDiv.innerHTML = `<p class="text-red-500 text-sm">Could not find matching brands. Error: ${error.message}</p>`;
+    }
+}
+
+window.exportSystemLogs = async function() {
+    if (!state.userId) return;
+    
+    showToast("Fetching logs...", "info");
+    
+    try {
+        // Haal logs op, gesorteerd op nieuwste eerst
+        const logsRef = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'systemLogs');
+        const q = query(logsRef, orderBy("timestamp", "desc"), limit(100)); // Laatste 100 fouten
+        const snapshot = await getDocs(q);
+        
+        const logs = snapshot.docs.map(doc => doc.data());
+        
+        if (logs.length === 0) {
+            showToast("No errors found! Great job.", "success");
+            return;
+        }
+
+        // Download als JSON
+        const blob = new Blob([JSON.stringify(logs, null, 2)], {type: 'application/json'});
+        const a = document.createElement('a'); 
+        a.href = URL.createObjectURL(blob); 
+        a.download = `debug_logs_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        
+        showToast("Logs downloaded.", "success");
+    } catch (e) {
+        console.error(e);
+        showToast("Failed to fetch logs.", "error");
     }
 }
 

@@ -1,7 +1,7 @@
 import { db } from './firebase-init.js';
 import { state } from './state.js';
 import { showToast, performApiCall, getLoaderHtml, switchMainView, switchSubView } from './utils.js';
-import { doc, getDoc, setDoc, updateDoc, collection, addDoc, deleteDoc, query, onSnapshot, getDocs, writeBatch, arrayUnion, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, getDoc, setDoc, updateDoc, collection, addDoc, deleteDoc, query, onSnapshot, getDocs, writeBatch, arrayUnion, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // Fallback als CONFIG niet globaal beschikbaar is (wat in modules vaak zo is)
 const CONFIG = window.CONFIG || { firebase: { apiKey: "" } };
@@ -1410,6 +1410,27 @@ window.exportSystemLogs = async function() {
     } catch (e) {
         console.error(e);
         showToast("Failed to fetch logs.", "error");
+    }
+}
+
+// --- LOG COUNTER (BADGE) ---
+window.updateLogCount = async function() {
+    const badge = document.getElementById('log-count-badge');
+    if (!badge || !state.userId) return;
+
+    try {
+        const coll = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'systemLogs');
+        const snapshot = await getCountFromServer(coll);
+        const count = snapshot.data().count;
+
+        if (count > 0) {
+            badge.innerText = count > 99 ? '99+' : count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    } catch (e) {
+        console.warn("Log count check failed:", e);
     }
 }
 

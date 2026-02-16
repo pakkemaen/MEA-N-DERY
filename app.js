@@ -130,6 +130,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (viewName === 'brew-day-2' && window.renderBrewDay2) {
                 window.renderBrewDay2();
             }
+
+            if (viewName === 'settings-data' && window.updateLogCount) {
+            window.updateLogCount();
+            }
         });
     });
 

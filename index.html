@@ -1263,11 +1263,17 @@
                 
                 <div class="grid grid-cols-2 gap-4 mb-6">
                     <button id="exportHistoryBtn" class="bg-surface-variant text-on-surface-variant hover:bg-surface-variant/80 font-bold py-3 rounded-full border border-outline-variant">Export History</button>
-                    <button onclick="window.exportSystemLogs()" class="bg-gray-700 text-white hover:bg-gray-600 font-bold py-3 rounded-full border border-gray-600 flex items-center justify-center gap-2">
-    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-    Download Debug Logs
-</button>
                     <button id="exportInventoryBtn" class="bg-surface-variant text-on-surface-variant hover:bg-surface-variant/80 font-bold py-3 rounded-full border border-outline-variant">Export Inv</button>
+                    <button onclick="window.exportSystemLogs()" class="relative bg-surface-variant text-on-surface-variant hover:bg-surface-variant/80 font-bold py-3 rounded-full border border-outline-variant flex items-center justify-center gap-2">
+    
+                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+    
+                       <span>Debug Logs</span>
+
+                       <span id="log-count-badge" class="hidden absolute -top-2 -right-2 bg-error text-white text-[10px] font-bold px-2 py-1 rounded-full border-2 border-surface shadow-sm animate-bounce">
+        0
+                       </span>
+                   </button>
                 </div>
                 <div class="border-t border-error/20 pt-6 space-y-3">
                     <button id="clearHistoryBtn" class="w-full bg-error text-white py-3 rounded-full font-bold hover:brightness-110 shadow-sm">Delete ALL History</button>

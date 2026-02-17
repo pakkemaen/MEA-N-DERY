@@ -226,12 +226,16 @@ function updateSliderDisplay(id, val) {
                    .replace(/([A-Z])/g, '-$1')
                    .toLowerCase();
     
-    // Fix voor ID afwijkingen
     if (id.endsWith('Size2')) dispId = dispId.replace('size2', 'size-2');
-    if (id.includes('OffsetY')) dispId = dispId.replace('offset-y', 'offset-y'); // check of dit matcht met HTML ID
 
     const disp = document.getElementById(dispId);
     if(disp) {
+        // Voorkom 'px' achter kleurencodes (hex start met #)
+        if (typeof val === 'string' && val.startsWith('#')) {
+            disp.textContent = val.toUpperCase();
+            return;
+        }
+
         if(id.includes('Rotate')) disp.textContent = val + '°';
         else if(id.includes('Break')) disp.textContent = (val >= 8) ? "All" : "Word " + val;
         else if(id.includes('Width') && id.includes('Border')) disp.textContent = val + 'mm';

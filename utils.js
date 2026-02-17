@@ -1,4 +1,6 @@
 import { state } from './state.js';
+// Oplossing voor 'db is not defined': importeer de instanties en functies direct uit je init file
+import { db, addDoc, collection } from './firebase-init.js';
 
 // --- TOAST NOTIFICATIONS ---
 export function showToast(message, type = 'info', duration = 4000) {
@@ -49,12 +51,9 @@ export function switchMainView(viewName, targetSubView = null) {
     if (viewToShow) viewToShow.classList.remove('hidden');
     
     // 3. SLIMME NAVIGATIE
-    // Als er een specifieke sub-view is gevraagd (via dashboard knop), ga daarheen.
-    // Zo niet (via footer menu), gebruik dan de defaults.
     if (targetSubView) {
         switchSubView(targetSubView, `${viewName}-main-view`);
     } else {
-        // Default fallbacks (alleen als er geen doel is opgegeven)
         if (viewName === 'management') switchSubView('inventory', 'management-main-view');
         else if (viewName === 'tools') switchSubView('calculators', 'tools-main-view');
         else if (viewName === 'settings') switchSubView('settings-general', 'settings-main-view');
@@ -68,33 +67,22 @@ export function switchSubView(viewName, parentViewId) {
     const parentView = document.getElementById(parentViewId);
     if (!parentView) return;
 
-    // 1. Reset UI: Verberg alle views die eindigen op '-view' BINNEN deze parent
-    // We gebruiken :scope om zeker te weten dat we alleen directe kinderen of diepe kinderen binnen deze sectie pakken
     const children = parentView.querySelectorAll('[id$="-view"]');
     children.forEach(v => v.classList.add('hidden'));
 
-    // Reset Tabs
     parentView.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
 
-    // 2. Toon nieuwe view en activeer tab
-    // Dit gebeurt direct, zodat de gebruiker instant feedback ziet
     const viewToShow = document.getElementById(`${viewName}-view`);
     const tabToActivate = document.getElementById(`${viewName}-sub-tab`);
 
     if (viewToShow) viewToShow.classList.remove('hidden');
     if (tabToActivate) tabToActivate.classList.add('active');
 
-    // 3. Trigger Renderers (MET VERTRAAGING)
-    // We wachten 50ms. Dit geeft de browser precies genoeg tijd om de CSS 'display: block' 
-    // te verwerken en het scherm te tekenen, voordat de zware data-functies draaien.
     const renderDelay = 50; 
 
-    // --- BREWING ---
-    // Brew Day 1 & 2 laten we direct, omdat die vaak al in het geheugen zitten en snel moeten voelen.
     if (viewName === 'brew-day-1' && window.renderBrewDay) window.renderBrewDay();
     if (viewName === 'brew-day-2' && window.renderBrewDay2) window.renderBrewDay2();
     
-    // History en Shopping List kunnen zwaar zijn, dus die vertragen we ook
     if (viewName === 'history' && window.renderHistoryList) {
         setTimeout(() => window.renderHistoryList(), renderDelay);
     }
@@ -105,7 +93,6 @@ export function switchSubView(viewName, parentViewId) {
         }, renderDelay);
     }
 
-    // --- MANAGEMENT (De probleemveroorzakers) ---
     if (viewName === 'inventory' && window.renderInventory) {
         setTimeout(() => window.renderInventory(), renderDelay);
     }
@@ -122,7 +109,6 @@ export function switchSubView(viewName, parentViewId) {
         setTimeout(() => window.renderPackagingUI(), renderDelay);
     }
 
-    // --- TOOLS ---
     if (viewName === 'social') {
         setTimeout(() => {
             if(window.populateSocialRecipeDropdown) window.populateSocialRecipeDropdown();
@@ -140,7 +126,6 @@ export function switchSubView(viewName, parentViewId) {
         setTimeout(() => window.resetTroubleshootChat(), renderDelay);
     }
     
-    // --- SETTINGS ---
     if (viewName === 'settings-assets' && window.renderLabelAssetsSettings) {
         setTimeout(() => window.renderLabelAssetsSettings(), renderDelay);
     }
@@ -241,13 +226,11 @@ export function updateDashboardInsights() {
     let alertsCount = 0;
     const today = new Date();
 
-    // SVG ICONEN (Geen Emojis meer)
     const iconExpired = `<svg class="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
     const iconWarning = `<svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
     const iconCheck = `<svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
     const iconGhost = `<svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>`;
 
-    // Helper voor stijlvolle kaarten
     const createAlert = (icon, title, desc, bgClass = "bg-surface-container") => {
         const li = document.createElement('li');
         li.className = "mb-2 last:mb-0";
@@ -262,7 +245,6 @@ export function updateDashboardInsights() {
         return li;
     };
 
-    // INVENTORY CHECKS
     state.inventory.forEach(item => {
         if (item.expirationDate) {
             const expDate = new Date(item.expirationDate);
@@ -270,26 +252,15 @@ export function updateDashboardInsights() {
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
             if (diffDays <= 30 && diffDays >= 0) {
-                list.appendChild(createAlert(
-                    iconWarning, 
-                    "Expiry Warning", 
-                    `<b>${item.name}</b> expires in ${diffDays} days.`,
-                    "bg-amber-50 dark:bg-amber-900/20"
-                ));
+                list.appendChild(createAlert(iconWarning, "Expiry Warning", `<b>${item.name}</b> expires in ${diffDays} days.`, "bg-amber-50 dark:bg-amber-900/20"));
                 alertsCount++;
             } else if (diffDays < 0) {
-                list.appendChild(createAlert(
-                    iconExpired, 
-                    "Expired Item", 
-                    `<b>${item.name}</b> is ${Math.abs(diffDays)} days over date.`,
-                    "bg-error-container/30"
-                ));
+                list.appendChild(createAlert(iconExpired, "Expired Item", `<b>${item.name}</b> is ${Math.abs(diffDays)} days over date.`, "bg-error-container/30"));
                 alertsCount++;
             }
         }
     });
 
-    // BREWING CHECKS
     state.brews.forEach(brew => {
         if (brew.archived || brew.bottledDate) return;
         const hasStarted = brew.logData && brew.logData.brewDate;
@@ -298,7 +269,6 @@ export function updateDashboardInsights() {
         const startDate = new Date(brew.logData.brewDate);
         const ageDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
         
-        // Knoppen HTML (zonder functionaliteit wijziging, alleen styling)
         const archiveBtn = `<button onclick="window.archiveBrew('${brew.id}', '${brew.recipeName}')" class="text-blue-500 font-bold hover:underline ml-2">Archive</button>`;
         const deleteBtn = `<button onclick="window.deleteGhostBrew('${brew.id}', '${brew.recipeName}')" class="text-red-500 font-bold hover:underline ml-2">Delete</button>`;
 
@@ -311,12 +281,7 @@ export function updateDashboardInsights() {
             alertsCount++;
         }
         if (ageDays > 60) {
-            list.appendChild(createAlert(
-                iconGhost, 
-                "Ghost Batch Detected", 
-                `<b>${brew.recipeName}</b> active for ${ageDays} days. Update status? <div class="mt-1 flex justify-end text-[10px] uppercase tracking-wider">${archiveBtn} ${deleteBtn}</div>`,
-                "bg-surface-variant/30"
-            ));
+            list.appendChild(createAlert(iconGhost, "Ghost Batch Detected", `<b>${brew.recipeName}</b> active for ${ageDays} days. Update status? <div class="mt-1 flex justify-end text-[10px] uppercase tracking-wider">${archiveBtn} ${deleteBtn}</div>`, "bg-surface-variant/30"));
             alertsCount++;
         }
     });
@@ -324,28 +289,24 @@ export function updateDashboardInsights() {
     if (alertsCount > 0) widget.classList.remove('hidden'); else widget.classList.add('hidden');
 }
 
-// --- BLACK BOX LOGGING SYSTEM ---
+// --- BLACK BOX LOGGING SYSTEM (FIXED) ---
 export async function logSystemError(error, context = 'General', severity = 'ERROR') {
-    // 1. Altijd ook in de console tonen voor development
     console.error(`[${context}]`, error);
 
-    // 2. Als we geen user ID hebben, kunnen we niet opslaan in zijn mapje
     if (!state.userId) return;
 
     try {
         const logEntry = {
             timestamp: new Date().toISOString(),
-            version: "v2.4", // Pas dit aan als je updatet
-            severity: severity, // 'ERROR', 'WARN', 'INFO'
+            version: "v2.4", 
+            severity: severity, 
             context: context,
             message: error.message || error.toString(),
             stack: error.stack || 'No stack trace',
-            userAgent: navigator.userAgent // Handig om te weten of het iPhone of Android was
+            userAgent: navigator.userAgent
         };
 
-        // We slaan dit op in een APARTE collectie 'systemLogs' zodat het je recepten niet vervuilt
-        const { addDoc, collection } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-        
+        // De imports van addDoc en collection komen nu rechtstreeks uit firebase-init.js (zie bovenaan)
         await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'systemLogs'), logEntry);
         
     } catch (loggingError) {

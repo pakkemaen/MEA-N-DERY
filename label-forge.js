@@ -161,7 +161,7 @@ function initLabelForge() {
     // E. GECOMBINEERDE LIVE UPDATE LISTENERS (Sliders, Kleuren, Fonts, Checkboxes)
     const liveUpdateIds = [
         // Algemeen
-        'labelShowBorder', 'logoColorMode', 'tuneBorderWidth', 'tuneBackgroundColor',
+        'labelShowBorder', 'logoColorMode', 'tuneBorderWidth', 'tuneBackgroundColor', 'labelShowGuides',
         
         // Logo
         'tuneLogoColor', 'tuneLogoSize', 'tuneLogoX', 'tuneLogoY', 'tuneLogoRotate', 'tuneLogoOpacity',
@@ -670,6 +670,12 @@ function setLabelTheme(theme) {
     const getVal = (id) => document.getElementById(id)?.value || '';
     const getCheck = (id) => document.getElementById(id)?.checked || false;
     const getText = (id) => document.getElementById(id)?.textContent || '';
+
+    const showGuides = document.getElementById('labelShowGuides')?.checked;
+    const previewWrapper = document.querySelector('#labels-view main'); 
+    if (previewWrapper) {
+        previewWrapper.classList.toggle('show-guides', showGuides);
+    }
 
     // 1. DATA OPHALEN
     const title = getVal('labelTitle') || 'MEAD NAME';

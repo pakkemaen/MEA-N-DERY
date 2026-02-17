@@ -499,3 +499,20 @@ input:checked + .slider:before { transform: translateX(24px); }
     opacity: 1 !important;
     pointer-events: auto !important;
 }
+
+/* Avery Stanslijnen Gids (Alleen zichtbaar in preview) */
+.show-guides #label-preview-container::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px dashed rgba(255, 0, 0, 0.3); /* Subtiel rood stippellijntje */
+    pointer-events: none;
+    z-index: 60;
+}
+
+/* Verberg de gids altijd tijdens het printen */
+@media print {
+    .show-guides #label-preview-container::after {
+        display: none !important;
+    }
+}

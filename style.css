@@ -391,6 +391,15 @@ table input:focus {
     box-shadow: 0 20px 50px rgba(0,0,0,0.3);
 }
 
+/* Voorkomt dat lange woorden buiten de tekstvakken van het label vallen */
+#label-content p, 
+#label-content h1, 
+#label-content div {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
 /* --- CUSTOM LOADER --- */
 .honeycomb-loader { width: 50px; height: 50px; margin: 2rem auto; display: block; }
 .honeycomb-path {

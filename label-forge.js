@@ -1817,59 +1817,57 @@ window.saveLabelToBrew = async function() {
     }
 }
 
-// --- FUNCTIE: TEKST AUTOMATISCH PASSEND MAKEN ---
+// --- FUNCTIE: TEKST AUTOMATISCH PASSEND MAKEN (VERBETERD V4.0) ---
 window.autoFitLabelText = function() {
     const titleEl = document.getElementById('prev-title');
     const groupEl = document.getElementById('text-group'); 
-    const container = document.querySelector('#label-content .relative.w-\\[65\\%\\]'); 
+    // Dynamische selector voor de rechter container van het label
+    const container = document.querySelector('#label-content > div:last-child'); 
     const logoEl = document.getElementById('label-logo-img');
     
-    // Sliders ophalen
+    if (!titleEl || !groupEl || !container) return;
+
+    // Haal de door de gebruiker gekozen basisgrootte op uit de slider
     const sizeSlider = document.getElementById('tuneTitleSize');
-    
-    // We gebruiken nu een vaste veilige afstand van 5px, omdat de slider weg is.
-    const safeZone = 5; 
     const startFontSize = sizeSlider ? parseInt(sizeSlider.value) : 100;
+    const safeZone = 5; // Marge in pixels rondom de randen en het logo
 
-    if (!titleEl || !groupEl) return;
-
-    // Reset naar groot
+    // 1. Reset naar de basisgrootte
     let fontSize = startFontSize; 
     titleEl.style.fontSize = fontSize + 'px';
-    titleEl.style.lineHeight = '0.9'; 
-    
-    // Zorg dat line-clamp werkt
-    titleEl.style.display = '-webkit-box'; 
-    titleEl.style.webkitBoxOrient = 'vertical'; 
-    titleEl.style.webkitLineClamp = '2';
 
-    if (!container || container.offsetWidth === 0) return;
-
-    // Collision Logic (kijkt of tekst en logo botsen)
-    const checkCollision = () => {
-        if (!logoEl) return false;
+    // 2. Hulpfunctie om botsingen of overloop te detecteren
+    const checkIssues = () => {
         const gRect = groupEl.getBoundingClientRect(); 
-        const lRect = logoEl.getBoundingClientRect();
+        const cRect = container.getBoundingClientRect();
+        
+        // Check of de tekst de randen van het label raakt
+        const overflows = (gRect.right > cRect.right - safeZone) || 
+                          (gRect.bottom > cRect.bottom - safeZone) ||
+                          (gRect.left < cRect.left + safeZone) ||
+                          (gRect.top < cRect.top + safeZone);
 
-        const overlap = !(gRect.right < (lRect.left - safeZone) || 
-                          gRect.left > (lRect.right + safeZone) || 
-                          gRect.bottom < (lRect.top - safeZone) || 
-                          gRect.top > (lRect.bottom + safeZone));
-        return overlap;
+        // Check of de tekst het logo raakt
+        let hitsLogo = false;
+        if (logoEl && logoEl.offsetParent !== null) { // Alleen als logo zichtbaar is
+            const lRect = logoEl.getBoundingClientRect();
+            hitsLogo = !(gRect.right < (lRect.left - safeZone) || 
+                         gRect.left > (lRect.right + safeZone) || 
+                         gRect.bottom < (lRect.top - safeZone) || 
+                         gRect.top > (lRect.bottom + safeZone));
+        }
+        
+        return overflows || hitsLogo;
     };
 
-    const checkOverflow = () => {
-        return (groupEl.offsetWidth + groupEl.offsetLeft > container.offsetWidth);
-    }
-
-    // Verklein lus
-    while ( (checkCollision() || checkOverflow()) && fontSize > 5 ) {
-        fontSize--; 
+    // 3. Verklein de font-size stap voor stap tot het past (minimaal 8px)
+    while (checkIssues() && fontSize > 8) {
+        fontSize -= 2; 
         titleEl.style.fontSize = fontSize + 'px';
     }
     
-    if (fontSize <= 5) titleEl.style.fontSize = '5px';
-}
+    // Log voor debug (optioneel): console.log(`Auto-fit: ${startFontSize}px -> ${fontSize}px`);
+};
 
 // --- DEEL X: LABEL ASSETS MANAGER (STYLES & FONTS) ---
 

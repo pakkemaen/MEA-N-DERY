@@ -666,167 +666,99 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
     if(typeof setLabelTheme === 'function') setLabelTheme(theme);
 }
 
-// --- LABEL THEMA FUNCTIE (MET DATUM FIX) ---
+// --- DE VOLLEDIGE, GEOPTIMALISEERDE THEMA-ENGINE (V4.1 - NO REGRESSION) ---
 function setLabelTheme(theme) {
     const container = document.getElementById('label-content');
     if (!container) return; 
 
+    // 1. DATA OPHALEN
     const getVal = (id) => document.getElementById(id)?.value || '';
     const getCheck = (id) => document.getElementById(id)?.checked || false;
     const getText = (id) => document.getElementById(id)?.textContent || '';
 
+    // Cut Guides logica
     const showGuides = document.getElementById('labelShowGuides')?.checked;
     const previewWrapper = document.querySelector('#labels-view main'); 
-    if (previewWrapper) {
-        previewWrapper.classList.toggle('show-guides', showGuides);
-    }
+    if (previewWrapper) previewWrapper.classList.toggle('show-guides', showGuides);
 
-    // 1. DATA OPHALEN
+    // Basis Variabelen
     const title = getVal('labelTitle') || 'MEAD NAME';
     const sub = getVal('labelSubtitle') || 'Style Description';
-    const abv = getVal('labelAbv');
-    const fg = getVal('labelFg');
-    const vol = getVal('labelVol');
-    const desc = getVal('labelDescription');
-    const details = getVal('labelDetails'); 
-    
-    // --- DATUM FORMATTERING FIX ---
+    const abv = getVal('labelAbv'), fg = getVal('labelFg'), vol = getVal('labelVol');
+    const desc = getVal('labelDescription'), details = getVal('labelDetails');
+    const allergenText = getVal('labelAllergens');
+    const bgColor = getVal('tuneBackgroundColor') || '#ffffff';
+    const borderWidth = getVal('tuneBorderWidth') || 0;
+    const showDetails = getCheck('labelShowDetails');
+    const showHoney = getCheck('labelShowHoney');
+    const showYeast = getCheck('labelShowYeast');
+
+    // Datum Formattering
     const rawDate = getVal('labelDate');
-    let dateVal = rawDate; 
-    // Probeer de datum om te zetten naar DD-MM-YYYY (of lokaal formaat)
+    let dateVal = rawDate;
     if (rawDate) {
         try {
             const d = new Date(rawDate);
-            if (!isNaN(d.getTime())) {
-                // 'nl-NL' zorgt voor dag-maand-jaar volgorde (bv. 14-04-2025)
-                dateVal = d.toLocaleDateString('nl-NL'); 
-            }
-        } catch(e) { /* fallback naar input waarde */ }
+            if (!isNaN(d.getTime())) dateVal = d.toLocaleDateString('nl-NL');
+        } catch(e) {}
     } else {
         dateVal = new Date().toLocaleDateString('nl-NL');
     }
 
-    const bgColor = getVal('tuneBackgroundColor') || '#ffffff';
-    const borderWidth = getVal('tuneBorderWidth') || 0;
-    const showDetails = getCheck('labelShowDetails'); 
-    const allergenText = getVal('labelAllergens'); 
-    
-    // 2. AFBEELDING CHECK
+    // Afbeelding Cache
     let imgSrc = tempState.currentLabelImageSrc || '';
-    const imgElement = document.getElementById('label-img-display');
-    if (!imgSrc && imgElement && !imgElement.classList.contains('hidden') && imgElement.src !== window.location.href) {
-        imgSrc = imgElement.src;
-    }
     const hasImage = imgSrc && imgSrc.length > 10;
 
-    // 3. KNOPPEN STATUS
-    document.querySelectorAll('.label-theme-btn').forEach(b => {
-        b.classList.remove('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
-        if(b.dataset.theme === theme) b.classList.add('active', 'border-app-brand', 'text-app-brand', 'ring-2', 'ring-offset-1');
-    });
+    // Helper: Tekst splitsen
+    const splitBySlider = (text, breakVal) => {
+       const cleanText = text.replace(/\|/g, ''); 
+       const words = cleanText.split(' ').filter(w => w.trim() !== '');
+       if (breakVal >= 8 || breakVal >= words.length) return { l1: cleanText, l2: "", isSplit: false };
+       return { l1: words.slice(0, breakVal).join(' '), l2: words.slice(breakVal).join(' '), isSplit: true };
+    };
+
+    // Dynamische waarden voor honing/gist (uit de verborgen spans)
+    const hVal = getText('displayLabelHoney'), yVal = getText('displayLabelYeast');
+    const honeyText = (showHoney && hVal && hVal !== '--') ? hVal : '';
+    const yeastText = (showYeast && yVal && yVal !== '--') ? yVal : '';
 
     // =================================================================
-    // THEMA 1: STANDARD LABEL (V3.8 - FULL FEATURE SUPPORT)
+    // THEMA 1: STANDARD LABEL (Verticale layout)
     // =================================================================
     if (theme === 'standard') {
-        const titleX = getVal('tuneTitleX') || 10; 
-        const titleY = getVal('tuneTitleY') || 10; 
-        const titleRot = getVal('tuneTitleRotate') || 0;
-        const titleColor = getVal('tuneTitleColor') || '#8F8C79';
-        const titleSize1 = parseInt(getVal('tuneTitleSize')) || 100;
-        const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60;
-        const titleFont = getVal('tuneTitleFont') || 'Barlow Semi Condensed';
-        const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8;
-        const titleOffset = getVal('tuneTitleOffset') || 0;
-        const titleOffsetY = getVal('tuneTitleOffsetY') || 0;
+        const titleX = getVal('tuneTitleX') || 10, titleY = getVal('tuneTitleY') || 10, titleRot = getVal('tuneTitleRotate') || 0;
+        const titleColor = getVal('tuneTitleColor') || '#8F8C79', titleSize1 = parseInt(getVal('tuneTitleSize')) || 100;
+        const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60, titleFont = getVal('tuneTitleFont') || 'sans-serif';
+        const titleOffset = getVal('tuneTitleOffset') || 0, titleOffsetY = getVal('tuneTitleOffsetY') || 0, titleBreak = parseInt(getVal('tuneTitleBreak')) || 8;
 
-        const styleColor = getVal('tuneStyleColor') || '#9ca3af';
-        const styleSize1 = parseInt(getVal('tuneStyleSize')) || 14;
-        const styleSize2 = parseInt(getVal('tuneStyleSize2')) || 10;
-        const styleFont = getVal('tuneStyleFont') || 'Barlow Semi Condensed';
-        const styleBreak = parseInt(getVal('tuneStyleBreak')) || 8;
-        const styleGap = getVal('tuneStyleGap') || 5; 
-        const styleY = getVal('tuneStyleY') || 0;      
-        const subRot = getVal('tuneStyleRotate') || 0; 
-        const styleOffset = getVal('tuneStyleOffset') || 0;
-        const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
+        const styleColor = getVal('tuneStyleColor') || '#9ca3af', styleSize1 = parseInt(getVal('tuneStyleSize')) || 14;
+        const styleFont = getVal('tuneStyleFont') || 'sans-serif', styleGap = getVal('tuneStyleGap') || 5, styleY = getVal('tuneStyleY') || 0;
+        const subRot = getVal('tuneStyleRotate') || 0, styleBreak = parseInt(getVal('tuneStyleBreak')) || 8;
 
-        const specsX = getVal('tuneSpecsX') || 50;
-        const specsY = getVal('tuneSpecsY') || 85; 
-        const specsRot = getVal('tuneSpecsRotate') || 0;
-        const specsSize = getVal('tuneSpecsSize') || 4; 
-        const specsColor = getVal('tuneSpecsColor') || '#333333'; // Donkergrijs voor leesbaarheid
-        const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
-        const specsAlign = getVal('tuneSpecsAlign') || 'center';
-        const specsShadow = getCheck('tuneSpecsShadow');
+        const specsX = getVal('tuneSpecsX') || 50, specsY = getVal('tuneSpecsY') || 85, specsRot = getVal('tuneSpecsRotate') || 0;
+        const specsSize = getVal('tuneSpecsSize') || 4, specsColor = getVal('tuneSpecsColor') || '#333333', specsFont = getVal('tuneSpecsFont') || 'sans-serif', specsAlign = getVal('tuneSpecsAlign') || 'center';
 
-        const descX = getVal('tuneDescX') || 50;  
-        const descY = getVal('tuneDescY') || 15;  
-        const descWidth = getVal('tuneDescWidth') || 85; 
-        const descRot = getVal('tuneDescRotate') || 0;
-        const descSize = getVal('tuneDescSize') || 6;
-        const descColor = getVal('tuneDescColor') || '#333333'; 
-        const descFont = getVal('tuneDescFont') || 'serif';
-        const descAlign = getVal('tuneDescAlign') || 'center';
+        const descX = getVal('tuneDescX') || 50, descY = getVal('tuneDescY') || 15, descWidth = getVal('tuneDescWidth') || 85; 
+        const descRot = getVal('tuneDescRotate') || 0, descSize = getVal('tuneDescSize') || 6, descColor = getVal('tuneDescColor') || '#333333';
+        const descFont = getVal('tuneDescFont') || 'serif', descAlign = getVal('tuneDescAlign') || 'center';
 
-        const artZoom = getVal('tuneArtZoom') || 1.0;
-        const artX = getVal('tuneArtX') || 50;
-        const artY = getVal('tuneArtY') || 50;
-        const artRot = getVal('tuneArtRotate') || 0;
-        const artOpacity = getVal('tuneArtOpacity') || 1.0;
-        const artOverlay = getVal('tuneArtOverlay') || 0.0;
-        
-        const logoSize = getVal('tuneLogoSize') || 100;
-        const logoX = getVal('tuneLogoX') || 0;
-        const logoY = getVal('tuneLogoY') || 0;
-        const logoRot = getVal('tuneLogoRotate') || 0;
-        const logoOp = getVal('tuneLogoOpacity') || 1.0;
-        const logoFlat = getCheck('logoColorMode');
-        const logoColor = getVal('tuneLogoColor') || '#ffffff';
+        const tData = splitBySlider(title, titleBreak), sData = splitBySlider(sub, styleBreak);
+        const gridLabelAlign = (specsAlign === 'left') ? 'text-left' : 'text-right';
+        const gridValueAlign = (specsAlign === 'right') ? 'text-right' : 'text-left';
 
-        const splitBySlider = (text, breakVal) => {
-           const cleanText = text.replace(/\|/g, ''); 
-           const words = cleanText.split(' ').filter(w => w.trim() !== '');
-           if (breakVal >= 8 || breakVal >= words.length) return { l1: cleanText, l2: "", isSplit: false };
-           return { l1: words.slice(0, breakVal).join(' '), l2: words.slice(breakVal).join(' '), isSplit: true };
-        };
-        const tData = splitBySlider(title, titleBreak);
-        const sData = splitBySlider(sub, styleBreak);
-
-        let gridLabelAlign = 'text-right', gridValueAlign = 'text-left'; 
-        if (specsAlign === 'left') { gridLabelAlign = 'text-left'; gridValueAlign = 'text-left'; }
-        if (specsAlign === 'right') { gridLabelAlign = 'text-right'; gridValueAlign = 'text-right'; }
-
-        let artHtml = '';
-        if (hasImage) {
-             artHtml = `
-             <div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center pointer-events-none">
-                <img src="${imgSrc}" style="position: absolute; left: ${artX}%; top: ${artY}%; transform: translate(-50%, -50%) rotate(${artRot}deg) scale(${artZoom}); opacity: ${artOpacity}; min-width: 100%; min-height: 100%; object-fit: cover;">
-                <div class="absolute inset-0" style="background-color: black; opacity: ${artOverlay};"></div>
-             </div>`;
-        }
-
-        let logoInnerHtml = logoFlat 
-            ? `<div style="width: 100%; height: 100%; background-color: ${logoColor}; -webkit-mask: url(logo.png) no-repeat center / contain; mask: url(logo.png) no-repeat center / contain;"></div>`
-            : `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-full h-auto object-contain drop-shadow-md">`;
-
-        const showYeast = getCheck('labelShowYeast'), showHoney = getCheck('labelShowHoney');
-        let yeastText = "", honeyText = "";
-        const yVal = getText('displayLabelYeast'); if (yVal && yVal !== '--') yeastText = yVal;
-        const hVal = getText('displayLabelHoney'); if (hVal && hVal !== '--') honeyText = hVal;
-        
         container.innerHTML = `
             <div class="absolute inset-0 pointer-events-none z-50" style="box-shadow: inset 0 0 0 ${borderWidth}mm white;"></div>
             <div class="relative h-full w-[30%] bg-gray-50/90 z-20 border-r border-gray-200" style="font-family: '${specsFont}', sans-serif;">
                 <div class="absolute" style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%; transform: translate(-50%, 0) rotate(${descRot}deg); font-size: ${descSize}px; color: ${descColor}; font-family: '${descFont}', serif; text-align: ${descAlign}; line-height: 1.4;">
                     ${desc}
-                    ${showDetails && details ? `<p class="mt-2 pt-2 border-t border-gray-300 uppercase tracking-widest opacity-70" style="font-size: 0.8em; font-family: sans-serif;">${details}</p>` : ''}
+                    ${showDetails && details ? `<p class="mt-2 pt-1 border-t border-gray-300 uppercase tracking-widest opacity-60" style="font-size: 0.8em;">${details}</p>` : ''}
                 </div>
+
                 <div class="absolute flex flex-col items-${specsAlign === 'left' ? 'start' : (specsAlign === 'right' ? 'end' : 'center')}" style="top: ${specsY}%; left: ${specsX}%; width: 90%; transform: translate(-50%, -50%) rotate(${specsRot}deg); font-size: ${specsSize}px; color: ${specsColor};">
                     <div class="w-full mb-2 border-b border-gray-300 pb-1 space-y-0.5 text-${specsAlign}">
-                        ${showHoney && honeyText ? `<div><span class="opacity-60 uppercase text-[0.8em] font-bold">Honey:</span> <span class="font-bold uppercase">${honeyText}</span></div>` : ''}
-                        ${showYeast && yeastText ? `<div><span class="opacity-60 uppercase text-[0.8em] font-bold">Yeast:</span> <span class="font-bold uppercase">${yeastText}</span></div>` : ''}
-                        ${allergenText ? `<div class="font-bold uppercase" style="color: ${getVal('tuneAllergenColor')}">${allergenText}</div>` : ''}
+                        ${honeyText ? `<div><span class="opacity-50 uppercase text-[0.8em] font-bold">Honey:</span> <span class="font-bold uppercase">${honeyText}</span></div>` : ''}
+                        ${yeastText ? `<div><span class="opacity-50 uppercase text-[0.8em] font-bold">Yeast:</span> <span class="font-bold uppercase">${yeastText}</span></div>` : ''}
+                        ${allergenText ? `<div class="font-bold uppercase pt-1" style="color: ${getVal('tuneAllergenColor')}">${allergenText}</div>` : ''}
                     </div>
                     <div class="grid grid-cols-[auto_auto] gap-x-3 font-bold uppercase tracking-wider text-${specsAlign}">
                         <div class="${gridLabelAlign} opacity-50">ABV</div> <div class="${gridValueAlign}">${abv}%</div>
@@ -836,135 +768,58 @@ function setLabelTheme(theme) {
                     </div>
                 </div>
             </div>
+
             <div class="h-full w-[70%] relative overflow-hidden" style="background-color: ${bgColor};">
-                ${artHtml}
+                ${hasImage ? `<div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center pointer-events-none"><img src="${imgSrc}" style="position: absolute; left: ${getVal('tuneArtX')}%; top: ${getVal('tuneArtY')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneArtRotate')}deg) scale(${getVal('tuneArtZoom')}); opacity: ${getVal('tuneArtOpacity')}; min-width: 100%; min-height: 100%; object-fit: cover;"><div class="absolute inset-0" style="background-color: black; opacity: ${getVal('tuneArtOverlay')};"></div></div>` : ''}
                 <div id="text-group" class="absolute z-10 flex flex-row items-end" style="left: ${titleX}%; bottom: ${titleY}%; transform-origin: bottom left;">
-                    <div class="relative" style="line-height: 0;">
-                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-nowrap" 
-                            style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor};">
-                            ${tData.l1}
-                            ${tData.isSplit ? `<div class="absolute" style="top: 0; left: 0; writing-mode: vertical-rl; transform: translate(${titleOffset}%, ${titleOffsetY}%) rotate(0deg); font-size: ${titleSize2}px;">${tData.l2}</div>` : ''}
-                        </h1>
-                    </div>
-                    <div class="relative" style="margin-left: ${styleGap}px; transform: translateY(${styleY}px); line-height: 0;">
-                        <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-nowrap" 
-                           style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(subRot)}deg); font-family: '${styleFont}', sans-serif; font-size: ${styleSize1}px; color: ${styleColor};">
-                           ${sData.l1}
-                           ${sData.isSplit ? `<div class="absolute" style="top: 0; left: 0; writing-mode: vertical-rl; transform: translate(${styleOffset}px, ${styleOffsetY}%) rotate(180deg); font-size: ${styleSize2}px;">${sData.l2}</div>` : ''}
-                        </p>
-                    </div>
+                    <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor};">
+                        ${tData.l1}${tData.isSplit ? `<div class="absolute" style="top: 0; left: 0; writing-mode: vertical-rl; transform: translate(${titleOffset}%, ${titleOffsetY}%) rotate(0deg); font-size: ${titleSize2}px;">${tData.l2}</div>` : ''}
+                    </h1>
+                    <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-nowrap" style="margin-left: ${styleGap}px; writing-mode: vertical-rl; transform: rotate(${180 + parseInt(subRot)}deg) translateY(${styleY}px); font-family: '${getVal('tuneStyleFont')}', sans-serif; font-size: ${styleSize1}px; color: ${styleColor};">
+                        ${sData.l1}${sData.isSplit ? `<div class="absolute" style="top: 0; left: 0; writing-mode: vertical-rl; transform: translate(${getVal('tuneStyleOffset')}px, ${getVal('tuneStyleOffsetY')}%) rotate(180deg); font-size: ${getVal('tuneStyleSize2')}px;">${sData.l2}</div>` : ''}
+                    </p>
                 </div>
-                <div class="absolute z-20" style="transform: translate(${logoX}px, ${logoY}px) rotate(${logoRot}deg); width: ${logoSize}px; padding: 10px; opacity: ${logoOp}; top: 0; right: 0;">
-                    ${logoInnerHtml}
+                <div class="absolute z-20" style="transform: translate(${getVal('tuneLogoX')}px, ${getVal('tuneLogoY')}px) rotate(${getVal('tuneLogoRotate')}deg); width: ${getVal('tuneLogoSize')}px; opacity: ${getVal('tuneLogoOpacity')}; top: 0; right: 0;">
+                    ${getCheck('logoColorMode') ? `<div style="width:100%; height:100%; background-color:${getVal('tuneLogoColor')}; -webkit-mask:url(logo.png) center/contain no-repeat; mask:url(logo.png) center/contain no-repeat;"></div>` : `<img src="logo.png" class="w-full h-auto">`}
                 </div>
             </div>
         `;
     }
     
     // =================================================================
-    // THEMA 2: SPECIAL (V3.12 - FULL FEATURE SUPPORT)
+    // THEMA 2: SPECIAL LABEL (Horizontale layout)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden`; 
-       container.style = ""; 
        container.style.backgroundColor = bgColor;  
        
-       const titleX = getVal('tuneTitleX') || 50; 
-       const titleY = getVal('tuneTitleY') || 20;
-       const titleRot = getVal('tuneTitleRotate') || 0;
-       const titleColor = getVal('tuneTitleColor') || '#ffffff';
-       const titleSize1 = parseInt(getVal('tuneTitleSize')) || 100; 
-       const titleSize2 = parseInt(getVal('tuneTitleSize2')) || 60; 
-       const titleOffset = getVal('tuneTitleOffset') || 0;
-       const titleOffsetY = getVal('tuneTitleOffsetY') || 0; 
-       const titleBreak = parseInt(getVal('tuneTitleBreak')) || 8; 
-       const titleFont = getVal('tuneTitleFont') || 'Barlow Semi Condensed';
-       
-       const subX = getVal('tuneStyleGap') || 50; 
-       const subY = getVal('tuneStyleY') || 35;   
-       const subColor = getVal('tuneStyleColor') || '#cccccc';
-       const subSize1 = parseInt(getVal('tuneStyleSize')) || 14; 
-       const subSize2 = parseInt(getVal('tuneStyleSize2')) || 10;
-       const subRot = getVal('tuneStyleRotate') || 0;
-       const subOffset = getVal('tuneStyleOffset') || 0;
-       const subOffsetY = getVal('tuneStyleOffsetY') || 0; 
-       const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; 
-       const subFont = getVal('tuneStyleFont') || 'Barlow Semi Condensed';
-
-       const descX = getVal('tuneDescX') || 50, descY = getVal('tuneDescY') || 70;
-       const descWidth = getVal('tuneDescWidth') || 60, descRot = getVal('tuneDescRotate') || 0;
-       const descSize = getVal('tuneDescSize') || 6, descColor = getVal('tuneDescColor') || '#ffffff';
-       const descFont = getVal('tuneDescFont') || 'serif', descAlign = getVal('tuneDescAlign') || 'center';
-
-       const specsX = getVal('tuneSpecsX') || 50, specsY = getVal('tuneSpecsY') || 80; 
-       const specsRot = getVal('tuneSpecsRotate') || 0, specsColor = getVal('tuneSpecsColor') || '#ffffff';
-       const specsSize = getVal('tuneSpecsSize') || 4, specsFont = getVal('tuneSpecsFont') || 'sans-serif';
-       const specsAlign = getVal('tuneSpecsAlign') || 'center', specsShadow = getCheck('tuneSpecsShadow');
-
-       const artZoom = getVal('tuneArtZoom') || 1.0, artX = getVal('tuneArtX') || 50; 
-       const artY = getVal('tuneArtY') || 50, artRot = getVal('tuneArtRotate') || 0;
-       const artOpacity = getVal('tuneArtOpacity') || 1.0, artOverlay = getVal('tuneArtOverlay') || 0.2;
-
-       const logoSize = getVal('tuneLogoSize') || 100, logoX = getVal('tuneLogoX') || 50, logoY = getVal('tuneLogoY') || 10;
-       const logoRot = getVal('tuneLogoRotate') || 0, logoOp = getVal('tuneLogoOpacity') || 1.0; 
-       const logoFlat = getCheck('logoColorMode'), logoColor = getVal('tuneLogoColor') || '#ffffff';
-
-       const splitBySlider = (text, breakVal) => {
-           const cleanText = text.replace(/\|/g, ''); 
-           const words = cleanText.split(' ').filter(w => w.trim() !== '');
-           if (breakVal >= 8 || breakVal >= words.length) return { l1: cleanText, l2: "", isSplit: false };
-           return { l1: words.slice(0, breakVal).join(' '), l2: words.slice(breakVal).join(' '), isSplit: true };
-       };
-       const tData = splitBySlider(title, titleBreak);
-       const sData = splitBySlider(sub, subBreak);
-
-       let yeastText = "", honeyText = "";
-       const yVal = getText('displayLabelYeast'); if (yVal && yVal !== '--') yeastText = yVal;
-       const hVal = getText('displayLabelHoney'); if (hVal && hVal !== '--') honeyText = hVal;
-       
-       let bgHtml = hasImage ? `
-           <div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center">
-                <img src="${imgSrc}" style="position: absolute; left: ${artX}%; top: ${artY}%; transform: translate(-50%, -50%) rotate(${artRot}deg) scale(${artZoom}); opacity: ${artOpacity}; min-width: 100%; min-height: 100%; object-fit: cover;">
-                <div class="absolute inset-0" style="background-color: black; opacity: ${artOverlay};"></div>
-           </div>` : `<div class="absolute inset-0 z-0" style="background-color: ${bgColor};"></div>`;
-
-       let logoInnerHtml = logoFlat 
-           ? `<div style="width: 100%; height: 100%; background-color: ${logoColor}; -webkit-mask: url(logo.png) no-repeat center / contain; mask: url(logo.png) no-repeat center / contain;"></div>`
-           : `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
+       const tData = splitBySlider(title, parseInt(getVal('tuneTitleBreak'))), sData = splitBySlider(sub, parseInt(getVal('tuneStyleBreak')));
 
        container.innerHTML = `
-           ${bgHtml}
+           ${hasImage ? `<div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center"><img src="${imgSrc}" style="position: absolute; left: ${getVal('tuneArtX')}%; top: ${getVal('tuneArtY')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneArtRotate')}deg) scale(${getVal('tuneArtZoom')}); opacity: ${getVal('tuneArtOpacity')}; min-width: 100%; min-height: 100%; object-fit: cover;"><div class="absolute inset-0" style="background-color: black; opacity: ${getVal('tuneArtOverlay')};"></div></div>` : `<div class="absolute inset-0 z-0" style="background-color: ${bgColor};"></div>`}
            <div class="absolute inset-0 pointer-events-none z-50" style="box-shadow: inset 0 0 0 ${borderWidth}mm white;"></div>
-           <div class="absolute z-10 w-max" style="top: ${titleY}%; left: ${titleX}%; transform: translate(-50%, -50%) rotate(${titleRot}deg); text-align: center;">
-                <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none relative" style="font-size: ${titleSize1}px; color: ${titleColor}; font-family: '${titleFont}', sans-serif;">
-                    ${tData.l1}
-                    ${tData.isSplit ? `<div class="absolute top-full left-1/2 w-max" style="transform: translate(-50%, ${titleOffsetY}%) translate(${titleOffset}%, 0); font-size: ${titleSize2}px; margin-top: 5px;">${tData.l2}</div>` : ''}
-                </h1>
+           
+           <div class="absolute z-10 w-max" style="top: ${getVal('tuneTitleY')}%; left: ${getVal('tuneTitleX')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneTitleRotate')}deg); text-align: center;">
+                <h1 style="font-size: ${getVal('tuneTitleSize')}px; color: ${getVal('tuneTitleColor')}; font-family: '${getVal('tuneTitleFont')}', sans-serif;" class="font-bold uppercase tracking-widest leading-none drop-shadow-lg">${tData.l1}${tData.isSplit ? `<div style="font-size: ${getVal('tuneTitleSize2')}px; transform: translate(${getVal('tuneTitleOffset')}%, ${getVal('tuneTitleOffsetY')}%);">${tData.l2}</div>` : ''}</h1>
            </div>
-           <div class="absolute z-10 w-max" style="top: ${subY}%; left: ${subX}%; transform: translate(-50%, -50%) rotate(${subRot}deg); text-align: center;">
-                <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight relative" style="font-size: ${subSize1}px; color: ${subColor}; font-family: '${subFont}', sans-serif;">
-                   ${sData.l1}
-                   ${sData.isSplit ? `<div class="absolute top-full left-1/2 w-max" style="transform: translate(-50%, ${subOffsetY}%) translate(${subOffset}%, 0); font-size: ${subSize2}px; margin-top: 5px;">${sData.l2}</div>` : ''}
-                </p>
+
+           <div class="absolute z-10 w-max" style="top: ${getVal('tuneStyleY')}%; left: ${getVal('tuneStyleGap')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneStyleRotate')}deg); text-align: center;">
+                <p style="font-size: ${getVal('tuneStyleSize')}px; color: ${getVal('tuneStyleColor')}; font-family: '${getVal('tuneStyleFont')}', sans-serif;" class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight">${sData.l1}${sData.isSplit ? `<div style="font-size: ${getVal('tuneStyleSize2')}px; transform: translate(${getVal('tuneStyleOffset')}%, ${getVal('tuneStyleOffsetY')}%);">${sData.l2}</div>` : ''}</p>
            </div>
-           ${desc ? `<div class="absolute z-10 w-full flex flex-col items-center" style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%; transform: translate(-50%, -50%) rotate(${descRot}deg); text-align: ${descAlign};">
-                <p class="italic leading-tight drop-shadow-md" style="font-size: ${descSize}px; color: ${descColor}; font-family: '${descFont}', serif;">${desc}</p>
-           </div>` : ''}
-           <div class="absolute z-10" style="left: ${specsX}%; top: ${specsY}%; transform: translate(-50%, -50%) rotate(${specsRot}deg); font-family: '${specsFont}', monospace;">
-                <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: ${specsShadow ? '0 1px 2px rgba(0,0,0,0.8)' : 'none'}; text-align: ${specsAlign};">
-                   <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-bold justify-center" style="justify-content: ${specsAlign}">
-                       <span class="opacity-70">ABV</span> <span>${abv}%</span>
-                       ${fg ? `<span class="opacity-70">FG</span> <span>${fg}</span>` : ''}
-                       <span class="opacity-70">Vol</span> <span>${vol}ml</span>
-                       <span class="opacity-70">Date</span> <span>${dateVal}</span>
-                   </div>
-                   ${honeyText || yeastText ? `<div class="mb-2 border-t border-white/20 pt-1 font-sans uppercase text-[0.8em]">${honeyText ? `Honey: ${honeyText}<br>` : ''}${yeastText ? `Yeast: ${yeastText}` : ''}</div>` : ''}
+
+           ${desc ? `<div class="absolute z-10" style="top: ${getVal('tuneDescY')}%; left: ${getVal('tuneDescX')}%; width: ${getVal('tuneDescWidth')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneDescRotate')}deg); text-align: ${getVal('tuneDescAlign')};"><p style="font-size: ${getVal('tuneDescSize')}px; color: ${getVal('tuneDescColor')}; font-family: '${getVal('tuneDescFont')}', serif;" class="italic leading-tight drop-shadow-md">${desc}</p></div>` : ''}
+
+           <div class="absolute z-10" style="left: ${getVal('tuneSpecsX')}%; top: ${getVal('tuneSpecsY')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneSpecsRotate')}deg); text-align: ${getVal('tuneSpecsAlign')};">
+                <div style="font-size: ${getVal('tuneSpecsSize')}px; color: ${getVal('tuneSpecsColor')}; line-height: 1.4; text-shadow: ${getCheck('tuneSpecsShadow') ? '0 1px 2px rgba(0,0,0,0.8)' : 'none'};">
+                   <div class="grid grid-cols-[auto_auto] gap-x-3 mb-1 font-bold font-mono"><span>ABV</span> <span>${abv}%</span> ${fg ? `<span>FG</span> <span>${fg}</span>` : ''} <span>Vol</span> <span>${vol}ml</span></div>
+                   ${honeyText || yeastText ? `<div class="mb-1 border-t border-white/20 pt-1 font-sans uppercase text-[0.8em]">${honeyText ? `Honey: ${honeyText}<br>` : ''}${yeastText ? `Yeast: ${yeastText}` : ''}</div>` : ''}
                    ${allergenText ? `<div class="mt-1 font-bold uppercase" style="color: ${getVal('tuneAllergenColor')}">${allergenText}</div>` : ''}
-                   ${showDetails && details ? `<p class="opacity-90 max-w-[200px] mx-auto leading-tight italic border-t border-white/20 pt-1">${details}</p>` : ''}
+                   ${showDetails && details ? `<p class="opacity-80 text-[0.8em] italic border-t border-white/10 pt-1 mt-1">${details}</p>` : ''}
                </div>
            </div>
-           <div class="absolute z-20" style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; transform: translate(-50%, 0) rotate(${logoRot}deg); opacity: ${logoOp};">
-                ${logoInnerHtml}
+
+           <div class="absolute z-20" style="left: ${getVal('tuneLogoX')}%; top: ${getVal('tuneLogoY')}%; width: ${getVal('tuneLogoSize')}px; transform: translate(-50%, 0) rotate(${getVal('tuneLogoRotate')}deg); opacity: ${getVal('tuneLogoOpacity')};">
+                ${getCheck('logoColorMode') ? `<div style="width:100%; height:100%; background-color:${getVal('tuneLogoColor')}; -webkit-mask:url(logo.png) center/contain no-repeat; mask:url(logo.png) center/contain no-repeat;"></div>` : `<img src="logo.png" class="w-full h-full object-contain filter brightness-110 drop-shadow-xl">`}
            </div>
        `;
     }

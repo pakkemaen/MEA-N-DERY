@@ -918,33 +918,51 @@
     </div>
 
     <div class="space-y-3 mb-6 pt-4 border-t border-outline-variant">
-        <label class="text-xs font-bold uppercase text-on-surface-variant mb-2 block tracking-wider">Label Content</label>
-        <div class="grid grid-cols-2 gap-2">
-            <input type="text" id="labelTitle" placeholder="Batch Title" class="text-sm">
-            <input type="text" id="labelSubtitle" placeholder="Mead Style" class="text-sm">
+    <label class="text-xs font-bold uppercase text-on-surface-variant mb-2 block tracking-wider">Label Content</label>
+    <div class="grid grid-cols-2 gap-2">
+        <input type="text" id="labelTitle" placeholder="Batch Title" class="text-sm">
+        <input type="text" id="labelSubtitle" placeholder="Mead Style" class="text-sm">
+    </div>
+    <div class="grid grid-cols-4 gap-2">
+        <input type="text" id="labelAbv" placeholder="ABV%" class="text-xs text-center">
+        <input type="text" id="labelFg" placeholder="FG" class="text-xs text-center">
+        <input type="text" id="labelVol" placeholder="ml" class="text-xs text-center">
+        <input type="text" id="labelDate" placeholder="Date" class="text-xs text-center">
+    </div>
+
+    <div class="p-3 bg-surface-variant/5 rounded-xl border border-outline-variant/30 space-y-3 mt-2">
+        <div class="flex items-center justify-between text-[10px] font-bold uppercase text-on-surface-variant">
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="labelShowHoney" class="rounded text-primary" checked> Honey
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="labelShowYeast" class="rounded text-primary" checked> Yeast
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="labelShowDetails" class="rounded text-primary"> Details
+            </label>
         </div>
-        <div class="grid grid-cols-4 gap-2">
-            <input type="text" id="labelAbv" placeholder="ABV%" class="text-xs text-center">
-            <input type="text" id="labelFg" placeholder="FG" class="text-xs text-center">
-            <input type="text" id="labelVol" placeholder="ml" class="text-xs text-center">
-            <input type="text" id="labelDate" placeholder="Date" class="text-xs text-center">
-        </div>
-        
-        <div class="mt-4 pt-2 border-t border-outline-variant/30">
-            <div class="flex justify-between items-center mb-2">
-                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Back Story Tone</label>
-                <button id="ai-label-desc-btn" class="bg-purple-600 text-white text-[10px] font-bold uppercase py-1.5 px-3 rounded-full shadow-sm hover:scale-105 transition-transform">✨ AI Write</button>
-            </div>
-            <select id="label-persona-select" class="w-full mb-2 text-xs bg-surface-container-low border-outline-variant rounded-lg p-2 font-bold text-primary">
-                <option value="Witty">The Witty Brewer (Default)</option>
-                <option value="Ryan Reynolds">Ryan Reynolds Style</option>
-                <option value="The Sommelier">The Sommelier (Elegant)</option>
-                <option value="Dry British">Dry British (Cynical)</option>
-                <option value="The Viking">The Viking (Epic)</option>
-            </select>
-            <textarea id="labelDescription" rows="3" class="w-full text-xs p-3 rounded-xl bg-surface-container-lowest border-outline-variant" placeholder="Short description..."></textarea>
+        <div>
+            <label class="text-[9px] font-bold uppercase text-on-surface-variant mb-1 block">Allergens / Warnings</label>
+            <input type="text" id="labelAllergens" placeholder="e.g. Contains Sulfites" class="w-full text-[10px] p-2 bg-surface border-outline-variant rounded-lg">
         </div>
     </div>
+    
+    <div class="mt-4 pt-2 border-t border-outline-variant/30">
+        <div class="flex justify-between items-center mb-2">
+            <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Back Story Tone</label>
+            <button id="ai-label-desc-btn" class="bg-purple-600 text-white text-[10px] font-bold uppercase py-1.5 px-3 rounded-full shadow-sm hover:scale-105 transition-transform">✨ AI Write</button>
+        </div>
+        <select id="label-persona-select" class="w-full mb-2 text-xs bg-surface-container-low border-outline-variant rounded-lg p-2 font-bold text-primary">
+            <option value="Witty">The Witty Brewer (Default)</option>
+            <option value="Ryan Reynolds">Ryan Reynolds Style</option>
+            <option value="The Sommelier">The Sommelier (Elegant)</option>
+            <option value="Dry British">Dry British (Cynical)</option>
+            <option value="The Viking">The Viking (Epic)</option>
+        </select>
+        <textarea id="labelDescription" rows="3" class="w-full text-xs p-3 rounded-xl bg-surface-container-lowest border-outline-variant" placeholder="Short description..."></textarea>
+    </div>
+</div>
 
     <div class="pt-4 border-t border-outline-variant">
         <details class="group">
@@ -957,9 +975,12 @@
                  
                  <details class="group/inner bg-surface-variant/5 rounded-lg border border-outline-variant/20 overflow-hidden">
                     <summary class="flex justify-between items-center cursor-pointer text-[10px] font-bold uppercase text-on-surface-variant p-3 bg-surface-variant/10 hover:bg-surface-variant/20">
-                        <span>Title & Typography</span>
-                        <span class="text-xs text-primary">+</span>
-                    </summary>
+    <span>Title & Typography</span>
+    <span class="text-xs text-primary font-bold">
+        <span class="group-open/inner:hidden">+</span>
+        <span class="hidden group-open/inner:inline">−</span>
+    </span>
+</summary>
                     <div class="p-3 space-y-4">
                         <div>
                             <div class="flex justify-between text-[10px] font-bold uppercase text-on-surface-variant mb-1">

@@ -726,10 +726,9 @@ function setLabelTheme(theme) {
     });
 
     // =================================================================
-    // THEMA : STANDARD LABEL (V3.7 - FIX: Specs Alignment & Clean Ingredients)
+    // THEMA 1: STANDARD LABEL (V3.8 - FULL FEATURE SUPPORT)
     // =================================================================
     if (theme === 'standard') {
-        const bgColor = getVal('tuneBackgroundColor') || '#ffffff';
         const titleX = getVal('tuneTitleX') || 10; 
         const titleY = getVal('tuneTitleY') || 10; 
         const titleRot = getVal('tuneTitleRotate') || 0;
@@ -752,60 +751,39 @@ function setLabelTheme(theme) {
         const styleOffset = getVal('tuneStyleOffset') || 0;
         const styleOffsetY = getVal('tuneStyleOffsetY') || 0;
 
-        // SPECS SLIDERS & ALIGNMENT (NIEUW)
         const specsX = getVal('tuneSpecsX') || 50;
         const specsY = getVal('tuneSpecsY') || 85; 
         const specsRot = getVal('tuneSpecsRotate') || 0;
         const specsSize = getVal('tuneSpecsSize') || 4; 
-        const specsColor = getVal('tuneSpecsColor') || '#8F8C79';
+        const specsColor = getVal('tuneSpecsColor') || '#333333'; // Donkergrijs voor leesbaarheid
         const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
-        const allergenColor = getVal('tuneAllergenColor') || '#000000';
         const specsAlign = getVal('tuneSpecsAlign') || 'center';
+        const specsShadow = getCheck('tuneSpecsShadow');
 
-        // Bepaal CSS classes voor specs uitlijning (CONTAINER)
-        let specsFlexAlign = 'items-center'; // Default center
-        let specsTextAlign = 'text-center';
-        
-        // Bepaal CSS classes voor de kolommen (INHOUD)
-        // Default (Center): Labels rechts, waardes links (zorgt voor een mooie middellijn)
-        let gridLabelAlign = 'text-right'; 
-        let gridValueAlign = 'text-left'; 
-
-        if (specsAlign === 'left') { 
-            specsFlexAlign = 'items-start'; 
-            specsTextAlign = 'text-left'; 
-            // Bij links uitlijnen: alles links
-            gridLabelAlign = 'text-left';
-            gridValueAlign = 'text-left';
-        }
-        if (specsAlign === 'right') { 
-            specsFlexAlign = 'items-end'; 
-            specsTextAlign = 'text-right'; 
-            // Bij rechts uitlijnen: alles rechts
-            gridLabelAlign = 'text-right';
-            gridValueAlign = 'text-right';
-        }
-
-        // Story Sliders
         const descX = getVal('tuneDescX') || 50;  
         const descY = getVal('tuneDescY') || 15;  
         const descWidth = getVal('tuneDescWidth') || 85; 
         const descRot = getVal('tuneDescRotate') || 0;
         const descSize = getVal('tuneDescSize') || 6;
-        const descColor = getVal('tuneDescColor') || '#000000';
-        const descFont = getVal('tuneDescFont') || 'Barlow Semi Condensed';
+        const descColor = getVal('tuneDescColor') || '#333333'; 
+        const descFont = getVal('tuneDescFont') || 'serif';
         const descAlign = getVal('tuneDescAlign') || 'center';
 
-        // Art & Logo
         const artZoom = getVal('tuneArtZoom') || 1.0;
-        const artX = getVal('tuneArtX') || 0;
-        const artY = getVal('tuneArtY') || 0;
+        const artX = getVal('tuneArtX') || 50;
+        const artY = getVal('tuneArtY') || 50;
+        const artRot = getVal('tuneArtRotate') || 0;
         const artOpacity = getVal('tuneArtOpacity') || 1.0;
+        const artOverlay = getVal('tuneArtOverlay') || 0.0;
+        
         const logoSize = getVal('tuneLogoSize') || 100;
         const logoX = getVal('tuneLogoX') || 0;
         const logoY = getVal('tuneLogoY') || 0;
-        
-        // Split logic (hetzelfde)
+        const logoRot = getVal('tuneLogoRotate') || 0;
+        const logoOp = getVal('tuneLogoOpacity') || 1.0;
+        const logoFlat = getCheck('logoColorMode');
+        const logoColor = getVal('tuneLogoColor') || '#ffffff';
+
         const splitBySlider = (text, breakVal) => {
            const cleanText = text.replace(/\|/g, ''); 
            const words = cleanText.split(' ').filter(w => w.trim() !== '');
@@ -815,119 +793,82 @@ function setLabelTheme(theme) {
         const tData = splitBySlider(title, titleBreak);
         const sData = splitBySlider(sub, styleBreak);
 
-        // ... Art & Logo HTML (hetzelfde) ...
+        let gridLabelAlign = 'text-right', gridValueAlign = 'text-left'; 
+        if (specsAlign === 'left') { gridLabelAlign = 'text-left'; gridValueAlign = 'text-left'; }
+        if (specsAlign === 'right') { gridLabelAlign = 'text-right'; gridValueAlign = 'text-right'; }
+
         let artHtml = '';
         if (hasImage) {
-             artHtml = `<div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center pointer-events-none"><img src="${imgSrc}" style="transform: translate(${artX}px, ${artY}px) scale(${artZoom}); opacity: ${artOpacity}; transform-origin: center;" class="w-full h-full object-cover transition-transform duration-75"></div>`;
+             artHtml = `
+             <div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center pointer-events-none">
+                <img src="${imgSrc}" style="position: absolute; left: ${artX}%; top: ${artY}%; transform: translate(-50%, -50%) rotate(${artRot}deg) scale(${artZoom}); opacity: ${artOpacity}; min-width: 100%; min-height: 100%; object-fit: cover;">
+                <div class="absolute inset-0" style="background-color: black; opacity: ${artOverlay};"></div>
+             </div>`;
         }
-        const logoHtml = `<div class="absolute top-0 right-0 z-20 pointer-events-none" style="transform: translate(${logoX}px, ${logoY}px); width: ${logoSize}px; padding: 10px;"><img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-full h-auto object-contain drop-shadow-md"></div>`;
-        
-        // Specs Logic (hetzelfde)
-        const showYeast = getCheck('labelShowYeast');
-        const showHoney = getCheck('labelShowHoney');
-        let yeastText = "", honeyText = "";
-        const yVal = document.getElementById('displayLabelYeast')?.textContent; if (yVal && yVal.trim() !== '--') yeastText = yVal.trim();
-        const hVal = document.getElementById('displayLabelHoney')?.textContent; if (hVal && hVal.trim() !== '--') honeyText = hVal.trim();
-        const showSpecsBlock = (showYeast && yeastText) || (showHoney && honeyText) || allergenText;
-        
-        let peakDateVal = "";
-        const selectEl = document.getElementById('labelRecipeSelect');
-        const selectedBrew = state.brews.find(b => b.id === selectEl?.value);
-        if (selectedBrew && selectedBrew.peakFlavorDate) { try { peakDateVal = new Date(selectedBrew.peakFlavorDate).toLocaleDateString('nl-NL').replace(/-/g, '/'); } catch(e){} } 
-        else if (rawDate) { try { const d = new Date(rawDate); const abvNum = parseFloat(abv); let months = (abvNum < 8) ? 3 : (abvNum > 14 ? 12 : 6); d.setMonth(d.getMonth() + months); peakDateVal = d.toLocaleDateString('nl-NL').replace(/-/g, '/'); } catch(e) {} }
 
+        let logoInnerHtml = logoFlat 
+            ? `<div style="width: 100%; height: 100%; background-color: ${logoColor}; -webkit-mask: url(logo.png) no-repeat center / contain; mask: url(logo.png) no-repeat center / contain;"></div>`
+            : `<img id="label-logo-img" src="logo.png" onerror="this.src='favicon.png'" class="w-full h-auto object-contain drop-shadow-md">`;
+
+        const showYeast = getCheck('labelShowYeast'), showHoney = getCheck('labelShowHoney');
+        let yeastText = "", honeyText = "";
+        const yVal = getText('displayLabelYeast'); if (yVal && yVal !== '--') yeastText = yVal;
+        const hVal = getText('displayLabelHoney'); if (hVal && hVal !== '--') honeyText = hVal;
+        
         container.innerHTML = `
             <div class="absolute inset-0 pointer-events-none z-50" style="box-shadow: inset 0 0 0 ${borderWidth}mm white;"></div>
-
-            <div class="relative h-full w-[30%] bg-gray-50/80 z-20 overflow-hidden" 
-                 style="font-family: '${specsFont}', sans-serif;">
-                
-                <div class="absolute flex flex-col"
-                     style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%; 
-                            transform: translate(-50%, 0) rotate(${descRot}deg);
-                            font-size: ${descSize}px; color: ${descColor}; font-family: '${descFont}', serif;
-                            text-align: ${descAlign};
-                            line-height: 1.4; white-space: normal; overflow-wrap: break-word;">
+            <div class="relative h-full w-[30%] bg-gray-50/90 z-20 border-r border-gray-200" style="font-family: '${specsFont}', sans-serif;">
+                <div class="absolute" style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%; transform: translate(-50%, 0) rotate(${descRot}deg); font-size: ${descSize}px; color: ${descColor}; font-family: '${descFont}', serif; text-align: ${descAlign}; line-height: 1.4;">
                     ${desc}
-                    ${showDetails && details ? `<p class="mt-2 pt-2 border-t border-gray-300 w-full uppercase tracking-wide opacity-80" style="font-size: 0.8em; font-family: sans-serif;">${details}</p>` : ''}
+                    ${showDetails && details ? `<p class="mt-2 pt-2 border-t border-gray-300 uppercase tracking-widest opacity-70" style="font-size: 0.8em; font-family: sans-serif;">${details}</p>` : ''}
                 </div>
-
-                <div class="absolute flex flex-col ${specsFlexAlign} ${specsTextAlign}"
-                     style="top: ${specsY}%; left: ${specsX}%; width: 90%; 
-                            transform: translate(-50%, -50%) rotate(${specsRot}deg);
-                            font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4;">
-                    
-                    ${showSpecsBlock ? `
-                    <div class="w-full pb-2 mb-2 border-b border-gray-300/50 space-y-1">
-                        ${showHoney && honeyText ? `<div class="leading-tight"><span class="block font-bold uppercase tracking-widest opacity-60" style="font-size: 0.8em;">Honey Source</span><span class="uppercase font-bold">${honeyText}</span></div>` : ''}
-                        ${showYeast && yeastText ? `<div class="leading-tight"><span class="block font-bold uppercase tracking-widest opacity-60" style="font-size: 0.8em;">Yeast Strain</span><span class="uppercase font-bold">${yeastText}</span></div>` : ''}
-                        ${allergenText ? `<div class="leading-tight pt-1"><span class="uppercase font-bold" style="color: ${allergenColor}">${allergenText}</span></div>` : ''}
-                    </div>` : ''}
-                    
-                    <div class="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 font-bold uppercase tracking-wider ${specsTextAlign}">
-                        ${abv ? `<div class="${gridLabelAlign} opacity-60 whitespace-nowrap">ABV</div> <div class="${gridValueAlign} whitespace-nowrap">${abv}%</div>` : ''}
-                        ${fg ? `<div class="${gridLabelAlign} opacity-60 whitespace-nowrap">FG</div> <div class="${gridValueAlign} whitespace-nowrap">${fg}</div>` : ''}
-                        ${vol ? `<div class="${gridLabelAlign} opacity-60 whitespace-nowrap">Vol</div> <div class="${gridValueAlign} whitespace-nowrap">${vol}ml</div>` : ''}
-                        ${dateVal ? `<div class="${gridLabelAlign} opacity-60 whitespace-nowrap">Bottled</div> <div class="${gridValueAlign} whitespace-nowrap">${dateVal}</div>` : ''}
-                        ${peakDateVal ? `<div class="${gridLabelAlign} opacity-60 whitespace-nowrap">Peak</div> <div class="${gridValueAlign} whitespace-nowrap">${peakDateVal}</div>` : ''}
+                <div class="absolute flex flex-col items-${specsAlign === 'left' ? 'start' : (specsAlign === 'right' ? 'end' : 'center')}" style="top: ${specsY}%; left: ${specsX}%; width: 90%; transform: translate(-50%, -50%) rotate(${specsRot}deg); font-size: ${specsSize}px; color: ${specsColor};">
+                    <div class="w-full mb-2 border-b border-gray-300 pb-1 space-y-0.5 text-${specsAlign}">
+                        ${showHoney && honeyText ? `<div><span class="opacity-60 uppercase text-[0.8em] font-bold">Honey:</span> <span class="font-bold uppercase">${honeyText}</span></div>` : ''}
+                        ${showYeast && yeastText ? `<div><span class="opacity-60 uppercase text-[0.8em] font-bold">Yeast:</span> <span class="font-bold uppercase">${yeastText}</span></div>` : ''}
+                        ${allergenText ? `<div class="font-bold uppercase" style="color: ${getVal('tuneAllergenColor')}">${allergenText}</div>` : ''}
+                    </div>
+                    <div class="grid grid-cols-[auto_auto] gap-x-3 font-bold uppercase tracking-wider text-${specsAlign}">
+                        <div class="${gridLabelAlign} opacity-50">ABV</div> <div class="${gridValueAlign}">${abv}%</div>
+                        ${fg ? `<div class="${gridLabelAlign} opacity-50">FG</div> <div class="${gridValueAlign}">${fg}</div>` : ''}
+                        <div class="${gridLabelAlign} opacity-50">Vol</div> <div class="${gridValueAlign}">${vol}ml</div>
+                        <div class="${gridLabelAlign} opacity-50">Date</div> <div class="${gridValueAlign}">${dateVal}</div>
                     </div>
                 </div>
             </div>
-
-            <div class="h-full w-[70%] relative p-2 overflow-hidden" style="background-color: ${bgColor};">
-    ${artHtml}
-    <div id="text-group" class="absolute z-10 flex flex-row items-end pointer-events-none" 
-         style="left: ${titleX}%; bottom: ${titleY}%; transform-origin: bottom left;">
-        
-        <div id="title-container" class="relative" style="line-height: 0;">
-            <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-nowrap overflow-visible" 
-                style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor}; margin: 0;">
-                ${tData.l1}
-                ${tData.isSplit ? `
-                <div class="absolute" style="top: 0; left: 0; pointer-events: none; 
-                     writing-mode: vertical-rl;
-                     transform: translate(${titleOffset}%, ${titleOffsetY}%) rotate(0deg);">
-                    <span style="font-size: ${titleSize2}px; color: ${titleColor}; font-family: '${titleFont}', sans-serif; white-space: nowrap;">
-                        ${tData.l2}
-                    </span>
-                </div>` : ''}
-            </h1>
-        </div>
-
-        <div id="style-container" class="relative" 
-             style="margin-left: ${styleGap}px; transform: translateY(${styleY}px); line-height: 0;">
-             <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-nowrap leading-none" 
-                style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(subRot)}deg); font-family: '${styleFont}', sans-serif; font-size: ${styleSize1}px; color: ${styleColor}; margin: 0;">
-                ${sData.l1}
-                ${sData.isSplit ? `
-                <div class="absolute" style="top: 0; left: 0; pointer-events: none; 
-                     writing-mode: vertical-rl; 
-                     transform: translate(${styleOffset}px, ${styleOffsetY}%) rotate(180deg);">
-                    <span style="font-size: ${styleSize2}px; color: ${styleColor}; font-family: '${styleFont}', sans-serif; white-space: nowrap;">
-                        ${sData.l2}
-                    </span>
-                </div>` : ''}
-            </p>
-        </div>
-    </div>
-    ${logoHtml}
-</div>
+            <div class="h-full w-[70%] relative overflow-hidden" style="background-color: ${bgColor};">
+                ${artHtml}
+                <div id="text-group" class="absolute z-10 flex flex-row items-end" style="left: ${titleX}%; bottom: ${titleY}%; transform-origin: bottom left;">
+                    <div class="relative" style="line-height: 0;">
+                        <h1 id="prev-title" class="font-header font-bold uppercase tracking-widest text-left leading-[0.9] whitespace-nowrap" 
+                            style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(titleRot)}deg); font-family: '${titleFont}', sans-serif; font-size: ${titleSize1}px; color: ${titleColor};">
+                            ${tData.l1}
+                            ${tData.isSplit ? `<div class="absolute" style="top: 0; left: 0; writing-mode: vertical-rl; transform: translate(${titleOffset}%, ${titleOffsetY}%) rotate(0deg); font-size: ${titleSize2}px;">${tData.l2}</div>` : ''}
+                        </h1>
+                    </div>
+                    <div class="relative" style="margin-left: ${styleGap}px; transform: translateY(${styleY}px); line-height: 0;">
+                        <p id="prev-subtitle" class="font-bold uppercase tracking-[0.3em] whitespace-nowrap" 
+                           style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(subRot)}deg); font-family: '${styleFont}', sans-serif; font-size: ${styleSize1}px; color: ${styleColor};">
+                           ${sData.l1}
+                           ${sData.isSplit ? `<div class="absolute" style="top: 0; left: 0; writing-mode: vertical-rl; transform: translate(${styleOffset}px, ${styleOffsetY}%) rotate(180deg); font-size: ${styleSize2}px;">${sData.l2}</div>` : ''}
+                        </p>
+                    </div>
+                </div>
+                <div class="absolute z-20" style="transform: translate(${logoX}px, ${logoY}px) rotate(${logoRot}deg); width: ${logoSize}px; padding: 10px; opacity: ${logoOp}; top: 0; right: 0;">
+                    ${logoInnerHtml}
+                </div>
+            </div>
         `;
     }
     
     // =================================================================
-    // THEMA 2: SPECIAL (V3.11 - NU MET UITLIJNING & STABILITEIT)
+    // THEMA 2: SPECIAL (V3.12 - FULL FEATURE SUPPORT)
     // =================================================================
     else if (theme === 'special') {
        container.className = `relative w-full h-full overflow-hidden`; 
-       
-       // Reset eerst alle styles om conflicten te voorkomen
        container.style = ""; 
-       
-       // Pas daarna de kleur toe
        container.style.backgroundColor = bgColor;  
        
-       // --- TUNING VALUES ---
        const titleX = getVal('tuneTitleX') || 50; 
        const titleY = getVal('tuneTitleY') || 20;
        const titleRot = getVal('tuneTitleRotate') || 0;
@@ -950,188 +891,83 @@ function setLabelTheme(theme) {
        const subBreak = parseInt(getVal('tuneStyleBreak')) || 8; 
        const subFont = getVal('tuneStyleFont') || 'Barlow Semi Condensed';
 
-       const descX = getVal('tuneDescX') || 50;
-       const descY = getVal('tuneDescY') || 70;
-       const descWidth = getVal('tuneDescWidth') || 60;
-       const descRot = getVal('tuneDescRotate') || 0;
-       const descSize = getVal('tuneDescSize') || 6;
-       const descColor = getVal('tuneDescColor') || '#ffffff';
-       const descFont = getVal('tuneDescFont') || 'Playfair Display';
-       const descAlign = getVal('tuneDescAlign') || 'center'; // <--- OPHALEN
+       const descX = getVal('tuneDescX') || 50, descY = getVal('tuneDescY') || 70;
+       const descWidth = getVal('tuneDescWidth') || 60, descRot = getVal('tuneDescRotate') || 0;
+       const descSize = getVal('tuneDescSize') || 6, descColor = getVal('tuneDescColor') || '#ffffff';
+       const descFont = getVal('tuneDescFont') || 'serif', descAlign = getVal('tuneDescAlign') || 'center';
 
-       const specsX = getVal('tuneSpecsX') || 50; 
-       const specsY = getVal('tuneSpecsY') || 80; 
-       const specsRot = getVal('tuneSpecsRotate') || 0;
-       const specsColor = getVal('tuneSpecsColor') || '#ffffff';
-       const allergenColor = getVal('tuneAllergenColor') || specsColor;
-       const specsSize = getVal('tuneSpecsSize') || 4;
-       const specsFont = getVal('tuneSpecsFont') || 'Barlow Semi Condensed';
-       const specsAlign = getVal('tuneSpecsAlign') || 'center'; 
-       const specsShadow = getCheck('tuneSpecsShadow');
+       const specsX = getVal('tuneSpecsX') || 50, specsY = getVal('tuneSpecsY') || 80; 
+       const specsRot = getVal('tuneSpecsRotate') || 0, specsColor = getVal('tuneSpecsColor') || '#ffffff';
+       const specsSize = getVal('tuneSpecsSize') || 4, specsFont = getVal('tuneSpecsFont') || 'sans-serif';
+       const specsAlign = getVal('tuneSpecsAlign') || 'center', specsShadow = getCheck('tuneSpecsShadow');
 
-       const artZoom = getVal('tuneArtZoom') || 1.0;
-       const artX = getVal('tuneArtX') || 50; 
-       const artY = getVal('tuneArtY') || 50; 
-       const artRot = getVal('tuneArtRotate') || 0;
-       const artOpacity = getVal('tuneArtOpacity') || 1.0;
-       const artOverlay = getVal('tuneArtOverlay') || 0.2;
+       const artZoom = getVal('tuneArtZoom') || 1.0, artX = getVal('tuneArtX') || 50; 
+       const artY = getVal('tuneArtY') || 50, artRot = getVal('tuneArtRotate') || 0;
+       const artOpacity = getVal('tuneArtOpacity') || 1.0, artOverlay = getVal('tuneArtOverlay') || 0.2;
 
-       const logoSize = getVal('tuneLogoSize') || 100;
-       const logoX = getVal('tuneLogoX') || 50;
-       const logoY = getVal('tuneLogoY') || 10;
-       const logoRot = getVal('tuneLogoRotate') || 0; 
-       const logoOp = getVal('tuneLogoOpacity') || 1.0; 
-       const logoFlat = getCheck('logoColorMode');
-       const logoColor = getVal('tuneLogoColor') || '#ffffff';
+       const logoSize = getVal('tuneLogoSize') || 100, logoX = getVal('tuneLogoX') || 50, logoY = getVal('tuneLogoY') || 10;
+       const logoRot = getVal('tuneLogoRotate') || 0, logoOp = getVal('tuneLogoOpacity') || 1.0; 
+       const logoFlat = getCheck('logoColorMode'), logoColor = getVal('tuneLogoColor') || '#ffffff';
 
-       // Bepaal Flex alignment op basis van tekst alignment (voor Description)
-       let descFlex = 'items-center';
-       if(descAlign === 'left') descFlex = 'items-start';
-       if(descAlign === 'right') descFlex = 'items-end';
-
-       // --- GRID UITLIJNING LOGICA ---
-       let gridLabelAlign = 'text-right'; 
-       let gridValueAlign = 'text-left'; 
-
-       if (specsAlign === 'left') { 
-           gridLabelAlign = 'text-left';
-           gridValueAlign = 'text-left';
-       } else if (specsAlign === 'right') { 
-           gridLabelAlign = 'text-right';
-           gridValueAlign = 'text-right';
-       }
-
-       // --- SPLIT LOGIC ---
        const splitBySlider = (text, breakVal) => {
-           // ... (deze functie blijft hetzelfde, niet aanpassen) ...
            const cleanText = text.replace(/\|/g, ''); 
            const words = cleanText.split(' ').filter(w => w.trim() !== '');
            if (breakVal >= 8 || breakVal >= words.length) return { l1: cleanText, l2: "", isSplit: false };
            return { l1: words.slice(0, breakVal).join(' '), l2: words.slice(breakVal).join(' '), isSplit: true };
        };
-
        const tData = splitBySlider(title, titleBreak);
        const sData = splitBySlider(sub, subBreak);
 
-       // Specs data setup
-       const showYeast = getCheck('labelShowYeast');
-       const showHoney = getCheck('labelShowHoney');
        let yeastText = "", honeyText = "";
-       const yVal = document.getElementById('displayLabelYeast')?.textContent; 
-       if (yVal && yVal.trim() !== '--') yeastText = yVal.trim();
-       const hVal = document.getElementById('displayLabelHoney')?.textContent; 
-       if (hVal && hVal.trim() !== '--') honeyText = hVal.trim();
+       const yVal = getText('displayLabelYeast'); if (yVal && yVal !== '--') yeastText = yVal;
+       const hVal = getText('displayLabelHoney'); if (hVal && hVal !== '--') honeyText = hVal;
        
-       let extraInfoHtml = '';
-       if (showHoney && honeyText) extraInfoHtml += `<div><span class="opacity-60">Honey:</span> <span class="font-bold">${honeyText}</span></div>`;
-       if (showYeast && yeastText) extraInfoHtml += `<div><span class="opacity-60">Yeast:</span> <span class="font-bold">${yeastText}</span></div>`;
-       if (allergenText) extraInfoHtml += `<div class="mt-1 font-bold uppercase" style="font-size: 0.9em; color: ${allergenColor}">${allergenText}</div>`;
-
-       let bgHtml = '';
-       if (hasImage) {
-           bgHtml = `
+       let bgHtml = hasImage ? `
            <div class="absolute inset-0 z-0 overflow-hidden flex items-center justify-center">
-                <img src="${imgSrc}" 
-                     style="position: absolute; left: ${artX}%; top: ${artY}%; transform: translate(-50%, -50%) rotate(${artRot}deg) scale(${artZoom}); opacity: ${artOpacity}; min-width: 100%; min-height: 100%; object-fit: cover;">
-                <div class="absolute inset-0 pointer-events-none" style="background-color: black; opacity: ${artOverlay};"></div>
-           </div>`;
-       } else {
-           // Als de gebruiker wit kiest, tonen we misschien de default gradient, 
-           // OF we tonen gewoon de kleur. Laten we de kleur leidend maken:
-           bgHtml = `<div class="absolute inset-0 z-0" style="background-color: ${bgColor};"></div>`;
-           
-           // Optioneel: Als je de oude "dark gradient" wilt behouden als de user NIETS kiest (dus #ffffff),
-           // kun je een check doen. Maar een harde kleurkeuze is vaak duidelijker.
-       }
+                <img src="${imgSrc}" style="position: absolute; left: ${artX}%; top: ${artY}%; transform: translate(-50%, -50%) rotate(${artRot}deg) scale(${artZoom}); opacity: ${artOpacity}; min-width: 100%; min-height: 100%; object-fit: cover;">
+                <div class="absolute inset-0" style="background-color: black; opacity: ${artOverlay};"></div>
+           </div>` : `<div class="absolute inset-0 z-0" style="background-color: ${bgColor};"></div>`;
 
-       let logoInnerHtml = '';
-       const currentLogoSrc = document.getElementById('label-logo-img')?.src || 'logo.png';
-
-       if (logoFlat) {
-           logoInnerHtml = `<div style="width: 100%; height: 100%; background-color: ${logoColor}; -webkit-mask: url(${currentLogoSrc}) no-repeat center / contain; mask: url(${currentLogoSrc}) no-repeat center / contain;"></div>`;
-       } else {
-           logoInnerHtml = `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
-       }
+       let logoInnerHtml = logoFlat 
+           ? `<div style="width: 100%; height: 100%; background-color: ${logoColor}; -webkit-mask: url(logo.png) no-repeat center / contain; mask: url(logo.png) no-repeat center / contain;"></div>`
+           : `<img src="logo.png" onerror="this.src='favicon.png'" class="w-full h-full object-contain drop-shadow-xl filter brightness-110">`;
 
        container.innerHTML = `
            ${bgHtml}
-
            <div class="absolute inset-0 pointer-events-none z-50" style="box-shadow: inset 0 0 0 ${borderWidth}mm white;"></div>
-
-           <div class="absolute z-10 pointer-events-none" 
-                style="top: ${titleY}%; left: ${titleX}%; 
-                       transform: translate(-50%, -50%) rotate(${titleRot}deg); 
-                       white-space: nowrap; text-align: center;">
-                <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none relative"
-                    style="font-size: ${titleSize1}px; color: ${titleColor}; margin: 0; font-family: '${titleFont}', sans-serif;">
+           <div class="absolute z-10 w-max" style="top: ${titleY}%; left: ${titleX}%; transform: translate(-50%, -50%) rotate(${titleRot}deg); text-align: center;">
+                <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none relative" style="font-size: ${titleSize1}px; color: ${titleColor}; font-family: '${titleFont}', sans-serif;">
                     ${tData.l1}
-                    ${tData.isSplit ? `
-                    <div class="absolute top-full left-1/2 w-max" 
-                         style="transform: translate(-50%, ${titleOffsetY}%) translate(${titleOffset}%, 0);">
-                        <h1 class="font-bold uppercase tracking-widest drop-shadow-lg leading-none"
-                            style="font-size: ${titleSize2}px; color: ${titleColor}; margin-top: 5px; font-family: '${titleFont}', sans-serif;">
-                            ${tData.l2}
-                        </h1>
-                    </div>` : ''}
+                    ${tData.isSplit ? `<div class="absolute top-full left-1/2 w-max" style="transform: translate(-50%, ${titleOffsetY}%) translate(${titleOffset}%, 0); font-size: ${titleSize2}px; margin-top: 5px;">${tData.l2}</div>` : ''}
                 </h1>
            </div>
-
-           <div class="absolute z-10 pointer-events-none" 
-                style="top: ${subY}%; left: ${subX}%; 
-                       transform: translate(-50%, -50%) rotate(${subRot}deg); 
-                       white-space: nowrap; text-align: center;">
-                <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight relative"
-                   style="font-size: ${subSize1}px; color: ${subColor}; margin: 0; font-family: '${subFont}', sans-serif;">
+           <div class="absolute z-10 w-max" style="top: ${subY}%; left: ${subX}%; transform: translate(-50%, -50%) rotate(${subRot}deg); text-align: center;">
+                <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight relative" style="font-size: ${subSize1}px; color: ${subColor}; font-family: '${subFont}', sans-serif;">
                    ${sData.l1}
-                   ${sData.isSplit ? `
-                   <div class="absolute top-full left-1/2 w-max" 
-                        style="transform: translate(-50%, ${subOffsetY}%) translate(${subOffset}%, 0);">
-                        <p class="font-bold uppercase tracking-[0.4em] drop-shadow-md leading-tight"
-                           style="font-size: ${subSize2}px; color: ${subColor}; margin-top: 5px; font-family: '${subFont}', sans-serif;">
-                           ${sData.l2}
-                        </p>
-                   </div>` : ''}
+                   ${sData.isSplit ? `<div class="absolute top-full left-1/2 w-max" style="transform: translate(-50%, ${subOffsetY}%) translate(${subOffset}%, 0); font-size: ${subSize2}px; margin-top: 5px;">${sData.l2}</div>` : ''}
                 </p>
            </div>
-
-           ${desc ? `
-           <div class="absolute z-10 pointer-events-none flex flex-col ${descFlex}" 
-                style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%;
-                       transform: translate(-50%, -50%) rotate(${descRot}deg);
-                       text-align: ${descAlign};">
-                <p class="italic leading-tight drop-shadow-md whitespace-normal"
-                   style="font-size: ${descSize}px; color: ${descColor}; font-family: '${descFont}', serif;">
-                   ${desc}
-                </p>
+           ${desc ? `<div class="absolute z-10 w-full flex flex-col items-center" style="top: ${descY}%; left: ${descX}%; width: ${descWidth}%; transform: translate(-50%, -50%) rotate(${descRot}deg); text-align: ${descAlign};">
+                <p class="italic leading-tight drop-shadow-md" style="font-size: ${descSize}px; color: ${descColor}; font-family: '${descFont}', serif;">${desc}</p>
            </div>` : ''}
-
-           <div class="absolute z-10 pointer-events-none" 
-                style="left: ${specsX}%; top: ${specsY}%; transform: translate(-50%, -50%) rotate(${specsRot}deg);
-                       font-family: '${specsFont}', monospace;">
-                <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; 
-                 text-shadow: ${specsShadow ? '0 1px 2px rgba(0,0,0,0.8)' : 'none'}; 
-                 text-align: ${specsAlign};">
-                   
-                   <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-bold justify-center" style="justify-content: ${specsAlign === 'left' ? 'start' : (specsAlign === 'right' ? 'end' : 'center')}">
-                       <span class="opacity-70 ${gridLabelAlign}">ABV</span> <span class="${gridValueAlign}">${abv}%</span>
-                       ${fg ? `<span class="opacity-70 ${gridLabelAlign}">FG</span> <span class="${gridValueAlign}">${fg}</span>` : ''}
-                       <span class="opacity-70 ${gridLabelAlign}">Vol</span> <span class="${gridValueAlign}">${vol}ml</span>
-                       <span class="opacity-70 ${gridLabelAlign}">Date</span> <span class="${gridValueAlign}">${dateVal}</span>
+           <div class="absolute z-10" style="left: ${specsX}%; top: ${specsY}%; transform: translate(-50%, -50%) rotate(${specsRot}deg); font-family: '${specsFont}', monospace;">
+                <div style="font-size: ${specsSize}px; color: ${specsColor}; line-height: 1.4; text-shadow: ${specsShadow ? '0 1px 2px rgba(0,0,0,0.8)' : 'none'}; text-align: ${specsAlign};">
+                   <div class="grid grid-cols-[auto_auto] gap-x-3 mb-2 font-bold justify-center" style="justify-content: ${specsAlign}">
+                       <span class="opacity-70">ABV</span> <span>${abv}%</span>
+                       ${fg ? `<span class="opacity-70">FG</span> <span>${fg}</span>` : ''}
+                       <span class="opacity-70">Vol</span> <span>${vol}ml</span>
+                       <span class="opacity-70">Date</span> <span>${dateVal}</span>
                    </div>
-
-                   ${extraInfoHtml ? `<div class="mb-2 border-t border-white/20 pt-1 space-y-0.5 font-sans">${extraInfoHtml}</div>` : ''}
-                   
-                   ${showDetails && details ? `<p class="opacity-90 max-w-[200px] mx-auto leading-tight italic border-t border-white/20 pt-1 whitespace-normal">${details}</p>` : ''}
+                   ${honeyText || yeastText ? `<div class="mb-2 border-t border-white/20 pt-1 font-sans uppercase text-[0.8em]">${honeyText ? `Honey: ${honeyText}<br>` : ''}${yeastText ? `Yeast: ${yeastText}` : ''}</div>` : ''}
+                   ${allergenText ? `<div class="mt-1 font-bold uppercase" style="color: ${getVal('tuneAllergenColor')}">${allergenText}</div>` : ''}
+                   ${showDetails && details ? `<p class="opacity-90 max-w-[200px] mx-auto leading-tight italic border-t border-white/20 pt-1">${details}</p>` : ''}
                </div>
            </div>
-
-           <div class="absolute z-20 pointer-events-none" 
-                style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; padding: 10px; transform: translate(-50%, 0) rotate(${logoRot}deg); opacity: ${logoOp};">
+           <div class="absolute z-20" style="left: ${logoX}%; top: ${logoY}%; width: ${logoSize}px; transform: translate(-50%, 0) rotate(${logoRot}deg); opacity: ${logoOp};">
                 ${logoInnerHtml}
            </div>
        `;
     }
-}
 
 // 5. LABEL MANAGER (ADD / DELETE / AUTO-DETECT)
 

@@ -1229,18 +1229,46 @@ window.saveCustomLabelFormat = async function(e) {
     } catch (e) { showToast("Save error.", "error"); }
 }
 
-// Verwijderen Formaat
+// --- VERWIJDEREN CUSTOM FORMAAT (VERBETERD) ---
 window.deleteCustomLabelFormat = async function() {
-    const id = document.getElementById('labelPaper').value;
-    if (!userLabelFormats[id] || !confirm(`Delete "${userLabelFormats[id].name}"?`)) return;
+    // 1. Haal de ID op van het geselecteerde formaat uit de sidebar
+    const select = document.getElementById('labelPaper');
+    const id = select ? select.value : '';
 
-    delete userLabelFormats[id];
-    
+    // 2. Controleer of het een custom formaat is (standaard formaten mogen niet weg)
+    if (!userLabelFormats[id]) {
+        showToast("Cannot delete standard formats.", "error");
+        return;
+    }
+
+    // 3. Bevestiging vragen
+    if (!confirm(`Are you sure you want to delete "${userLabelFormats[id].name}"?`)) return;
+
+    const originalName = userLabelFormats[id].name;
+
     try {
-        await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'labelFormats'), userLabelFormats);
-        populateLabelPaperDropdown();
-        showToast("Deleted.", "success");
-    } catch (e) { console.error(e); }
+        // 4. Verwijder lokaal uit het object
+        delete userLabelFormats[id];
+        
+        // 5. Update de volledige collectie in Firestore
+        // We overschrijven het 'labelFormats' document met de nieuwe lijst (zonder de verwijderde ID)
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'labelFormats');
+        await setDoc(docRef, userLabelFormats);
+
+        // 6. UI herstellen
+        populateLabelPaperDropdown(); // Ververs de dropdown lijst
+        
+        // Zet de selectie terug op de standaard Avery
+        if (select) select.value = 'avery_l7165';
+        
+        // Verberg de modal
+        document.getElementById('label-format-modal').classList.add('hidden');
+        
+        showToast(`Format "${originalName}" deleted.`, "success");
+    } catch (e) {
+        console.error("Delete Format Error:", e);
+        showToast("Could not delete format from database.", "error");
+    }
 }
 
 // 6. AI CONTENT & ART GENERATORS

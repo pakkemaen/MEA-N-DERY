@@ -175,6 +175,17 @@ function updateSliderDisplay(id, val) {
     }
 }
 
+function updateArtButtons() {
+    const actions = document.getElementById('art-actions');
+    if (!actions) return;
+    // Toon de knoppen 'Save/Clear' alleen als er een afbeelding is geladen
+    if (tempState.currentLabelImageSrc && tempState.currentLabelImageSrc.length > 10) {
+        actions.classList.remove('hidden');
+    } else {
+        actions.classList.add('hidden');
+    }
+}
+
 // 3. DATAMANAGEMENT (Laden & Dropdowns)
 
 // A. Receptenlijst vullen
@@ -338,226 +349,91 @@ export function updateLabelPreviewText() {
     setLabelTheme(theme);
 }
 
-// --- DATA LADEN (V3.1 - STRICT SEPARATION & FEEDBACK) ---
 function loadLabelFromBrew(eOrId, forceTheme = null) {
-    // Flexibele input: kan een event zijn (dropdown change) of een string (ID)
     const brewId = (typeof eOrId === 'object' && eOrId.target) ? eOrId.target.value : eOrId;
-    
     if (!brewId) return;
-    const brew = state.brews.find(b => b.id === brewId);
+    const brew = state.brews.find(b => b.id === brewId); //
     if (!brew) return;
 
-    // 1. BEPAAL THEMA
-    let theme = forceTheme;
-    if (!theme) {
-        const activeBtn = document.querySelector('.label-theme-btn.active');
-        theme = activeBtn ? activeBtn.dataset.theme : 'standard';
-    }
+    let theme = forceTheme || document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
 
-    // Helpers
     const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
     const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
     const setCheck = (id, val) => { const el = document.getElementById(id); if(el) el.checked = val; };
     const restoreSlider = (id, val, fallback) => {
         const el = document.getElementById(id);
-        if(el) {
-            // Als de opgeslagen waarde undefined is, gebruik de fallback (reset)
-            el.value = (val !== undefined && val !== null) ? val : fallback;
-            el.dispatchEvent(new Event('input')); 
-        }
+        if(el) { el.value = (val !== undefined) ? val : fallback; el.dispatchEvent(new Event('input')); }
     };
 
-    // Basis data genereren
+    // Ingrediënten parsen voor automatische detectie
     const ings = parseIngredientsFromMarkdown(brew.recipeMarkdown);
-    
-    // FILTER HONING, GIST ÉN ALLERGENEN/ADDITIEVEN
-    const filteredIngs = ings.filter(i => {
-        const n = i.name.toLowerCase();
-        
-        // 1. Basis ingrediënten die al een eigen kopje hebben
-        const isBase = n.includes('honey') || n.includes('honing') || 
-                       n.includes('yeast') || n.includes('gist') || 
-                       n.includes('safale') || n.includes('lalvin') || n.includes('mangrove');
-
-        // 2. Allergenen & Stabilisatoren (staan vaak al bij 'Allergens' of 'Contains')
-        const isAllergen = n.includes('sulfite') || n.includes('sulphite') ||  // Sulfieten
-                           n.includes('campden') || n.includes('metabi') ||    // Campden / Metabisulfiet
-                           n.includes('sorbate') ||                            // Sorbaat
-                           n.includes('lactose');                              // Lactose
-
-        // We behouden het item ALLEEN als het GEEN basis is én GEEN allergeen
-        return !isBase && !isAllergen;
-    });
-
+    const filteredIngs = ings.filter(i => !/honey|honing|yeast|gist|sulfite|sorbate|lactose/i.test(i.name));
     const generatedDetails = filteredIngs.map(i => i.name).join(' • ');
 
-    let yeastItem = ings.find(i => i.name.toLowerCase().includes('yeast') || i.name.toLowerCase().includes('gist'));
+    let yeastItem = ings.find(i => /yeast|gist/i.test(i.name));
     let generatedYeast = yeastItem ? yeastItem.name.replace(/yeast|gist/gi, '').trim() : 'Unknown';
-    let honeyItem = ings.find(i => i.name.toLowerCase().includes('honey') || i.name.toLowerCase().includes('honing'));
+    let honeyItem = ings.find(i => /honey|honing/i.test(i.name));
     let generatedHoney = honeyItem ? honeyItem.name.replace(/honey/gi, '').trim() : 'Wildflower';
 
-    // 2. DATA ZOEKEN (STRICT)
-    let s = null;
-    let isSavedData = false;
-    
-    // Check: Bestaat er een specifieke save voor DIT thema?
-    if (brew.labelSettings && brew.labelSettings[theme]) {
-        s = brew.labelSettings[theme];
-        isSavedData = true;
-    } 
-    
-    // 3. TOEPASSEN
-    if (isSavedData && s) {
-        // --- SCENARIO A: ER IS EEN SAVE (HERSTEL ALLES) ---
-        
-        // Teksten
-        setVal('labelTitle', s.title);
-        setVal('labelSubtitle', s.subtitle);
-        setVal('labelAbv', s.abv);
-        setVal('labelFg', s.fg);
-        setVal('labelVol', s.vol);
-        setVal('labelDate', s.date);
-        setVal('labelDescription', s.desc);
+    // Check voor opgeslagen settings
+    let s = (brew.labelSettings && brew.labelSettings[theme]) ? brew.labelSettings[theme] : null;
+
+    if (s) {
+        // SCENARIO A: Herstel opgeslagen data
+        setVal('labelTitle', s.title); setVal('labelSubtitle', s.subtitle);
+        setVal('labelAbv', s.abv); setVal('labelFg', s.fg); setVal('labelVol', s.vol);
+        setVal('labelDate', s.date); setVal('labelDescription', s.desc);
         setVal('labelDetails', s.details || generatedDetails); 
         setVal('labelAllergens', s.allergens || ''); 
-        
         if (s.persona) setVal('label-persona-select', s.persona);
-
-        setCheck('labelShowYeast', s.showYeast);
-        setCheck('labelShowHoney', s.showHoney);
+        setCheck('labelShowYeast', s.showYeast); setCheck('labelShowHoney', s.showHoney);
         setCheck('labelShowDetails', s.showDetails);
-
+        
+        // Vul de hidden spans voor rendering
         setText('displayLabelYeast', s.yeastName || generatedYeast);
         setText('displayLabelHoney', s.honeyName || generatedHoney);
 
-        // Styling & Sliders
-        setVal('tuneTitleColor', s.tuneTitleColor);
-        setVal('tuneStyleColor', s.tuneStyleColor);
-        
-        restoreSlider('tuneTitleSize', s.tuneTitleSize, 100);
-        restoreSlider('tuneTitleSize2', s.tuneTitleSize2, 60);
+        // Slider herstel
+        setVal('tuneTitleColor', s.tuneTitleColor); setVal('tuneStyleColor', s.tuneStyleColor);
+        restoreSlider('tuneTitleSize', s.tuneTitleSize, 100); 
         restoreSlider('tuneTitleX', s.tuneTitleX, 10);
         restoreSlider('tuneTitleY', s.tuneTitleY, 10);
-        restoreSlider('tuneTitleRotate', s.tuneTitleRotate, 0);
-        restoreSlider('tuneTitleOffset', s.tuneTitleOffset, 0);
-        restoreSlider('tuneTitleOffsetY', s.tuneTitleOffsetY, 0);
-        restoreSlider('tuneTitleBreak', s.tuneTitleBreak, 8);
-        
-        restoreSlider('tuneStyleY', s.tuneStyleY, 0);
-        restoreSlider('tuneStyleSize', s.tuneStyleSize, 14);
-        restoreSlider('tuneStyleSize2', s.tuneStyleSize2, 10);
-        restoreSlider('tuneStyleGap', s.tuneStyleGap, 5);
-        restoreSlider('tuneStyleRotate', s.tuneStyleRotate, 0);
-        restoreSlider('tuneStyleOffset', s.tuneStyleOffset, 0);
-        restoreSlider('tuneStyleOffsetY', s.tuneStyleOffsetY, 0)
-        restoreSlider('tuneStyleBreak', s.tuneStyleBreak, 8);
+        restoreSlider('tuneLogoX', s.tuneLogoX, 5); // Default 5% van rechts
 
-        restoreSlider('tuneSpecsSize', s.tuneSpecsSize, 4);
-        restoreSlider('tuneSpecsX', s.tuneSpecsX, 50);
-        restoreSlider('tuneSpecsY', s.tuneSpecsY, 80);
-        setVal('tuneSpecsColor', s.tuneSpecsColor || '#ffffff');
-        restoreSlider('tuneSpecsRotate', s.tuneSpecsRotate, 0);
-
-        setCheck('tuneSpecsShadow', (s.tuneSpecsShadow !== undefined) ? s.tuneSpecsShadow : true);
-
-        restoreSlider('tuneDescX', s.tuneDescX, 50);
-        restoreSlider('tuneDescY', s.tuneDescY, 70);
-        restoreSlider('tuneDescWidth', s.tuneDescWidth, 60);
-        restoreSlider('tuneDescRotate', s.tuneDescRotate, 0);
-        restoreSlider('tuneDescSize', s.tuneDescSize, 6);
-        setVal('tuneDescColor', s.tuneDescColor || '#ffffff');
-
-        restoreSlider('tuneArtZoom', s.tuneArtZoom, 1.0);
-        restoreSlider('tuneArtX', s.tuneArtX, 50);
-        restoreSlider('tuneArtY', s.tuneArtY, 50);
-        restoreSlider('tuneArtRotate', s.tuneArtRotate, 0);
-        restoreSlider('tuneArtOpacity', s.tuneArtOpacity, 1.0);
-        restoreSlider('tuneArtOverlay', s.tuneArtOverlay, 0.0);
-        
-        restoreSlider('tuneLogoSize', s.tuneLogoSize, 100);
-        restoreSlider('tuneLogoX', s.tuneLogoX, 50);
-        restoreSlider('tuneLogoY', s.tuneLogoY, 10);
-        restoreSlider('tuneLogoRotate', s.tuneLogoRotate, 0);
-        restoreSlider('tuneLogoOpacity', s.tuneLogoOpacity, 1.0);
-        setCheck('logoColorMode', s.logoColorMode);
-        setVal('tuneLogoColor', s.tuneLogoColor || '#ffffff');
-
-        restoreSlider('tuneBorderWidth', s.tuneBorderWidth, (theme === 'standard' ? 3 : 0));
-        setVal('tuneAllergenColor', s.tuneAllergenColor || '#ffffff');
-        setVal('tuneBackgroundColor', s.tuneBackgroundColor || '#ffffff');
-        
-        // Update het tekstlabeltje naast de color picker (optioneel, voor netheid)
-        const bgDisp = document.getElementById('disp-background-color');
-        if(bgDisp) bgDisp.textContent = s.tuneBackgroundColor || '#ffffff';
-
-        if (s.imageSrc) {
-            tempState.currentLabelImageSrc = s.imageSrc;
-            const imgDisplay = document.getElementById('label-img-display');
-            if(imgDisplay) {
-                imgDisplay.src = s.imageSrc;
-                imgDisplay.classList.remove('hidden');
-            }
-        }
-
-        // FEEDBACK: LATEN ZIEN DAT WE GELADEN HEBBEN
-        showToast(`📂 ${theme.charAt(0).toUpperCase() + theme.slice(1)} Label Loaded!`, "success");
-
+        if (s.imageSrc) { tempState.currentLabelImageSrc = s.imageSrc; } //
+        showToast(`📂 ${theme.toUpperCase()} Label Loaded!`, "success"); //
     } else {
-        // --- SCENARIO B: GEEN SAVE (RESET NAAR HARDE DEFAULTS) ---
-        // Dit is cruciaal: als we switchen naar een thema dat nog niet is opgeslagen,
-        // moeten we de sliders resetten naar de standaardwaarden van DAT thema.
-        
-        // 1. Reset Basis Teksten (uit Recept)
-        setVal('labelTitle', brew.recipeName);
-        let style = "Traditional Mead";
-        if (brew.recipeMarkdown.toLowerCase().includes('melomel')) style = "Melomel";
-        setVal('labelSubtitle', style);
+        // SCENARIO B: Nieuw recept laden (Defaults)
+        setVal('labelTitle', brew.recipeName.split(':')[0].trim());
+        setVal('labelSubtitle', brew.recipeMarkdown.toLowerCase().includes('melomel') ? "Melomel" : "Traditional Mead");
         setVal('labelAbv', brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '');
         setVal('labelFg', brew.logData?.actualFG || brew.logData?.targetFG || '');
-        setVal('labelVol', '330');
-        setVal('labelDate', brew.logData?.brewDate || new Date().toLocaleDateString('nl-NL'));
+        setVal('labelVol', '330'); setVal('labelDate', brew.logData?.brewDate || new Date().toISOString().split('T')[0]);
         
-        // 2. Reset Sliders per Thema
+        // REPARATIE: Vul ook de hidden spans bij Scenario B zodat data direct getoond wordt
+        setText('displayLabelYeast', generatedYeast);
+        setText('displayLabelHoney', generatedHoney);
+
         if (theme === 'standard') {
-            setVal('tuneTitleColor', '#8F8C79');
-            setVal('tuneStyleColor', '#9ca3af');
-            setVal('tuneBackgroundColor', '#ffffff');
-            
-            restoreSlider('tuneLogoSize', 100); restoreSlider('tuneLogoX', 0); restoreSlider('tuneLogoY', 0);
-            restoreSlider('tuneTitleSize', 100); restoreSlider('tuneTitleSize2', 60);
-            restoreSlider('tuneTitleX', 10); restoreSlider('tuneTitleY', 10);
-            restoreSlider('tuneTitleRot', 0); restoreSlider('tuneTitleOffset', 0);
-            
-            restoreSlider('tuneStyleSize', 14); restoreSlider('tuneStyleSize2', 10);
-            restoreSlider('tuneStyleGap', 5); restoreSlider('tuneStyleY', 0);
-            restoreSlider('tuneStyleRotate', 0);
-            
-            restoreSlider('tuneBorderWidth', 3); // Standard heeft border
+            setVal('tuneTitleColor', '#8F8C79'); 
+            setVal('tuneSpecsColor', '#333333'); 
+            setVal('tuneDescColor', '#333333');
+            restoreSlider('tuneLogoX', 5); // 5% vanaf rechts
         } else {
-            // Special
-            setVal('tuneTitleColor', '#ffffff');
-            setVal('tuneStyleColor', '#cccccc');
-            setVal('tuneBackgroundColor', '#000000');
-            
-            restoreSlider('tuneLogoSize', 100); restoreSlider('tuneLogoX', 50); restoreSlider('tuneLogoY', 15);
-            restoreSlider('tuneTitleX', 50); restoreSlider('tuneTitleY', 40);
-            restoreSlider('tuneStyleGap', 50); restoreSlider('tuneStyleY', 55);
-            restoreSlider('tuneBorderWidth', 0);
-            
-            setCheck('tuneSpecsShadow', true);
+            setVal('tuneTitleColor', '#ffffff'); 
+            setVal('tuneSpecsColor', '#ffffff'); 
+            setVal('tuneDescColor', '#ffffff');
+            restoreSlider('tuneLogoX', 50); // Midden voor special
         }
-
-        // FEEDBACK: LATEN ZIEN DAT HET DEFAULTS ZIJN
-        showToast(`ℹ️ ${theme.charAt(0).toUpperCase() + theme.slice(1)} (Defaults) Loaded`, "info");
+        showToast(`ℹ️ ${theme.toUpperCase()} (Defaults) Loaded`, "info");
     }
-
-    // Forceer render
-    if(typeof setLabelTheme === 'function') setLabelTheme(theme);
+    setLabelTheme(theme);
+    if (typeof updateArtButtons === 'function') updateArtButtons();
 }
 
 // --- THEMA-ENGINE (V4.2, De Single Source of Truth voor de Live Preview) ---
-export function setLabelTheme(theme) {
-    const container = document.getElementById('label-content');
+function setLabelTheme(theme) {
+    const container = document.getElementById('label-content'); //
     if (!container) return; 
 
     // --- 1. DATA COLLECTIE ---
@@ -565,49 +441,48 @@ export function setLabelTheme(theme) {
     const getCheck = (id) => document.getElementById(id)?.checked || false;
     const getText = (id) => document.getElementById(id)?.textContent || '';
 
+    // Teksten ophalen uit UI
     const title = getVal('labelTitle') || 'MEAD NAME';
     const sub = getVal('labelSubtitle') || 'Style Description';
     const abv = getVal('labelAbv'), fg = getVal('labelFg'), vol = getVal('labelVol');
-    const desc = getVal('labelDescription'), details = getVal('labelDetails');
-    const allergenText = getVal('labelAllergens');
+    const desc = getVal('labelDescription'), allergenText = getVal('labelAllergens');
+    
+    // Kleuren & Layout instellingen
     const bgColor = getVal('tuneBackgroundColor') || '#ffffff';
     const borderWidth = getVal('tuneBorderWidth') || 0;
 
-    // Fix voor kleuren: donkergrijs op wit (Standard) of wit op donker (Special)
+    // FIX: Standaard donkere tekst voor 'standard' thema op witte achtergrond
     const specsColor = getVal('tuneSpecsColor') || (theme === 'standard' ? '#333333' : '#ffffff');
     const descColor = getVal('tuneDescColor') || (theme === 'standard' ? '#333333' : '#ffffff');
 
-    // Dynamische Data (Honing & Gist)
+    // Data uit verborgen spans (geladen door loadLabelFromBrew)
     const hVal = getText('displayLabelHoney'), yVal = getText('displayLabelYeast');
     const honeyText = (getCheck('labelShowHoney') && hVal && hVal !== '--') ? hVal : '';
     const yeastText = (getCheck('labelShowYeast') && yVal && yVal !== '--') ? yVal : '';
 
-    const rawDate = getVal('labelDate');
-    let dateVal = rawDate;
-    if (rawDate && !isNaN(new Date(rawDate).getTime())) dateVal = new Date(rawDate).toLocaleDateString('nl-NL');
-
-    let imgSrc = tempState.currentLabelImageSrc || '';
+    const dateVal = getVal('labelDate') ? new Date(getVal('labelDate')).toLocaleDateString('nl-NL') : '--';
+    let imgSrc = tempState.currentLabelImageSrc || ''; //
     const hasImage = imgSrc && imgSrc.length > 10;
 
     const splitBySlider = (text, breakVal) => {
-       if (!text) return { l1: "", l2: "", isSplit: false };
-       const words = text.split(' ').filter(w => w.trim() !== '');
+       const words = (text || "").split(' ').filter(w => w.trim() !== '');
        if (breakVal >= 8 || breakVal >= words.length) return { l1: text, l2: "", isSplit: false };
        return { l1: words.slice(0, breakVal).join(' '), l2: words.slice(breakVal).join(' '), isSplit: true };
     };
 
-    // --- 2. RENDERING ---
+    // --- 2. RENDERING PER THEMA ---
     if (theme === 'standard') {
         const tData = splitBySlider(title, parseInt(getVal('tuneTitleBreak')) || 8);
         const specsAlign = getVal('tuneSpecsAlign') || 'center';
-
+        
         container.innerHTML = `
-            <div class="absolute inset-0 pointer-events-none z-50" style="box-shadow: inset 0 0 0 ${borderWidth}mm white;"></div>
-            <div class="relative h-full w-[30%] bg-gray-50/90 z-20 border-r border-gray-200" style="font-family: '${getVal('tuneSpecsFont')}', sans-serif;">
+            <div class="absolute inset-0 z-50 pointer-events-none" style="box-shadow: inset 0 0 0 ${borderWidth}mm white;"></div>
+            
+            <div class="relative h-full w-[30%] bg-gray-50/90 z-20 border-r border-gray-200">
                 <div class="absolute" style="top: ${getVal('tuneDescY')}%; left: ${getVal('tuneDescX')}%; width: ${getVal('tuneDescWidth')}%; transform: translate(-50%, 0) rotate(${getVal('tuneDescRotate')}deg); font-size: ${getVal('tuneDescSize')}px; color: ${descColor}; text-align: ${getVal('tuneDescAlign')}; line-height: 1.4;">
                     ${desc}
                 </div>
-                <div class="absolute flex flex-col items-${specsAlign === 'left' ? 'start' : (specsAlign === 'right' ? 'end' : 'center')}" style="top: ${getVal('tuneSpecsY')}%; left: ${getVal('tuneSpecsX')}%; width: 90%; transform: translate(-50%, -50%) rotate(${getVal('tuneSpecsRotate')}deg); font-size: ${getVal('tuneSpecsSize')}px; color: ${specsColor};">
+                <div class="absolute flex flex-col items-${specsAlign}" style="top: ${getVal('tuneSpecsY')}%; left: ${getVal('tuneSpecsX')}%; width: 90%; transform: translate(-50%, -50%) rotate(${getVal('tuneSpecsRotate')}deg); font-size: ${getVal('tuneSpecsSize')}px; color: ${specsColor};">
                     <div class="w-full mb-2 border-b border-gray-300 pb-1 text-${specsAlign}">
                         ${honeyText ? `<div><span class="opacity-50 uppercase text-[0.8em]">Honey:</span> <b>${honeyText}</b></div>` : ''}
                         ${yeastText ? `<div><span class="opacity-50 uppercase text-[0.8em]">Yeast:</span> <b>${yeastText}</b></div>` : ''}
@@ -621,39 +496,39 @@ export function setLabelTheme(theme) {
                     </div>
                 </div>
             </div>
+
             <div class="h-full w-[70%] relative overflow-hidden" style="background-color: ${bgColor};">
                 ${hasImage ? `<img src="${imgSrc}" style="position: absolute; left: ${getVal('tuneArtX')}%; top: ${getVal('tuneArtY')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneArtRotate')}deg) scale(${getVal('tuneArtZoom')}); opacity: ${getVal('tuneArtOpacity')}; min-width: 100%; min-height: 100%; object-fit: cover;">` : ''}
+                
                 <div class="absolute z-10 flex flex-row items-end" style="left: ${getVal('tuneTitleX')}%; bottom: ${getVal('tuneTitleY')}%; transform-origin: bottom left;">
-                    <h1 class="font-bold uppercase leading-[0.9] whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(getVal('tuneTitleRotate'))}deg); font-family: '${getVal('tuneTitleFont')}', sans-serif; font-size: ${getVal('tuneTitleSize')}px; color: ${getVal('tuneTitleColor')};">
+                    <h1 class="font-bold uppercase leading-[0.9]" style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(getVal('tuneTitleRotate'))}deg); font-family: '${getVal('tuneTitleFont')}', sans-serif; font-size: ${getVal('tuneTitleSize')}px; color: ${getVal('tuneTitleColor')};">
                         ${tData.l1}${tData.isSplit ? `<div class="absolute" style="top: 0; left: 0; transform: translate(${getVal('tuneTitleOffset')}%, ${getVal('tuneTitleOffsetY')}%) rotate(0deg); font-size: ${getVal('tuneTitleSize2')}px;">${tData.l2}</div>` : ''}
                     </h1>
                 </div>
-                <div class="absolute z-20" style="top: ${getVal('tuneLogoY')}px; right: ${getVal('tuneLogoX')}px; transform: rotate(${getVal('tuneLogoRotate')}deg); width: ${getVal('tuneLogoSize')}px; opacity: ${getVal('tuneLogoOpacity')};">
+
+                <div class="absolute z-20" style="top: ${getVal('tuneLogoY')}%; right: ${getVal('tuneLogoX')}%; transform: rotate(${getVal('tuneLogoRotate')}deg); width: ${getVal('tuneLogoSize')}px; opacity: ${getVal('tuneLogoOpacity')};">
                     ${getCheck('logoColorMode') ? `<div style="width:100%; height:100%; background-color:${getVal('tuneLogoColor')}; -webkit-mask:url(logo.png) center/contain no-repeat; mask:url(logo.png) center/contain no-repeat;"></div>` : `<img src="logo.png" class="w-full h-auto">`}
                 </div>
             </div>
         `;
-    } 
-    else if (theme === 'special') {
+    } else if (theme === 'special') {
         const tData = splitBySlider(title, parseInt(getVal('tuneTitleBreak')) || 8);
         container.innerHTML = `
             ${hasImage ? `<img src="${imgSrc}" class="absolute inset-0 w-full h-full object-cover" style="left: ${getVal('tuneArtX')}%; top: ${getVal('tuneArtY')}%; transform: translate(-50%, -50%) scale(${getVal('tuneArtZoom')}); opacity: ${getVal('tuneArtOpacity')};">` : `<div class="absolute inset-0" style="background-color: ${bgColor};"></div>`}
-            <div class="absolute inset-0 pointer-events-none z-50" style="box-shadow: inset 0 0 0 ${borderWidth}mm white;"></div>
             <div class="absolute z-10 w-max" style="top: ${getVal('tuneTitleY')}%; left: ${getVal('tuneTitleX')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneTitleRotate')}deg); text-align: center;">
                 <h1 style="font-size: ${getVal('tuneTitleSize')}px; color: ${getVal('tuneTitleColor')}; font-family: '${getVal('tuneTitleFont')}', sans-serif;" class="font-bold uppercase tracking-widest leading-none drop-shadow-lg">${tData.l1}</h1>
             </div>
             <div class="absolute z-10" style="top: ${getVal('tuneDescY')}%; left: ${getVal('tuneDescX')}%; width: ${getVal('tuneDescWidth')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneDescRotate')}deg); text-align: ${getVal('tuneDescAlign')};">
                 <p style="font-size: ${getVal('tuneDescSize')}px; color: ${descColor}; font-family: '${getVal('tuneDescFont')}', serif;" class="italic leading-tight drop-shadow-md">${desc}</p>
             </div>
-            <div class="absolute z-10" style="left: ${getVal('tuneSpecsX')}%; top: ${getVal('tuneSpecsY')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneSpecsRotate')}deg); text-align: ${getVal('tuneSpecsAlign')};">
-                <div style="font-size: ${getVal('tuneSpecsSize')}px; color: ${specsColor}; line-height: 1.4; text-shadow: ${getCheck('tuneSpecsShadow') ? '0 1px 2px rgba(0,0,0,0.8)' : 'none'};">
+            <div class="absolute z-10" style="left: ${getVal('tuneSpecsX')}%; top: ${getVal('tuneSpecsY')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneSpecsRotate')}deg);">
+                <div style="font-size: ${getVal('tuneSpecsSize')}px; color: ${specsColor};">
                     <div class="grid grid-cols-2 gap-x-3 mb-1 font-bold font-mono"><span>ABV</span> <span>${abv}%</span> ${fg ? `<span>FG</span> <span>${fg}</span>` : ''} <span>Vol</span> <span>${vol}ml</span></div>
                     ${honeyText || yeastText ? `<div class="mb-1 border-t border-white/20 pt-1 font-sans uppercase text-[0.8em]">${honeyText ? `Honey: ${honeyText}<br>` : ''}${yeastText ? `Yeast: ${yeastText}` : ''}</div>` : ''}
-                    ${allergenText ? `<div class="mt-1 font-bold uppercase" style="color: ${getVal('tuneAllergenColor')}">${allergenText}</div>` : ''}
                 </div>
             </div>
-            <div class="absolute z-20" style="top: ${getVal('tuneLogoY')}%; right: ${getVal('tuneLogoX')}px; width: ${getVal('tuneLogoSize')}px; transform: rotate(${getVal('tuneLogoRotate')}deg); opacity: ${getVal('tuneLogoOpacity')};">
-                 ${getCheck('logoColorMode') ? `<div style="width:100%; height:100%; background-color:${getVal('tuneLogoColor')}; -webkit-mask:url(logo.png) center/contain no-repeat; mask:url(logo.png) center/contain no-repeat;"></div>` : `<img src="logo.png" class="w-full h-full object-contain filter brightness-110 drop-shadow-xl">`}
+            <div class="absolute z-20" style="top: ${getVal('tuneLogoY')}%; right: ${getVal('tuneLogoX')}%; width: ${getVal('tuneLogoSize')}px; transform: rotate(${getVal('tuneLogoRotate')}deg);">
+                 ${getCheck('logoColorMode') ? `<div style="width:100%; height:100%; background-color:${getVal('tuneLogoColor')}; -webkit-mask:url(logo.png) center/contain no-repeat; mask:url(logo.png) center/contain no-repeat;"></div>` : `<img src="logo.png" class="w-full h-auto filter brightness-110 drop-shadow-xl">`}
             </div>
         `;
     }

@@ -2164,6 +2164,25 @@ async function saveLabelAssets() {
     }
 }
 
+window.resetLabelLayout = function() {
+    if(!confirm("Reset all sliders to default?")) return;
+    
+    const brewId = document.getElementById('labelRecipeSelect').value;
+    const activeTheme = document.querySelector('.label-theme-btn.active')?.dataset.theme || 'standard';
+    
+    // Roep de bestaande load functie aan ZONDER opgeslagen data te forceren, 
+    // dit triggert de 'Scenario B' (Reset naar harde defaults) in je code.
+    if(brewId) {
+        // We omzeilen de opgeslagen settings even door een nep-object te sturen zonder settings
+        const brew = state.brews.find(b => b.id === brewId);
+        const tempBrew = {...brew, labelSettings: null}; 
+        
+        // Sla de originele settings niet over in de state, maar laad ze gewoon niet in de UI
+        window.loadLabelFromBrew(brewId, activeTheme); 
+        showToast("Layout reset to theme defaults", "info");
+    }
+}
+
 
 // =============================================================
 // STAP 4.5: EXPORTS NAAR WINDOW (CRUCIAAL VOOR HTML KNOPPEN)

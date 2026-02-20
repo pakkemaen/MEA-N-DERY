@@ -386,10 +386,10 @@ function autoScaleLabelPreview() {
 
     if (!mainContainer || !labelContainer) return;
 
-    // Reset schaal voor meting
+    // Reset schaal voor een zuivere meting
     labelContainer.style.transform = 'scale(1)';
 
-    // Beschikbare ruimte (met een kleine marge)
+    // Beschikbare ruimte met een marge van 40px
     const availableWidth = mainContainer.clientWidth - 40; 
     const availableHeight = mainContainer.clientHeight - 40;
     
@@ -398,19 +398,20 @@ function autoScaleLabelPreview() {
 
     if (labelWidth === 0 || labelHeight === 0) return;
 
-    // Bereken schaal op basis van de kleinste ratio
+    // Bereken de schaalfactor (neem de kleinste ratio zodat hij altijd past)
     const scaleX = availableWidth / labelWidth;
     const scaleY = availableHeight / labelHeight;
     const scale = Math.min(scaleX, scaleY);
 
-    // Pas transform toe (maximaal 4x vergroting voor scherpte)
-    const finalScale = Math.min(scale, 4); 
+    // Pas de transform toe (maximaal 4x vergroting voor scherpte op grote schermen)
+    const finalScale = Math.max(0.5, Math.min(scale, 4)); 
     
     labelContainer.style.transform = `scale(${finalScale})`;
-    
-    // Werk de info tekst linksboven bij
+    labelContainer.style.transformOrigin = 'center';
+
+    // Update de info tekst linksboven in de preview bak
     const infoText = mainContainer.querySelector('p.absolute');
-    if(infoText) infoText.textContent = `Live Preview (Scaled: ${finalScale.toFixed(2)}x)`;
+    if(infoText) infoText.textContent = `Live Preview (Zoom: ${finalScale.toFixed(2)}x)`;
 }
 
 // --- THEMA-ENGINE (V4.2, De Single Source of Truth voor de Live Preview) ---
@@ -430,7 +431,7 @@ function setLabelTheme(theme) {
     const bgColor = getVal('tuneBackgroundColor') || '#ffffff';
     const borderWidth = getVal('tuneBorderWidth') || 0;
 
-    // FIX: Standaard donkergrijs voor Standard thema op witte achtergrond
+    // FIX: Standaard donkergrijs (#333333) voor Standard thema op witte achtergrond
     const specsColor = getVal('tuneSpecsColor') || (theme === 'standard' ? '#333333' : '#ffffff');
     const descColor = getVal('tuneDescColor') || (theme === 'standard' ? '#333333' : '#ffffff');
 
@@ -481,7 +482,7 @@ function setLabelTheme(theme) {
                 ${hasImage ? `<img src="${imgSrc}" style="position: absolute; left: ${getVal('tuneArtX')}%; top: ${getVal('tuneArtY')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneArtRotate')}deg) scale(${getVal('tuneArtZoom')}); opacity: ${getVal('tuneArtOpacity')}; min-width: 100%; min-height: 100%; object-fit: cover;">` : ''}
                 
                 <div class="absolute z-10 flex flex-row items-end" style="left: ${getVal('tuneTitleX')}%; bottom: ${getVal('tuneTitleY')}%; transform-origin: bottom left;">
-                    <h1 class="font-bold uppercase leading-[0.9]" style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(getVal('tuneTitleRotate'))}deg); font-family: '${getVal('tuneTitleFont')}', sans-serif; font-size: ${getVal('tuneTitleSize')}px; color: ${getVal('tuneTitleColor')};">
+                    <h1 class="font-bold uppercase leading-[0.9] whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(${180 + parseInt(getVal('tuneTitleRotate'))}deg); font-family: '${getVal('tuneTitleFont')}', sans-serif; font-size: ${getVal('tuneTitleSize')}px; color: ${getVal('tuneTitleColor')};">
                         ${tData.l1}${tData.isSplit ? `<div class="absolute" style="top: 0; left: 0; transform: translate(${getVal('tuneTitleOffset')}%, ${getVal('tuneTitleOffsetY')}%) rotate(0deg); font-size: ${getVal('tuneTitleSize2')}px;">${tData.l2}</div>` : ''}
                     </h1>
                 </div>
@@ -492,7 +493,6 @@ function setLabelTheme(theme) {
             </div>
         `;
     } else {
-        // Thema Special rendering logic
         const tData = splitBySlider(title, parseInt(getVal('tuneTitleBreak')) || 8);
         container.innerHTML = `
             ${hasImage ? `<img src="${imgSrc}" class="absolute inset-0 w-full h-full object-cover" style="left: ${getVal('tuneArtX')}%; top: ${getVal('tuneArtY')}%; transform: translate(-50%, -50%) scale(${getVal('tuneArtZoom')}); opacity: ${getVal('tuneArtOpacity')};">` : `<div class="absolute inset-0" style="background-color: ${bgColor};"></div>`}

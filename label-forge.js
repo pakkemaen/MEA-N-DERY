@@ -103,7 +103,7 @@ export function initLabelForge() {
         'tuneSpecsFont', 'tuneSpecsColor', 'tuneAllergenColor', 'tuneSpecsAlign',
         'tuneSpecsSize', 'tuneSpecsX', 'tuneSpecsY', 'tuneSpecsRotate',
         'tuneSpecsShadow', 'tuneDescFont', 'tuneDescColor', 'tuneDescAlign',
-        'tuneDescX', 'tuneDescY', 'tuneDescWidth', 'tuneDescRotate', 'tuneDescSize',
+        'tuneDescX', 'tuneDescY', 'tuneDescWidth', 'tuneDescRotate', 'tuneDescSize','tuneDescLineHeight',
         'tuneArtZoom', 'tuneArtX', 'tuneArtY', 'tuneArtOpacity', 'tuneArtRotate', 
         'tuneArtOverlay', 'tuneLogoColor', 'tuneLogoSize', 'tuneLogoX', 
         'tuneLogoY', 'tuneLogoRotate', 'tuneLogoOpacity', 'logoColorMode',
@@ -170,6 +170,7 @@ function updateSliderDisplay(id, val) {
         else if(id.includes('Width') && id.includes('Border')) disp.textContent = val + 'mm';
         else if(id.includes('Opacity') || id.includes('Overlay')) disp.textContent = Math.round(val * 100) + '%';
         else if(id.includes('Zoom')) disp.textContent = parseFloat(val).toFixed(2) + 'x';
+        else if(id.includes('LineHeight')) disp.textContent = val;
         else if(id.includes('X') || id.includes('Y') || id.includes('Gap') || id.includes('Offset') || (id.includes('Width') && !id.includes('Border'))) disp.textContent = val + '%';
         else disp.textContent = val + 'px';
     }
@@ -360,6 +361,8 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
         restoreSlider('tuneTitleX', s.tuneTitleX, 10);
         restoreSlider('tuneTitleY', s.tuneTitleY, 10);
         restoreSlider('tuneLogoX', s.tuneLogoX, 5); 
+        restoreSlider('tuneDescSize', s.tuneDescSize, 10);
+        restoreSlider('tuneDescLineHeight', s.tuneDescLineHeight, 1.4);
 
         if (s.imageSrc) { tempState.currentLabelImageSrc = s.imageSrc; }
     } else {
@@ -459,7 +462,7 @@ function setLabelTheme(theme) {
             <div class="absolute inset-0 z-50 pointer-events-none" style="box-shadow: inset 0 0 0 ${borderWidth}mm white;"></div>
             
             <div class="relative h-full w-[30%] bg-gray-50/90 z-20 border-r border-gray-200" style="font-family: '${getVal('tuneSpecsFont')}', sans-serif;">
-                <div class="absolute" style="top: ${getVal('tuneDescY')}%; left: ${getVal('tuneDescX')}%; width: ${getVal('tuneDescWidth')}%; transform: translate(-50%, 0) rotate(${getVal('tuneDescRotate')}deg); font-size: ${getVal('tuneDescSize')}px; color: ${descColor}; text-align: ${getVal('tuneDescAlign')}; line-height: 1.4;">
+                <div class="absolute" style="top: ${getVal('tuneDescY')}%; left: ${getVal('tuneDescX')}%; width: ${getVal('tuneDescWidth')}%; transform: translate(-50%, 0) rotate(${getVal('tuneDescRotate')}deg); font-size: ${getVal('tuneDescSize')}px; color: ${descColor}; text-align: ${getVal('tuneDescAlign')}; line-height: ${getVal('tuneDescLineHeight')};">
                     ${desc}
                 </div>
                 
@@ -501,7 +504,7 @@ function setLabelTheme(theme) {
                 <h1 style="font-size: ${getVal('tuneTitleSize')}px; color: ${getVal('tuneTitleColor')}; font-family: '${getVal('tuneTitleFont')}', sans-serif;" class="font-bold uppercase tracking-widest leading-none drop-shadow-lg">${tData.l1}</h1>
             </div>
             <div class="absolute z-10" style="top: ${getVal('tuneDescY')}%; left: ${getVal('tuneDescX')}%; width: ${getVal('tuneDescWidth')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneDescRotate')}deg); text-align: ${getVal('tuneDescAlign')};">
-                <p style="font-size: ${getVal('tuneDescSize')}px; color: ${descColor}; font-family: '${getVal('tuneDescFont')}', serif;" class="italic leading-tight drop-shadow-md">${desc}</p>
+                <p style="font-size: ${getVal('tuneDescSize')}px; line-height: ${getVal('tuneDescLineHeight')}; color: ${descColor}; font-family: '${getVal('tuneDescFont')}', serif;" class="italic leading-tight drop-shadow-md">${desc}</p>
             </div>
             <div class="absolute z-10" style="left: ${getVal('tuneSpecsX')}%; top: ${getVal('tuneSpecsY')}%; transform: translate(-50%, -50%) rotate(${getVal('tuneSpecsRotate')}deg);">
                 <div style="font-size: ${getVal('tuneSpecsSize')}px; color: ${specsColor};">
@@ -1178,7 +1181,7 @@ window.saveLabelToBrew = async function() {
             tuneDescX: getVal('tuneDescX'), tuneDescY: getVal('tuneDescY'),
             tuneDescWidth: getVal('tuneDescWidth'), tuneDescRotate: getVal('tuneDescRotate'),
             tuneDescSize: getVal('tuneDescSize'), tuneDescColor: getVal('tuneDescColor'),
-            tuneDescAlign: getVal('tuneDescAlign'),
+            tuneDescAlign: getVal('tuneDescAlign'), tuneDescLineHeight: getVal('tuneDescLineHeight'),
             
             tuneArtZoom: getVal('tuneArtZoom'), tuneArtX: getVal('tuneArtX'),
             tuneArtY: getVal('tuneArtY'), tuneArtOpacity: getVal('tuneArtOpacity'),

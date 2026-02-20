@@ -141,7 +141,6 @@
                      class="h-14 w-auto object-contain drop-shadow-md dark:brightness-90" 
                      alt="Mea(n)dery Brewbuddy">
             </div>
-            <p class="text-[9px] uppercase tracking-[0.2em] text-primary font-bold mt-1 opacity-80">AI Brew Assistant</p>
         </header>
 
 <div id="dashboard-main-view">
@@ -1209,6 +1208,14 @@
     <div class="space-y-1">
         <label class="flex justify-between text-[9px]">Width <span id="disp-desc-width">60%</span></label>
         <input type="range" id="tuneDescWidth" min="10" max="100" value="60" class="w-full h-1 bg-outline-variant rounded-lg appearance-none cursor-pointer accent-primary">
+    </div>
+    <div class="space-y-1">
+        <label class="flex justify-between text-[9px]">Size <span id="disp-desc-size">10px</span></label>
+        <input type="range" id="tuneDescSize" min="4" max="40" step="0.5" value="10" class="w-full h-1 bg-outline-variant rounded-lg appearance-none cursor-pointer accent-primary">
+    </div>
+    <div class="space-y-1">
+        <label class="flex justify-between text-[9px]">Line Height <span id="disp-desc-line-height">1.4</span></label>
+        <input type="range" id="tuneDescLineHeight" min="0.8" max="2.5" step="0.1" value="1.4" class="w-full h-1 bg-outline-variant rounded-lg appearance-none cursor-pointer accent-primary">
     </div>
 </div>
                         </div>

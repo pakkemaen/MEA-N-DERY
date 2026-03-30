@@ -1,3 +1,8 @@
+// ============================================================================
+// tools.js
+// MEANDERY V2.5 - CALCULATORS & UTILITIES (TOSNA 3.0 & HALL EQUATION)
+// ============================================================================
+
 import { db } from './firebase-init.js';
 import { state } from './state.js';
 import { showToast, performApiCall, getLoaderHtml, switchMainView, switchSubView } from './utils.js';
@@ -1097,31 +1102,75 @@ const BUILT_IN_WATER_PROFILES = {
 
 // --- CALCULATORS ---
 
-function calculateABV() {
-    const og = parseFloat(document.getElementById('og').value);
-    const fg = parseFloat(document.getElementById('fg').value);
+window.calculateABV = function() {
+    const ogInput = document.getElementById('og')?.value.replace(',', '.') || "";
+    const fgInput = document.getElementById('fg')?.value.replace(',', '.') || "";
+    const og = parseFloat(ogInput);
+    const fg = parseFloat(fgInput);
     const resultDiv = document.getElementById('abvResult');
-    if (og && fg && og > fg) {
-        const abv = (og - fg) * 131.25;
-        resultDiv.textContent = `ABV: ${abv.toFixed(2)}%`;
-    } else {
-        resultDiv.textContent = 'Invalid Input';
-    }
-}
 
-function correctHydrometer() {
-    const sg = parseFloat(document.getElementById('sgReading').value);
-    const t = parseFloat(document.getElementById('tempReading').value);
-    const c = parseFloat(document.getElementById('calTemp').value);
+    if (isNaN(og) || isNaN(fg)) {
+        window.showToast("Vul geldige getallen in voor OG en FG.", "error");
+        if (resultDiv) {
+            resultDiv.textContent = 'Invalid Input';
+            resultDiv.classList.add('text-error');
+        }
+        return;
+    }
+
+    // 1. Hall-veiligheidscheck & Visuele feedback (v2.4)
+    if (og >= 1.775) {
+        window.showToast(`Kritieke fout: OG (${og}) overschrijdt fysieke limiet.`, "error");
+        window.logSystemError(`Onrealistische OG invoer in Calculator: ${og}`, 'Calculator: ABV', 'WARNING');
+        
+        if (resultDiv) {
+            resultDiv.textContent = 'LIMIT ERR';
+            resultDiv.classList.add('text-error');
+        }
+        // Data integriteit fallback
+        if (window.tempState) window.tempState.lastCalculatedABV = 0;
+        return;
+    }
+
+    if (og > fg) {
+        // Reset visuele stijl bij geldige berekening
+        if (resultDiv) resultDiv.classList.remove('text-error');
+
+        // Hall Equation (Scientific Standard v2.4)
+        const abw = (76.08 * (og - fg)) / (1.775 - og);
+        const abv = abw / 0.794;
+        
+        if (resultDiv) resultDiv.textContent = `ABV: ${abv.toFixed(2)}%`;
+        if (window.tempState) window.tempState.lastCalculatedABV = abv;
+    } else {
+        window.showToast("FG kan niet hoger zijn dan de OG.", "error");
+        if (resultDiv) {
+            resultDiv.textContent = 'Invalid Input';
+            resultDiv.classList.add('text-error');
+        }
+    }
+};
+
+window.correctHydrometer = function() {
+    const sgInput = document.getElementById('sgReading')?.value.replace(',', '.') || "";
+    const tInput = document.getElementById('tempReading')?.value.replace(',', '.') || "";
+    const cInput = document.getElementById('calTemp')?.value.replace(',', '.') || "";
+    
+    const sg = parseFloat(sgInput);
+    const t = parseFloat(tInput);
+    const c = parseFloat(cInput);
     const resultDiv = document.getElementById('sgResult');
 
     if (isNaN(sg) || isNaN(t) || isNaN(c)) {
+        window.showToast("Vul alle velden in voor temperatuurcorrectie.", "error");
+        window.logSystemError("Hydrometer: Missing values", 'Calculator: Hydrometer', 'ERROR');
         resultDiv.textContent = 'Invalid Input';
         return;
     }
+
     const correctedSg = sg * ((1.00130346 - 0.000134722124 * t + 0.00000204052596 * t**2 - 0.00000000232820948 * t**3) / (1.00130346 - 0.000134722124 * c + 0.00000204052596 * c**2 - 0.00000000232820948 * c**3));
     resultDiv.textContent = `Corrected: ${correctedSg.toFixed(3)}`;
-}
+};
 
 function calculatePrimingSugar() {
     const vol = parseFloat(document.getElementById('carbVol').value);
@@ -1184,14 +1233,22 @@ function calculateDilution() {
     resultDiv.textContent = `Add ${waterToAdd.toFixed(2)}L water`;
 }
 
-function calculateTOSNA() {
-    const og = parseFloat(document.getElementById('tosna_og').value);
-    const vol = parseFloat(document.getElementById('tosna_vol').value);
-    const yeastNeed = document.getElementById('tosna_yeast').value;
+window.calculateTOSNA = function() {
+    const ogInput = document.getElementById('tosna_og')?.value.replace(',', '.') || "";
+    const volInput = document.getElementById('tosna_vol')?.value.replace(',', '.') || "";
+    const og = parseFloat(ogInput);
+    const vol = parseFloat(volInput);
+    const yeastNeed = document.getElementById('tosna_yeast')?.value;
     const resultDiv = document.getElementById('tosnaResult');
 
-    if (isNaN(og) || isNaN(vol)) { resultDiv.innerHTML = `<p class="text-red-500">Invalid Input</p>`; return; }
+    if (isNaN(og) || isNaN(vol) || vol <= 0) { 
+        window.showToast("Ongeldige invoer voor TOSNA berekening.", "error");
+        window.logSystemError("TOSNA: Invalid Input", 'Calculator: TOSNA', 'ERROR');
+        resultDiv.innerHTML = `<p class="text-red-500">Invalid Input</p>`; 
+        return; 
+    }
 
+    // TOSNA 3.0 Logica
     const brix = (og * 1000 - 1000) / 4;
     let targetYAN = (yeastNeed === 'low') ? 20 * brix : (yeastNeed === 'medium' ? 25 * brix : 35 * brix);
     
@@ -1199,20 +1256,35 @@ function calculateTOSNA() {
     const totalFermaidO = (targetYAN / 40) * vol;
     const addition = totalFermaidO / 4;
 
+    // Pitch Rate & Go-Ferm (3.0 Standaard)
+    const pitchRate = (og < 1.100) ? 1.0 : 1.5; // gram per gallon (ca. 3.785L)
+    const yeastGrams = (vol / 3.785) * pitchRate;
+    const goFermGrams = yeastGrams * 1.25;
+
     resultDiv.innerHTML = `
-        <h4 class="font-bold text-lg">TOSNA 2.0 Schedule</h4>
-        <p><strong>Total Fermaid-O:</strong> ${totalFermaidO.toFixed(2)}g</p>
-        <ul class="list-disc pl-5 mt-2 text-sm">
-            <li><strong>24h / 48h / 72h:</strong> Add ${addition.toFixed(2)}g each time.</li>
-            <li><strong>1/3 Break (Day 7):</strong> Add final ${addition.toFixed(2)}g.</li>
+        <h4 class="font-bold text-lg border-b border-app-brand/20 mb-2 pb-1">TOSNA 3.0 Protocol</h4>
+        <div class="grid grid-cols-2 gap-2 mb-3 text-sm">
+            <div class="bg-app-tertiary p-2 rounded">
+                <span class="block text-[10px] uppercase opacity-60">Dry Yeast</span>
+                <span class="font-bold">${yeastGrams.toFixed(1)}g</span>
+            </div>
+            <div class="bg-app-tertiary p-2 rounded">
+                <span class="block text-[10px] uppercase opacity-60">Go-Ferm Sterk</span>
+                <span class="font-bold">${goFermGrams.toFixed(1)}g</span>
+            </div>
+        </div>
+        <p class="text-sm"><strong>Total Fermaid-O:</strong> ${totalFermaidO.toFixed(2)}g</p>
+        <ul class="list-disc pl-5 mt-2 text-xs space-y-1">
+            <li><strong>24h / 48h / 72h:</strong> Voeg telkens ${addition.toFixed(2)}g toe.</li>
+            <li><strong>1/3 Sugar Break:</strong> Voeg laatste ${addition.toFixed(2)}g toe.</li>
         </ul>
     `;
-}
+};
 
 // --- REFRACTOMETER CORRECTIE (Brix -> SG) ---
 function calculateRefractometerCorrection() {
-    const ob = parseFloat(document.getElementById('refract_ob').value); // Original Brix
-    const cb = parseFloat(document.getElementById('refract_cb').value); // Current Brix
+    const ob = parseFloat(document.getElementById('refract_ob').value);
+    const cb = parseFloat(document.getElementById('refract_cb').value);
     const resultDiv = document.getElementById('refractResult');
 
     if (isNaN(ob) || isNaN(cb)) {
@@ -1220,31 +1292,24 @@ function calculateRefractometerCorrection() {
         return;
     }
 
-    // Wort Correction Factor (standaard is vaak 1.04, maar voor honing/fruit is 1.0 vaak prima, we gebruiken 1.0 voor de eenvoud of de Sean Terrill formule die geen WCF nodig heeft)
-    // We gebruiken hier de Petr Novotny formule (standaard in veel homebrew apps):
-    
-    // Stap 1: Bereken SG
-    const sg = 1.001843 
-             - 0.002318474 * ob 
-             - 0.000007775 * (ob * ob) 
-             - 0.0340054 * cb 
-             + 0.00564 * (cb * cb) 
-             + 0.000283 * (ob * cb);
-
-    // Stap 2: Bereken ABV (Standaard formule op basis van SG)
-    // We moeten eerst de Original Gravity weten vanuit de Original Brix
+    const sg = 1.001843 - 0.002318474 * ob - 0.000007775 * (ob * ob) - 0.0340054 * cb + 0.00564 * (cb * cb) + 0.000283 * (ob * cb);
     const originalSG = 1 + (ob / (258.6 - ((ob / 258.2) * 227.1)));
-    const abv = (originalSG - sg) * 131.25;
+
+    let abv = 0;
+    if (originalSG > sg) {
+        const abw = (76.08 * (originalSG - sg)) / (1.775 - originalSG);
+        abv = abw / 0.794;
+    }
 
     resultDiv.innerHTML = `
         <div class="grid grid-cols-2 gap-4">
             <div>
                 <p class="text-xs text-app-secondary uppercase">True Gravity</p>
-                <p class="text-2xl font-bold text-purple-700 dark:text-purple-300">${sg.toFixed(3)}</p>
+                <p class="text-2xl font-bold text-primary">${sg.toFixed(3)}</p>
             </div>
             <div>
                 <p class="text-xs text-app-secondary uppercase">Current ABV</p>
-                <p class="text-2xl font-bold text-purple-700 dark:text-purple-300">${abv.toFixed(1)}%</p>
+                <p class="text-2xl font-bold text-tertiary">${abv.toFixed(1)}%</p>
             </div>
         </div>
     `;

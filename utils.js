@@ -1,3 +1,8 @@
+// ============================================================================
+// utils.js
+// MEANDERY V2.5
+// ============================================================================
+
 import { state } from './state.js';
 // Oplossing voor 'db is not defined': importeer de instanties en functies direct uit je init file
 import { db, addDoc, collection } from './firebase-init.js';

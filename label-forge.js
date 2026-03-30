@@ -1,3 +1,8 @@
+// ============================================================================
+// label-forge.js
+// MEANDERY V2.5 - ...
+// ============================================================================
+
 import { db, storage } from './firebase-init.js';
 import { state, tempState } from './state.js';
 import { showToast, performApiCall } from './utils.js';

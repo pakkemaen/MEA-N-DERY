@@ -1,5 +1,6 @@
 // ============================================================================
-// app.js - THE MAIN ORCHESTRATOR (ROBUST VERSION)
+// app.js - 
+// MEANDERY V2.5 - THE MAIN ORCHESTRATOR (ROBUST VERSION)
 // ============================================================================
 
 // 1. MODULE IMPORTS (MOETEN BOVENAAN STAAN)

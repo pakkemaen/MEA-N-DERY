@@ -1,6 +1,6 @@
 // ============================================================================
 // brewing.js
-// MEANDERY V2.4 - MODULAR BREWING ENGINE
+// MEANDERY V2.5 - MODULAR BREWING ENGINE (HALL EQUATION CONSOLIDATED)
 // ============================================================================
 
 // 1. IMPORTS
@@ -1923,13 +1923,12 @@ function getBrewLogHtml(logData, idSuffix) {
     const data = logData || {};
     const fermLog = data.fermentationLog || [];
 
-    // CSS Definitions: Iets hoger (!h-10) voor makkelijker tikken op mobiel
+    // CSS Definitions: ABV veld nu met pointer-events-none om verwarring te voorkomen
     const inputBase = "bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary !p-2 !h-10 w-full";
     const labelBase = "text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block ml-1";
 
     const fermRows = fermLog.map(row => `
     <div class="log-entry bg-surface-container-low p-3 rounded-xl border border-outline-variant/30 mb-3 shadow-sm animate-fade-in relative group">
-        
         <div class="flex justify-between items-end mb-3">
             <div class="flex-grow mr-4">
                 <label class="${labelBase}">Date</label>
@@ -1939,7 +1938,6 @@ function getBrewLogHtml(logData, idSuffix) {
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             </button>
         </div>
-
         <div class="grid grid-cols-2 gap-3 mb-3">
             <div>
                 <label class="${labelBase}">Temp (°C)</label>
@@ -1950,12 +1948,10 @@ function getBrewLogHtml(logData, idSuffix) {
                 <input type="number" step="0.001" value="${row.sg || ''}" class="${inputBase} text-center font-mono font-bold text-primary sg-input" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')">
             </div>
         </div>
-        
         <div>
-             <input type="text" value="${row.notes || ''}" class="${inputBase} italic text-on-surface-variant" placeholder="Add notes (e.g. bubbling stopped)...">
+             <input type="text" value="${row.notes || ''}" class="${inputBase} italic text-on-surface-variant" placeholder="Add notes...">
         </div>
-    </div>
-    `).join('');
+    </div>`).join('');
 
     return `
     <div class="brew-log-section mt-6 bg-surface-container p-4 rounded-xl border border-outline-variant/30 shadow-sm" data-id="${idSuffix}">
@@ -1963,7 +1959,6 @@ function getBrewLogHtml(logData, idSuffix) {
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
             Brew Log (Actuals)
         </h3>
-        
         <div class="grid grid-cols-2 gap-3 mb-6 p-3 bg-surface-variant/20 rounded-lg border border-outline-variant/20">
             <div>
                 <label class="${labelBase}">OG (Start)</label>
@@ -1975,33 +1970,30 @@ function getBrewLogHtml(logData, idSuffix) {
             </div>
             <div>
                 <label class="${labelBase}">Real ABV</label>
-                <input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}" class="bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary w-full p-2 font-bold text-tertiary" placeholder="0.0%" readonly>
+                <input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}" class="bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary w-full p-2 font-bold text-tertiary pointer-events-none" placeholder="0.00%" readonly>
             </div>
             <div>
                 <label class="${labelBase}">Brew Date</label>
                 <input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}" class="bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary w-full p-2">
             </div>
         </div>
-
         <div class="mb-4">
             <div id="fermentationContainer-${idSuffix}" class="space-y-3">
                 ${fermRows}
             </div>
-            
             <button onclick="window.addLogLine('${idSuffix}')" class="mt-4 w-full text-xs font-bold text-primary hover:bg-primary-container/50 py-3 rounded-xl transition-colors border border-dashed border-primary/30 uppercase tracking-wider flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 Add Measurement
             </button>
         </div>
-
         <div class="space-y-4 pt-4 border-t border-outline-variant/20">
             <div>
                 <label class="${labelBase}">Process Notes</label>
-                <textarea id="agingNotes-${idSuffix}" rows="2" class="w-full bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary p-3" placeholder="Racking, stabilization, oak additions...">${data.agingNotes || ''}</textarea>
+                <textarea id="agingNotes-${idSuffix}" rows="2" class="w-full bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary p-3" placeholder="Notes...">${data.agingNotes || ''}</textarea>
             </div>
             <div>
                 <label class="${labelBase}">Tasting Notes</label>
-                <textarea id="tastingNotes-${idSuffix}" rows="2" class="w-full bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary p-3" placeholder="Aroma, mouthfeel, sweetness, faults...">${data.tastingNotes || ''}</textarea>
+                <textarea id="tastingNotes-${idSuffix}" rows="2" class="w-full bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary p-3" placeholder="Aroma, mouthfeel...">${data.tastingNotes || ''}</textarea>
             </div>
         </div>
     </div>`;
@@ -2642,11 +2634,43 @@ window.printEmptyLog = function() {
 }
 
 window.autoCalculateABV = function(idSuffix) {
-    const og = parseFloat(document.getElementById(`actualOG-${idSuffix}`)?.value);
-    const fg = parseFloat(document.getElementById(`actualFG-${idSuffix}`)?.value);
+    const ogInput = document.getElementById(`actualOG-${idSuffix}`)?.value.replace(',', '.') || "";
+    const fgInput = document.getElementById(`actualFG-${idSuffix}`)?.value.replace(',', '.') || "";
+    const og = parseFloat(ogInput);
+    const fg = parseFloat(fgInput);
     const abvField = document.getElementById(`finalABV-${idSuffix}`);
-    if(!isNaN(og) && !isNaN(fg) && abvField) {
-        abvField.value = ((og - fg) * 131.25).toFixed(1) + "%";
+
+    if (!isNaN(og) && !isNaN(fg) && abvField) {
+        
+        // 1. Hall-veiligheidscheck & Contextuele CRITICAL Logging (v2.4)
+        if (og >= 1.775) {
+            window.showToast(`Kritieke fout: Fysieke limiet overschreden (OG: ${og})`, "error");
+            
+            // Contextuele logging met Batch-ID voor diepere audit
+            window.logSystemError(`Fysieke limiet (OG: ${og}) overschreden in batch-ID: ${idSuffix}`, 'Auto-Log: ABV', 'CRITICAL');
+            
+            // Visuele feedback & Data integriteit
+            abvField.value = "LIMIT ERR";
+            abvField.classList.add('text-error');
+            if (window.tempState) window.tempState.lastCalculatedABV = 0;
+            return;
+        } else {
+            // Herstel visuele status
+            abvField.classList.remove('text-error');
+        }
+        
+        if (og > fg) {
+            // Hall Equation (Scientific Standard v2.4)
+            const abw = (76.08 * (og - fg)) / (1.775 - og);
+            const abv = abw / 0.794;
+            
+            // UI Update conform tools.js
+            abvField.value = abv.toFixed(2) + "%";
+            if (window.tempState) window.tempState.lastCalculatedABV = abv;
+        } else {
+            abvField.value = "0.00%";
+            if (window.tempState) window.tempState.lastCalculatedABV = 0;
+        }
     }
 };
 
@@ -2817,9 +2841,12 @@ window.recalcTotalABV = function(idSuffix) {
     
     // Check of we SG-based ABV moeten gebruiken
     const ogVal = parseFloat(document.getElementById(`actualOG-${idSuffix}`).value.replace(',', '.'));
-    const fgVal = parseFloat(document.getElementById(`actualFG-${idSuffix}`).value.replace(',', '.'));
-    if (!isNaN(ogVal) && !isNaN(fgVal)) {
-        baseABV = (ogVal - fgVal) * 131.25;
+           const fgVal = parseFloat(document.getElementById(`actualFG-${idSuffix}`).value.replace(',', '.'));
+    
+    if (!isNaN(ogVal) && !isNaN(fgVal) && ogVal > fgVal) {
+        // Updated to Hall Equation
+        const abw = (76.08 * (ogVal - fgVal)) / (1.775 - ogVal);
+        baseABV = abw / 0.794;
     }
 
     // --- DE REKENSOM ---

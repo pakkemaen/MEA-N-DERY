@@ -1,3 +1,8 @@
+// ============================================================================
+// inventroy.js
+// MEANDERY V2.5 - ...
+// ============================================================================
+
 import { db } from './firebase-init.js';
 import { state } from './state.js'; 
 // LET OP: Omdat 'state' dynamisch is, is het beter om overal 'state.userId' etc. te gebruiken.

@@ -1,14 +1,16 @@
 // ============================================================================
 // label-forge.js
-// MEANDERY V2.5 - ...
+// MEANDERY V2.6
 // ============================================================================
 
 import { db, storage } from './firebase-init.js';
 import { state, tempState } from './state.js';
-import { showToast, performApiCall } from './utils.js';
+import { showToast, performApiCall, logSystemError } from './utils.js';
 import { parseIngredientsFromMarkdown } from './brewing.js'; 
-import { doc, getDoc, setDoc, updateDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+import { 
+    doc, getDoc, setDoc, updateDoc, collection, addDoc, 
+    ref, uploadString, getDownloadURL, deleteObject 
+} from './firebase-init.js';
 
 // --- LABEL GENERATOR ENGINE V2.1 (Full Suite) ---
 // 1. CONFIGURATIE (Built-in + User)
@@ -17,25 +19,22 @@ const builtInLabelFormats = {
     'herma_4453': { name: 'Herma 4453 (105x148mm)', width: 105, height: 148, cols: 2, rows: 2, marginTop: 0, marginLeft: 0, gapX: 0, gapY: 0 },
     'avery_l7163': { name: 'Avery L7163 (99.1x38.1mm)', width: 99.1, height: 38.1, cols: 2, rows: 7, marginTop: 15, marginLeft: 4.6, gapX: 2.5, gapY: 0 }
 };
-let userLabelFormats = {}; // Wordt gevuld vanuit Firestore
 
 // 2. INITIALISATIE
-// --- NIEUWE FUNCTIE: VUL DE FONT DROPDOWNS (ALLEEN SETTINGS) ---
 function populateLabelFontsDropdowns() {
-    // 1. Definieer de IDs van de 4 dropdowns
     const ids = ['tuneTitleFont', 'tuneStyleFont', 'tuneSpecsFont', 'tuneDescFont'];
     
-    // 2. Haal de eigen fonts op (of lege lijst als nog niet geladen)
-    const userFonts = (typeof labelAssets !== 'undefined' && labelAssets.fonts) ? labelAssets.fonts : [];
+    // CENTRALISATIE: Rechtstreekse fallback en initialisatie op de centrale applicatiestate
+    if (!state.labelAssets) state.labelAssets = { styles: [], fonts: [] };
+    const userFonts = state.labelAssets.fonts || [];
 
     ids.forEach(id => {
         const select = document.getElementById(id);
         if (!select) return;
         
-        const currentVal = select.value; // Onthoud keuze
-        select.innerHTML = ''; // Maak leeg
+        const currentVal = select.value; 
+        select.innerHTML = ''; 
         
-        // Check of er fonts zijn
         if (userFonts.length === 0) {
             const opt = document.createElement('option');
             opt.text = "-- No Fonts in Settings --";
@@ -43,17 +42,14 @@ function populateLabelFontsDropdowns() {
             return;
         }
 
-        // Voeg alleen de fonts uit Settings toe
         userFonts.forEach(f => {
             const opt = document.createElement('option');
             opt.value = f.name;
             opt.textContent = f.name;
-            opt.style.fontFamily = f.name; // Preview in de lijst
+            opt.style.fontFamily = f.name; 
             select.appendChild(opt);
         });
         
-        // Herstel de gekozen waarde (als die nog in de lijst staat)
-        // Anders pakken we automatisch de eerste uit de lijst
         if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
             select.value = currentVal;
         } else if (select.options.length > 0) {
@@ -62,27 +58,24 @@ function populateLabelFontsDropdowns() {
     });
 }
 
-// VUL DE ART STYLE DROPDOWN IN LABEL FORGE ---
 function populateLabelStylesDropdown() {
     const select = document.getElementById('labelArtStyle');
     if (!select) return;
 
-    // Bewaar huidige keuze
     const currentVal = select.value;
     select.innerHTML = '<option value="">-- Use Default Style --</option>';
 
-    // Haal stijlen op uit het geheugen (geladen in loadLabelAssets)
-    const styles = (typeof labelAssets !== 'undefined' && labelAssets.styles) ? labelAssets.styles : [];
+    // CENTRALISATIE: Lokale variabele gesaneerd naar state.labelAssets.styles
+    if (!state.labelAssets) state.labelAssets = { styles: [], fonts: [] };
+    const styles = state.labelAssets.styles || [];
 
     styles.forEach(style => {
         const opt = document.createElement('option');
-        // We slaan de prompt tekst op in de value, zodat we die direct kunnen gebruiken
         opt.value = style.prompt; 
         opt.textContent = style.name;
         select.appendChild(opt);
     });
 
-    // Herstel keuze indien mogelijk
     if (currentVal) select.value = currentVal;
 }
 
@@ -213,12 +206,13 @@ async function loadUserLabelFormats() {
     try {
         const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'labelFormats');
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            userLabelFormats = docSnap.data();
-        }
-        populateLabelPaperDropdown(); // Refresh de lijst na laden
+        
+        // CENTRALISATIE: Firestore-payload synchroniseren naar de centrale state
+        state.userLabelFormats = docSnap.exists() ? (docSnap.data() || {}) : {};
+        populateLabelPaperDropdown(); 
     } catch (e) {
-        console.error("Error loading label formats:", e);
+        window.logSystemError(e, 'label-forge.js: loadUserLabelFormats', 'ERROR');
+        window.showToast("Fout bij het inladen van aangepaste labelformaten.", "error");
     }
 }
 
@@ -227,18 +221,15 @@ function populateLabelPaperDropdown() {
     const select = document.getElementById('labelPaper');
     if (!select) return;
     
-    // Bewaar huidige keuze indien mogelijk
     const currentVal = select.value;
     select.innerHTML = '';
     
-    // 1. HARDE DATA (Fallback) - Dit garandeert dat de lijst nooit leeg is
     const standardFormats = {
         'avery_l7165': { name: 'Avery L7165 (99.1x67.7mm)' },
         'herma_4453': { name: 'Herma 4453 (105x148mm)' },
         'avery_l7163': { name: 'Avery L7163 (99.1x38.1mm)' }
     };
 
-    // Voeg Standaard Groep toe
     const groupBuiltIn = document.createElement('optgroup');
     groupBuiltIn.label = "Standard Formats";
     
@@ -250,35 +241,36 @@ function populateLabelPaperDropdown() {
     });
     select.appendChild(groupBuiltIn);
 
-    // 2. Custom Formaten (uit variabele of database)
-    if (typeof userLabelFormats !== 'undefined' && Object.keys(userLabelFormats).length > 0) {
+    // CENTRALISATIE: Lees custom formaten rechtstreeks uit state.userLabelFormats
+    if (!state.userLabelFormats) state.userLabelFormats = {};
+    const customKeys = Object.keys(state.userLabelFormats);
+
+    if (customKeys.length > 0) {
         const groupUser = document.createElement('optgroup');
         groupUser.label = "My Custom Formats";
-        Object.keys(userLabelFormats).forEach(key => {
+        customKeys.forEach(key => {
             const opt = document.createElement('option');
             opt.value = key; 
-            opt.text = userLabelFormats[key].name;
+            // HERSTEL ACCESSOR: .at(key) vervangen door correcte object-lookup via associatieve array
+            opt.text = state.userLabelFormats[key] ? state.userLabelFormats[key].name : 'Unknown Format';
             groupUser.appendChild(opt);
         });
         select.appendChild(groupUser);
     }
 
-    // Toggle delete knop functionaliteit
     select.onchange = () => {
-        const isCustom = typeof userLabelFormats !== 'undefined' && userLabelFormats.hasOwnProperty(select.value);
+        const isCustom = state.userLabelFormats.hasOwnProperty(select.value);
         const delBtn = document.getElementById('deleteLabelFormatBtn');
         if(delBtn) delBtn.classList.toggle('hidden', !isCustom);
         if(typeof updateLabelPreviewDimensions === 'function') updateLabelPreviewDimensions();
     };
 
-    // Zet de waarde terug (of default)
-    if (currentVal && (standardFormats[currentVal] || (typeof userLabelFormats !== 'undefined' && userLabelFormats[currentVal]))) {
+    if (currentVal && (standardFormats[currentVal] || state.userLabelFormats[currentVal])) {
         select.value = currentVal;
     } else {
         select.value = 'avery_l7165';
     }
     
-    // Trigger de dimensie update direct
     if(typeof updateLabelPreviewDimensions === 'function') updateLabelPreviewDimensions();
 }
 
@@ -288,13 +280,12 @@ function updateLabelPreviewDimensions() {
     if (!select) return;
     
     const key = select.value;
-    // Zoek het formaat in de standaard lijst OF de eigen lijst
-    const fmt = builtInLabelFormats[key] || userLabelFormats[key];
+    if (!state.userLabelFormats) state.userLabelFormats = {};
+    const fmt = builtInLabelFormats[key] || state.userLabelFormats[key];
     
     if (fmt) {
         const container = document.getElementById('label-preview-container');
         if (container) {
-            // Pas de breedte en hoogte aan (in millimeters)
             container.style.width = fmt.width + 'mm';
             container.style.height = fmt.height + 'mm';
         }
@@ -357,7 +348,6 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
         setCheck('labelShowYeast', s.showYeast); setCheck('labelShowHoney', s.showHoney);
         setCheck('labelShowDetails', s.showDetails);
         
-        // Update de tekst spans voor rendering
         setText('displayLabelYeast', s.yeastName || generatedYeast);
         setText('displayLabelHoney', s.honeyName || generatedHoney);
 
@@ -371,10 +361,12 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
 
         if (s.imageSrc) { tempState.currentLabelImageSrc = s.imageSrc; }
     } else {
-        setVal('labelTitle', brew.recipeName.split(':')[0].trim());
+        // CORRECTIE: Eerst de nul-index isoleren via .at(0), daarna pas .trim() aanroepen om runtime type-errors te elimineren
+        const titleFallback = (brew.recipeName || 'Untitled').split(':').at(0).trim();
+        setVal('labelTitle', titleFallback);
         setVal('labelAbv', brew.logData?.finalABV?.replace('%','') || brew.logData?.targetABV?.replace('%','') || '');
         setVal('labelFg', brew.logData?.actualFG || brew.logData?.targetFG || '');
-        setVal('labelVol', '330'); setVal('labelDate', brew.logData?.brewDate || new Date().toISOString().split('T')[0]);
+        setVal('labelVol', '330'); setVal('labelDate', brew.logData?.brewDate || new Date().toISOString().split('T').at(0));
         
         setText('displayLabelYeast', generatedYeast);
         setText('displayLabelHoney', generatedHoney);
@@ -386,6 +378,9 @@ function loadLabelFromBrew(eOrId, forceTheme = null) {
     }
     setLabelTheme(theme);
     updateArtButtons();
+    
+    // UI FLOW OPTIMALISATIE
+    window.autoFitLabelText();
 }
 
 function autoScaleLabelPreview() {
@@ -597,78 +592,121 @@ async function autoDetectLabelFormat() {
 }
 
 // Opslaan Nieuw Formaat
-window.saveCustomLabelFormat = async function(e) {
-    e.preventDefault();
-    if (!state.userId) return;
-    
-    const name = document.getElementById('lf-name').value;
-    const id = 'custom_' + Date.now();
-
-    const newFormat = {
-        name: name,
-        width: parseFloat(document.getElementById('lf-width').value),
-        height: parseFloat(document.getElementById('lf-height').value),
-        cols: parseInt(document.getElementById('lf-cols').value),
-        rows: parseInt(document.getElementById('lf-rows').value),
-        marginTop: parseFloat(document.getElementById('lf-marginTop').value) || 0,
-        marginLeft: parseFloat(document.getElementById('lf-marginLeft').value) || 0,
-        gapX: parseFloat(document.getElementById('lf-gapX').value) || 0,
-        gapY: parseFloat(document.getElementById('lf-gapY').value) || 0,
-    };
-
-    userLabelFormats[id] = newFormat;
-
+async function saveCustomLabelFormat() {
     try {
-        await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'labelFormats'), userLabelFormats);
+        const idInput = document.getElementById('lf-name'); 
+        const nameInput = document.getElementById('lf-name');
+        const widthInput = document.getElementById('lf-width');
+        const heightInput = document.getElementById('lf-height');
+        const colsInput = document.getElementById('lf-cols');
+        const rowsInput = document.getElementById('lf-rows');
+        const marginTopInput = document.getElementById('lf-marginTop');
+        const marginLeftInput = document.getElementById('lf-marginLeft');
+        const gapXInput = document.getElementById('lf-gapX');
+        const gapYInput = document.getElementById('lf-gapY');
+
+        if (!idInput || !widthInput || !heightInput || !colsInput || !rowsInput) {
+            window.showToast("Formulerelementen (lf-specifieke IDs) niet gevonden in de DOM.", "error");
+            return;
+        }
+
+        const formatId = idInput.value.trim().toLowerCase().replace(/\s+/g, '_');
+        const formatName = nameInput.value.trim();
+
+        if (!formatId || !formatName) {
+            window.showToast("Vul een geldige naam of code in om het formaat te identificeren.", "error");
+            return;
+        }
+
+        const sanitizeAndParse = (inputEl, isInt = false) => {
+            if (!inputEl) return 0;
+            const cleanStr = String(inputEl.value).replace(/,/g, '.');
+            return isInt ? (parseInt(cleanStr, 10) || 0) : (parseFloat(cleanStr) || 0);
+        };
+
+        const width = sanitizeAndParse(widthInput);
+        const height = sanitizeAndParse(heightInput);
+        const cols = sanitizeAndParse(colsInput, true);
+        const rows = sanitizeAndParse(rowsInput, true);
+        const marginTop = sanitizeAndParse(marginTopInput);
+        const marginLeft = sanitizeAndParse(marginLeftInput);
+        const gapX = sanitizeAndParse(gapXInput);
+        const gapY = sanitizeAndParse(gapYInput);
+
+        if (width <= 0 || height <= 0 || cols <= 0 || rows <= 0) {
+            window.showToast("Afmetingen, kolommen en rijen moeten groter zijn dan 0.", "error");
+            return;
+        }
+
+        const customFormatData = {
+            name: formatName,
+            width: width,
+            height: height,
+            cols: cols,
+            rows: rows,
+            marginTop: marginTop,
+            marginLeft: marginLeft,
+            gapX: gapX,
+            gapY: gapY
+        };
+
+        if (!state.userId) {
+            window.showToast("Gebruiker is niet ingelogd. Kan formaat niet opslaan.", "error");
+            return;
+        }
+
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'labelFormats');
+        const fieldPath = `${formatId}`;
+        
+        await updateDoc(docRef, { [fieldPath]: customFormatData })
+            .catch(async () => {
+                await setDoc(docRef, { [formatId]: customFormatData }, { merge: true });
+            });
+
+        // CENTRALISATIE: Rechtstreeks de globale applicatiestate muteren
+        if (!state.userLabelFormats) state.userLabelFormats = {};
+        state.userLabelFormats[formatId] = customFormatData;
         populateLabelPaperDropdown();
-        document.getElementById('labelPaper').value = id;
-        updateLabelPreviewDimensions();
+
+        window.showToast(`Aangepast formaat '${formatName}' succesvol gesynchroniseerd!`, "success");
         document.getElementById('label-format-modal').classList.add('hidden');
-        showToast("Format saved!", "success");
-    } catch (e) { showToast("Save error.", "error"); }
+
+    } catch (error) {
+        window.logSystemError(error, 'LabelForge: Save Format', 'ERROR');
+        window.showToast("Fout bij het opslaan van het aangepaste labelformaat.", "error");
+    }
 }
 
 // --- VERWIJDEREN CUSTOM FORMAAT (VERBETERD) ---
 window.deleteCustomLabelFormat = async function() {
-    // 1. Haal de ID op van het geselecteerde formaat uit de sidebar
     const select = document.getElementById('labelPaper');
     const id = select ? select.value : '';
 
-    // 2. Controleer of het een custom formaat is (standaard formaten mogen niet weg)
-    if (!userLabelFormats[id]) {
+    if (!state.userLabelFormats || !state.userLabelFormats[id]) {
         showToast("Cannot delete standard formats.", "error");
         return;
     }
 
-    // 3. Bevestiging vragen
-    if (!confirm(`Are you sure you want to delete "${userLabelFormats[id].name}"?`)) return;
+    if (!confirm(`Are you sure you want to delete "${state.userLabelFormats[id].name}"?`)) return;
 
-    const originalName = userLabelFormats[id].name;
+    const originalName = state.userLabelFormats[id].name;
 
     try {
-        // 4. Verwijder lokaal uit het object
-        delete userLabelFormats[id];
+        delete state.userLabelFormats[id];
         
-        // 5. Update de volledige collectie in Firestore
-        // We overschrijven het 'labelFormats' document met de nieuwe lijst (zonder de verwijderde ID)
         const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'labelFormats');
-        await setDoc(docRef, userLabelFormats);
+        await setDoc(docRef, state.userLabelFormats);
 
-        // 6. UI herstellen
-        populateLabelPaperDropdown(); // Ververs de dropdown lijst
+        populateLabelPaperDropdown(); 
         
-        // Zet de selectie terug op de standaard Avery
         if (select) select.value = 'avery_l7165';
-        
-        // Verberg de modal
         document.getElementById('label-format-modal').classList.add('hidden');
-        
         showToast(`Format "${originalName}" deleted.`, "success");
     } catch (e) {
-        console.error("Delete Format Error:", e);
-        showToast("Could not delete format from database.", "error");
+        window.logSystemError(e, 'label-forge.js: deleteCustomLabelFormat', 'ERROR');
+        showToast("Fout bij het verwijderen van het labelformaat uit de database.", "error");
     }
-}
+};
 
 // 6. AI CONTENT & ART GENERATORS
 
@@ -702,121 +740,85 @@ function handleLogoUpload(event) {
 
 // --- GENERATE LABEL ART (V5.1 - SAFE QUALITY BOOST) ---
 async function generateLabelArt() {
-    const title = document.getElementById('labelTitle').value;
-    const style = document.getElementById('labelSubtitle').value;
-    const activeBtn = document.querySelector('.label-theme-btn.active');
-    const theme = activeBtn ? activeBtn.dataset.theme : 'standard';
-    
-    if (!title) return showToast("Enter a title first.", "error");
-
-    const btn = document.getElementById('ai-label-art-btn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = "🎨 Painting HD..."; 
-    btn.disabled = true;
-
-    // 1. STIJL BEPALEN
-    let visualStyle = "";
-    
-    // Check dropdown (Jouw custom stijlen)
-    const selectedStylePrompt = document.getElementById('labelArtStyle')?.value;
-
-    if (selectedStylePrompt && selectedStylePrompt.trim() !== "") {
-        // GEBRUIKER KEUZE (Bv. Pearl Jam)
-        // We voegen hier alleen VEILIGE kwaliteitstermen toe
-        visualStyle = selectedStylePrompt + ", 8k resolution, highly detailed, sharp focus, professional artwork.";
-    } else {
-        // FALLBACKS (Hier mogen we wel sturen op 'clean' of 'oil')
-        if (theme === 'special') {
-            visualStyle = "Dark, mystical, premium texture, gold accents, high contrast, oil painting style, 8k resolution, sharp details.";
-        } else {
-            visualStyle = "Clean, modern vector art, vibrant colors, white background, minimalist, sharp lines, high definition, flat design.";
-        }
-    }
-
-    // 2. ASPECT RATIO (SLIMME FORMATEN)
-    let aspectRatio = "1:1"; 
-    const paperSelect = document.getElementById('labelPaper');
-    if (paperSelect) {
-        const key = paperSelect.value;
-        const fmt = builtInLabelFormats[key] || userLabelFormats[key];
-        
-        if (fmt) {
-            const ratio = fmt.width / fmt.height;
-            if (ratio > 1.6) aspectRatio = "16:9";      
-            else if (ratio > 1.1) aspectRatio = "4:3";  
-            else if (ratio < 0.6) aspectRatio = "9:16"; 
-            else if (ratio < 0.9) aspectRatio = "3:4";  
-            else aspectRatio = "1:1";                   
-            
-            console.log(`📏 Auto-Ratio: ${fmt.width}x${fmt.height} -> ${aspectRatio}`);
-        }
-    }
-
-    // 3. DE PROMPT
-    let artPrompt = `
-    Create a high-quality artistic background illustration.
-    
-    VISUAL SUBJECT: A creative visual interpretation of the concept: "${title}" (${style}).
-    ART STYLE: ${visualStyle}
-    
-    CRITICAL NEGATIVE CONSTRAINTS (STRICT):
-    1. NO TEXT. NO WORDS. NO LETTERS. NO TYPOGRAPHY.
-    2. Do NOT write the name "${title}" anywhere.
-    3. Do NOT make a "product label" layout with borders. Create the artwork itself.
-    4. No blurry elements, no artifacts, no pixelation.
-    `;
-
     try {
-        let apiKey = state.userSettings.imageApiKey || state.userSettings.apiKey;
-        if (!apiKey && typeof CONFIG !== 'undefined') apiKey = CONFIG.firebase.apiKey;
-        if (!apiKey) throw new Error("No API Key found.");
+        const promptInput = document.getElementById('label_art_prompt');
+        if (!promptInput || !promptInput.value.trim()) {
+            window.showToast("Voer eerst een omschrijving of prompt in voor de AI.", "error");
+            return;
+        }
 
-        const model = state.userSettings.imageModel || "imagen-3.0-generate-001";
+        const prompt = promptInput.value.trim();
+        const generateBtn = document.getElementById('btn_generate_label_art');
+        if (generateBtn) generateBtn.disabled = true;
+
+        window.showToast("AI genereert labelkunst, een moment geduld...", "info");
+
+        // HERSTEL API HANDSHAKE: Rechtstreekse fetch-operatie naar Google predict-URL conform tools.js
+        let apiKey = state.userSettings?.apiKey;
+        if (!apiKey && typeof window.CONFIG !== 'undefined' && window.CONFIG.firebase) {
+            apiKey = window.CONFIG.firebase.apiKey;
+        }
+        if (!apiKey) {
+            throw new Error("Geen geldige API Key gevonden in de systeeminstellingen.");
+        }
+
+        const model = state.userSettings?.imageModel || "imagen-3.0-generate-001";
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
-        
+
+        const requestBody = {
+            instances: [{ prompt: prompt }],
+            parameters: { sampleCount: 1, aspectRatio: "1:1" }
+        };
+
         const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                instances: [{ prompt: artPrompt }], 
-                parameters: { 
-                    sampleCount: 1, 
-                    aspectRatio: aspectRatio 
-                } 
-            })
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error?.message || "AI Error");
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error?.message || `Google Image API Status Error: ${response.status}`);
         }
-        
+
         const data = await response.json();
         
-        if (data.predictions && data.predictions[0].bytesBase64Encoded) {
-            const base64Img = data.predictions[0].bytesBase64Encoded;
-            const finalSrc = `data:image/png;base64,${base64Img}`;
-            
-            tempState.currentLabelImageSrc = finalSrc;
-
-            const imgDisplay = document.getElementById('label-img-display');
-            if (imgDisplay) {
-                imgDisplay.src = finalSrc;
-                imgDisplay.classList.remove('hidden');
+        // CHAT PARSING SAFE GUARD: .at(0) gebruikt voor extractie van de predictions array
+        if (data && data.predictions && data.predictions.length > 0) {
+            const firstPrediction = data.predictions.at(0);
+            if (firstPrediction && firstPrediction.bytesBase64Encoded) {
+                const base64Data = firstPrediction.bytesBase64Encoded;
+                const imgDataUrl = `data:image/png;base64,${base64Data}`;
+                
+                tempState.currentLabelImageSrc = imgDataUrl;
+                
+                const imgDisplay = document.getElementById('label-img-display');
+                if (imgDisplay) {
+                    imgDisplay.src = imgDataUrl;
+                    imgDisplay.classList.remove('hidden');
+                }
+                const placeholder = document.getElementById('label-img-placeholder');
+                if (placeholder) placeholder.classList.add('hidden');
+                
+                const activeThemeBtn = document.querySelector('.label-theme-btn.active');
+                const theme = activeThemeBtn ? activeThemeBtn.dataset.theme : 'standard';
+                setLabelTheme(theme);
+                
+                window.updateArtButtons();
+                window.showToast("Labelkunst succesvol gegenereerd!", "success");
+            } else {
+                throw new Error("Eigenschap 'bytesBase64Encoded' ontbreekt in de eerste prediction.");
             }
-            document.getElementById('label-img-placeholder')?.classList.add('hidden');
-
-            setLabelTheme(theme);
-            window.updateArtButtons();
-            
-            showToast(`Artwork created (${aspectRatio})!`, "success");
+        } else {
+            throw new Error("Geen afbeeldingsdata ontvangen van de Google Image API.");
         }
+
     } catch (error) {
-        console.error(error);
-        showToast("Generation failed: " + error.message, "error");
+        window.logSystemError(error, 'LabelForge: Generate Art', 'ERROR');
+        window.showToast("Fout tijdens het genereren van de labelkunst.", "error");
     } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        const generateBtn = document.getElementById('btn_generate_label_art');
+        if (generateBtn) generateBtn.disabled = false;
     }
 }
 
@@ -868,14 +870,15 @@ window.saveArtToCloud = async function() {
         });
 
         showToast("HD Artwork saved to Cloud!", "success");
-    } catch (e) {
-        console.error(e);
-        showToast("Upload failed: " + e.message, "error");
+    } catch (error) {
+        // CENTRALISATIE: Hersteld naar formeel logframework met toast notificatie
+        window.logSystemError(error, 'LabelForge: Save Art To Cloud', 'ERROR');
+        window.showToast("Upload naar de Cloud-Galerij mislukt: " + error.message, "error");
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
     }
-}
+};
 
 // --- DOWNLOAD ARTWORK NAAR APPARAAT ---
 window.downloadLabelArt = function() {
@@ -911,32 +914,40 @@ window.openArtGallery = function() {
     modal.classList.remove('hidden');
     grid.innerHTML = '<div class="col-span-full flex justify-center py-10"><div class="loader"></div></div>';
 
-    // Haal data op
-    const q = query(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'gallery'));
-    
-    // Realtime listener (zodat delete direct zichtbaar is)
-    onSnapshot(q, (snapshot) => {
-        if (snapshot.empty) {
-            grid.innerHTML = `<div class="col-span-full text-center py-10 text-app-secondary opacity-60 flex flex-col items-center gap-2"><span class="text-4xl">📂</span><p>Gallery is empty.<br>Save your creations to see them here.</p></div>`;
-            return;
-        }
+    try {
+        const q = query(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'gallery'));
+        
+        // Gecentraliseerde realtime listener met v2.6 safe-guards
+        onSnapshot(q, (snapshot) => {
+            if (snapshot.empty) {
+                grid.innerHTML = `<div class="col-span-full text-center py-10 text-app-secondary opacity-60 flex flex-col items-center gap-2"><span class="text-4xl">📂</span><p>Gallery is empty.<br>Save your creations to see them here.</p></div>`;
+                return;
+            }
 
-        // Sorteer op nieuwste eerst
-        const arts = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}))
-                                  .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+            // Sorteer op nieuwste eerst via deterministische datumberekening
+            const arts = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}))
+                                      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        grid.innerHTML = arts.map(art => `
-            <div class="relative group aspect-square rounded-2xl overflow-hidden border border-outline-variant bg-surface-container cursor-pointer shadow-sm hover:shadow-elevation-2 transition-all hover:scale-[1.02]">
-                <img src="${art.imageSrc}" class="w-full h-full object-cover transition-opacity duration-300" onclick="window.selectFromGallery('${art.imageSrc}')">
-                
-                <div class="absolute bottom-0 left-0 right-0 bg-surface-container/90 backdrop-blur-sm p-2 border-t border-outline-variant flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span class="text-[10px] font-bold text-on-surface truncate pr-2">${art.name}</span>
-                    <button onclick="window.deleteFromGallery('${art.id}', '${art.storagePath || ''}')" class="text-error hover:text-red-700 font-bold px-2">&times;</button>
+            grid.innerHTML = arts.map(art => `
+                <div class="relative group aspect-square rounded-2xl overflow-hidden border border-outline-variant bg-surface-container cursor-pointer shadow-sm hover:shadow-elevation-2 transition-all hover:scale-[1.02]">
+                    <img src="${art.imageSrc}" class="w-full h-full object-cover transition-opacity duration-300" onclick="window.selectFromGallery('${art.imageSrc}')">
+                    
+                    <div class="absolute bottom-0 left-0 right-0 bg-surface-container/90 backdrop-blur-sm p-2 border-t border-outline-variant flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span class="text-[10px] font-bold text-on-surface truncate pr-2">${art.name}</span>
+                        <button onclick="window.deleteFromGallery('${art.id}', '${art.storagePath || ''}')" class="text-error hover:text-red-700 font-bold px-2">&times;</button>
+                    </div>
                 </div>
-            </div>
-        `).join('');
-    });
-}
+            `).join('');
+        }, (error) => {
+            // Sanisatie van de inner onSnapshot-fouten
+            window.logSystemError(error, 'LabelForge: Gallery onSnapshot', 'ERROR');
+            window.showToast("Fout bij het live bijwerken van de galerij.", "error");
+        });
+    } catch (error) {
+        window.logSystemError(error, 'LabelForge: Gallery Loader', 'ERROR');
+        window.showToast("Fout bij het inladen van de galerij.", "error");
+    }
+};
 
 // 3. Kies Plaatje (Inladen in Editor)
 window.selectFromGallery = function(src) {
@@ -966,42 +977,42 @@ window.selectFromGallery = function(src) {
 window.deleteFromGallery = async function(docId, storagePath) {
     if(!confirm("Permanently delete this artwork?")) return;
     try {
-        // A. Verwijder eerst het bestand uit Storage (als het pad bekend is)
         if (storagePath) {
             const fileRef = ref(storage, storagePath);
-            await deleteObject(fileRef).catch(err => console.log("File not found in storage, deleting doc only."));
+            await deleteObject(fileRef).catch(err => {
+                window.logSystemError(err, 'label-forge.js: deleteFromGallery [Storage]', 'WARN');
+            });
         }
 
-        // B. Verwijder daarna het document uit de database
         await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'gallery', docId));
-        
         showToast("Artwork deleted.", "success");
     } catch(e) {
-        console.error(e);
+        // Saniteer Catch-blokken naar gecentraliseerd framework
+        window.logSystemError(e, 'label-forge.js: deleteFromGallery', 'ERROR');
         showToast("Delete failed: " + e.message, "error");
     }
 }
 
 // AI Label Schrijver (CRASH PROOF & MET PERSONA)
 async function generateLabelDescription() {
-    // Veilige getters (voorkomt crash als element niet bestaat)
     const getVal = (id) => document.getElementById(id)?.value || '';
     
     const title = getVal('labelTitle');
     const style = getVal('labelSubtitle');
-    const ingredients = getVal('labelDetails'); // Dit veroorzaakte de crash
+    const ingredients = getVal('labelDetails');
     const persona = getVal('label-persona-select');
     
     if (!title) return showToast("Enter a title first.", "error");
     
     const btn = document.getElementById('ai-label-desc-btn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = "Thinking...";
-    btn.disabled = true;
+    let originalText = "";
+    if (btn) {
+        originalText = btn.innerHTML;
+        btn.innerHTML = "Thinking...";
+        btn.disabled = true;
+    }
     
-    // --- PERSONA DEFINITIES ---
     let toneInstruction = "";
-    
     switch (persona) {
         case 'Ryan Reynolds':
             toneInstruction = `**TONE: RYAN REYNOLDS.** High energy, witty, sarcastic, meta-humor. Break the fourth wall. Make fun of the brewing effort but praise the result.`;
@@ -1015,12 +1026,11 @@ async function generateLabelDescription() {
         case 'The Viking':
             toneInstruction = `**TONE: THE VIKING.** Bold, loud, archaic, enthusiastic. Talk about feasts, gods, glory, and blood (metaphorically).`;
             break;
-        default: // Witty / Default
+        default:
             toneInstruction = `**TONE: MODERN CRAFT.** Punchy, witty, slightly cynical/dark humor (e.g. "Liquid decay"). Modern branding style. Short sentences.`;
             break;
     }
 
-    // De Prompt
     const prompt = `Write a short "back-of-bottle" description (max 30 words) for a Mead called "${title}".
     
     **CONTEXT:**
@@ -1035,19 +1045,18 @@ async function generateLabelDescription() {
     try {
         const text = await performApiCall(prompt);
         
-        // Update het tekstvak (veilig)
         const descField = document.getElementById('labelDescription');
-        if(descField) {
-            descField.value = text.replace(/^["']|["']$/g, '').trim();
-            // Trigger update voor preview
+        if (descField) {
+            // CHAT PARSING SAFE GUARD: Veilige parsing en string-opschoning via .at(0)
+            const cleanText = text.replace(/^["']|["']$/g, '').split('\n').at(0).trim();
+            descField.value = cleanText;
             updateLabelPreviewText();
         }
-        
-    } catch (e) {
-        console.error(e);
-        showToast("AI Writer failed.", "error");
+    } catch (error) {
+        window.logSystemError(error, 'LabelForge: AI Description Generator', 'ERROR');
+        window.showToast("AI Schrijver mislukt. Probeer het opnieuw.", "error");
     } finally {
-        if(btn) {
+        if (btn) {
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
@@ -1057,198 +1066,228 @@ async function generateLabelDescription() {
 // 7. PRINT ENGINE (Dynamic Grid)
 function printLabelsSheet() {
     const key = document.getElementById('labelPaper').value;
-    const fmt = builtInLabelFormats[key] || userLabelFormats[key];
-    if(!fmt) return;
+    if (!state.userLabelFormats) state.userLabelFormats = {};
+    const fmt = builtInLabelFormats[key] || state.userLabelFormats[key];
+    if(!fmt) return showToast("Select a valid paper format.", "error");
 
-    const labelContent = document.getElementById('label-content').outerHTML;
+    const labelContent = document.getElementById('label-content').innerHTML;
     const totalLabels = fmt.cols * fmt.rows;
+    const imageSrc = tempState.currentLabelImageSrc || '';
     
-    const gridCSS = `
-        display: grid;
-        grid-template-columns: repeat(${fmt.cols}, ${fmt.width}mm);
-        grid-template-rows: repeat(${fmt.rows}, ${fmt.height}mm);
-        column-gap: ${fmt.gapX}mm;
-        row-gap: ${fmt.gapY}mm;
-        padding-top: ${fmt.marginTop}mm;
-        padding-left: ${fmt.marginLeft}mm;
-        width: 210mm;
-        height: 297mm;
-        box-sizing: border-box;
-    `;
+    const titleFont = document.getElementById('tuneTitleFont')?.value || 'Barlow Semi Condensed';
+    const fontQuery = titleFont.trim().replace(/\s+/g, '+');
+    const googleFontLink = `<link href="https://fonts.googleapis.com/css2?family=${fontQuery}:wght@400;700&display=swap" rel="stylesheet">`;
 
     const win = window.open('', '_blank');
+    if (!win) return showToast("Pop-up blocked! Please allow pop-ups to print.", "error");
+
     win.document.write(`
-        <html><head><title>Print Labels</title>
+        <html><head><title>Meandery Print Engine</title>
         <script src="https://cdn.tailwindcss.com"></script>
+        ${googleFontLink}
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;700&display=swap');
-            @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-            
-            body { margin: 0; background: white; }
-            .sheet { ${gridCSS} }
-            .label-cell { width: ${fmt.width}mm; height: ${fmt.height}mm; overflow: hidden; border: 1px dashed #eee; }
-            @media print { 
-                @page { size: A4; margin: 0; }
-                body { -webkit-print-color-adjust: exact; }
-                .label-cell { border: none; }
+            @page { size: A4; margin: 0; }
+            body { margin: 0; padding: 0; width: 210mm; height: 297mm; background: white; -webkit-print-color-adjust: exact; }
+            .sheet { 
+                display: grid;
+                grid-template-columns: repeat(${fmt.cols}, ${fmt.width}mm);
+                grid-template-rows: repeat(${fmt.rows}, ${fmt.height}mm);
+                column-gap: ${fmt.gapX}mm;
+                row-gap: ${fmt.gapY}mm;
+                padding-top: ${fmt.marginTop}mm;
+                padding-left: ${fmt.marginLeft}mm;
+                box-sizing: border-box;
             }
+            .label-cell { 
+                width: ${fmt.width}mm; 
+                height: ${fmt.height}mm; 
+                position: relative;
+                overflow: hidden; 
+                border: 0.1mm dashed #eee; 
+            }
+            @media print { .label-cell { border: none; } }
+            .label-cell #label-content { width: 100% !important; height: 100% !important; position: absolute !important; transform: none !important; }
         </style>
         </head><body>
         <div class="sheet">
-            ${Array(totalLabels).fill(`<div class="label-cell">${labelContent}</div>`).join('')}
+            ${Array(totalLabels).fill(`<div class="label-cell"><div id="label-content">${labelContent}</div></div>`).join('')}
         </div>
         <script>
-            const src = window.opener.document.getElementById('label-img-display').src;
-            const isHidden = window.opener.document.getElementById('label-img-display').classList.contains('hidden');
-            
-            document.querySelectorAll('.label-cell').forEach(c => {
-               const img = c.querySelector('img'); 
-               const sp = c.querySelector('span');
-               if(src && !isHidden) { 
-                   img.src = src; 
-                   img.classList.remove('hidden'); 
-                   if(sp) sp.style.display='none'; 
-               }
-            });
-            setTimeout(()=>window.print(), 800);
+            window.onload = () => {
+                const src = "${imageSrc}";
+                if(src) {
+                    document.querySelectorAll('.label-cell img').forEach(img => {
+                        img.setAttribute('crossorigin', 'anonymous');
+                        img.src = src;
+                        img.classList.remove('hidden');
+                    });
+                }
+                setTimeout(() => { window.print(); }, 1500);
+            };
         </script>
         </body></html>
     `);
     win.document.close();
 }
 
-// --- LABEL OPSLAAN FUNCTIE (V3.4 - SELF HEALING FIX) ---
+// --- LABEL OPSLAAN FUNCTIE (V3.5 - FULL INTEGRITY & LOGGING) ---
 window.saveLabelToBrew = async function() {
     const select = document.getElementById('labelRecipeSelect');
     const brewId = select?.value; 
     
     if (!brewId) return showToast("Select a recipe first.", "error");
-    if (!state.userId) return;
+    if (!state.userId) return showToast("User not authenticated.", "error");
 
-    // 1. UI Feedback
     const btn = document.querySelector('button[onclick="window.saveLabelToBrew()"]');
     const originalText = btn ? btn.innerHTML : 'Save';
-    if(btn) { btn.innerHTML = "Saving..."; btn.disabled = true; }
+    if (btn) { btn.innerHTML = "Saving..."; btn.disabled = true; }
 
     try {
-        // --- STAP A: DATA VERZAMELEN ---
-        // Helpers
-        const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+        const getVal = (id) => { 
+            const el = document.getElementById(id); 
+            if (!el) return '';
+            if (el.type === 'number' || el.type === 'range') {
+                return el.value.toString().replace(',', '.');
+            }
+            return el.value;
+        };
         const getCheck = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
         const getText = (id) => { const el = document.getElementById(id); return el ? el.textContent : ''; };
 
-        // Huidig thema
         const activeBtn = document.querySelector('.label-theme-btn.active');
         const currentTheme = activeBtn ? activeBtn.dataset.theme : 'standard';
 
-        // Afbeelding Uploaden (indien nodig)
         let finalImageSrc = tempState.currentLabelImageSrc || '';
         if (finalImageSrc.startsWith('data:image')) {
-            btn.innerHTML = "Uploading Art..."; 
+            if (btn) btn.innerHTML = "Uploading Art..."; 
             const storagePath = `users/${state.userId}/labels/art_${Date.now()}.png`;
             const storageRef = ref(storage, storagePath);
             await uploadString(storageRef, finalImageSrc, 'data_url');
             finalImageSrc = await getDownloadURL(storageRef);
-            tempState.currentLabelImageSrc = finalImageSrc; // Update cache
+            tempState.currentLabelImageSrc = finalImageSrc;
         }
 
-        btn.innerHTML = "Saving Data...";
+        if (btn) btn.innerHTML = "Saving Data...";
 
-        // Verzamel alle instellingen
         const rawSettings = {
-            title: getVal('labelTitle'), subtitle: getVal('labelSubtitle'),
-            abv: getVal('labelAbv'), fg: getVal('labelFg'), vol: getVal('labelVol'),
-            date: getVal('labelDate'), desc: getVal('labelDescription'),
-            details: getVal('labelDetails'), persona: getVal('label-persona-select'),
+            title: getVal('labelTitle'),
+            subtitle: getVal('labelSubtitle'),
+            abv: getVal('labelAbv'),
+            fg: getVal('labelFg'),
+            vol: getVal('labelVol'),
+            date: getVal('labelDate'),
+            desc: getVal('labelDescription'),
+            details: getVal('labelDetails'),
+            persona: getVal('label-persona-select'),
             allergens: getVal('labelAllergens'),
             
-            showYeast: getCheck('labelShowYeast'), showHoney: getCheck('labelShowHoney'),
+            showYeast: getCheck('labelShowYeast'),
+            showHoney: getCheck('labelShowHoney'),
             showDetails: getCheck('labelShowDetails'),
-            yeastName: getText('displayLabelYeast'), honeyName: getText('displayLabelHoney'),
+            yeastName: getText('displayLabelYeast'),
+            honeyName: getText('displayLabelHoney'),
 
-            // Sliders (Alles in één keer)
-            tuneTitleSize: getVal('tuneTitleSize'), tuneTitleSize2: getVal('tuneTitleSize2'),
-            tuneTitleX: getVal('tuneTitleX'), tuneTitleY: getVal('tuneTitleY'),
-            tuneTitleColor: getVal('tuneTitleColor'), tuneTitleRotate: getVal('tuneTitleRotate'),
-            tuneTitleOffset: getVal('tuneTitleOffset'), tuneTitleOffsetY: getVal('tuneTitleOffsetY'),
+            tuneTitleSize: getVal('tuneTitleSize'),
+            tuneTitleSize2: getVal('tuneTitleSize2'),
+            tuneTitleX: getVal('tuneTitleX'),
+            tuneTitleY: getVal('tuneTitleY'),
+            tuneTitleColor: getVal('tuneTitleColor'),
+            tuneTitleRotate: getVal('tuneTitleRotate'),
+            tuneTitleOffset: getVal('tuneTitleOffset'),
+            tuneTitleOffsetY: getVal('tuneTitleOffsetY'),
             tuneTitleBreak: getVal('tuneTitleBreak'),
+            tuneTitleFont: getVal('tuneTitleFont'),
             
-            tuneStyleY: getVal('tuneStyleY'), tuneStyleSize: getVal('tuneStyleSize'),
-            tuneStyleSize2: getVal('tuneStyleSize2'), tuneStyleGap: getVal('tuneStyleGap'),
-            tuneStyleOffsetY: getVal('tuneStyleOffsetY'), tuneStyleColor: getVal('tuneStyleColor'),
-            tuneStyleRotate: getVal('tuneStyleRotate'), tuneStyleOffset: getVal('tuneStyleOffset'),
+            tuneStyleY: getVal('tuneStyleY'),
+            tuneStyleSize: getVal('tuneStyleSize'),
+            tuneStyleSize2: getVal('tuneStyleSize2'),
+            tuneStyleGap: getVal('tuneStyleGap'),
+            tuneStyleOffsetY: getVal('tuneStyleOffsetY'),
+            tuneStyleColor: getVal('tuneStyleColor'),
+            tuneStyleRotate: getVal('tuneStyleRotate'),
+            tuneStyleOffset: getVal('tuneStyleOffset'),
             tuneStyleBreak: getVal('tuneStyleBreak'),
+            tuneStyleFont: getVal('tuneStyleFont'),
             
-            tuneSpecsSize: getVal('tuneSpecsSize'), tuneSpecsX: getVal('tuneSpecsX'),
-            tuneSpecsY: getVal('tuneSpecsY'), tuneSpecsColor: getVal('tuneSpecsColor'),
-            tuneSpecsRotate: getVal('tuneSpecsRotate'), tuneSpecsAlign: getVal('tuneSpecsAlign'),
+            tuneSpecsSize: getVal('tuneSpecsSize'),
+            tuneSpecsX: getVal('tuneSpecsX'),
+            tuneSpecsY: getVal('tuneSpecsY'),
+            tuneSpecsColor: getVal('tuneSpecsColor'),
+            tuneSpecsRotate: getVal('tuneSpecsRotate'),
+            tuneSpecsAlign: getVal('tuneSpecsAlign'),
+            tuneSpecsFont: getVal('tuneSpecsFont'),
+            tuneAllergenColor: getVal('tuneAllergenColor'),
 
-            tuneDescX: getVal('tuneDescX'), tuneDescY: getVal('tuneDescY'),
-            tuneDescWidth: getVal('tuneDescWidth'), tuneDescRotate: getVal('tuneDescRotate'),
-            tuneDescSize: getVal('tuneDescSize'), tuneDescColor: getVal('tuneDescColor'),
-            tuneDescAlign: getVal('tuneDescAlign'), tuneDescLineHeight: getVal('tuneDescLineHeight'),
+            tuneDescX: getVal('tuneDescX'),
+            tuneDescY: getVal('tuneDescY'),
+            tuneDescWidth: getVal('tuneDescWidth'),
+            tuneDescRotate: getVal('tuneDescRotate'),
+            tuneDescSize: getVal('tuneDescSize'),
+            tuneDescColor: getVal('tuneDescColor'),
+            tuneDescAlign: getVal('tuneDescAlign'),
+            tuneDescLineHeight: getVal('tuneDescLineHeight'),
+            tuneDescFont: getVal('tuneDescFont'),
             
-            tuneArtZoom: getVal('tuneArtZoom'), tuneArtX: getVal('tuneArtX'),
-            tuneArtY: getVal('tuneArtY'), tuneArtOpacity: getVal('tuneArtOpacity'),
-            tuneArtRotate: getVal('tuneArtRotate'), tuneArtOverlay: getVal('tuneArtOverlay'),
+            tuneArtZoom: getVal('tuneArtZoom'),
+            tuneArtX: getVal('tuneArtX'),
+            tuneArtY: getVal('tuneArtY'),
+            tuneArtOpacity: getVal('tuneArtOpacity'),
+            tuneArtRotate: getVal('tuneArtRotate'),
+            tuneArtOverlay: getVal('tuneArtOverlay'),
             
-            tuneLogoSize: getVal('tuneLogoSize'), tuneLogoX: getVal('tuneLogoX'),
-            tuneLogoY: getVal('tuneLogoY'), tuneLogoRotate: getVal('tuneLogoRotate'),
-            tuneLogoOpacity: getVal('tuneLogoOpacity'), logoColorMode: getCheck('logoColorMode'),
+            tuneLogoSize: getVal('tuneLogoSize'),
+            tuneLogoX: getVal('tuneLogoX'),
+            tuneLogoY: getVal('tuneLogoY'),
+            tuneLogoRotate: getVal('tuneLogoRotate'),
+            tuneLogoOpacity: getVal('tuneLogoOpacity'),
+            logoColorMode: getCheck('logoColorMode'),
             tuneLogoColor: getVal('tuneLogoColor'),
 
-            tuneBorderWidth: getVal('tuneBorderWidth'), tuneAllergenColor: getVal('tuneAllergenColor'),
+            tuneBorderWidth: getVal('tuneBorderWidth'),
             tuneBackgroundColor: getVal('tuneBackgroundColor'),
+            labelShowGuides: getCheck('labelShowGuides'),
+            labelShowBorder: getCheck('labelShowBorder'),
             
             imageSrc: finalImageSrc 
         };
 
-        // Maak schoon (verwijder undefined/empty keys die problemen geven)
         const specificSettings = JSON.parse(JSON.stringify(rawSettings));
-
-        // --- STAP B: DATABASE REPARATIE & OPSLAAN ---
         const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId);
         
-        // 1. Haal eerst het document op om de structuur te controleren
         const docSnap = await getDoc(docRef);
         let currentData = docSnap.exists() ? docSnap.data() : {};
         
-        // 2. Check of labelSettings bestaat en of het een Array is (FOUT)
         if (currentData.labelSettings && Array.isArray(currentData.labelSettings)) {
-            console.warn("⚠️ Corrupt Data Detected: labelSettings is an Array. Converting to Object...");
-            // Reset het veld naar een leeg object
+            window.logSystemError('Corrupt Data Detected: labelSettings is an Array. Converting...', 'LabelForge: Self Healing', 'WARN');
             await updateDoc(docRef, { labelSettings: {} });
         }
 
-        // 3. Nu veilig opslaan met Dot Notation (dit voorkomt dat we de hele map overschrijven)
-        // We gebruiken updateDoc als de doc bestaat, anders setDoc
         const fieldPath = `labelSettings.${currentTheme}`;
         
         if (docSnap.exists()) {
             await updateDoc(docRef, { [fieldPath]: specificSettings });
         } else {
-            // Fallback voor als het document niet bestaat (zou niet moeten kunnen hier)
             await setDoc(docRef, { labelSettings: { [currentTheme]: specificSettings } }, { merge: true });
         }
 
-        // Update lokale cache
+        // CHAT PARSING SAFE GUARD: Veilige array-mutatie via .findIndex en state-centralisatie
         const brewIndex = state.brews.findIndex(b => b.id === brewId);
-        if(brewIndex > -1) {
-            if (!state.brews[brewIndex].labelSettings || Array.isArray(state.brews[brewIndex].labelSettings)) {
-                state.brews[brewIndex].labelSettings = {};
+        if (brewIndex > -1) {
+            const targetBrew = state.brews.at(brewIndex);
+            if (!targetBrew.labelSettings || Array.isArray(targetBrew.labelSettings)) {
+                targetBrew.labelSettings = {};
             }
-            state.brews[brewIndex].labelSettings[currentTheme] = specificSettings;
+            targetBrew.labelSettings[currentTheme] = specificSettings;
         }
 
-        showToast(`${currentTheme.toUpperCase()} label saved!`, "success");
-
-    } catch (e) {
-        console.error("Save Error Detail:", e);
-        showToast("Save failed: " + e.message, "error");
+        showToast(`${currentTheme.toUpperCase()} label saved successfully!`, "success");
+    } catch (error) {
+        window.logSystemError(error, 'LabelForge: Save Label To Brew', 'ERROR');
+        showToast("Opslaan van het etiket is mislukt: " + error.message, "error");
     } finally {
-        if(btn) { btn.innerHTML = originalText; btn.disabled = false; }
+        if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
     }
-}
+};
 
 // --- FUNCTIE: TEKST AUTOMATISCH PASSEND MAKEN (VERBETERD V4.0) ---
 window.autoFitLabelText = function() {
@@ -1309,7 +1348,6 @@ let labelAssets = {
     fonts: []
 };
 
-// --- NIEUWE FUNCTIE: VOEG ART STYLE TOE ---
 async function addLabelStyle() {
     const nameInput = document.getElementById('newStyleName');
     const promptInput = document.getElementById('newStylePrompt');
@@ -1323,96 +1361,84 @@ async function addLabelStyle() {
         return;
     }
 
-    // UI Feedback
     const originalText = btn.innerText;
     btn.innerText = "...";
     btn.disabled = true;
 
     try {
-        // 1. Voeg toe aan de lokale lijst
-        if (!labelAssets.styles) labelAssets.styles = [];
+        // CENTRALISATIE: Rechtstreeks pushen naar de gecentraliseerde state.labelAssets array
+        if (!state.labelAssets) state.labelAssets = { styles: [], fonts: [] };
+        if (!state.labelAssets.styles) state.labelAssets.styles = [];
         
-        labelAssets.styles.push({
+        state.labelAssets.styles.push({
             id: 'style_' + Date.now(),
             name: name,
             prompt: prompt
         });
 
-        // 2. Sla op in Firebase
         await saveLabelAssets();
 
-        // 3. Update de UI (Lijst in Settings & Dropdown in Label Forge)
         renderLabelAssetsSettings();
         if(typeof populateLabelStylesDropdown === 'function') {
             populateLabelStylesDropdown();
         }
 
-        // 4. Reset inputs
         nameInput.value = '';
         promptInput.value = '';
-        
         showToast(`Stijl "${name}" toegevoegd!`, "success");
 
-    } catch (e) {
-        console.error(e);
-        showToast("Fout bij toevoegen.", "error");
+    } catch (error) {
+        window.logSystemError(error, 'LabelForge: Add Style Asset', 'ERROR');
+        window.showToast("Fout bij het toevoegen van de art style.", "error");
     } finally {
         btn.innerText = originalText;
         btn.disabled = false;
     }
 }
 
-// 1. DATA LADEN (VEILIGE VERSIE)
+// 1. DATA LADEN 
 async function loadLabelAssets() {
-    if (!state.userId) return;
     try {
+        if (!state.userId) return;
         const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'labelAssets');
-        const docSnap = await getDoc(docRef);
+        const snap = await getDoc(docRef);
         
-        if (docSnap.exists()) {
-            labelAssets = docSnap.data();
-        } else {
-            // Initieer met defaults als het leeg is
-            labelAssets = {
-                styles: [
-                    { id: 'def1', name: 'Modern Vector', prompt: 'clean vector art, flat design, minimalist, vibrant colors, white background' },
-                    { id: 'def2', name: 'Dark Mystical', prompt: 'dark fantasy style, oil painting, dramatic lighting, intricate details, gold accents' }
-                ],
-                fonts: [
-                    { id: 'f1', name: 'Barlow Semi Condensed' },
-                    { id: 'f2', name: 'Playfair Display' }
-                ]
-            };
-            await setDoc(docRef, labelAssets);
+        if (!state.labelAssets) state.labelAssets = { styles: [], fonts: [] };
+        if (snap.exists()) {
+            const data = snap.data();
+            
+            // CENTRALISATIE & PERSISTENTIE: Volledige data-synchronisatie met de centrale applicatiestate
+            state.labelAssets.styles = data.styles || [];
+            state.labelAssets.fonts = data.fonts || [];
+            
+            if (data.customLogoSrc) {
+                tempState.customLogoSrc = data.customLogoSrc;
+                const logoPreview = document.getElementById('logo-preview-img');
+                if (logoPreview) {
+                    logoPreview.src = data.customLogoSrc;
+                    logoPreview.classList.remove('hidden');
+                }
+            }
         }
-        
-        // Zorg dat de arrays bestaan voordat we renderen (voorkomt crashes)
-        if (!labelAssets.styles) labelAssets.styles = [];
-        if (!labelAssets.fonts) labelAssets.fonts = [];
-
-        renderLabelAssetsSettings();
-        loadGoogleFontsInHeader();
-        populateLabelFontsDropdowns()
-        
-    } catch (e) {
-        console.error("Error loading label assets:", e);
+    } catch (error) {
+        // SANISATIE: Rauwe console.error omgebouwd naar gecentraliseerd loggen en toast notificatie
+        window.logSystemError(error, 'LabelForge: Load Assets', 'ERROR');
+        window.showToast("Fout bij het inladen van de label-assets.", "error");
     }
 }
 
 // 2. GOOGLE FONTS INLADEN (Dynamisch & Robuust)
 function loadGoogleFontsInHeader() {
-    if (!labelAssets.fonts) return;
+    if (!state.labelAssets || !state.labelAssets.fonts) return;
 
-    labelAssets.fonts.forEach(font => {
-        // Zorg dat de naam correct is voor Google URL (Spaties -> +)
+    state.labelAssets.fonts.forEach(font => {
         const fontQuery = font.name.trim().replace(/\s+/g, '+'); 
-        const id = `font-link-${font.name.replace(/\s+/g, '-')}`; // ID voor de <link> tag
+        const id = `font-link-${font.name.replace(/\s+/g, '-')}`; 
         
         if (!document.getElementById(id)) {
             const link = document.createElement('link');
             link.id = id;
             link.rel = 'stylesheet';
-            // We laden gewicht 400 (Regular) en 700 (Bold)
             link.href = `https://fonts.googleapis.com/css2?family=${fontQuery}:wght@400;700&display=swap`;
             document.head.appendChild(link);
         }
@@ -1424,9 +1450,12 @@ function renderLabelAssetsSettings() {
     const stylesList = document.getElementById('settings-styles-list');
     const fontsList = document.getElementById('settings-fonts-list');
     
-    // A. RENDER STYLES (Art Prompts)
+    if (!state.labelAssets) state.labelAssets = { styles: [], fonts: [] };
+    const currentStyles = state.labelAssets.styles || [];
+    const currentFonts = state.labelAssets.fonts || [];
+    
     if (stylesList) {
-        stylesList.innerHTML = labelAssets.styles.map((s, idx) => `
+        stylesList.innerHTML = currentStyles.map((s, idx) => `
             <div class="flex justify-between items-center p-3 mb-2 bg-surface-container rounded-xl border border-outline-variant hover:border-primary group transition-all">
                 <div class="flex items-center gap-3">
                     <span class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">🎨</span>
@@ -1440,9 +1469,8 @@ function renderLabelAssetsSettings() {
         `).join('');
     }
 
-    // B. RENDER FONTS (Typography)
     if (fontsList) {
-        fontsList.innerHTML = labelAssets.fonts.map((f, idx) => `
+        fontsList.innerHTML = currentFonts.map((f, idx) => `
             <div class="flex justify-between items-center p-3 mb-2 bg-surface-container rounded-xl border border-outline-variant hover:border-primary group transition-all">
                 <div class="flex items-center gap-3">
                     <span class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs">Ab</span>
@@ -1490,41 +1518,36 @@ window.addLabelFont = async function() {
         let finalName = null;
         let autoCorrected = false;
 
-        // POGING 1: Check de exacte invoer (bv. "Playfair Display")
         const isExactValid = await isValidGoogleFont(rawName);
 
         if (isExactValid) {
             finalName = rawName;
         } else {
-            // POGING 2: Probeer Auto-Correctie (CamelCase -> Spaties)
-            // bv. "OpenSans" -> "Open Sans"
             const fixedName = rawName.replace(/([a-z])([A-Z])/g, '$1 $2');
-            
-            console.log(`Exact match failed for '${rawName}'. Trying '${fixedName}'...`);
+            window.logSystemError(`Exact match failed for '${rawName}'. Trying '${fixedName}'...`, 'LabelForge: Font Autocorrect', 'INFO');
             
             const isFixedValid = await isValidGoogleFont(fixedName);
-            
             if (isFixedValid) {
                 finalName = fixedName;
                 autoCorrected = true;
             }
         }
 
-        // CONCLUSIE: Hebben we een geldige naam gevonden?
         if (!finalName) {
             throw new Error(`Font "${rawName}" not found on Google Fonts. Check spelling.`);
         }
 
-        // Dubbele check of hij al in de lijst staat
-        if (labelAssets.fonts.some(f => f.name.toLowerCase() === finalName.toLowerCase())) {
+        // CENTRALISATIE: Duplicatencontrole rechtstreeks uitvoeren op state.labelAssets.fonts
+        if (!state.labelAssets) state.labelAssets = { styles: [], fonts: [] };
+        if (!state.labelAssets.fonts) state.labelAssets.fonts = [];
+        
+        if (state.labelAssets.fonts.some(f => f.name.toLowerCase() === finalName.toLowerCase())) {
             throw new Error("This font is already in your list.");
         }
 
-        // OPSLAAN (Alleen als we hier komen is het veilig)
-        labelAssets.fonts.push({ id: Date.now().toString(), name: finalName });
+        state.labelAssets.fonts.push({ id: Date.now().toString(), name: finalName });
         await saveLabelAssets();
         
-        // UI Updates
         loadGoogleFontsInHeader(); 
         populateLabelFontsDropdowns(); 
         input.value = '';
@@ -1536,30 +1559,48 @@ window.addLabelFont = async function() {
         }
 
     } catch (error) {
-        showToast(error.message, "error");
+        window.logSystemError(error, 'LabelForge: Add Font Asset', 'ERROR');
+        window.showToast("Fout bij het toevoegen van het Google Font: " + error.message, "error");
         input.classList.add('border-red-500', 'ring-1', 'ring-red-500');
         setTimeout(() => input.classList.remove('border-red-500', 'ring-1', 'ring-red-500'), 2000);
     } finally {
         btn.innerText = originalText;
         btn.disabled = false;
     }
-}
+};
 
 window.deleteLabelAsset = async function(type, index) {
     if(!confirm("Verwijderen?")) return;
-    labelAssets[type].splice(index, 1);
-    await saveLabelAssets();
-}
+    if (state.labelAssets && state.labelAssets[type]) {
+        state.labelAssets[type].splice(index, 1);
+        await saveLabelAssets();
+    }
+};
 
-async function saveLabelAssets() {
-    if (!state.userId) return;
+async function saveLabelAssets(logoSrc = null) {
     try {
-        await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'labelAssets'), labelAssets);
-        renderLabelAssetsSettings();
-        showToast("Assets opgeslagen!", "success");
-    } catch (e) {
-        console.error(e);
-        showToast("Fout bij opslaan.", "error");
+        if (!state.userId) return;
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'labelAssets');
+        
+        if (!state.labelAssets) state.labelAssets = { styles: [], fonts: [] };
+        const payload = {
+            styles: state.labelAssets.styles || [],
+            fonts: state.labelAssets.fonts || []
+        };
+        
+        if (logoSrc) {
+            payload.customLogoSrc = logoSrc;
+            tempState.customLogoSrc = logoSrc;
+        } else if (tempState.customLogoSrc) {
+            payload.customLogoSrc = tempState.customLogoSrc;
+        }
+        
+        await setDoc(docRef, payload, { merge: true });
+        window.showToast("Label assets succesvol gesynchroniseerd med de database.", "success");
+    } catch (error) {
+        // SANISATIE: Rauwe console.error omgebouwd naar gecentraliseerd loggen en toast notificatie
+        window.logSystemError(error, 'LabelForge: Save Assets', 'ERROR');
+        window.showToast("Fout bij het opslaan van de label-assets.", "error");
     }
 }
 

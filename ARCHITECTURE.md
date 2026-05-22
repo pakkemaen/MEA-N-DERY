@@ -1,4 +1,4 @@
-# MEANDERY APP - ARCHITECTURE & GUIDELINES (v2.4)
+# MEANDERY APP - ARCHITECTURE & GUIDELINES (v2.6)
 Dit document beschrijft de architectuur, datastructuur en strikte programmeerregels van de Meandery App. Lees dit ALTIJD voordat je code wijzigt of toevoegt om regressie te voorkomen.
 
 ## 1. Tech Stack & Core Rules

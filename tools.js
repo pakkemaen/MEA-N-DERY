@@ -1,12 +1,19 @@
 // ============================================================================
 // tools.js
-// MEANDERY V2.5 - CALCULATORS & UTILITIES (TOSNA 3.0 & HALL EQUATION)
+// MEANDERY V2.6
 // ============================================================================
 
-import { db } from './firebase-init.js';
+import { 
+    db, doc, getDoc, setDoc, updateDoc, collection, addDoc, 
+    deleteDoc, query, onSnapshot, getDocs, writeBatch, arrayUnion, 
+    orderBy, limit, getCountFromServer 
+} from './firebase-init.js'; // Imports uitsluitend via firebase-init
+
 import { state } from './state.js';
-import { showToast, performApiCall, getLoaderHtml, switchMainView, switchSubView } from './utils.js';
-import { doc, getDoc, setDoc, updateDoc, collection, addDoc, deleteDoc, query, onSnapshot, getDocs, writeBatch, arrayUnion, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { 
+    showToast, performApiCall, getLoaderHtml, switchMainView, 
+    switchSubView, logSystemError 
+} from './utils.js';
 
 // Fallback als CONFIG niet globaal beschikbaar is (wat in modules vaak zo is)
 const CONFIG = window.CONFIG || { firebase: { apiKey: "" } };
@@ -15,30 +22,32 @@ let userWaterProfiles = [];
 
 // --- SETTINGS MANAGEMENT ---
 async function loadUserSettings() {
-    if (!state.userId) return;
-    const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
-    const snap = await getDoc(docRef);
-    
-    if (snap.exists()) {
-        state.userSettings = snap.data();
+    try {
+        if (!state.userId) return;
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
+        const snap = await getDoc(docRef);
         
-        if (state.userSettings.currentBrewDay && state.userSettings.currentBrewDay.brewId) {
-            // 1. Zet de pointer terug in de globale state
-            state.currentBrewDay = state.userSettings.currentBrewDay;
+        if (snap.exists()) {
+            state.userSettings = snap.data();
             
-            // 2. Zet ook de pointer voor de nieuwe brewing module (tempState)
-            if (window.tempState) {
-                window.tempState.activeBrewId = state.userSettings.currentBrewDay.brewId;
+            if (state.userSettings.currentBrewDay && state.userSettings.currentBrewDay.brewId) {
+                state.currentBrewDay = state.userSettings.currentBrewDay;
+                
+                if (window.tempState) {
+                    window.tempState.activeBrewId = state.userSettings.currentBrewDay.brewId;
+                }
+
+                if (typeof window.renderBrewDay === 'function') {
+                    console.log("🔄 Restoring active brew:", state.currentBrewDay.brewId);
+                    window.renderBrewDay(state.currentBrewDay.brewId);
+                }
             }
 
-            // 3. Probeer direct het scherm te renderen als we toevallig al op die tab staan
-            if (typeof window.renderBrewDay === 'function') {
-                console.log("🔄 Restoring active brew:", state.currentBrewDay.brewId);
-                window.renderBrewDay(state.currentBrewDay.brewId);
-            }
+            applySettings();
         }
-
-        applySettings();
+    } catch (error) {
+        window.logSystemError(error, 'Settings: Load', 'ERROR');
+        window.showToast("Fout bij het inladen van de gebruikersinstellingen. Gebruikersinstellingen konden niet worden ingeladen.", "error");
     }
 }
 
@@ -61,18 +70,43 @@ function applySettings() {
 async function saveUserSettings() {
     if (!state.userId) return;
     
-    const newSettings = {
-        apiKey: document.getElementById('apiKeyInput').value.trim(),
-        defaultBatchSize: parseFloat(document.getElementById('defaultBatchSizeInput').value), 
-        currencySymbol: document.getElementById('defaultCurrencyInput').value || '€',
-        carbonationMethod: document.getElementById('defaultCarbonationInput').value,
-        theme: document.getElementById('theme-toggle-checkbox').checked ? 'dark' : 'light'
-    };
-    
-    await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main'), newSettings, { merge: true });
-    state.userSettings = { ...state.userSettings, ...newSettings }; // Update lokaal
-    applySettings();
-    showToast("Settings saved!", "success");
+    try {
+        const apiKeyVal = document.getElementById('apiKeyInput').value.trim();
+        const batchSizeInput = document.getElementById('defaultBatchSizeInput').value.replace(/,/g, '.');
+        const wcfInput = parseFloat(document.getElementById('wcfInput')?.value.replace(/,/g, '.')) || 1.00;
+
+        if (wcfInput < 1.00 || wcfInput > 1.04) {
+            showToast("WCF moet tussen 1.00 en 1.04 liggen.", "error");
+            return;
+        }
+
+        if (!apiKeyVal) {
+            showToast("Let op: Zonder API Key zullen AI-functies (recepten, chat) niet werken.", "warning");
+        }
+        
+        const newSettings = {
+            apiKey: apiKeyVal,
+            defaultBatchSize: parseFloat(batchSizeInput) || 5, 
+            currencySymbol: document.getElementById('defaultCurrencyInput').value || '€',
+            carbonationMethod: document.getElementById('defaultCarbonationInput').value,
+            wcf: wcfInput,
+            theme: document.getElementById('theme-toggle-checkbox').checked ? 'dark' : 'light'
+        };
+        
+        await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main'), newSettings, { merge: true });
+        
+        state.userSettings = { ...state.userSettings, ...newSettings }; 
+        applySettings();
+        showToast("Settings saved!", "success");
+        
+        if (window.tempState?.activeBrewId && typeof window.renderFermentationGraph === 'function') {
+            window.renderFermentationGraph(window.tempState.activeBrewId);
+        }
+    } catch (error) {
+        // CORRECTION: Omschrijving in het catch-blok aangepast naar een representatieve tekst voor deze module
+        window.logSystemError(error, 'Settings: Save', 'ERROR');
+        window.showToast("Fout bij het opslaan van de gebruikersinstellingen.", "error");
+    }
 }
 
 // --- WATER PROFILE MANAGEMENT ---
@@ -108,8 +142,8 @@ async function findWaterProfileWithAI() {
 
         if (profile.ca === 0 && profile.mg === 0) {
             showToast(`Could not find a profile for "${brandName}".`, 'info');
+            window.logSystemError(`AI Water Search: Geen resultaten voor ${brandName}`, 'Tools: Water', 'INFO');
         } else {
-            // Vul het formulier in met de gevonden data
             document.getElementById('water-profile-name').value = brandName;
             document.getElementById('manual_ca').value = profile.ca;
             document.getElementById('manual_mg').value = profile.mg;
@@ -120,8 +154,8 @@ async function findWaterProfileWithAI() {
             showToast(`Profile for "${brandName}" found! Review and save.`, 'success');
         }
     } catch (error) {
+        window.logSystemError(error, 'Tools: findWaterProfileWithAI', 'ERROR');
         showToast("AI search failed. Please try again.", "error");
-        console.error(error);
     } finally {
         searchBtn.disabled = false;
         searchBtn.textContent = 'Find';
@@ -160,22 +194,39 @@ function renderUserWaterProfilesList() {
 async function saveWaterProfile(e) {
     e.preventDefault();
     if (!state.userId) return;
-    const id = document.getElementById('water-profile-id').value;
-    const data = {
-        name: document.getElementById('water-profile-name').value,
-        ca: parseFloat(document.getElementById('manual_ca').value)||0, mg: parseFloat(document.getElementById('manual_mg').value)||0,
-        na: parseFloat(document.getElementById('manual_na').value)||0, so4: parseFloat(document.getElementById('manual_so4').value)||0,
-        cl: parseFloat(document.getElementById('manual_cl').value)||0, hco3: parseFloat(document.getElementById('manual_hco3').value)||0,
-    };
-    if (!data.name) return showToast("Name required.", "error");
     
     try {
+        const id = document.getElementById('water-profile-id').value;
+        
+        // Helper voor Comma-to-Dot sanitisatie
+        const getSanitizedVal = (id) => parseFloat(document.getElementById(id).value.replace(/,/g, '.')) || 0;
+
+        const data = {
+            name: document.getElementById('water-profile-name').value.trim(),
+            ca: getSanitizedVal('manual_ca'),
+            mg: getSanitizedVal('manual_mg'),
+            na: getSanitizedVal('manual_na'),
+            so4: getSanitizedVal('manual_so4'),
+            cl: getSanitizedVal('manual_cl'),
+            hco3: getSanitizedVal('manual_hco3'),
+        };
+
+        if (!data.name) return showToast("Profile name required.", "error");
+        
         const col = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'waterProfiles');
-        if (id) await setDoc(doc(col, id), data); else await addDoc(col, data);
-        showToast("Profile saved!", "success");
+        if (id) {
+            await setDoc(doc(col, id), data);
+        } else {
+            await addDoc(col, data);
+        }
+        
+        showToast("Water profile saved!", "success");
         document.getElementById('water-profile-form').reset();
         document.getElementById('water-profile-id').value = '';
-    } catch (e) { console.error(e); showToast("Error saving.", "error"); }
+    } catch (error) {
+        window.logSystemError(error, 'WaterProfile: Save', 'ERROR');
+        showToast("Error saving water profile.", "error");
+    }
 }
 
 window.editWaterProfile = function(id) {
@@ -195,12 +246,9 @@ window.deleteWaterProfile = async function(id) {
 }
 
 window.showLastPrompt = function() {
-    const modal = document.getElementById('prompt-modal');
-    const content = document.getElementById('prompt-modal-content');
-    if (modal && content) {
-        content.textContent = lastGeneratedPrompt || "No prompt generated yet.";
-        modal.classList.remove('hidden');
-    }
+    // In tools.js refereren we naar de variabele uit brewing.js indien beschikbaar
+    const promptText = window.lastGeneratedPrompt || "No prompt generated yet.";
+    window.showPromptModal(promptText);
 }
 
 window.hidePromptModal = function() {
@@ -225,16 +273,16 @@ function setupPromptEngineer() {
 
     // Koppel de Upload Listener
     if (upload) {
-        // Verwijder oude listeners door te clonen (optioneel, maar veilig)
         const newUpload = upload.cloneNode(true);
         upload.parentNode.replaceChild(newUpload, upload);
         
         newUpload.addEventListener('change', function(e) {
-            const file = e.target.files[0];
+            const file = e.target.files;
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(evt) {
-                    promptEngineerImageBase64 = evt.target.result.split(',')[1];
+                    // CORRECTIE: Extractie van de base64-string via de chat-veilige .at(1) methodiek
+                    promptEngineerImageBase64 = evt.target.result.split(',').at(1);
                     const previewContainer = document.getElementById('prompt-engineer-preview');
                     const previewImg = document.getElementById('pe-preview-img');
                     if (previewContainer && previewImg) {
@@ -251,7 +299,6 @@ function setupPromptEngineer() {
 
     // Koppel de Generate Knop Listener
     if (btn) {
-        // Verwijder oude listeners
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         
@@ -344,11 +391,15 @@ async function runPromptEngineer() {
 
         const data = await response.json();
         
+        // CORRECTIE: Extractie van candidates en parts arrays volledig omgebouwd naar de veilige .at(0) methodiek
         if (data.candidates && data.candidates.length > 0) {
-            const result = data.candidates[0].content.parts[0].text.trim();
-            outputDiv.classList.remove('hidden');
-            outputText.value = result;
-            showToast("Style DNA Extracted!", "success");
+            const firstCandidate = data.candidates.at(0);
+            if (firstCandidate && firstCandidate.content && firstCandidate.content.parts && firstCandidate.content.parts.length > 0) {
+                const result = firstCandidate.content.parts.at(0).text.trim();
+                outputDiv.classList.remove('hidden');
+                outputText.value = result;
+                showToast("Style DNA Extracted!", "success");
+            }
         }
 
     } catch (e) {
@@ -412,7 +463,8 @@ async function importData(event, collectionName) {
             if (collectionName === 'inventory' && window.loadInventory) window.loadInventory();
 
         } catch (err) {
-            console.error(err);
+            // SANISATIE: Rauwe console.error geconverteerd naar gecentraliseerd loggen en toast notificatie
+            window.logSystemError(err, 'Tools: Data Import', 'ERROR');
             showToast("Import failed: " + err.message, "error");
         }
     };
@@ -587,14 +639,15 @@ window.deleteMedicChat = async function(chatId) {
 
 // 5. Foto Selectie Handling (Ongewijzigd)
 window.handleChatImageSelect = function(input) {
-    if (input.files && input.files[0]) {
+    if (input.files && input.files) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            currentChatImageBase64 = e.target.result.split(',')[1]; 
+            // CORRECTIE: Extractie van de base64-string via de chat-veilige .at(1) methodiek
+            currentChatImageBase64 = e.target.result.split(',').at(1); 
             document.getElementById('chat-preview-img').src = e.target.result;
             document.getElementById('chat-image-preview').classList.remove('hidden');
         }
-        reader.readAsDataURL(input.files[0]);
+        reader.readAsDataURL(input.files);
     }
 }
 
@@ -726,7 +779,8 @@ async function performChatApiCall(history, base64Image) {
         throw new Error(`AI Error (${response.status}): ${errData.error?.message || response.statusText}`);
     }
     const data = await response.json();
-    return data.candidates[0].content.parts[0].text;
+    // CORRECTIE: Extractie van de content-tekst via de chat-veilige .at(0) methodiek
+    return data.candidates.at(0).content.parts.at(0).text;
 }
 
 window.clearChatImage = function() {
@@ -894,103 +948,111 @@ window.loadSocialStyles = async function() {
 }
 
 // 2. TEKST GENEREREN (Nu met Style Injectie)
-window.runSocialMediaGenerator = async function() {
-    const brewId = document.getElementById('social-recipe-select').value;
-    const persona = document.getElementById('social-persona').value;
-    const platform = document.getElementById('social-platform').value;
-    const tweak = document.getElementById('social-tweak').value;
-    const selectedStyleValue = document.getElementById('social-art-style').value;
-    
-    if (!brewId && !tweak) { showToast("Select a recipe OR type a topic.", "error"); return; }
-    
+async function runSocialMediaGenerator() {
+    // 1. UI INITIALISATIE & CREDIT CHECK
+    const actionWrapper = document.getElementById('social-action-wrapper');
+    const creditCountSpan = document.getElementById('social-credit-count');
     const container = document.getElementById('social-content-container');
     const imageBtn = document.getElementById('generate-social-image-btn');
 
-    container.innerHTML = getLoaderHtml(`Channeling ${persona}...`);
-    imageBtn.classList.add('hidden'); // Verberg knop tot we klaar zijn
-
-    // Context ophalen
-    let context = "";
-    if (brewId) {
-        const brew = state.brews.find(b => b.id === brewId);
-        const abv = brew.logData?.finalABV || brew.logData?.targetABV || "approx 12%";
-        context = `**PRODUCT:** Mead (Honey Wine). NAME: ${brew.recipeName}. STATS: ABV ${abv}. RECIPE: ${brew.recipeMarkdown.substring(0, 500)}... USER NOTES: ${tweak}`;
-    } else {
-        context = `**TOPIC:** ${tweak}`;
-    }
-
-    // Persona Definities (Voor de TEKST)
-    let toneInstruction = "";
-    switch (persona) {
-        case 'Ryan Reynolds': toneInstruction = `TONE: Ryan Reynolds. Witty, sarcastic, meta-humor, high energy.`; break;
-        case 'Dry British': toneInstruction = `TONE: Dry British. Understated, cynical, charming, "splendid".`; break;
-        case 'The Sommelier': toneInstruction = `TONE: Sommelier. Elegant, sensory-focused, premium vocabulary.`; break;
-        default: toneInstruction = `TONE: Viking. Bold, loud, enthusiastic, glory & feasts.`; break;
-    }
-
-    // Image Prompt Instructie (De "Mix & Match" logica)
-    let imageInstruction = "";
-    
-    if (selectedStyleValue === 'none') {
-        imageInstruction = `**IMAGE RULE:** Do NOT generate an image prompt. The user wants text only.`;
-    } else {
-        let visualStyle = "";
-        if (selectedStyleValue === 'persona') {
-            visualStyle = `Visual style matching the '${persona}' vibe (e.g. if Viking, use rugged/fire/wood. If Reynolds, use cinematic/high contrast).`;
-        } else {
-            // HIER IS DE MAGIE: We injecteren jouw Custom Style (bv. Pearl Jam Poster)
-            visualStyle = `**MANDATORY ART STYLE:** Apply this specific art style: "${selectedStyleValue}".`;
+    try {
+        if (actionWrapper) actionWrapper.classList.remove('hidden');
+        
+        let credits = state.userSettings?.credits;
+        if (credits !== undefined && credits !== null && credits <= 0) {
+            showToast("Geen credits meer beschikbaar.", "error");
+            return;
         }
 
-        imageInstruction = `
-        **IMAGE PROMPT GENERATION:**
-        1. At the very end, generate an AI image prompt.
-        2. ${visualStyle}
-        3. **SUBJECT MATTER:** The subject should still match the '${persona}' narrative (e.g. if the text is funny, the image subject can be quirky), but rendered in the Art Style defined above.
-        4. Format: Start a new line at the bottom with "IMG_PROMPT: [The Prompt]"
-        `;
-    }
+        if (creditCountSpan) {
+            creditCountSpan.textContent = (credits === undefined || credits === null) ? "∞" : credits;
+        }
 
-    const prompt = `You are a Social Media Manager.
-    
-    ${context}
-    ${toneInstruction}
-    ${platform === 'Untappd' ? 'FORMAT: Short, pure flavor review.' : 'FORMAT: Instagram caption with hashtags.'}
-    
-    ${imageInstruction}
-    
-    **OUTPUT RULES:**
-    1. Output ONLY the caption text. 
-    2. Do NOT write "Here is the post".
-    3. If requested, put the IMG_PROMPT at the bottom.
-    `;
-    
-    try {
-        const rawText = await performApiCall(prompt);
+        // 2. INPUT VALIDATIE
+        const brewId = document.getElementById('social-recipe-select').value;
+        const persona = document.getElementById('social-persona').value;
+        const platform = document.getElementById('social-platform').value;
+        const tweak = document.getElementById('social-tweak').value;
+        const selectedStyleValue = document.getElementById('social-art-style').value;
         
+        if (!brewId && !tweak) { 
+            showToast("Selecteer een recept of typ een onderwerp.", "error"); 
+            return; 
+        }
+
+        // 3. AI GENERATIE VOORBEREIDING
+        if (container) container.innerHTML = getLoaderHtml(`Channeling ${persona}...`);
+        if (imageBtn) imageBtn.classList.add('hidden');
+
+        let context = "";
+        if (brewId) {
+            const brew = state.brews.find(b => b.id === brewId);
+            if (!brew) {
+                showToast("Geselecteerd recept niet gevonden.", "error");
+                if (container) container.innerHTML = "";
+                return;
+            }
+            const abv = brew.logData?.finalABV || brew.logData?.targetABV || "approx 12%";
+            context = `**PRODUCT:** Mead (Honey Wine). NAME: ${brew.recipeName}. STATS: ABV ${abv}. RECIPE: ${brew.recipeMarkdown ? brew.recipeMarkdown.substring(0, 500) : 'No recipe text'}... USER NOTES: ${tweak}`;
+        } else {
+            context = `**TOPIC:** ${tweak}`;
+        }
+
+        let toneInstruction = "";
+        switch (persona) {
+            case 'Ryan Reynolds': toneInstruction = `TONE: Ryan Reynolds. Witty, sarcastic, meta-humor, high energy.`; break;
+            case 'Dry British': toneInstruction = `TONE: Dry British. Understated, cynical, charming, "splendid".`; break;
+            case 'The Sommelier': toneInstruction = `TONE: Sommelier. Elegant, sensory-focused, premium vocabulary.`; break;
+            default: toneInstruction = `TONE: Viking. Bold, loud, enthusiastic, glory & feasts.`; break;
+        }
+
+        let imageInstruction = (selectedStyleValue === 'none') 
+            ? `**IMAGE RULE:** Do NOT generate an image prompt.` 
+            : `**IMAGE PROMPT GENERATION:** 1. Generate an AI prompt at the end. 2. Style: "${selectedStyleValue === 'persona' ? persona + ' vibe' : selectedStyleValue}". 3. Format: Start line with "IMG_PROMPT: "`;
+
+        const prompt = `You are a Social Media Manager.\n\n${context}\n${toneInstruction}\nFORMAT: ${platform === 'Untappd' ? 'Short flavor review.' : 'Instagram caption.'}\n\n${imageInstruction}\n\nOutput ONLY text.`;
+        
+        // 4. API CALL & PARSING
+        const rawText = await performApiCall(prompt);
         let finalPost = rawText;
         let imgPrompt = "";
 
-        // Splitsen van Prompt en Caption
         if (rawText.includes("IMG_PROMPT:")) {
             const parts = rawText.split("IMG_PROMPT:");
-            finalPost = parts[0].trim();
-            imgPrompt = parts[1].trim();
+            // CORRECTIE: Elementen uit de parts-array geïsoleerd via de stabiele .at() indexatie
+            finalPost = parts.at(0).trim(); 
+            imgPrompt = parts.at(1).trim(); 
         }
 
-        // Cleanup
-        finalPost = finalPost.replace(/^["']|["']$/g, '').replace(/^(Here is|Sure|Certainly).*?:/i, '').trim();
-        container.innerText = finalPost; 
+        finalPost = finalPost.replace(/^["']|["']$/g, '').trim();
         
-        // Knop logica: Alleen tonen als er een prompt is gegenereerd
-        if (imgPrompt && selectedStyleValue !== 'none') {
+        // 5. CREDIT CONSUMPTION & FIRESTORE UPDATE
+        if (state.userId && credits !== undefined && credits !== null) {
+            const newCredits = Math.max(0, credits - 1);
+            await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main'), {
+                credits: newCredits
+            });
+            state.userSettings.credits = newCredits;
+            if (creditCountSpan) creditCountSpan.textContent = newCredits;
+        }
+
+        // Renderen
+        if (container) {
+            container.innerHTML = `<div class="prose prose-sm dark:prose-invert max-w-none">${marked.parse(finalPost)}</div>`;
+        }
+        
+        // 6. AFBEELDING ACTIVATIE
+        if (imgPrompt && selectedStyleValue !== 'none' && imageBtn) {
             imageBtn.classList.remove('hidden');
-            imageBtn.innerText = "🎨 Generate Image (1 Credit)"; // Duidelijk maken dat dit kost
             imageBtn.onclick = () => window.generateSocialImage(imgPrompt);
         }
 
-    } catch (e) {
-        container.innerHTML = `<p class="text-red-500 text-sm">Error: ${e.message}</p>`;
+        showToast("Social Studio geladen", "success");
+
+    } catch (error) {
+        window.logSystemError(error, 'SocialMedia: runGenerator', 'ERROR');
+        showToast("Fout bij laden Social Studio: " + error.message, "error");
+        if (container) container.innerHTML = "";
     }
 }
 
@@ -998,9 +1060,6 @@ window.runSocialMediaGenerator = async function() {
 window.generateSocialImage = async function(finalPrompt) {
     const container = document.getElementById('social-image-container');
     const btn = document.getElementById('generate-social-image-btn');
-    
-    // We gebruiken de prompt die de tekst-AI heeft gemaakt. 
-    // Die bevat nu al de mix van "Ryan Reynolds onderwerp" + "Pearl Jam Poster stijl".
     
     let apiKey = state.userSettings.apiKey;
     if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.firebase) apiKey = CONFIG.firebase.apiKey;
@@ -1025,8 +1084,9 @@ window.generateSocialImage = async function(finalPrompt) {
         
         const data = await response.json();
         
-        if (data.predictions?.[0]?.bytesBase64Encoded) {
-            const base64Img = data.predictions[0].bytesBase64Encoded;
+        // CORRECTIE: Optionele chaining en array-extractie volledig omgebouwd naar de chat-veilige .at(0) methodiek
+        if (data && data.predictions && data.predictions.length > 0 && data.predictions.at(0)?.bytesBase64Encoded) {
+            const base64Img = data.predictions.at(0).bytesBase64Encoded;
             if (container) container.innerHTML = `<img src="data:image/png;base64,${base64Img}" class="w-full h-full object-cover rounded-xl shadow-inner animate-fade-in">`;
         } else {
             throw new Error("No image data received.");
@@ -1037,7 +1097,7 @@ window.generateSocialImage = async function(finalPrompt) {
         // Toon knop weer als het mislukt, zodat je opnieuw kunt proberen
         if (btn) btn.classList.remove('hidden'); 
     }
-}
+};
 
 // (Verwijder window.toggleSocialStyleSelect uit de exports want die bestaat niet meer)
 
@@ -1078,14 +1138,29 @@ window.saveSocialPost = async function() {
 
 // Water Management
 function handleWaterSourceChange() {
-    const select = document.getElementById('waterSource');
-    const [type, id] = select.value.split('_');
-    let profile;
-    if (type === 'builtin') profile = BUILT_IN_WATER_PROFILES[id];
-    else if (type === 'user') profile = userWaterProfiles.find(p => p.id === id);
-    if (profile) {
-        window.currentWaterProfile = profile;
-        updateWaterProfileDisplay(profile);
+    try {
+        const select = document.getElementById('waterSource');
+        if (!select) return;
+
+        const val = select.value;
+        if (!val) return;
+
+        const [type, id] = val.split('_');
+        let profile;
+        
+        if (type === 'builtin') {
+            profile = BUILT_IN_WATER_PROFILES[id];
+        } else if (type === 'user') {
+            profile = userWaterProfiles.find(p => p.id === id);
+        }
+
+        if (profile) {
+            window.currentWaterProfile = profile;
+            updateWaterProfileDisplay(profile);
+        }
+    } catch (error) {
+        window.logSystemError(error, 'WaterTools: handleSourceChange', 'ERROR');
+        showToast("Fout bij selecteren waterprofiel.", "error");
     }
 }
 
@@ -1101,220 +1176,605 @@ const BUILT_IN_WATER_PROFILES = {
 };
 
 // --- CALCULATORS ---
-
 window.calculateABV = function() {
-    const ogInput = document.getElementById('og')?.value.replace(',', '.') || "";
-    const fgInput = document.getElementById('fg')?.value.replace(',', '.') || "";
-    const og = parseFloat(ogInput);
-    const fg = parseFloat(fgInput);
-    const resultDiv = document.getElementById('abvResult');
+    try {
+        const ogVal = document.getElementById('og')?.value.replace(/,/g, '.');
+        const fgVal = document.getElementById('fg')?.value.replace(/,/g, '.');
+        const og = parseFloat(ogVal);
+        const fg = parseFloat(fgVal);
+        const resultDiv = document.getElementById('abvResult');
 
-    if (isNaN(og) || isNaN(fg)) {
-        window.showToast("Vul geldige getallen in voor OG en FG.", "error");
-        if (resultDiv) {
-            resultDiv.textContent = 'Invalid Input';
-            resultDiv.classList.add('text-error');
+        if (isNaN(og) || isNaN(fg)) {
+            window.showToast("Voer zowel OG als FG in.", "error");
+            return;
         }
-        return;
-    }
 
-    // 1. Hall-veiligheidscheck & Visuele feedback (v2.4)
-    if (og >= 1.775) {
-        window.showToast(`Kritieke fout: OG (${og}) overschrijdt fysieke limiet.`, "error");
-        window.logSystemError(`Onrealistische OG invoer in Calculator: ${og}`, 'Calculator: ABV', 'WARNING');
-        
-        if (resultDiv) {
-            resultDiv.textContent = 'LIMIT ERR';
-            resultDiv.classList.add('text-error');
+        if (og >= 1.775) {
+            window.showToast("Hall Limit: OG te hoog (max 1.774).", "error");
+            return; // CRITICAL FIX: Stop executie
         }
-        // Data integriteit fallback
-        if (window.tempState) window.tempState.lastCalculatedABV = 0;
-        return;
-    }
 
-    if (og > fg) {
-        // Reset visuele stijl bij geldige berekening
-        if (resultDiv) resultDiv.classList.remove('text-error');
-
-        // Hall Equation (Scientific Standard v2.4)
         const abw = (76.08 * (og - fg)) / (1.775 - og);
         const abv = abw / 0.794;
-        
-        if (resultDiv) resultDiv.textContent = `ABV: ${abv.toFixed(2)}%`;
-        if (window.tempState) window.tempState.lastCalculatedABV = abv;
-    } else {
-        window.showToast("FG kan niet hoger zijn dan de OG.", "error");
+
         if (resultDiv) {
-            resultDiv.textContent = 'Invalid Input';
-            resultDiv.classList.add('text-error');
+            resultDiv.innerHTML = `<span class="text-2xl font-bold">${abv.toFixed(2)}%</span> <span class="text-[10px] opacity-60">ABV</span>`;
+            resultDiv.classList.remove('hidden');
         }
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: calculateABV', 'ERROR');
+        window.showToast("Fout bij het uitvoeren van de berekening. Controleer de invoerwaarden.", "error");
     }
 };
 
 window.correctHydrometer = function() {
-    const sgInput = document.getElementById('sgReading')?.value.replace(',', '.') || "";
-    const tInput = document.getElementById('tempReading')?.value.replace(',', '.') || "";
-    const cInput = document.getElementById('calTemp')?.value.replace(',', '.') || "";
-    
-    const sg = parseFloat(sgInput);
-    const t = parseFloat(tInput);
-    const c = parseFloat(cInput);
-    const resultDiv = document.getElementById('sgResult');
+    try {
+        const sgInput = document.getElementById('sgReading')?.value.replace(/,/g, '.') || "";
+        const tInput = document.getElementById('tempReading')?.value.replace(/,/g, '.') || "";
+        const cInput = document.getElementById('calTemp')?.value.replace(/,/g, '.') || "";
+        
+        const sg = parseFloat(sgInput);
+        const t = parseFloat(tInput);
+        const c = parseFloat(cInput);
+        const resultDiv = document.getElementById('sgResult');
 
-    if (isNaN(sg) || isNaN(t) || isNaN(c)) {
-        window.showToast("Vul alle velden in voor temperatuurcorrectie.", "error");
-        window.logSystemError("Hydrometer: Missing values", 'Calculator: Hydrometer', 'ERROR');
-        resultDiv.textContent = 'Invalid Input';
-        return;
+        if (t > 40) {
+            window.showToast("⚠️ Waarschuwing: Temperatuur > 40°C. Gebruik Celsius.", "warning");
+        }
+
+        if (isNaN(sg) || isNaN(t) || isNaN(c)) {
+            window.showToast("Vul alle velden in.", "error");
+            return;
+        }
+
+        const correctedSg = sg * (
+            (1.00130346 - 0.000134722124 * t + 0.00000204052596 * Math.pow(t, 2) - 0.00000000232820948 * Math.pow(t, 3)) / 
+            (1.00130346 - 0.000134722124 * c + 0.00000204052596 * Math.pow(c, 2) - 0.00000000232820948 * Math.pow(c, 3))
+        );
+
+        if (resultDiv) {
+            resultDiv.textContent = `Corrected: ${correctedSg.toFixed(3)}`;
+        }
+    } catch (error) {
+        window.logSystemError(error, 'Calculator: Hydrometer Correction', 'ERROR');
+        window.showToast("Fout bij het uitvoeren van de berekening. Controleer de invoerwaarden.", "error");
     }
-
-    const correctedSg = sg * ((1.00130346 - 0.000134722124 * t + 0.00000204052596 * t**2 - 0.00000000232820948 * t**3) / (1.00130346 - 0.000134722124 * c + 0.00000204052596 * c**2 - 0.00000000232820948 * c**3));
-    resultDiv.textContent = `Corrected: ${correctedSg.toFixed(3)}`;
 };
 
-function calculatePrimingSugar() {
-    const vol = parseFloat(document.getElementById('carbVol').value);
-    const temp = parseFloat(document.getElementById('carbTemp').value);
-    const size = parseFloat(document.getElementById('carbBatchSize').value);
-    const resultDiv = document.getElementById('sugarResult');
+window.calculatePrimingSugar = function() {
+    try {
+        const getVal = (id) => parseFloat(document.getElementById(id)?.value.replace(/,/g, '.')) || NaN;
+        
+        const vol = getVal('carbVol');
+        const temp = getVal('carbTemp');
+        const size = getVal('carbBatchSize');
+        const resultDiv = document.getElementById('sugarResult');
 
-    if (isNaN(vol) || isNaN(temp) || isNaN(size)) { resultDiv.textContent = 'Invalid Input'; return; }
-    const sugarGrams = (vol - (3.0378 - 0.050062 * temp + 0.00026555 * temp**2)) * 4 * size;
-    resultDiv.textContent = `${sugarGrams.toFixed(1)} g sugar`;
-}
+        if (isNaN(vol) || isNaN(temp) || isNaN(size)) { 
+            window.showToast("Vul alle velden in voor suikerberekening.", "error");
+            return; 
+        }
 
-function calculateBlend() {
-    const vol1 = parseFloat(document.getElementById('vol1').value);
-    const abv1 = parseFloat(document.getElementById('abv1').value);
-    const vol2 = parseFloat(document.getElementById('vol2').value);
-    const abv2 = parseFloat(document.getElementById('abv2').value);
-    const resultDiv = document.getElementById('blendResult');
-
-    if (isNaN(vol1) || isNaN(abv1) || isNaN(vol2) || isNaN(abv2)) { 
-        resultDiv.textContent = 'Invalid Input'; 
-        return; 
+        // Priming Equation v2.6
+        const sugarGrams = (vol - (3.0378 - 0.050062 * temp + 0.00026555 * Math.pow(temp, 2))) * 4 * size;
+        
+        if (resultDiv) {
+            resultDiv.textContent = `${Math.max(0, sugarGrams).toFixed(1)} g sugar`;
+            resultDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: calculatePrimingSugar', 'ERROR');
+        window.showToast("Fout bij het uitvoeren van de berekening. Controleer de invoerwaarden.", "error");
     }
+};
 
-    const totalAlcohol = (vol1 * abv1) + (vol2 * abv2);
-    const totalVolume = vol1 + vol2;
-    
-    if (totalVolume <= 0) {
-        resultDiv.textContent = 'Volume Error';
-        return;
+window.addBlendingRow = function(idSuffix) {
+    try {
+        const container = document.getElementById(`blending-rows-${idSuffix}`);
+        if (!container) return;
+
+        const rowId = Date.now();
+        const tr = document.createElement('tr');
+        tr.id = `blend-row-${rowId}`;
+        tr.className = "border-b border-app-brand/10 bg-app-primary/5";
+
+        tr.innerHTML = `
+            <td class="p-2"><input type="number" step="0.1" placeholder="L" class="w-full bg-transparent text-sm focus:outline-none" oninput="this.value = this.value.replace(',', '.'); window.calculateBlend('${idSuffix}')"></td>
+            <td class="p-2"><input type="number" step="0.1" placeholder="%" class="w-full bg-transparent text-sm focus:outline-none" oninput="this.value = this.value.replace(',', '.'); window.calculateBlend('${idSuffix}')"></td>
+            <td class="p-2"><input type="number" step="0.001" placeholder="SG" class="w-full bg-transparent text-sm focus:outline-none" oninput="this.value = this.value.replace(',', '.'); window.calculateBlend('${idSuffix}')"></td>
+            <td class="p-2"><input type="number" step="0.01" placeholder="pH" class="w-full bg-transparent text-sm focus:outline-none" oninput="this.value = this.value.replace(',', '.'); window.calculateBlend('${idSuffix}')"></td>
+            <td class="p-2 text-right"><button onclick="this.closest('tr').remove(); window.calculateBlend('${idSuffix}')" class="text-red-500 hover:text-red-700 text-lg">&times;</button></td>
+        `;
+        container.appendChild(tr);
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: addBlendingRow', 'ERROR');
     }
+};
 
-    const finalABV = totalAlcohol / totalVolume;
-    resultDiv.textContent = `New: ${totalVolume.toFixed(2)}L @ ${finalABV.toFixed(2)}% ABV`;
-}
+// --- BLENDING & SPLIT BATCH REPAIRS (v2.6 STANDARDS) ---
 
-function calculateBacksweetening() {
-    const vol = parseFloat(document.getElementById('bs_current_vol').value);
-    const currentSg = parseFloat(document.getElementById('bs_current_sg').value);
-    const targetSg = parseFloat(document.getElementById('bs_target_sg').value);
-    const resultDiv = document.getElementById('backsweetenResult');
+window.calculateBlend = function() {
+    try {
+        const mode = document.getElementById('blend_mode')?.value || 'manual';
+        const resultDiv = document.getElementById('blendResult');
+        
+        let totalVolume = 0;
+        let weightedAbvSum = 0;
+        let weightedSgSum = 0;
+        let totalHydrogenGrams = 0; 
 
-    if (isNaN(vol) || isNaN(currentSg) || isNaN(targetSg) || targetSg <= currentSg) { resultDiv.textContent = 'Invalid Input'; return; }
-    // 3.4g honing per liter verhoogt SG met 0.001
-    const pointsToAdd = (targetSg - currentSg) * 1000;
-    const honeyGrams = pointsToAdd * 3.4 * vol;
-    resultDiv.textContent = `Add ${honeyGrams.toFixed(0)}g (${(honeyGrams/1000).toFixed(2)}kg) honey`;
-}
+        if (mode === 'manual') {
+            const v1 = parseFloat(String(document.getElementById('blend_v1')?.value || '0').replace(/,/g, '.')) || 0;
+            const abv1 = parseFloat(String(document.getElementById('blend_abv1')?.value || '0').replace(/,/g, '.')) || 0;
+            const sg1 = parseFloat(String(document.getElementById('blend_sg1')?.value || '1.000').replace(/,/g, '.')) || 1.000;
+            const ph1 = parseFloat(String(document.getElementById('blend_ph1')?.value || '3.6').replace(/,/g, '.')) || 3.6;
 
-function calculateDilution() {
-    const startVol = parseFloat(document.getElementById('dil_start_vol').value);
-    const startSg = parseFloat(document.getElementById('dil_start_sg').value);
-    const targetSg = parseFloat(document.getElementById('dil_target_sg').value);
-    const resultDiv = document.getElementById('dilutionResult');
+            const v2 = parseFloat(String(document.getElementById('blend_v2')?.value || '0').replace(/,/g, '.')) || 0;
+            const abv2 = parseFloat(String(document.getElementById('blend_abv2')?.value || '0').replace(/,/g, '.')) || 0;
+            const sg2 = parseFloat(String(document.getElementById('blend_sg2')?.value || '1.000').replace(/,/g, '.')) || 1.000;
+            const ph2 = parseFloat(String(document.getElementById('blend_ph2')?.value || '3.6').replace(/,/g, '.')) || 3.6;
 
-    if (isNaN(startVol) || isNaN(startSg) || isNaN(targetSg) || startSg <= targetSg) { resultDiv.textContent = 'Invalid Input'; return; }
-    const startPoints = startSg * 1000 - 1000;
-    const targetPoints = targetSg * 1000 - 1000;
-    const waterToAdd = startVol * (startPoints / targetPoints - 1);
-    resultDiv.textContent = `Add ${waterToAdd.toFixed(2)}L water`;
-}
+            totalVolume = v1 + v2;
+            if (totalVolume > 0) {
+                weightedAbvSum = (v1 * abv1) + (v2 * abv2);
+                weightedSgSum = (v1 * sg1) + (v2 * sg2);
+                totalHydrogenGrams = (v1 * Math.pow(10, -ph1)) + (v2 * Math.pow(10, -ph2));
+            }
+        } else {
+            const tableRows = document.querySelectorAll('#blendTableBody tr');
+            
+            tableRows.forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                if (inputs.length >= 4) {
+                    // CORRECTIE: NodeList indexering hersteld via de verplichte .item(index) methodiek
+                    const v = parseFloat(String(inputs.item(0).value || '0').replace(/,/g, '.')) || 0;
+                    const abv = parseFloat(String(inputs.item(1).value || '0').replace(/,/g, '.')) || 0;
+                    const sg = parseFloat(String(inputs.item(2).value || '1.000').replace(/,/g, '.')) || 1.000;
+                    const ph = parseFloat(String(inputs.item(3).value || '3.6').replace(/,/g, '.')) || 3.6;
 
+                    totalVolume += v;
+                    weightedAbvSum += (v * abv);
+                    weightedSgSum += (v * sg);
+                    totalHydrogenGrams += (v * Math.pow(10, -ph));
+                }
+            });
+        }
+
+        if (totalVolume <= 0) {
+            if (resultDiv) resultDiv.innerHTML = `<span class="text-xs text-on-surface-variant">Voer volumes in om de blend te berekenen.</span>`;
+            return;
+        }
+
+        const finalAbv = weightedAbvSum / totalVolume;
+        const finalSg = weightedSgSum / totalVolume;
+        
+        let finalPh = 3.6;
+        if (totalHydrogenGrams > 0) {
+            const calculatedPhValue = -Math.log10(totalHydrogenGrams / totalVolume);
+            if (isFinite(calculatedPhValue) && !isNaN(calculatedPhValue)) {
+                finalPh = calculatedPhValue;
+            }
+        }
+
+        if (finalSg >= 1.775) {
+            window.showToast("Kritieke fout: De berekende SG overschrijdt de Hall-limiet (1.775).", "error");
+            if (resultDiv) resultDiv.innerHTML = `<span class="text-error font-bold">LIMIT ERR</span>`;
+            return;
+        }
+
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="p-4 bg-primary-container rounded-xl border border-primary/20 shadow-sm animate-fade-in">
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-primary mb-2">Predicted Blend Profile</div>
+                    <div class="space-y-1 text-sm text-on-surface">
+                        <div class="flex justify-between border-b border-outline-variant/30 pb-1">
+                            <span>Total Volume:</span> <span class="font-mono font-bold text-primary">${totalVolume.toFixed(2)} L</span>
+                        </div>
+                        <div class="flex justify-between text-xs pt-1">
+                            <span>Blend ABV:</span> <span class="font-mono font-bold">${finalAbv.toFixed(2)}%</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span>Blend Gravity (SG):</span> <span class="font-mono font-bold">${finalSg.toFixed(4)}</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span>Blend pH:</span> <span class="font-mono font-bold">${finalPh.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+        }
+
+    } catch (error) {
+        window.logSystemError(error, 'Tools: Blending Engine', 'ERROR');
+        window.showToast("Fout bij het berekenen van de blend. Controleer de invoerwaarden.", "error");
+    }
+};
+
+window.calculateBacksweetening = function() {
+    try {
+        // 1. Comma-to-Dot protocol (v2.6)
+        const volInput = document.getElementById('bs_current_vol')?.value.replace(/,/g, '.') || "";
+        const currentSgInput = document.getElementById('bs_current_sg')?.value.replace(/,/g, '.') || "";
+        const targetSgInput = document.getElementById('bs_target_sg')?.value.replace(/,/g, '.') || "";
+
+        const vol = parseFloat(volInput);
+        const currentSg = parseFloat(currentSgInput);
+        const targetSg = parseFloat(targetSgInput);
+        const resultDiv = document.getElementById('backsweetenResult');
+
+        if (isNaN(vol) || isNaN(currentSg) || isNaN(targetSg)) { 
+            window.showToast("Vul alle waarden in.", "error");
+            return; 
+        }
+
+        // 2. Hall-veiligheidscheck
+        if (currentSg >= 1.775 || targetSg >= 1.775) {
+            window.showToast("Fysieke limiet overschreden (1.775).", "error");
+            window.logSystemError(`Backsweetening: SG ${currentSg}/${targetSg} >= 1.775`, 'Tools: Backsweeten', 'CRITICAL');
+            return;
+        }
+
+        // 3. Bates-polynoom: SG naar Brix conversie
+        const getBrix = (sg) => (182.9622 * Math.pow(sg, 3)) - (777.3009 * Math.pow(sg, 2)) + (1264.5170 * sg) - 670.1831;
+        
+        const currentBrix = getBrix(currentSg);
+        const targetBrix = getBrix(targetSg);
+
+        // 4. Volledige Bates-v2.6 Honingberekening inclusief TargetSG
+        // Formule: DeltaBrix * 0.0125 (suiker-constante) * Vol * TargetSG * 1000 (naar gram)
+        const honeyGrams = (targetBrix - currentBrix) * 0.0125 * vol * targetSg * 1000;
+        const honeyKg = honeyGrams / 1000;
+
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="p-4 bg-app-primary-container rounded-xl border border-app-brand/20 shadow-sm animate-fade-in">
+                    <span class="block text-[10px] uppercase opacity-60 font-bold tracking-widest text-app-brand">Required Honey (Bates-v2.6)</span>
+                    <span class="text-3xl font-bold text-app-brand font-header">${Math.round(honeyGrams)}g</span>
+                    <div class="mt-2 pt-2 border-t border-app-brand/10 flex justify-between text-xs opacity-80">
+                        <span>${honeyKg.toFixed(3)} kg</span>
+                        <span>Δ Brix: ${(targetBrix - currentBrix).toFixed(1)}°</span>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        window.logSystemError(error, 'Calculator: Backsweetening', 'ERROR');
+        window.showToast("Fout bij berekening zoetheid.", "error");
+    }
+};
+
+window.calculateDilution = function() {
+    try {
+        const getVal = (id) => parseFloat(document.getElementById(id)?.value.replace(/,/g, '.')) || NaN;
+
+        const startVol = getVal('dil_start_vol');
+        const startSg = getVal('dil_start_sg');
+        const targetSg = getVal('dil_target_sg');
+        const resultDiv = document.getElementById('dilutionResult');
+
+        if (isNaN(startVol) || isNaN(startSg) || isNaN(targetSg)) { 
+            window.showToast("Voer geldige SG en Volume waarden in.", "error");
+            return; 
+        }
+
+        if (startSg <= targetSg) {
+            window.showToast("Start SG moet hoger zijn dan Target SG.", "error");
+            return;
+        }
+
+        const startPoints = (startSg * 1000) - 1000;
+        const targetPoints = (targetSg * 1000) - 1000;
+        
+        if (targetPoints <= 0) return;
+
+        const waterToAdd = startVol * (startPoints / targetPoints - 1);
+        if (resultDiv) {
+            resultDiv.textContent = `Add ${waterToAdd.toFixed(2)}L water`;
+        }
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: calculateDilution', 'ERROR');
+    }
+};
+
+// --- PROACTIEVE BUFFER CALCULATOR (v2.6)  ---
+window.calculateBuffer = function() {
+    try {
+        // 1. Inputs ophalen & Comma-to-Dot sanitisatie
+        const volInput = document.getElementById('buffer_vol')?.value.replace(/,/g, '.') || "";
+        const taCurrentInput = document.getElementById('buffer_ta_current')?.value.replace(/,/g, '.') || "";
+        const taTargetInput = document.getElementById('buffer_ta_target')?.value.replace(/,/g, '.') || "";
+        const currentPhInput = document.getElementById('buffer_ph_current')?.value.replace(/,/g, '.') || "";
+
+        const vol = parseFloat(volInput);
+        const taCurrent = parseFloat(taCurrentInput);
+        const taTarget = parseFloat(taTargetInput);
+        const currentPh = parseFloat(currentPhInput);
+        const resultDiv = document.getElementById('bufferResult');
+
+        if (isNaN(vol) || vol <= 0) {
+            window.showToast("Voer een geldig volume in.", "error");
+            return;
+        }
+
+        let htmlContent = "";
+
+        // 2. MODUS DETECTIE: Proactief vs Correctief
+        if (isNaN(taCurrent) || isNaN(taTarget)) {
+            // --- PROACTIEVE MODUS (v2.6 Standaard) ---
+            const proactiveGrams = 0.4 * vol;
+            const dosePerLiter = proactiveGrams / vol;
+            
+            // Berekening Kalium-verhoging (v2.6 Cosmetische Update)
+            const potassiumPpm = dosePerLiter * 523.07;
+            
+            // Kalium-check: minimaal 0.26 g/L K2CO3 voor ~300ppm
+            let potassiumNote = dosePerLiter < 0.26 
+                ? `<p class="mt-2 text-[9px] text-amber-600 font-bold uppercase">⚠️ Opmerking: Kaliumgehalte mogelijk onder 300 ppm drempel.</p>` 
+                : `<p class="mt-2 text-[9px] text-green-600 font-bold uppercase">✓ Kalium verhoging: +${Math.round(potassiumPpm)} ppm K⁺</p>`;
+            
+            htmlContent = `
+                <div class="p-4 bg-app-tertiary rounded-xl border border-app-brand/20 shadow-sm animate-fade-in">
+                    <span class="block text-[10px] uppercase opacity-60 font-bold tracking-widest text-app-brand">Proactieve Buffer (K₂CO₃)</span>
+                    <span class="text-3xl font-bold text-app-brand font-header">${proactiveGrams.toFixed(2)}g</span>
+                    <p class="mt-2 text-[10px] opacity-80 uppercase leading-tight">Voorkomt pH-crash < 3.2 in honingmost.</p>
+                    ${potassiumNote}
+                </div>`;
+        } else {
+            // --- CORRECTIEVE MODUS (Delta TA) ---
+            const deltaTA = Math.max(0, taCurrent - taTarget);
+            const k2co3Grams = vol * deltaTA * 0.6; 
+            const khco3Grams = vol * deltaTA * 0.9;
+            
+            const k2co3DosePerLiter = k2co3Grams / vol;
+            const khco3DosePerLiter = khco3Grams / vol;
+
+            // Berekening Kalium-verhoging (v2.6 Cosmetische Update)
+            const ppmK2CO3 = k2co3DosePerLiter * 523.07;
+            const ppmKHCO3 = khco3DosePerLiter * 361.20;
+
+            // Veiligheidscheck: pH-Gevaar & Botulisme
+            let warningHtml = "";
+            if (currentPh > 4.2 && deltaTA > 0) {
+                warningHtml = `
+                    <div class="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded text-[10px] text-red-600 font-bold uppercase animate-pulse">
+                        ⚠️ GEVAAR: pH > 4.2 gedetecteerd. Verdere reductie kan pH > 4.6 pushen. 
+                        Risico op botulisme bij pH > 4.6 indien niet gecorrigeerd!
+                    </div>`;
+            }
+
+            let potassiumNote = k2co3DosePerLiter < 0.26 
+                ? `<p class="mt-2 text-[9px] text-amber-600 font-bold uppercase">⚠️ Opmerking: Kaliumgehalte (K₂CO₃) mogelijk onder 300 ppm drempel.</p>` 
+                : `<p class="mt-2 text-[9px] text-green-600 font-bold uppercase">✓ Est. K⁺: +${Math.round(ppmK2CO3)} ppm (Carbonaat) / +${Math.round(ppmKHCO3)} ppm (Bicarbonaat)</p>`;
+
+            htmlContent = `
+                <div class="p-4 bg-app-primary-container rounded-xl border border-app-brand/20 shadow-sm animate-fade-in">
+                    <span class="block text-[10px] uppercase opacity-60 font-bold tracking-widest text-app-brand">Correctieve Zuurreductie (ΔTA: ${deltaTA.toFixed(1)}g/L)</span>
+                    <div class="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                            <span class="block text-[9px] font-bold opacity-70">K₂CO₃ (Carbonaat)</span>
+                            <span class="text-xl font-bold text-app-brand">${k2co3Grams.toFixed(2)}g</span>
+                        </div>
+                        <div>
+                            <span class="block text-[9px] font-bold opacity-70">KHCO₃ (Bicarbonaat)</span>
+                            <span class="text-xl font-bold text-app-brand">${khco3Grams.toFixed(2)}g</span>
+                        </div>
+                    </div>
+                    <p class="mt-3 text-[9px] italic opacity-70">Bicarbonaat (KHCO₃) zorgt voor minder agressieve schuimvorming.</p>
+                    ${potassiumNote}
+                    ${warningHtml}
+                </div>`;
+        }
+
+        if (resultDiv) {
+            resultDiv.innerHTML = htmlContent;
+        }
+
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: calculateBuffer', 'ERROR');
+        window.showToast("Fout bij buffer-berekening.", "error");
+    }
+};
+
+// --- TOSNA 3.0 CALCULATOR (v2.6 COMPLIANT) ---
 window.calculateTOSNA = function() {
-    const ogInput = document.getElementById('tosna_og')?.value.replace(',', '.') || "";
-    const volInput = document.getElementById('tosna_vol')?.value.replace(',', '.') || "";
-    const og = parseFloat(ogInput);
-    const vol = parseFloat(volInput);
-    const yeastNeed = document.getElementById('tosna_yeast')?.value;
-    const resultDiv = document.getElementById('tosnaResult');
+    try {
+        const getVal = (id) => {
+            const el = document.getElementById(id);
+            return el ? parseFloat(el.value.replace(/,/g, '.')) : NaN;
+        };
+        
+        const og = getVal('tosna_og');
+        const vol = getVal('tosna_vol');
+        const yeastKey = document.getElementById('tosna_yeast')?.value || 'medium';
+        const resultDiv = document.getElementById('tosnaResult');
 
-    if (isNaN(og) || isNaN(vol) || vol <= 0) { 
-        window.showToast("Ongeldige invoer voor TOSNA berekening.", "error");
-        window.logSystemError("TOSNA: Invalid Input", 'Calculator: TOSNA', 'ERROR');
-        resultDiv.innerHTML = `<p class="text-red-500">Invalid Input</p>`; 
-        return; 
+        if (isNaN(og) || isNaN(vol) || og < 1.000 || vol <= 0) {
+            window.showToast("Voer een geldige OG (1.xxx) en Volume in.", "error");
+            return;
+        }
+
+        const brixInit = (182.9622 * Math.pow(og, 3)) - (777.3009 * Math.pow(og, 2)) + (1264.5170 * og) - 670.1831;
+        const factors = { 'low': 0.75, 'medium': 0.90, 'high': 1.25 };
+        const fGist = factors[yeastKey] || 0.90;
+
+        const yanNeed = 10 * brixInit * og * fGist;
+        const totalFermaidO = (yanNeed / 160) * vol;
+
+        // TOSNA 3.0 Pitch Rate Logic
+        const pitchRateAdvice = og < 1.100 
+            ? "💡 Pitch Rate: Use exactly 1g yeast per gallon (TOSNA 3.0)."
+            : "💡 Pitch Rate: Standard dosage (2g/gal) recommended.";
+
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="p-4 bg-primary/5 border-l-4 border-primary rounded-r-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] uppercase font-bold opacity-60 tracking-widest">TOSNA 3.0 Analysis</span>
+                        <span class="bg-primary text-on-primary text-[8px] px-2 py-0.5 rounded-full font-bold">F_gist: ${fGist}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-3">
+                        <div><p class="text-[9px] opacity-60 uppercase">YAN Target</p><p class="font-bold font-header text-lg">${Math.round(yanNeed)} ppm</p></div>
+                        <div><p class="text-[9px] opacity-60 uppercase">Total Fermaid O</p><p class="font-bold font-header text-lg text-primary">${totalFermaidO.toFixed(2)}g</p></div>
+                    </div>
+                    <div class="pt-2 border-t border-primary/10 space-y-1">
+                        <p class="text-[10px] font-medium italic text-on-surface/70">Dosing Schedule (4 steps):</p>
+                        <p class="font-mono text-xs font-bold text-primary border-b border-primary/5 pb-1">${(totalFermaidO / 4).toFixed(2)}g at 24h, 48h, 72h, & 1/3 Sugar Break.</p>
+                        <p class="text-[10px] font-bold text-secondary-onContainer pt-1">${pitchRateAdvice}</p>
+                    </div>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: calculateTOSNA', 'ERROR');
+        window.showToast("Fout bij TOSNA berekening.", "error");
     }
-
-    // TOSNA 3.0 Logica
-    const brix = (og * 1000 - 1000) / 4;
-    let targetYAN = (yeastNeed === 'low') ? 20 * brix : (yeastNeed === 'medium' ? 25 * brix : 35 * brix);
-    
-    // Fermaid-O is ~40mg YAN/gram.
-    const totalFermaidO = (targetYAN / 40) * vol;
-    const addition = totalFermaidO / 4;
-
-    // Pitch Rate & Go-Ferm (3.0 Standaard)
-    const pitchRate = (og < 1.100) ? 1.0 : 1.5; // gram per gallon (ca. 3.785L)
-    const yeastGrams = (vol / 3.785) * pitchRate;
-    const goFermGrams = yeastGrams * 1.25;
-
-    resultDiv.innerHTML = `
-        <h4 class="font-bold text-lg border-b border-app-brand/20 mb-2 pb-1">TOSNA 3.0 Protocol</h4>
-        <div class="grid grid-cols-2 gap-2 mb-3 text-sm">
-            <div class="bg-app-tertiary p-2 rounded">
-                <span class="block text-[10px] uppercase opacity-60">Dry Yeast</span>
-                <span class="font-bold">${yeastGrams.toFixed(1)}g</span>
-            </div>
-            <div class="bg-app-tertiary p-2 rounded">
-                <span class="block text-[10px] uppercase opacity-60">Go-Ferm Sterk</span>
-                <span class="font-bold">${goFermGrams.toFixed(1)}g</span>
-            </div>
-        </div>
-        <p class="text-sm"><strong>Total Fermaid-O:</strong> ${totalFermaidO.toFixed(2)}g</p>
-        <ul class="list-disc pl-5 mt-2 text-xs space-y-1">
-            <li><strong>24h / 48h / 72h:</strong> Voeg telkens ${addition.toFixed(2)}g toe.</li>
-            <li><strong>1/3 Sugar Break:</strong> Voeg laatste ${addition.toFixed(2)}g toe.</li>
-        </ul>
-    `;
 };
 
-// --- REFRACTOMETER CORRECTIE (Brix -> SG) ---
-function calculateRefractometerCorrection() {
-    const ob = parseFloat(document.getElementById('refract_ob').value);
-    const cb = parseFloat(document.getElementById('refract_cb').value);
-    const resultDiv = document.getElementById('refractResult');
+window.calculateTargetApparentBrix = function() {
+    try {
+        const getVal = (id) => parseFloat(document.getElementById(id)?.value.replace(/,/g, '.')) || NaN;
+        const og = getVal('target_brix_og');
+        const targetSg = getVal('target_brix_sg');
+        
+        // Priority: Input field > userSettings > Default 1.04
+        const inputWcf = getVal('refract_wcf');
+        const WCF = !isNaN(inputWcf) ? inputWcf : (state.userSettings?.wcf || 1.04);
+        
+        const resultDiv = document.getElementById('targetBrixResult');
 
-    if (isNaN(ob) || isNaN(cb)) {
-        showToast("Please enter both Brix values.", "error");
-        return;
+        if (isNaN(og) || isNaN(targetSg)) {
+            window.showToast("Voer OG en Target SG in.", "error");
+            return;
+        }
+
+        const brixInit = (182.9622 * Math.pow(og, 3)) - (777.3009 * Math.pow(og, 2)) + (1264.5170 * og) - 670.1831;
+        const wri_i = brixInit / WCF;
+        const wri_f = (targetSg - 1.0 + 0.002349 * wri_i) / 0.006276;
+        const displayBrix = wri_f * WCF;
+
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="p-4 bg-primary-container rounded-xl border border-primary/20 shadow-sm">
+                    <span class="block text-[10px] uppercase opacity-60 font-bold">Target Apparent Brix</span>
+                    <span class="text-3xl font-bold text-primary">${displayBrix.toFixed(1)}°Bx</span>
+                </div>`;
+            resultDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: calculateTargetApparentBrix', 'ERROR');
+        window.showToast("Fout bij het uitvoeren van de berekening. Controleer de invoerwaarden.", "error");
     }
+};
 
-    const sg = 1.001843 - 0.002318474 * ob - 0.000007775 * (ob * ob) - 0.0340054 * cb + 0.00564 * (cb * cb) + 0.000283 * (ob * cb);
-    const originalSG = 1 + (ob / (258.6 - ((ob / 258.2) * 227.1)));
+window.calculateStabilization = function() {
+    try {
+        const getVal = (id) => parseFloat(document.getElementById(id)?.value.replace(/,/g, '.')) || NaN;
+        const abv = getVal('stab_abv');
+        const fg = getVal('stab_fg');
+        const ph = getVal('stab_ph');
+        const vol = getVal('stab_vol');
+        const resultDiv = document.getElementById('stabilizationResult');
 
-    let abv = 0;
-    if (originalSG > sg) {
-        const abw = (76.08 * (originalSG - sg)) / (1.775 - originalSG);
-        abv = abw / 0.794;
+        if (isNaN(abv) || isNaN(fg) || isNaN(ph) || isNaN(vol)) {
+            window.showToast("Vul alle waarden in.", "error");
+            return;
+        }
+
+        // Hall-safety pre-check (App_Context v2.6)
+        if (fg >= 1.775) {
+            window.showToast("Hall Limit: FG te hoog.", "error");
+            return;
+        }
+
+        const residualBrix = (182.9622 * Math.pow(fg, 3)) - (777.3009 * Math.pow(fg, 2)) + (1264.5170 * fg) - 670.1831;
+        const delleUnits = (4.5 * abv) + residualBrix;
+        
+        // STRIKTE DELLE-LIMIET & PHYSIOLOGISCHE WETMATIGHEID v2.6 VERIFICATIE
+        const isStable = delleUnits >= 78.0 || abv >= 15.0;
+
+        // Piecewise Sorbate Scale (Auditor Model)
+        let sorbateMgL = 200;
+        if (abv < 10) sorbateMgL = 200;
+        else if (abv >= 10 && abv < 11) sorbateMgL = 200 - (abv - 10) * 35;
+        else if (abv >= 11 && abv < 12) sorbateMgL = 165 - (abv - 11) * 30;
+        else if (abv >= 12 && abv < 13) sorbateMgL = 135 - (abv - 12) * 35;
+        else if (abv >= 13 && abv < 14) sorbateMgL = 100 - (abv - 13) * 35;
+        else if (abv >= 14 && abv < 15) sorbateMgL = 65 - (abv - 14) * 15;
+        else sorbateMgL = 50;
+
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="p-4 rounded-2xl border ${isStable ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'} animate-fade-in">
+                    <p class="text-center font-bold text-sm mb-3">${isStable ? '✅ MOLECULAR STABLE' : '⚠️ STABILIZATION REQUIRED'}</p>
+                    <div class="grid grid-cols-2 gap-4 text-center mb-3">
+                        <div><p class="text-[9px] uppercase opacity-60">Delle Units</p><p class="text-xl font-bold">${delleUnits.toFixed(1)}</p></div>
+                        <div><p class="text-[9px] uppercase opacity-60">Residual Brix</p><p class="text-xl font-bold">${residualBrix.toFixed(1)}°</p></div>
+                    </div>
+                    <div class="pt-2 border-t border-black/5">
+                        <div class="flex justify-between text-sm"><span>K-Sorbate:</span><span class="font-bold">${((sorbateMgL * vol) / 1000).toFixed(2)}g</span></div>
+                        <p class="text-[8px] italic mt-1 opacity-70">*Target: ${Math.round(sorbateMgL)} ppm (Auditor Piecewise Model).</p>
+                    </div>
+                </div>`;
+            resultDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: calculateStabilization', 'ERROR');
+        window.showToast("Fout bij het uitvoeren van de berekening. Controleer de invoerwaarden.", "error");
     }
+};
 
-    resultDiv.innerHTML = `
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <p class="text-xs text-app-secondary uppercase">True Gravity</p>
-                <p class="text-2xl font-bold text-primary">${sg.toFixed(3)}</p>
-            </div>
-            <div>
-                <p class="text-xs text-app-secondary uppercase">Current ABV</p>
-                <p class="text-2xl font-bold text-tertiary">${abv.toFixed(1)}%</p>
-            </div>
-        </div>
-    `;
-    resultDiv.classList.remove('hidden');
-}
+window.calculateRefractometerCorrection = function() {
+    try {
+        const getVal = (id, fallback) => {
+            const val = document.getElementById(id)?.value.replace(/,/g, '.');
+            return val ? parseFloat(val) : fallback;
+        };
+
+        const ri_i = getVal('refract_ob', NaN);
+        const ri_f = getVal('refract_cb', NaN);
+        const wcf = getVal('refract_wcf', 1.04);
+        const resultDiv = document.getElementById('refractResult');
+
+        if (isNaN(ri_i) || isNaN(ri_f)) {
+            window.showToast("Vul beide Brix-waarden in.", "error");
+            return;
+        }
+
+        const wri_i = ri_i / wcf;
+        const wri_f = ri_f / wcf;
+        const finalFG = 1.0 - (0.002349 * wri_i) + (0.006276 * wri_f);
+
+        // ABV via Hall Equation
+        const finalOG = (ri_i > 1.2) ? 
+            (0.0000000578503 * Math.pow(ri_i, 3)) + (0.0000127414 * Math.pow(ri_i, 2)) + (0.00384577 * ri_i) + 1.0000 : ri_i;
+
+        if (finalOG >= 1.775) {
+             window.showToast("Hall Limit Error: OG te hoog.", "error");
+             return; // CRITICAL FIX: Stop executie
+        }
+
+        let abv = 0;
+        if (finalOG > finalFG) {
+            const abw = (76.08 * (finalOG - finalFG)) / (1.775 - finalOG);
+            abv = abw / 0.794;
+        }
+
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="grid grid-cols-2 gap-4 p-2">
+                    <div><p class="text-[10px] uppercase opacity-60">True FG</p><p class="font-bold">${finalFG.toFixed(3)}</p></div>
+                    <div><p class="text-[10px] uppercase opacity-60">Est. ABV</p><p class="font-bold">${abv.toFixed(2)}%</p></div>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: calculateRefractometerCorrection', 'ERROR');
+        window.showToast("Fout bij het uitvoeren van de berekening. Controleer de invoerwaarden.", "error");
+    }
+};
 
 // Helpers om vanuit een recept naar een calculator te springen
 window.linkToBacksweetenCalc = function(brewId) {
@@ -1374,13 +1834,9 @@ async function clearCollection(collectionName) {
 // --- WATER SOMMELIER LOGIC (BELGIAN EDITION) ---
 async function findCommercialWaterMatch() {
     const resultsDiv = document.getElementById('water-brand-results');
-    
-    // We halen het recept op via het window object (gedeeld geheugen)
     const recipeContext = window.currentRecipeMarkdown || "";
 
     if (!resultsDiv) return;
-    
-    // Als er geen recept is, toon een melding
     if (!recipeContext) {
         resultsDiv.classList.remove('hidden');
         resultsDiv.innerHTML = `<p class="text-amber-500 text-sm p-2">Please generate a recipe first so I can recommend matching water.</p>`;
@@ -1390,41 +1846,31 @@ async function findCommercialWaterMatch() {
     resultsDiv.classList.remove('hidden');
     resultsDiv.innerHTML = getLoaderHtml("Scanning Belgian inventory...");
 
-    const lowerRecipe = recipeContext.toLowerCase();
-    const styleHint = lowerRecipe.includes('melomel') || lowerRecipe.includes('fruit') 
-        ? "Fruit Mead (Prefers soft/low mineral water to let fruit shine)" 
-        : "Traditional (Prefers some mineral structure for mouthfeel)";
-
-    const prompt = `You are a Water Sommelier for a Mead Brewer in BELGIUM. 
-    
-    **CONTEXT:** ${styleHint}
-    **USER TOOL:** The user uses a **Refractometer (Brix)**. Carbonation bubbles are NOT an issue for measuring.
-    
-    **TASK:** Recommend 3 real-world bottled water brands found in **BELGIAN SUPERMARKETS** (e.g. Colruyt, Delhaize, Carrefour).
-    
-    **SEARCH SCOPE:** - Do NOT stick to a pre-defined list. Search your knowledge base for widely available Belgian/European brands.
-    - **CRITICAL:** Do NOT recommend American brands. Only brands sold in Belgium/EU.
-
-    **GUIDELINES:** 1. **STILL vs SPARKLING:** - Standard recommendation: "Plat/Still" (safest baseline).
-       - Exception: If the style benefits from it, you MAY recommend a Sparkling variant.
-       - Requirement: If Sparkling is chosen, add note: "Degas sample before measuring final gravity".
-    2. **NO SALT ADDITIONS:** The user uses the water "as is". Find the perfect natural profile.
-    3. **SOURCE CHECK:** If recommending a brand with multiple sources (like Cristaline or generic supermarket brands), you **MUST** specify which specific source/catchment area on the label is required (e.g. "Source Eleanor").
-    
-    RECIPE: ${recipeContext.substring(0, 1000)}...
-    
-    OUTPUT: JSON Array: [{"brand": "Name", "reason": "Why this specific mineral profile fits", "tweak_instruction": "Specific usage advice"}]`;
-
-    const schema = {
-        type: "ARRAY",
-        items: {
-            type: "OBJECT",
-            properties: { "brand": { "type": "STRING" }, "reason": { "type": "STRING" }, "tweak_instruction": { "type": "STRING" } },
-            required: ["brand", "reason", "tweak_instruction"]
-        }
-    };
-
     try {
+        const lowerRecipe = recipeContext.toLowerCase();
+        const styleHint = lowerRecipe.includes('melomel') || lowerRecipe.includes('fruit') 
+            ? "Fruit Mead (Prefers soft/low mineral water to let fruit shine)" 
+            : "Traditional (Prefers some mineral structure for mouthfeel)";
+
+        const prompt = `You are a Water Sommelier for a Mead Brewer in BELGIUM. 
+        CONTEXT: ${styleHint}
+        TASK: Recommend 3 real-world bottled water brands found in BELGIAN SUPERMARKETS.
+        CRITICAL: Do NOT recommend American brands. Only brands sold in Belgium/EU.
+        OUTPUT: JSON Array: [{"brand": "Name", "reason": "Why this specific mineral profile fits", "tweak_instruction": "Specific usage advice"}]`;
+
+        const schema = {
+            type: "ARRAY",
+            items: {
+                type: "OBJECT",
+                properties: { 
+                    "brand": { "type": "STRING" }, 
+                    "reason": { "type": "STRING" }, 
+                    "tweak_instruction": { "type": "STRING" } 
+                },
+                required: ["brand", "reason", "tweak_instruction"]
+            }
+        };
+
         const response = await performApiCall(prompt, schema);
         const brands = JSON.parse(response);
         let html = `<h5 class="font-bold mb-3 text-app-brand text-sm uppercase">Recommended Belgian Waters:</h5><div class="space-y-3">`;
@@ -1441,7 +1887,7 @@ async function findCommercialWaterMatch() {
         html += `</div>`;
         resultsDiv.innerHTML = html;
     } catch (error) {
-        console.error("Water match failed:", error);
+        window.logSystemError(error, 'tools.js: findCommercialWaterMatch', 'ERROR');
         resultsDiv.innerHTML = `<p class="text-red-500 text-sm">Could not find matching brands. Error: ${error.message}</p>`;
     }
 }
@@ -1452,7 +1898,6 @@ window.exportSystemLogs = async function() {
     showToast("Fetching logs...", "info");
     
     try {
-        // Haal logs op, gesorteerd op nieuwste eerst
         const logsRef = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'systemLogs');
         const q = query(logsRef, orderBy("timestamp", "desc"), limit(100)); // Laatste 100 fouten
         const snapshot = await getDocs(q);
@@ -1468,7 +1913,9 @@ window.exportSystemLogs = async function() {
         const blob = new Blob([JSON.stringify(logs, null, 2)], {type: 'application/json'});
         const a = document.createElement('a'); 
         a.href = URL.createObjectURL(blob); 
-        a.download = `debug_logs_${new Date().toISOString().split('T')[0]}.json`;
+        // CORRECTIE: Datum-extrapolatie herleid via de chat-veilige .at(0) methode na de split-operatie
+        const dateStamp = new Date().toISOString().split('T').at(0);
+        a.download = `debug_logs_${dateStamp}.json`;
         a.click();
         
         showToast("Logs downloaded.", "success");
@@ -1499,33 +1946,461 @@ window.updateLogCount = async function() {
     }
 }
 
-// --- EXPORTS ---
-window.importData = importData;
-window.getThemeColor = getThemeColor;
-window.saveWaterProfile = saveWaterProfile;
-window.findCommercialWaterMatch = findCommercialWaterMatch;
-window.findWaterProfileWithAI = findWaterProfileWithAI;
-window.exportHistory = exportHistory;
-window.exportInventory = exportInventory;
+// --- BRAGGOT EXTRACT & SPLIT BATCH CALCULATORS (v2.6 STANDARDS) ---
+
+window.calculateBraggot = function() {
+    try {
+        // 1. DOM Elementen ophalen
+        const honeyWeightInput = document.getElementById('braggot_honey_weight')?.value || "";
+        const maltWeightInput = document.getElementById('braggot_malt_weight')?.value || "";
+        const targetVolInput = document.getElementById('braggot_target_volume')?.value || "";
+        const extractType = document.getElementById('braggot_extract_type')?.value || "DME";
+        const resultDiv = document.getElementById('braggotResult');
+
+        // 2. Comma-to-Dot Sanitisatie protocol (v2.6)
+        const honeyWeight = parseFloat(honeyWeightInput.replace(/,/g, '.')) || 0;
+        const maltWeight = parseFloat(maltWeightInput.replace(/,/g, '.')) || 0;
+        const targetVolume = parseFloat(targetVolInput.replace(/,/g, '.')) || 0;
+
+        if (targetVolume <= 0) {
+            window.showToast("Voer een geldig doelvolume in groter dan 0 L.", "error");
+            return;
+        }
+
+        // 3. Suikerbijdrage (Gravity Points) berekenen op basis van v2.6 constanten
+        const gpHoney = honeyWeight * 290;
+        
+        let maltConstant = 375; // Default DME
+        if (extractType === "LME") {
+            maltConstant = 290;
+        } else if (extractType === "Candy") {
+            maltConstant = 300;
+        } else if (extractType === "DME") {
+            maltConstant = 375;
+        }
+        const gpMalt = maltWeight * maltConstant;
+        
+        const totalGP = gpHoney + gpMalt;
+
+        // 4. Handhaaf Braggot-Grenzen: Valideer of het molaandeel X_malt tussen 30% en 50% ligt
+        if (totalGP > 0) {
+            const xMalt = gpMalt / totalGP;
+            if (xMalt < 0.30 || xMalt > 0.50) {
+                window.showToast(`Zymologische waarschuwing: Het molaandeel van de moutstorting (${(xMalt * 100).toFixed(1)}%) valt buiten de braggot-restricties (strikte grens: 30% - 50%).`, "error");
+                if (resultDiv) resultDiv.innerHTML = `<span class="text-error font-bold">BRAG_BOUNDS_ERR</span>`;
+                return;
+            }
+        }
+
+        const calculatedPoints = totalGP / targetVolume;
+        const ogTheoretisch = 1.000 + (calculatedPoints / 1000);
+
+        // 5. Strikte Hall-precheck tegen crashes en corrupte data (OG mag niet >= 1.775 zijn)
+        if (ogTheoretisch >= 1.775) {
+            window.showToast("Kritieke fout: De theoretische OG overschrijdt de Hall-limiet (1.775).", "error");
+            if (resultDiv) resultDiv.innerHTML = `<span class="text-error font-bold">LIMIT ERR</span>`;
+            return;
+        }
+
+        // 6. Procentuele verhoudingen berekenen op basis van reële totalGP suikerbijdrage matrix
+        let percentHoney = 0;
+        let percentMalt = 0;
+        if (totalGP > 0) {
+            percentHoney = (gpHoney / totalGP) * 100;
+            percentMalt = (gpMalt / totalGP) * 100;
+        }
+
+        // 7. Real-time UI-update via MD3-conforme structuur
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="p-4 bg-primary-container rounded-xl border border-primary/20 shadow-sm animate-fade-in">
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-primary mb-2">Predicted Braggot Profile (v2.6)</div>
+                    <div class="space-y-1 text-sm text-on-surface">
+                        <div class="flex justify-between border-b border-outline-variant/30 pb-1">
+                            <span>Predicted OG:</span> <span class="font-mono font-bold text-primary">${ogTheoretisch.toFixed(3)}</span>
+                        </div>
+                        <div class="flex justify-between text-xs pt-1">
+                            <span>Sugar from Honey:</span> <span class="font-mono font-bold">${percentHoney.toFixed(1)}%</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span>Sugar from Malt (${extractType}):</span> <span class="font-mono font-bold">${percentMalt.toFixed(1)}%</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+        }
+
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: calculateBraggot', 'ERROR');
+        window.showToast("Fout bij het berekenen van de Braggot-extracten.", "error");
+    }
+};
+
+window.calculateSplitBatch = function() {
+    try {
+        // 1. DOM Elementen ophalen
+        const vSubInput = document.getElementById('split_v_sub')?.value || "";
+        const sgInitInput = document.getElementById('split_sg_init')?.value || "";
+        const vAddInput = document.getElementById('split_v_add')?.value || "";
+        const sgAddInput = document.getElementById('split_sg_add')?.value || "";
+        const resultDiv = document.getElementById('splitBatchResult');
+
+        // 2. Comma-to-Dot Sanitisatie protocol
+        const vSub = parseFloat(vSubInput.replace(/,/g, '.')) || 0;
+        const sgInit = parseFloat(sgInitInput.replace(/,/g, '.')) || 1.000;
+        const vAdd = parseFloat(vAddInput.replace(/,/g, '.')) || 0;
+        const sgAdd = parseFloat(sgAddInput.replace(/,/g, '.')) || 1.000;
+
+        // 3. Volumebepaling & Default-waarde afhandeling bij nulwaarden
+        const totalVolume = vSub + vAdd;
+        let sgNieuw = sgInit;
+
+        if (totalVolume > 0) {
+            // Reguliere massa- en volumebalans berekenen
+            sgNieuw = ((vSub * sgInit) + (vAdd * sgAdd)) / totalVolume;
+        }
+
+        // 4. Consistentie van de UI: Altijd renderen van de profielkaart conform MD3
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="p-4 bg-secondary-container rounded-xl border border-secondary/20 shadow-sm animate-fade-in">
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-secondary mb-2">Adjusted Split Profile</div>
+                    <div class="space-y-1 text-sm text-on-surface">
+                        <div class="flex justify-between border-b border-outline-variant/30 pb-1">
+                            <span>New Gravity:</span> <span class="font-mono font-bold text-secondary">${sgNieuw.toFixed(4)}</span>
+                        </div>
+                        <div class="flex justify-between text-xs pt-1">
+                            <span>Total Volume:</span> <span class="font-mono font-bold">${totalVolume.toFixed(2)} L</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+        }
+
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: calculateSplitBatch', 'ERROR');
+        window.showToast("Fout bij het berekenen van de split-batch dichtheid.", "error");
+    }
+};
+
+// ============================================================================
+// --- SOMMELIER TASTING ASSESSMENT & RATINGS PROTOCOL (v2.6) ---
+// ============================================================================
+
+window.calculateTastingAssessment = async function(brewId, sensoryScores, activeOffFlavors) {
+    try {
+        // 1. INPUT-SANITISATIE & MATHEMATISCHE PRE-CHECK (Comma-to-Dot Protocol)
+        if (!brewId) {
+            window.showToast("Fout: Geen actief brouwsel geselecteerd.", "error");
+            return;
+        }
+
+        const brew = state.brews.find(b => b.id === brewId);
+        if (!brew) {
+            window.showToast("Fout: Brouwsel niet gevonden in database.", "error");
+            return;
+        }
+
+        // Analytische parameters ophalen en saniteren
+        const fgRaw = String(document.getElementById('tasting_fg')?.value || brew.logData?.actualFG || brew.logData?.targetFG || '1.000');
+        const taRaw = String(document.getElementById('tasting_ta')?.value || '6.0');
+        const phRaw = String(document.getElementById('tasting_ph')?.value || '3.6');
+
+        const finalGravity = parseFloat(fgRaw.replace(/,/g, '.')) || 1.000;
+        const titratableAcidity = parseFloat(taRaw.replace(/,/g, '.')) || 0;
+        const measuredPh = parseFloat(phRaw.replace(/,/g, '.')) || 3.6;
+
+        // Harde Veiligheidsgrens: Voorkom division-by-zero
+        if (titratableAcidity <= 0) {
+            window.showToast("Kritieke fout: Titreerbare zuurgraad (TA) moet groter zijn dan 0 g/L.", "error");
+            window.logSystemError(new Error("Tasting Assessment division-by-zero pre-check failed: TA <= 0"), 'Tools: Tasting Assessment', 'CRITICAL');
+            return;
+        }
+
+        // Pre-check op Hall Equation limiet om algoritmische crashes te voorkomen
+        if (finalGravity >= 1.775) {
+            window.showToast("Fysieke limiet overschreden: FG is groter of gelijk aan de Hall-limiet (1.775).", "error");
+            return;
+        }
+
+        // 2. DICHTHEID- & HARMONIE-CALCULATIES
+        // Bates-polynoom: Soortelijke massa (SG) naar Finale Brix (Brix_f)
+        const brixFinal = (182.9622 * Math.pow(finalGravity, 3)) - (777.3009 * Math.pow(finalGravity, 2)) + (1264.5170 * finalGravity) - 670.1831;
+        
+        // Actuele restsuikerconcentratie (C_s in g/L)
+        const sugarConcentration = 10 * brixFinal * finalGravity;
+
+        // Astringentie-matrix factor op basis van tanninSlider (T_score)
+        const tScore = parseFloat(sensoryScores?.tanninSlider) || 1.0;
+        const astringencyFactor = 1.0 + (0.25 * (tScore - 1.0));
+
+        // Mede-Harmonie Index (M_HI)
+        const meadHarmonyIndex = (sugarConcentration * measuredPh) / (titratableAcidity * astringencyFactor);
+
+        // 3. ALGORITMISCHE FEEDBACK-MATRIX
+        let oenologicalFeedback = "";
+        if (meadHarmonyIndex < 25) {
+            oenologicalFeedback = "🚨 **Profiel: Te Droog / Acide.** De mede vertoont een analytische onbalans met dominante zuren of excessieve tannines vergeleken met de restsuikers. Advies: Overweeg back-sweetening (zoeten) via de Bates-v2.6 calculator of voeg een milde carbonaatbuffer toe.";
+        } else if (meadHarmonyIndex >= 25 && meadHarmonyIndex <= 65) {
+            oenologicalFeedback = "✨ **Profiel: Uitstekende Mede-Harmonie.** Smaakcomponenten zijn organoleptisch in perfect evenwicht. De verhouding tussen restsuikers, zuren en astringentie weerspiegelt een superieure zymologische structuur.";
+        } else {
+            // meadHarmonyIndex > 65
+            oenologicalFeedback = "🍯 **Profiel: Excessief Zoet / Flauw.** De suikerconcentratie overheerst het smaakprofiel door een gebrek aan ondersteunende zuren. Advies: Kwalitatief finetunen door voorzichtige additie van wijnsteenzuur of appelzuur om de frisheid te herstellen.";
+        }
+
+        // 4. OFF-FLAVOR KINETISCHE CHECKS
+        let offFlavorNotes = [];
+
+        // Kinetische Check A: Reductie & Stikstoftekort
+        if (activeOffFlavors?.reduction && brew.logData?.yanDelta > 0) {
+            const extraFermaidO = brew.logData.yanDelta / 40;
+            offFlavorNotes.push(`• **Reductie gedetecteerd:** Aanwezigheid van zwavelaroma's correleert met een stikstoftekort van ${Math.round(brew.logData.yanDelta)} ppm YAN tijdens de vergisting. Voeg proactief ${extraFermaidO.toFixed(2)} g/L Fermaid O toe bij een volgende iteratie.`);
+        }
+
+        // Kinetische Check B: Foezelalcoholen bij Lalvin D47 thermische stress
+        const yeastStrain = brew.yeastStrain || "";
+        const maxTemp = parseFloat(brew.logData?.maxFermentationTemp) || 0;
+        if (activeOffFlavors?.fusels && yeastStrain.includes("D47") && maxTemp > 20) {
+            const deltaTStress = maxTemp - 20;
+            offFlavorNotes.push(`• **Thermische Stress (Lalvin D47):** Foezelalcoholen gesynthetiseerd door temperatuuroverschrijding tijdens de logaritmische groeifase. Giststam onderging een thermische stressfactor van +${deltaTStress.toFixed(1)}°C boven de kritieke 20°C grens.`);
+        }
+
+        // Kinetische Check C: Binaris Risico op Geranium Taint (Kritieke Veiligheidscheck)
+        if (activeOffFlavors?.geranium) {
+            const hasSorbaat = brew.stabilizationData?.sorbateAdded || false;
+            const freeSO2 = parseFloat(brew.stabilizationData?.measuredFreeSO2) || 0;
+            const mSO2 = freeSO2 / (1 + Math.pow(10, (measuredPh - 1.81)));
+
+            if (measuredPh > 3.8 && hasSorbaat && mSO2 < 0.8) {
+                offFlavorNotes.push(`⚠️ **KRITIEK GERANIUM RISICO:** Extreme biochemische kwetsbaarheid gedetecteerd! pH is groter dan 3.8 met actieve kaliumsorbaat-aanwezigheid, terwijl de Vrije SO₂ suboptimaal is (M_SO₂ < 0.8 ppm). Melkzuurbacteriën kunnen sorbinezuur reduceren tot sorbinol, wat leidt tot onomkeerbare ethylsorbaat-degradatie ("Geranium Taint").`);
+            }
+        }
+
+        const combinedNotesString = offFlavorNotes.length > 0 
+            ? offFlavorNotes.join("\n") 
+            : "• Geen directe kinetische off-flavor afwijkingen geconstateerd op basis van brouwdata.";
+
+        // 5. RATING-BEREKENING (Sterrenscore met Off-Flavor Aftrek)
+        const aroma = parseFloat(sensoryScores?.aromaSlider) || 3.0;
+        const flavor = parseFloat(sensoryScores?.flavorSlider) || 3.0;
+        const mouthfeel = parseFloat(sensoryScores?.mouthfeelSlider) || 3.0;
+        
+        const unweightedAverage = (aroma + flavor + mouthfeel) / 3.0;
+        const activeOffFlavorCount = Object.values(activeOffFlavors || {}).filter(Boolean).length;
+        
+        // Vaste aftrek van 1.00 ster per actieve afwijking, hard begrensd tussen 0.25 en 5.00
+        let calculatedStars = unweightedAverage - (1.00 * activeOffFlavorCount);
+        calculatedStars = Math.max(0.25, Math.min(5.00, calculatedStars));
+
+        // 6. DATABASE SYNC & STATE-AFHANDELING
+        if (!state.userId) {
+            window.showToast("Waarschuwing: Beoordeling lokaal berekend. Log in om op te slaan.", "warning");
+            renderTastingResultsUI(sugarConcentration, meadHarmonyIndex, calculatedStars, oenologicalFeedback, combinedNotesString);
+            return;
+        }
+
+        const tastingPayload = {
+            tastingAssessment: {
+                sugarConcentrationGramsPerLiter: parseFloat(sugarConcentration.toFixed(2)),
+                meadHarmonyIndex: parseFloat(meadHarmonyIndex.toFixed(1)),
+                calculatedStars: parseFloat(calculatedStars.toFixed(2)),
+                oenologicalFeedback: oenologicalFeedback,
+                kineticOffFlavorNotes: combinedNotesString,
+                updatedAt: new Date().toISOString()
+            }
+        };
+
+        const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId);
+        
+        // Schrijf direct weg naar Firestore (Single Source of Truth)
+        await updateDoc(brewDocRef, tastingPayload);
+
+        // Update lokale state cache na succesvolle Firestore bevestiging
+        const localBrewIndex = state.brews.findIndex(b => b.id === brewId);
+        if (localBrewIndex !== -1) {
+            state.brews[localBrewIndex].tastingAssessment = tastingPayload.tastingAssessment;
+        }
+
+        // Render de resultaten live in de UI
+        renderTastingResultsUI(sugarConcentration, meadHarmonyIndex, calculatedStars, oenologicalFeedback, combinedNotesString);
+        window.showToast("Sommelier-beoordeling succesvol gesynchroniseerd!", "success");
+
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: calculateTastingAssessment', 'ERROR');
+        window.showToast("Fout bij het genereren van de sommelier-beoordeling.", "error");
+    }
+};
+
+/**
+ * Helper-functie om de geavanceerde analytische metrics te renderen conform MD3-standaarden.
+ */
+function renderTastingResultsUI(sugar, harmony, stars, feedback, notes) {
+    const outputDiv = document.getElementById('tasting-assessment-output');
+    if (!outputDiv) return;
+
+    outputDiv.innerHTML = `
+        <div class="p-5 bg-surface-variant/40 dark:bg-gray-800/60 rounded-2xl border border-app-brand/20 shadow-md animate-fade-in space-y-4">
+            <div class="flex justify-between items-center border-b border-app-brand/10 pb-2">
+                <span class="text-xs uppercase font-bold tracking-widest text-app-brand">Sommelier Proefnotities</span>
+                <span class="text-xl font-black text-amber-500 font-header">${stars.toFixed(2)} ⭐</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div class="p-3 card rounded-xl bg-app-primary/5">
+                    <span class="block text-[10px] uppercase opacity-60 font-bold">Restsuikers (C_s)</span>
+                    <span class="text-lg font-mono font-bold text-app-header">${sugar.toFixed(1)} g/L</span>
+                </div>
+                <div class="p-3 card rounded-xl bg-app-primary/5">
+                    <span class="block text-[10px] uppercase opacity-60 font-bold">Mede-Harmonie Index</span>
+                    <span class="text-lg font-mono font-bold text-app-brand">${harmony.toFixed(1)}</span>
+                </div>
+            </div>
+
+            <div class="text-xs text-app-header space-y-2">
+                <p class="leading-relaxed font-medium bg-white/50 dark:bg-black/20 p-3 rounded-lg border border-app-brand/5">${feedback}</p>
+                <div class="pt-2">
+                    <span class="block text-[9px] uppercase font-bold opacity-60 tracking-wider mb-1">Kinetische Analyse & Off-Flavors:</span>
+                    <div class="font-sans text-[11px] text-on-surface-variant opacity-90 whitespace-pre-line leading-relaxed bg-red-500/5 p-3 rounded-lg border border-red-500/10">${notes}</div>
+                </div>
+            </div>
+        </div>
+    `;
+    outputDiv.classList.remove('hidden');
+}
+
+window.calculateWaterMatching = function() {
+    try {
+        // Aangepaste hulpfunctie dwingt een numerieke 0 af bij mislukte parsing of lege strings
+        const getSanitizedVal = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return 0;
+            const parsed = parseFloat(el.value.replace(/,/g, '.'));
+            return (isNaN(parsed)) ? 0 : parsed;
+        };
+
+        const vWater = getSanitizedVal('match_water_vol');
+        
+        // Bron-ionen (Source)
+        const sourceCa = getSanitizedVal('match_source_ca');
+        const sourceMg = getSanitizedVal('match_source_mg');
+        const sourceSo4 = getSanitizedVal('match_source_so4');
+        const sourceCl = getSanitizedVal('match_source_cl');
+
+        // Doel-ionen (Target)
+        const targetCa = getSanitizedVal('match_target_ca');
+        const targetMg = getSanitizedVal('match_target_mg');
+        const targetSo4 = getSanitizedVal('match_target_so4');
+        const targetCl = getSanitizedVal('match_target_cl');
+
+        const resultDiv = document.getElementById('waterMatchingResult');
+
+        if (vWater <= 0) {
+            window.showToast("Voer een geldig watervolume in groter dan 0 L.", "error");
+            return;
+        }
+
+        const deltaCa = Math.max(0, targetCa - sourceCa);
+        const deltaMg = Math.max(0, targetMg - sourceMg);
+        const deltaSo4 = Math.max(0, targetSo4 - sourceSo4);
+        const deltaCl = Math.max(0, targetCl - sourceCl);
+
+        // Epsomzout op basis van Magnesiumbehoefte
+        const mEpsomPerLiter = deltaMg / 98.6;
+
+        // Resterend Sulfaat na Epsom-toevoeging
+        let deltaSo4Rem = deltaSo4 - (mEpsomPerLiter * 389.7);
+        if (deltaSo4Rem < 0) deltaSo4Rem = 0;
+
+        // Gips op basis van resterende Sulfaatbehoefte
+        const mGypsumPerLiter = deltaSo4Rem / 557.9;
+
+        // Calciumchloride op basis van Chloridebehoefte
+        const mCaCl2PerLiter = deltaCl / 482.3;
+
+        // Volumemodulatie (Totale massa in grammen)
+        const totalEpsom = mEpsomPerLiter * vWater;
+        const totalGypsum = mGypsumPerLiter * vWater;
+        const totalCaCl2 = mCaCl2PerLiter * vWater;
+
+        const caAddedPpm = (mGypsumPerLiter * 232.8) + (mCaCl2PerLiter * 272.6);
+
+        let ratioOutput = "";
+        if (targetCl === 0) {
+            ratioOutput = "Pure Bitter / Strak (Cl = 0)";
+        } else {
+            const ratio = targetSo4 / targetCl;
+            ratioOutput = ratio.toFixed(2);
+        }
+
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="p-4 bg-primary-container rounded-xl border border-primary/20 shadow-sm animate-fade-in space-y-3">
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-primary mb-1">Required Mineral Additions</div>
+                    
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div class="p-2 card rounded-lg bg-app-primary/5">
+                            <span class="block text-[9px] uppercase font-bold opacity-70">Gips (CaSO₄)</span>
+                            <span class="text-base font-mono font-bold text-app-header">${totalGypsum.toFixed(2)}g</span>
+                        </div>
+                        <div class="p-2 card rounded-lg bg-app-primary/5">
+                            <span class="block text-[9px] uppercase font-bold opacity-70">CaCl₂</span>
+                            <span class="text-base font-mono font-bold text-app-header">${totalCaCl2.toFixed(2)}g</span>
+                        </div>
+                        <div class="p-2 card rounded-lg bg-app-primary/5">
+                            <span class="block text-[9px] uppercase font-bold opacity-70">Epsom (MgSO₄)</span>
+                            <span class="text-base font-mono font-bold text-app-header">${totalEpsom.toFixed(2)}g</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-outline-variant/30 text-xs space-y-1 text-on-surface">
+                        <div class="flex justify-between">
+                            <span>Est. Calcium Balance Increase:</span>
+                            <span class="font-mono font-bold text-green-600">+${caAddedPpm.toFixed(1)} ppm</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Target SO₄ / Cl Ratio:</span>
+                            <span class="font-mono font-bold text-primary">${ratioOutput}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+        }
+
+    } catch (error) {
+        window.logSystemError(error, 'Tools: Water Matching', 'ERROR');
+        window.showToast("Fout bij het berekenen van het waterprofiel.", "error");
+    }
+};
+
+// --- HARDE WINDOW OBJECT BINDING (MODULE SCOPE ISOLATIE SANITISATIE) ---
 window.loadUserSettings = loadUserSettings;
+window.applySettings = applySettings;
 window.saveUserSettings = saveUserSettings;
-window.calculateABV = calculateABV;
-window.calculateTOSNA = calculateTOSNA;
-window.runSocialMediaGenerator = runSocialMediaGenerator;
-window.loadSocialStyles = loadSocialStyles;
-window.generateSocialImage = generateSocialImage;
+window.findWaterProfileWithAI = findWaterProfileWithAI;
+window.loadUserWaterProfiles = loadUserWaterProfiles;
+window.populateWaterDropdown = populateWaterDropdown;
+window.renderUserWaterProfilesList = renderUserWaterProfilesList;
+window.saveWaterProfile = saveWaterProfile;
+window.setupPromptEngineer = setupPromptEngineer;
+window.runPromptEngineer = runPromptEngineer;
 window.handleWaterSourceChange = handleWaterSourceChange;
-window.calculateRefractometerCorrection = calculateRefractometerCorrection;
+window.findCommercialWaterMatch = findCommercialWaterMatch;
+window.runSocialMediaGenerator = runSocialMediaGenerator;
+window.calculateABV = calculateABV;
+window.correctHydrometer = correctHydrometer;
 window.calculatePrimingSugar = calculatePrimingSugar;
 window.calculateBlend = calculateBlend;
 window.calculateBacksweetening = calculateBacksweetening;
 window.calculateDilution = calculateDilution;
-window.correctHydrometer = correctHydrometer;
-window.populateSocialRecipeDropdown = populateSocialRecipeDropdown;
-window.linkToBacksweetenCalc = linkToBacksweetenCalc;
-window.linkToDilutionCalc = linkToDilutionCalc;
-window.loadUserWaterProfiles = loadUserWaterProfiles;
-window.toggleMedicHistory = toggleMedicHistory;
-window.loadMedicChat = loadMedicChat;
-window.deleteMedicChat = deleteMedicChat;
-window.resetTroubleshootChat = resetTroubleshootChat;
+window.calculateBuffer = calculateBuffer;
+window.calculateTOSNA = calculateTOSNA;
+window.calculateTargetApparentBrix = calculateTargetApparentBrix;
+window.calculateStabilization = calculateStabilization;
+window.calculateRefractometerCorrection = calculateRefractometerCorrection;
+window.calculateBraggot = calculateBraggot;
+window.calculateSplitBatch = calculateSplitBatch;
+window.calculateTastingAssessment = calculateTastingAssessment;
+window.calculateWaterMatching = calculateWaterMatching;

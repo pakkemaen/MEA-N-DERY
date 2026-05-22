@@ -1,6 +1,6 @@
 // ============================================================================
 // state.js
-// Single Source of Truth
+// Single Source of Truth - V2.6
 // ============================================================================
 
 // 1. GLOBAL STATE (Data die gesynct wordt met Firebase of app-breed is)

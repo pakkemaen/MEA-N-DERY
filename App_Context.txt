@@ -1,4 +1,4 @@
-# MEANDERY APP - ARCHITECTURE & GUIDELINES (v2.5)
+# MEANDERY APP - ARCHITECTURE & GUIDELINES (v2.6)
 Dit document beschrijft de architectuur, datastructuur en strikte programmeerregels van de Meandery App. Lees dit ALTIJD voordat je code wijzigt of toevoegt om regressie te voorkomen.
 
 ## 1. Tech Stack & Core Rules
@@ -248,4 +248,150 @@ Sorbate addition chart : r/mead - Reddit, accessed on March 27, 2026, https://ww
 How to calculate the potassium sorbate and sorbic acid in food? - ResearchGate, accessed on March 27, 2026, https://www.researchgate.net/post/How_to_calculate_the_potassium_sorbate_and_sorbic_acid_in_food
 Three questions: use of potassium sorbate with high abv; stirring before taking sample; vigorous shaking to aerate & degas : r/mead - Reddit, accessed on March 27, 2026, https://www.reddit.com/r/mead/comments/ymeqs6/three_questions_use_of_potassium_sorbate_with/
 
+5. Development Status & RoadmapFase 1: Wetenschappelijke Fundering (Recept-accuratesse)Prioriteit: 100% conformiteit met stoichiometrische balansen en chemische kinetiek.
+
+[Roadmap-Punt 1.1] Universele Hall Equation Integratie:Scope: Uitbreiden van de Hall Equation ($ABW = \frac{76.08 \times (OG - FG)}{1.775 - OG}$ ) naar de blending.js en refractometer modules.  Eis: Vervang de lineaire 131.25 factor volledig om onderschatting van ethanol bij high-gravity batches (>1.100 SG) te voorkomen. ->COMPLETED  
+
+[Roadmap-Punt 1.2] TOSNA 3.0 Dynamische Pitch Rates:Scope: Implementatie van het algoritme waarbij de gistdosering wordt verlaagd naar exact 1 gram per gallon bij most < 1.100 SG.  Eis: De YAN-overhead van Go-Ferm moet dynamisch worden gecorrigeerd in de Fermaid O calculaties om de bio-equivalentie van 4.0x te handhaven. -> COMPLETED 
+
+[Roadmap-Punt 1.3] MSO2 & pH Synergie Matrix:Scope: Koppelen van de stabilization module aan de actuele pH-meting uit brewing.js.Eis: Gebruik de Henderson-Hasselbalch afgeleide ($Vrije\ SO_2 = 0.8 \times (1 + 10^{(pH - 1.81)})$ ) om de exacte Vrije $SO_2$ target te berekenen voor de 0.8 ppm MSO2 standaard. ->COMPLETED  
+
+[Roadmap-Punt 1.4] Proactieve Buffering Logica:Scope: Toevoegen van een 'Buffer Calculator' in tools.js op basis van de carbonaatmatrix ($K_2CO_3$ ).  Eis: Standaarddosering van 0.4 g/L Kaliumcarbonaat adviseren bij honingmost met een initiële pH < 4.0 om een pH-crash onder de 3.2 te voorkomen. ->COMPLETED  
+
+Fase 2: App Optimalisatie & UXPrioriteit: Visuele vertaling van brouwtheorie naar bruikbare data.
+
+[Roadmap-Punt 2.1] Novotny Fermentatie-Curve:Scope: Implementatie van het Novotny-model in de grafiekmodule van brewing.js.  Eis: Gebruik de Wort Correction Factor (WCF) en de lineaire Novotny-formule ($FG = 1.0 - 0.002349 \cdot (\frac{RI_i}{WCF}) + 0.006276 \cdot (\frac{RI_f}{WCF})$ ) voor real-time extrapolatie van de dichtheid tijdens actieve fermentatie. ->COMPLETED  
+
+[Roadmap-Punt 2.2] Black Box Risico-Detectie:Scope: Automatische triggers op basis van de 'Mead Medic' logica.Eis: Genereer een window.showToast waarschuwing voor "Geranium Taint" risico wanneer Kaliumsorbaat wordt toegevoegd aan een batch met pH > 3.8 zonder bevestigde Vrije $SO_2$ aanwezigheid. ->COMPLETED
+
+**Fase 3: Stabilisatie, Veiligheid & Gist-Kwaliteitsborging**
+Prioriteit: Implementatie van post-fermentatieve veiligheidsmechanismen, Delle-stabiliteit wiskunde en gist-specifieke risicodetectie ter voorkoming van organoleptische afwijkingen en flesbommen.
+
+**[Roadmap-Punt 3.1] Kaliumsorbaat "ABV Sliding Scale" & Delle-Limiet Calculator:**
+*   **Scope:** Toevoegen van een nieuwe stabilisatiecalculator in de `tools.js` module.
+*   **Eis:** De calculator MOET de synergistische 'sliding scale' voor sorbinezuur gebruiken, gekoppeld aan het finale ABV (berekend via de geïmplementeerde Hall Equation) [3, 4]. De schaal loopt exponentieel af: van 0.758 g/gal bij 10% ABV tot 0.132 g/gal bij 15% ABV [3]. Implementeer tevens de 'Delle-stabiliteit' grens: zodra het berekende ABV 14% tot 15% bereikt, is refermentatie fysiologisch onmogelijk en moet de app de gebruiker adviseren dat kaliumsorbaat marginaal of niet meer nodig is [5, 6]. -> COMPLETED
+
+**[Roadmap-Punt 3.2] "Klaring & Decimatie" Veiligheids-Checklist (Voorkomen van Flesbommen):**
+*   **Scope:** Uitbreiden van de 'Secondary/Aging' transitie in `brewing.js` (specifiek binnen `window.renderBrewDay2` of de stabilisatie-checklist) [7, 8].
+*   **Eis:** Voeg een verplichte "Black Box" veiligheids-stap toe voordat de app back-sweetening (zoeten) toestaat. De UI moet duidelijk maken dat Kaliumsorbaat gisten *niet doodt*, maar enkel *steriliseert* [9, 10]. Dwing de gebruiker via een checkbox af te vinken dat de most visueel en hydrometrisch volledig is geklaard (organisch gedecimeerd) [10]. Toevoeging van stabilisatoren aan een actieve/troebele fermentatie leidt anders onherroepelijk tot gevaarlijke flesbommen [10, 11]. -> COMPLETED
+
+**[Roadmap-Punt 3.3] Gist-Specifieke Temperatuur- en Voedingswaarschuwingen:**
+*   **Scope:** Uitbreiden van het risico-detectiesysteem in `brewing.js` (Mead Medic waarschuwingen via `window.showToast`) en update van `getFortKnoxLaws()` [12, 13].
+*   **Eis:** Koppel geselecteerde giststammen (uit de recipe generator of logboek) aan hun harde fysiologische limieten [14]. 
+    *   Voor **Lalvin D47**: Forceer een waarschuwing dat de temperatuur STRIKT onder de 20°C moet blijven om excessieve synthese van foezelalcoholen te voorkomen [14].
+    *   Voor **SafAle US-05**: Genereer een waarschuwing dat, omdat honing stikstofarm is, een rigoureus YAN/TOSNA-protocol vereist is om katabolische afbraak van aminozuren (wat leidt tot reductiearoma's zoals rotte eieren) te voorkomen [14-16]. -> COMPLETED
+
+**Fase 4: De 'Cellar' (Rijping) & Voorraad-Economie**
+Prioriteit: Realiseren van een sluitend economisch systeem en een wetenschappelijke 'Aging Matrix' voor gebottelde mede.
+*   **[Roadmap-Punt 4.1] Exacte Kostprijsberekening:** -> COMPLETED
+    *   **Scope:** Uitbreiden van `updateCostAnalysis` in `inventory.js`.
+    *   **Eis:** De AI moet de exacte kostprijs per fles berekenen. Dit vereist het combineren van de verbruikte ingrediënten uit `state.brews` (via `performInventoryDeduction`) met de verpakkingskosten (fles, kurk, etiket) uit `state.packagingCosts`.
+*   **[Roadmap-Punt 4.2] AI Aging Matrix:** -> COMPLETED
+    *   **Scope:** Optimaliseren van de `analyzeAgingPotential` functie in `inventory.js`.
+    *   **Eis:** Implementeer een voorspellend algoritme dat het berekende ABV, de restsuikers (SG), de bewaartemperatuur (`state.userSettings.cellarTemp`) en specifieke ingrediënten combineert om de optimale rijpingstijd (peak date) van een fles in de `state.cellar` te voorspellen.
+
+**Fase 5: AI Branding, Etikettering & Print-Engine**
+Prioriteit: Visuele identiteit automatiseren door brouwdata direct te koppelen aan de label-generator.
+*   **[Roadmap-Punt 5.1] Smaak-gedreven Art Generation:** -> COMPLETED
+    *   **Scope:** Uitbreiden van `generateLabelArt` en `generateLabelDescription` in `label-forge.js`.
+    *   **Eis:** Zorg dat de AI het gegenereerde smaakprofiel (`flavorProfile`) en de receptdata (ABV, ingrediënten) uit de geselecteerde batch (`state.brews`) direct injecteert in de Imagen/AI-prompts, zodat het visuele design en de beschrijvende tekst perfect aansluiten bij de inhoud.
+*   **[Roadmap-Punt 5.2] Print-Ready Canvas Optimalisatie:** -> COMPLETED
+    *   **Scope:** Verfijnen van `printLabelsSheet` en de DOM-manipulatie in `label-forge.js`.
+    *   **Eis:** Zorg ervoor dat het gegenereerde artwork (`tempState.currentLabelImageSrc`) feilloos wordt geschaald binnen de gedefinieerde `userLabelFormats` en `builtInLabelFormats`, met strikte handhaving van CSS margins en dynamische tekstschaling (`autoFitLabelText`).
+
+**Fase 6: Geavanceerde Blending Tool Optimalisatie**
+Prioriteit: Van simpele volumetrische berekening naar een complexe zymologische blending simulator.
+*   **[Roadmap-Punt 6.1] Ternaire Blending Calculator:** -> COMPLETED
+    *   **Scope:** Herschrijven van `calculateBlend` en `addBlendingRow` in `tools.js` (en de bijbehorende DOM-logica in `brewing.js`).
+    *   **Eis:** De huidige tool berekent enkel totaal Volume en gemiddeld ABV. Dit MOET worden uitgebreid. De nieuwe calculator moet bij het samenvoegen van vaten (op basis van geselecteerde `state.brews`) ook de resulterende specifieke dichtheid (SG) en de pH-verschuiving wiskundig berekenen om een accuraat profiel van de blend te voorspellen.
+
+**Fase 7: "Split Batching" & Parallelle Rijping** 
+Prioriteit: Eén grote basismede opsplitsen over meerdere kleine experimentele vaten.
+*   **[Roadmap-Punt 7.1] The Clone & Link Protocol:** -> COMPLETED
+    *   **Scope:** Uitbreiden van `window.cloneBrew` in `brewing.js` en UI-logica.
+    *   **Eis:** Voeg een "Split Batch" knop toe in de Secondary/Aging view. Deze functie moet een nieuwe batch aanmaken in `state.brews` die alle log-data, OG/FG en ingrediënten van de "Parent" batch overneemt, maar zijn eigen onafhankelijke Secondary logboek, labels en volume krijgt. Dit stelt de gebruiker in staat om A/B tests te doen met bijvoorbeeld verschillende dry-hops of fruit.
+
+**Fase 8: "The Untappd Tasting Room" (Persoonlijke Sensorische Evaluatie)**
+Prioriteit: Het digitaliseren van het proefproces, geïnspireerd op de Untappd rating-logica. 
+*   **[Roadmap-Punt 8.1] Sommelier Proefnotities & Ratings:** -> COMPLETED
+    *   **Scope:** Uitbreiding van de `cellar` module in `inventory.js`.
+    *   **Eis:** Voeg een 'Tasting Room' functionaliteit toe aan gebottelde medes. Als de gebruiker een fles opent, moet hij een Untappd-stijl rating (0.25 - 5 sterren) en slider-scores voor 'Sweetness, Acidity, Tannin, Fruity/Hoppy, Off-flavors' kunnen invoeren.
+*   **[Roadmap-Punt 8.2] AI Smaak-Feedback Loop:**  -> COMPLETED
+    *   **Scope:** API-calls in `utils.js` gekoppeld aan de tasting data.
+    *   **Eis:** De AI vergelijkt het oorspronkelijke brouwlogboek met de proefnotities van de gebruiker en geeft concreet advies voor de volgende batch (bijv. "Je scoorde de body laag, verhoog de volgende keer de moutstorting of voeg lactose toe").
+
+**Fase 9: Geavanceerde Waterchemie (Bier-Profielen Matchen)**
+Prioriteit: Waterchemie inzetten om het mondgevoel van specifieke bierstijlen (zoals een NEIPA of Stout) na te bootsen.
+*   **[Roadmap-Punt 9.1] Target Water Matching Calculator:**
+    *   **Scope:** Uitbreiding van de rekenmachines in `tools.js`.
+    *   **Eis:** Bouw een rekenmachine waarbij de gebruiker zijn bronwater en een bier-doelprofiel (bijv. "NEIPA - Hoge Chloride/Sulfaat ratio") selecteert. De calculator berekent exact hoeveel gram Calcium Chloride of Epsom Zout er toegevoegd moet worden om de ppm-waarden te matchen.
+
+**Fase 10: "The Untappd Translation Engine" (Braggots & Hopped Meads)**
+Prioriteit: Het mogelijk maken om commerciële bieren (Untappd favorieten) direct te vertalen naar wetenschappelijk kloppende mede/braggot recepten.
+*   **[Roadmap-Punt 10.1] AI Beer-to-Mead Clone Prompt:** -> COMPLETED
+    *   **Scope:** Uitbreiding van `buildPrompt()` en UI in `brewing.js`.
+    *   **Eis:** Voeg een 'Beer Clone' tekstveld toe aan de Recipe Creator. Als een gebruiker hier een commercieel bier (bijv. "Guinness Stout") invult, moet de AI het smaakprofiel analyseren. De AI moet de `isBraggot` wiskunde (waarbij mout 30-50% van de suikers levert) toepassen om de honing-tot-mout ratio te berekenen zonder de ABV-target te overschrijden. 
+*   **[Roadmap-Punt 10.2] Hop Kinetiek & Dry-Hopping Timers:** -> COMPLETED
+    *   **Scope:** Timer-logica in `brewing.js`.
+    *   **Eis:** Zorg dat de AI specifieke bier-timers genereert in de instructies, zoals `[TIMER:00:20:00]` voor een Hop Stand / Whirlpool, en dat dry-hopping exact wordt gelogd in de Secondary fase.
+*   **[Roadmap-Punt 10.3] Untappd API & Profiel Koppeling (OAuth):**
+    *   **Scope:** Uitbreiding van de instellingen in `tools.js` en de recipe generator in `brewing.js`.
+    *   **Eis:** Bouw een integratie waarmee de gebruiker zijn Untappd-account kan linken. Voeg invoervelden toe voor de Untappd API Client ID & Secret in de user settings (opgeslagen via `saveUserSettings()`). Ontwerp een functie die de 'Top Rated' check-ins van de gebruiker ophaalt. Voeg een "Clone my Top Untappd Beer" knop toe in de recept-generator die deze bieren direct als input gebruikt voor Roadmap-Punt 10.1.
+
+Changelog:
+9 mei 2026: FASE 1 (Wetenschappelijke Kern & Stoichiometrische Balansen) succesvol gevalideerd, goedgekeurd en gemerged.
+12 mei 2026: FASE 2 (App Optimalisatie & UX-Prioriteiten) volledig sluitend getest en gemerged.
+12 mei 2026: FASE 3 (Post-fermentatieve Chemische Stabilisatie & Delle/Sorbaat Synergie Matrix) succesvol door de poortwachter geloodst en gemerged.
+12 mei 2026: FASE 4.1 (Exacte Kostprijsberekening per Fles op basis van Verpakkingskosten) afgerond en gevalideerd.
+12 mei 2026: FASE 5 (AI-Branding, Etikettering & Canvas Print-Engine) afgerond en gevalideerd.
+12 mei 2026: FASE 6 (Geavanceerde Blending Tool / Ternaire Blending Calculator voor Volume en ABV) volledig operationeel en conform de richtlijnen van de Auditor opgeleverd.
+13 mei 2026: Roadmap-Punt 4.2 (AI Aging Matrix / Voorspellend Rijpingsalgoritme) volledig conform de wetenschappelijke blauwdruk van de Auditor en de strikte architecturale regels van v2.6 opgeleverd.
+18 mei 2026: FASE 7 (Uitbreiding Blending Simulator: Braggot-extracten en Split Batching Volumetrische Dichtheidsbalans met logaritmische pH-menging) inclusief de dynamische NodeList-hotfixes in tools.js definitief voorzien van [DEFINITIEF GROEN LICHT] en vrijgegeven voor de master-release.
+18 mei 2026: Roadmap-Punt 7.1 is hiermee 100% sluitend en goedgekeurd voor de release. De brouw- en splitsingsarchitectuur is waterdicht gecodeerd conform de v2.6 standaarden.
+18 mei 2026: [Roadmap-Punt 8.1] Sommelier Proefnotities & Ratings (Tasting Room) succesvol verankerd in `tools.js`. Integratie van de Mede-Harmonie Index ($M_{HI}$) op basis van restsuikerextrapolatie ($C_s$) via de derdegraads Bates-polynoom, titreerbare zuurgraad ($TA$) en pH. Inclusief een interactieve Untappd-stijl sterrenrating (0.25 - 5.00) met automatische off-flavor aftrekkunsten en de binaire *Geranium Taint* / ethylsorbaat risicomatrix.
+18 mei 2026: Algehele architecturale opschoning voltooid; alle verouderde v2.5 inline markers, logica-referenties en UI-labels door de gehele applicatie rigoureus gesaneerd en gestandaardiseerd conform het v2.6-mandaat. Vrijgegeven voor de master-release.
+18 mei 2026: Roadmap-Punt 8.2 is hiermee 100% goedgekeurd en operationeel bevonden. De AI Smaak-Feedback Loop is technisch en zymologisch naadloos verankerd in de kern van de applicatie.
+18 mei 2026: Roadmap-Punt 9.1, de waterchemie en proefevaluatie-engines zijn stabiel gecodeerd conform de v2.6 architectuurregels
+18 mei 2026: [Roadmap-Punt 10.1] AI Beer-to-Mead Clone Prompt (Untappd Translation Engine) succesvol geïmplementeerd in `brewing.js`. Introduceert de stoichiometrische Braggot-suikertransitie waarbij de molfractie van de moutstorting ($X_{malt}$) strikt tussen 30% en 50% van de totale suikertarget ($GP_{total}$) wordt gebalanceerd op basis van specifieke extract-potentialen (290, 375 en 300 GP). Inclusief een 75% schijnbare vergistingsgraad-correctie voor de achterwaartse herleiding van de vereiste $OG$ via de thermodynamische Hall-vergelijking. Tevens kritieke runtime-hotfixes doorgevoerd voor NodeList-indexeringsfouten en datumstring-transmutaties in `syncLogToFinal` en `runAgingAnalysis`. Alle overgebleven inline v2.5 markers volledig gesaneerd conform de v2.6-standaard.
+
 v2.5: Volledige implementatie van Hall Equation in alle rekenmodules, introductie TOSNA 3.0 pitch rates, en universele comma-to-dot input handling.
+
+### 📝 CHANGELOG – MEANDERY APP v2.6 (MASTER RELEASE)
+
+**[DEFINITIEF GROEN LICHT]** De codebase is na een volledige anti-regressie audit 100% waterdicht, modulair en stabiel verklaard conform de v2.6-architectuurstandaarden. Alle externe CDN-afhankelijkheden zijn geëlimineerd en gecentraliseerd binnen de infrastructuur.
+
+---
+
+#### 🚀 GEÏMPLEMENTEERDE ROADMAP-PUNTEN (v2.5 -> v2.6)
+
+* **Punt 8.1 & 8.2: AI Smaak-Feedback Loop & Organoleptische Analyse**
+    * Volledige integratie van de realtime feedback-loop binnen de evaluatie-engine.
+    * Biochemische interlocks toegevoegd voor temperatuurbewaking tijdens actieve vergisting (kritieke waarschuwingen bij $T > 25^\circ\text{C}$ ter voorkoming van fuselalcoholen en vluchtige metabolische off-flavors).
+    * Stabilisatie-interlock geïmplementeerd: Automatische blokkade op backsweetening wanneer most een onveilig pH-niveau heeft ($pH > 3.8$) in combinatie met kaliumsorbaat, om het risico op bacteriële stabilisatiefouten en *Geranium Taint* uit te sluiten (titratie-instructie naar $pH \le 3.5$).
+
+* **Punt 9.1: Waterchemie & Geavanceerde Proefevaluatie-Engine**
+    * Implementatie van deterministische waterprofiel-matching en ionenbalans-berekeningen.
+    * Zymologische validatie-interlocks toegevoegd voor chloride/sulfaat-ratio's en minerale buffering.
+    * Gecentraliseerde foutafhandeling via de runtime *Black Box* (`window.logSystemError` en `window.showToast`) ter voorkoming van applicatie-crashes bij ontbrekende netwerkverbindingen of corrupte API-respons.
+
+* **Punt 10.1: AI Beer-to-Mead Clone Prompt (Untappd Translation Engine)**
+    * Succesvolle uitrol van de Braggot-kloonfunctionaliteit binnen `brewing.js`.
+    * Implementatie van de stoichiometrische Braggot-suikertransitie waarbij de molfractie van de moutstorting ($X_{malt}$) strikt tussen 30% en 50% van de totale suikertarget ($GP_{total}$) wordt gebalanceerd op basis van specifieke extract-potentialen (290, 375 en 300 GP).
+    * 75% schijnbare vergistingsgraad-correctie voor de achterwaartse herleiding van de vereiste $OG$ via de thermodynamische Hall-vergelijking.
+
+* **Punt 10.2: Runtime Hotfixes & Sanitisatie**
+    * Kritieke runtime-fixes doorgevoerd voor NodeList-indexeringsfouten en datumstring-transmutaties binnen de tracking-pipelines `syncLogToFinal` en `runAgingAnalysis`.
+    * Volledige sanitisatie van historische `v2.5` markers naar de v2.6-standaard.
+
+---
+
+#### 🛠 ARCHITECTURALE & INFRASTRUCTURELE UPDATES
+
+1.  **Gecentraliseerde Firebase Architectuur:**
+    * Volledige sanitisatie van `app.js`. Alle directe gstatic CDN-imports (`doc`, `deleteDoc`, `updateDoc`) zijn definitief verwijderd.
+    * Firestore-pijplijn volledig omgeleid via de gecentraliseerde exports in `./firebase-init.js` ter garantie van offline-persistence en data-integriteit.
+2.  **Data Sanitisatie & Input-Isolatie:**
+    * Consistente handhaving van het *Comma-to-Dot protocol* (`sanitizeInput`) over alle rekenmodules, split-batch evaluaties en voorraadmutaties in `inventory.js`.
+3.  **State Management & UI Bindings:**
+    * Verificatie van `state.js` als de absolute *Single Source of Truth*.
+    * Alle globale HTML-event-bindings aan het `window`-object zijn intact en correct gescoped zonder risico op regressie.

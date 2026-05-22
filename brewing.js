@@ -1,26 +1,21 @@
 // ============================================================================
 // brewing.js
-// MEANDERY V2.5 - MODULAR BREWING ENGINE (HALL EQUATION CONSOLIDATED)
+// MEANDERY V2.6
 // ============================================================================
 
-// 1. IMPORTS
-// 1. Haal de database instanties uit je lokale bestand
-import { db, auth } from './firebase-init.js';
-
-// 2. Haal de Firestore functies rechtstreeks van Google
+// 1. IMPORTS - Gecentraliseerd via firebase-init.js
 import { 
-    collection, addDoc, updateDoc, doc, deleteDoc, 
-    getDoc, setDoc, query, onSnapshot, serverTimestamp 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    db, auth, collection, addDoc, updateDoc, doc, deleteDoc, 
+    getDoc, setDoc, query, onSnapshot, serverTimestamp, arrayUnion 
+} from './firebase-init.js';
 
 import { state, tempState } from './state.js';
 import { 
     showToast, performApiCall, switchMainView, switchSubView, 
-    getLoaderHtml 
+    getLoaderHtml, logSystemError 
 } from './utils.js';
 
 // 2. MODULE VARIABLES
-// Deze variabelen zijn alleen zichtbaar binnen dit bestand (geen global scope vervuiling)
 let currentRecipeMarkdown = "";
 let currentPredictedProfile = null;
 let lastGeneratedPrompt = "";
@@ -66,6 +61,9 @@ function getFortKnoxLaws(isNoWater = false, isBraggot = false, isHydromel = fals
     - If user has *only* DAP/Nutrisal: WARN against adding it after 9% ABV (Ammonia taste).
     - If style is *Wild/Sour*: Reduce nutrient dosage by 50% and front-load.
 
+4.  **HOP KINETICS & DRY-HOPPING RESTRICTIONS:**
+    - **Dry-Hop Time Window:** Cold extraction extraction processes (dry-hopping) in secondary phases MUST be planned strictly within the optimal time window of minimum **72 hours (3 days)** to maximum **120 hours (5 days)**. This is mandatory to maximize terpene solvation and minimize polyphenol/chlorophyll over-extraction.
+
 **OUTPUT FORMAT (STRICT):**
 - **Markdown** structure.
 - **Ingredients JSON:** \`\`\`json [{"ingredient": "Name", "quantity": 0, "unit": "kg"}] \`\`\` (List ALL ingredients with calculated amounts).
@@ -76,46 +74,38 @@ function getFortKnoxLaws(isNoWater = false, isBraggot = false, isHydromel = fals
 // --- CORE: De Prompt Bouwer (AANGEPAST: AUTO ABV & DESCRIPTION PRIORITY) ---
 function buildPrompt() {
     try {
-        // 1. Data Verzamelen
-        const batchSize = parseFloat(document.getElementById('batchSize')?.value) || 5;
+        const batchSize = parseFloat(String(document.getElementById('batchSize')?.value).replace(',', '.')) || 5;
         
-        // EERST: Haal de beschrijving op
         const customDescription = document.getElementById('customDescription')?.value.trim() || "";
         const hasDescription = customDescription !== "";
 
-        // DAN: Haal de ABV op
         const abvEl = document.getElementById('abv');
         const rawABV = abvEl ? abvEl.value : ''; 
         
-        // LOGICA: ABV is "Auto" als het veld leeg/0 is, OF als de gebruiker een beschrijving typt.
-        // Als er een beschrijving is, negeren we de slider/input volledig en laten we de AI de tekst interpreteren.
         const isAutoABV = (rawABV === '' || rawABV === '0') || hasDescription;
-        
-        // Als het NIET auto is, gebruiken we het getal. Anders is het 12 (fallback voor berekeningen, AI overrulet dit).
-        const targetABV = isAutoABV ? 12 : (parseFloat(rawABV) || 12);
+        const targetABV = isAutoABV ? 12 : (parseFloat(String(rawABV).replace(',', '.')) || 12);
 
         const sweetness = document.getElementById('sweetness')?.value;
         const styleSelect = document.getElementById('style');
-        const style = styleSelect.selectedOptions.length > 0 ? styleSelect.selectedOptions[0].text : 'Traditional Mead';
+        const style = styleSelect.selectedOptions.length > 0 ? styleSelect.selectedOptions.text : 'Traditional Mead';
         
-        // 1.5 Input Analyse
         const inputString = (customDescription + " " + style).toLowerCase();
         const noWaterCheckbox = document.getElementById('isNoWaterCheckbox');
         const isNoWater = (noWaterCheckbox && noWaterCheckbox.checked) || inputString.includes('no-water') || inputString.includes('no water');
         const isBraggot = inputString.includes('braggot');
         
-        // Budget Logic
+        const beerCloneInput = document.getElementById('beerCloneInput')?.value.trim() || "";
+        const hasBeerClone = beerCloneInput !== "";
+
         const useBudget = document.getElementById('useBudget')?.checked;
         let budgetContext = "";
         if (useBudget) {
-             const maxBudget = parseFloat(document.getElementById('maxBudget')?.value);
+             const maxBudget = parseFloat(String(document.getElementById('maxBudget')?.value).replace(',', '.'));
              if (maxBudget > 0) {
                  budgetContext = `\n- **STRICT BUDGET CONSTRAINT:** The total cost of ingredients MUST be below **€${maxBudget}**. Prioritize cheaper ingredients or smaller batches if necessary.`;
              }
         }
 
-        // --- CARBONATIE LOGICA ---
-        // Haal instelling op (standaard is bottle als er niets is opgeslagen)
         const carbMethod = state.userSettings?.carbonationMethod || 'bottle';
         let carbContext = "";
 
@@ -126,7 +116,6 @@ function buildPrompt() {
             - **Process:** Ferment -> Stabilize -> Backsweeten -> Keg -> Force Carbonate.
             `;
         } else {
-            // Flessen (Standaard)
             carbContext = `
             **CARBONATION METHOD: BOTTLE CONDITIONING.**
             - **CRITICAL SAFETY:** The user puts this in glass bottles.
@@ -139,11 +128,9 @@ function buildPrompt() {
             `;
         }
 
-        // 2. Math Injection
         let mathContext = "";
 
         if (isAutoABV) {
-            // SCENARIO: AI MAG KIEZEN
             mathContext = `
             **CALCULATED TARGETS:**
             - **Batch:** ${batchSize}L
@@ -153,12 +140,10 @@ function buildPrompt() {
             ${budgetContext}
             `;
         } else {
-            // SCENARIO: GEBRUIKER KIEST
             const honeyGramsPerLiter = targetABV * 22; 
             const totalHoneyKg = (honeyGramsPerLiter * batchSize) / 1000;
             const estimatedYAN = Math.round(targetABV * 10);
         
-            // LET OP: Hier stond 'let mathContext', dat heb ik weggehaald!
             mathContext = `
             **CALCULATED TARGETS:**
             - **Batch:** ${batchSize}L | **Target ABV:** ${targetABV}%
@@ -168,15 +153,41 @@ function buildPrompt() {
             `;
         }
 
-        if (isNoWater) {
+        // Pakket 3 & Hop Isomerisatie / Biotransformatie wetten
+        if (isBraggot || hasBeerClone) {
+            let braggotWiskunde = `\n- **PROTOCOL: BRAGGOT MATH (STRICT v2.6 BLUEPRINT):**`;
+            if (hasBeerClone) {
+                braggotWiskunde += `\n  - Target Beer Profile to Clone: "${beerCloneInput}"`;
+            }
+            braggotWiskunde += `
+            1. Calculate the required Alcohol by Weight (ABW) using: ABW = Target_ABV * 0.794.
+            2. Isolate the total density drop (ΔSG) using the inverted Hall Equation: ΔSG = (ABW * (1.775 - OG)) / 76.08.
+            3. Determine total sugar requirements in Gravity Points: GP_total = (OG - 1.000) * 1000 * Batch_Size.
+            4. Enforce malt grist ratio (X_malt) strictly between 30% and 50% of total sugar contribution: GP_malt = GP_total * X_malt. The remaining 50-70% must be supplied by honey.
+            5. Convert point distribution to exact mass weights in kilograms based on standard potentials:
+               - Honey Yield Potential: 290 points/kg/L
+               - Dry Malt Extract (DME) Yield Potential: 375 points/kg/L
+               - Liquid Malt Extract (LME) Yield Potential: 300 points/kg/L
+            6. Predict an increased Estimated Final Gravity (FG_est) by applying a 75% apparent attenuation limit solely onto the malt fraction, leaving residual unfermentable dextrins. Perform a backward adjustment on the final required OG to compensate for this density floor and guarantee the requested net ABV target.
+            7. **HONEY MUST IBU-RETENTION MATRIX:** Correct the calculated International Bitterness Units (IBU) based on the absence of protein-adsorptive losses in honey components.
+               - IF the mixture is a pure honey must (malt fraction is 0), scale the theoretical Tinseth bitterness utility by the mechanistical constant φ_mead = 1.45.
+               - IF the mixture is a hybrid braggot, calculate the dynamic adjustment factor using: φ_braggot = 1.0 + 0.45 * (1.0 - (ρ_malt / ρ_total)), where ρ_malt is the specific gravity points contribution from the malt extract, and ρ_total is the total starting gravity points of the must (OG - 1.000). Ensure total calculated bittering additions are adjusted to prevent overwhelming astringency.`;
+            
+            mathContext += braggotWiskunde;
+        } else if (isNoWater) {
             mathContext += `\n- **PROTOCOL: NO-WATER MELOMEL.** 1. No added water. 2. Need ~1.8kg fruit/Liter. 3. **SUGAR ALERT:** Fruit adds sugar. REDUCE Honey Baseline significantly.`;
-        } else if (isBraggot) {
-            mathContext += `\n- **PROTOCOL: BRAGGOT.** Malt provides 30-50% sugar. REDUCE Honey Baseline proportionally.`;
         } else {
             mathContext += `\n- **JUICE WARNING:** If replacing water with Fruit Juice, reduce honey to prevent overshooting ABV.`;
         }
 
-        // 3. Inventory Analyse 
+        // Nitrogen Catabolite Repression (NCR) De-repressie Algoritme Instructie
+        let ncrContext = "";
+        if (inputString.includes("qa23") || inputString.includes("us-05") || inputString.includes("71b") || inputString.includes("ec-1118") || inputString.includes("d47") || inputString.includes("m05")) {
+            ncrContext = `
+            - **NCR DE-REPRESSION ARCHITECTURE (IRC7-L Allele Activation):** If the prescribed yeast strain is Lalvin QA23 or SafAle US-05, you MUST compile an advanced nutrient schedule that exploits transcriptional de-repressive enzyme mechanics for up to a 10x higher free volatile thiol release (3MH).
+            - **Kinetic Staging:** Structure step-by-step instructions so the initial assimilation framework restricts total Nitrogen (YAN) below 100 mg/L during the early exponential lag phase. Instruct the brewer to delay the main organic nutrient additions until exactly after the first 1/3 sugar depletion zone has passed.`;
+        }
+
         const inventoryToggles = {
             Yeast: document.getElementById('useInventory_Yeast')?.checked || false,
             Nutrient: document.getElementById('useInventory_Nutrients')?.checked || false,
@@ -188,7 +199,7 @@ function buildPrompt() {
         
         const relevantCategories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
         const currentInventory = state.inventory || [];
-        const fullInventoryList = state.inventory.filter(item => relevantCategories.includes(item.category));
+        const fullInventoryList = currentInventory.filter(item => relevantCategories.includes(item.category));
         const inventoryString = fullInventoryList.map(item => `${item.name} (${item.qty} ${item.unit})`).join('; ');
         
         const useAnyInventory = Object.values(inventoryToggles).some(val => val === true);
@@ -201,8 +212,6 @@ function buildPrompt() {
              inventoryInstruction = `**STOCK AWARENESS:** The user has these items available. Suggest them if they fit the style perfectly.`;
         }
 
-        // Nutriënten logica (Vinoferm detectie)
-        // --- 1. Nutriënten Logica (Vinoferm & Hybrid detectie) ---
         const invLower = inventoryString.toLowerCase();
         
         const hasSafeOrganic = invLower.includes('fermaid o') || invLower.includes('ferm o') || invLower.includes('cellvit') || invLower.includes('yeast hulls');
@@ -212,24 +221,19 @@ function buildPrompt() {
         let baseNutrientRule = "";
         if (inventoryToggles.Nutrient) { 
              if (!hasSafeOrganic && (hasHybrid || hasDAP)) {
-                baseNutrientRule = `1. **Nutrients (HYBRID/INORGANIC):** Detected stock: Inorganic/Hybrid but NO Fermaid O. Use ONLY this stock. **WARNING:** Instruct user to STOP adding nutrients after 9% ABV to avoid off-flavors.`;
-            } else if (hasSafeOrganic) {
-                baseNutrientRule = `1. **Nutrients (ORGANIC):** Use Fermaid O/Cellvit from stock (TOSNA protocol).`;
-            } else {
-                baseNutrientRule = `1. **Nutrients:** Prescribe standard TOSNA 2.0 (Fermaid O preference).`;
-            }
-        } else {
-             baseNutrientRule = `1. **Nutrients:** Use standard TOSNA 2.0 guidelines.`;
+                baseNutrientRule = `1. **Nutrients (INORGANIC):** Detected inorganic stock. **WARNING:** Stop addition after 9% ABV. Use 1.0x YAN scaling.`;
+             } else if (hasSafeOrganic) {
+                baseNutrientRule = `1. **Nutrients (ORGANIC):** Use Fermaid O (Bio-equivalentie 4.0x). Calculate based on 160ppm equivalent per 1g/L. Follow TOSNA 3.0 (1g/gal pitch rate if <1.100 SG).`;
+             } else {
+                 baseNutrientRule = `1. **Nutrients:** Prescribe TOSNA 3.0 with organic nutrients (Bio-Eq 4.0 factor).`;
+             }
         }
 
-        // --- 2. Stabilisatie Check (Campden vs Metabisulphite) ---
-        // Zorgt dat de AI de taal van de gebruiker spreekt
         let stabiliserRule = "";
         if (invLower.includes('campden')) {
             stabiliserRule = `3. **NAMING CONVENTION:** The user has "Campden" in stock. Always write "**Campden Powder/Tablets**" instead of "Potassium Metabisulphite" in the ingredients list and instructions.`;
         }
 
-        // --- 3. De Final Logic String ---
         const inventoryLogic = `
         ${inventoryInstruction} 
         **FULL STOCK LIST:** [${inventoryString}]. 
@@ -243,7 +247,6 @@ function buildPrompt() {
         ${stabiliserRule}
         `;
 
-        // 4. Style Router
         const sourKeywords = ['sour', 'wild', 'gueuze', 'lambic', 'brett', 'funky', 'farmhouse', 'lacto', 'pedio', 'geuze'];
         const isQuickSour = inputString.includes('philly') || inputString.includes('kettle');
         const isWildMode = sourKeywords.some(k => inputString.includes(k));
@@ -255,7 +258,6 @@ function buildPrompt() {
         const isHydromel = targetABV < 8 || inputString.includes('session') || inputString.includes('hydromel');
         const isHeavyMode = heavyKeywords.some(k => inputString.includes(k)) || targetABV > 15;
 
-        // 5. Protocollen
         let protocolContext = "";
         let specificLaws = "";
 
@@ -313,36 +315,26 @@ function buildPrompt() {
             `;
         }
 
-        // 6. Water
-        let waterContext = "";
-        if (isNoWater) {
-            waterContext = `**WATER RULE:** DO NOT ADD WATER. Liquid must come from fruit juice/maceration only.`;
-        } else if (window.currentWaterProfile) { 
-            waterContext = `Use Water: ${window.currentWaterProfile.name}`;
-        } else {
-            // HIER IS DE WIJZIGING: Focus op type water, verbied chemie.
-            waterContext = `
-            **WATER INSTRUCTION (NO CHEMISTRY):**
-            1. **FORBIDDEN:** Do NOT recommend adding brewing salts (Gypsum, Epsom, etc.). The user uses bottled water.
-            2. **TASK:** Describe the *type* of water needed for this specific mead style (e.g., "Soft water to let delicate varietals shine" or "Mineral-rich water for structure").
-            3. **REFERENCE:** Mention a suitable **Belgian brand** ONLY as an example (e.g. "Use a soft water like Spa Reine" or "A mineral water like Chaudfontaine").
-            `;
-        }
+        let waterContext = `
+        **WATER INSTRUCTION (NO CHEMISTRY):**
+        1. **FORBIDDEN:** Do NOT recommend adding brewing salts (Gypsum, Epsom, etc.). The user uses bottled water.
+        2. **TASK:** Describe the *type* of water needed for this specific mead style (e.g., "Soft water to let delicate varietals shine" or "Mineral-rich water for structure").
+        3. **REFERENCE:** Mention a suitable **Belgian brand** ONLY as an example (e.g. "Use a soft water like Spa Reine" or "A mineral water like Chaudfontaine").
+        `;
 
-        // 7. Input Verwerking
         let creativeBrief = ""; 
         if (customDescription.trim() !== '') {
              creativeBrief = `User Vision: "${customDescription}". Override stats only if specified. Base: ${batchSize}L, ${targetABV}%.`;
         } else {
              creativeBrief = `Structure: ${style}, Batch: ${batchSize}L, Target: ${targetABV}%, Sweetness: ${sweetness}.`;
              if (style.includes('Melomel')) {
-                const fruits = Array.from(document.querySelectorAll('#fruit-section input[type=checkbox]:checked')).map(el => el.labels[0].innerText);
+                const fruits = Array.from(document.querySelectorAll('#fruit-section input[type=checkbox]:checked')).map(el => el.labels.innerText);
                 const otherFruits = document.getElementById('fruitOther').value;
                 const fStr = [...fruits, otherFruits].filter(Boolean).join(', ');
                 if(fStr) creativeBrief += `\n- Fruits: ${fStr}`;
              }
              if (style.includes('Metheglin')) {
-                const spices = Array.from(document.querySelectorAll('#spice-section input[type=checkbox]:checked')).map(el => el.labels[0].innerText);
+                const spices = Array.from(document.querySelectorAll('#spice-section input[type=checkbox]:checked')).map(el => el.labels.innerText);
                 const otherSpices = document.getElementById('spiceOther').value;
                 const sStr = [...spices, otherSpices].filter(Boolean).join(', ');
                 if(sStr) creativeBrief += `\n- Spices: ${sStr}`;
@@ -354,13 +346,13 @@ function buildPrompt() {
              if (document.getElementById('specialIngredients').value) creativeBrief += `\n- Special Ingredients: ${document.getElementById('specialIngredients').value}`;
         }
 
-        // --- STAP 8: FINAL PROMPT ---
         return `You are "MEA(N)DERY", a master mazer. 
 
 ${mathContext}
 ${carbContext}
 ${protocolContext}
 ${specificLaws}
+${ncrContext}
 ${inventoryLogic}
 ${waterContext}
 
@@ -386,7 +378,7 @@ ${creativeBrief}
 ---`;
 
     } catch (error) {
-        console.error("Error building prompt:", error);
+        window.logSystemError(error, "brewing.js: buildPrompt", "ERROR");
         throw new Error(`Failed to build prompt: ${error.message}`);
     }
 }
@@ -394,7 +386,6 @@ ${creativeBrief}
 // --- CORE: Generate Recipe ---
 async function generateRecipe() {
     const recipeOutput = document.getElementById('recipe-output');
-    // Gebruik getLoaderHtml uit utils.js
     if(recipeOutput) recipeOutput.innerHTML = getLoaderHtml("Initializing Brewing Protocol...");
     
     const generateBtn = document.getElementById('generateBtn');
@@ -403,27 +394,21 @@ async function generateRecipe() {
         generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
     }
     
-    // Reset module variabelen
     currentPredictedProfile = null; 
 
-    // Start animatie (als beschikbaar in utils.js via window koppeling)
     const thinkingInterval = (typeof window.startThinkingAnimation === 'function') 
         ? window.startThinkingAnimation("loader-text") 
         : null;
 
     try {
         const prompt = buildPrompt();
-        lastGeneratedPrompt = prompt; // Handig voor debuggen via console
+        lastGeneratedPrompt = prompt; 
         
-        // API Call via utils.js
         let rawResponse = await performApiCall(prompt); 
         
-        // Markdown opschonen (verwijder ```markdown code blocks)
         let cleanedResponse = rawResponse.trim();
         if (cleanedResponse.startsWith("```")) {
-            // Vind de eerste enter (na ```markdown)
             const firstNewLine = cleanedResponse.indexOf('\n');
-            // Vind de laatste ```
             const lastBackticks = cleanedResponse.lastIndexOf("```");
             
             if (firstNewLine !== -1 && lastBackticks !== -1) {
@@ -433,23 +418,23 @@ async function generateRecipe() {
         
         if (thinkingInterval) clearInterval(thinkingInterval);
 
-        // Opslaan in module scope en tempState voor andere functies
         currentRecipeMarkdown = cleanedResponse;
         window.currentRecipeMarkdown = cleanedResponse;
         tempState.currentRecipe = currentRecipeMarkdown;
 
-        // Renderen (deze functie komt in de volgende stap)
         if(typeof renderRecipeOutput === 'function') {
             await renderRecipeOutput(currentRecipeMarkdown); 
         } else {
             console.warn("renderRecipeOutput nog niet geladen.");
-            if(recipeOutput) recipeOutput.innerText = currentRecipeMarkdown; // Fallback tekst
+            if(recipeOutput) recipeOutput.innerText = currentRecipeMarkdown; 
         }
 
     } catch (error) {
         if (thinkingInterval) clearInterval(thinkingInterval);
-        console.error("Error calling Gemini API:", error);
-        if(recipeOutput) recipeOutput.innerHTML = getLoaderHtml("Initializing Brewing Protocol...");
+        // v2.6 Sluitend gecentraliseerd logframework geïntegreerd
+        window.logSystemError(error, 'brewing.js: generateRecipe', 'CRITICAL');
+        window.showToast("Failed to generate recipe. Check system logs.", "error");
+        if(recipeOutput) recipeOutput.innerHTML = `<p class="text-red-500 p-4">Error generating recipe: ${error.message}</p>`;
     } finally {
         if(generateBtn) {
             generateBtn.disabled = false;
@@ -1071,81 +1056,69 @@ window.startActualBrewDay = async function(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
     if (!brew) return;
 
-    // 1. Datum instellen (als die nog niet bestaat)
     if (!brew.logData) brew.logData = {};
     if (!brew.logData.brewDate) {
-        brew.logData.brewDate = new Date().toISOString().split('T')[0];
+        brew.logData.brewDate = new Date().toISOString().split('T');
         try {
             await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { 
                 logData: brew.logData 
             });
             showToast("Brew date set to today!", "info");
-        } catch (error) { console.error("Date save failed", error); }
+        } catch (error) { 
+            window.logSystemError(error, 'brewing.js -> startActualBrewDay (saveDate)', 'ERROR');
+            window.showToast("Failed to write brew date to database.", "error");
+        }
     }
 
-    // 2. CHECKLIST CONFLICT LOGICA (Uit oude file)
-    // Als er al vinkjes staan, vraag om reset
     if (brew.checklist && Object.keys(brew.checklist).length > 0) {
         if (confirm("This batch has existing progress. Reset checklist and start over?")) {
             brew.checklist = {};
             try {
                 await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { checklist: {} });
-            } catch (e) { console.error("Reset failed", e); }
+            } catch (error) { 
+                window.logSystemError(error, 'brewing.js -> startActualBrewDay (resetChecklist)', 'ERROR');
+                window.showToast("Failed to reset checklist in database.", "error");
+            }
         }
     } else {
-        // Zorg dat checklist object bestaat
         if(!brew.checklist) brew.checklist = {};
     }
 
-    // 3. State update & Persistentie (HERSTELD)
     tempState.activeBrewId = brewId;
     
-    // Sla op in database settings (zodat je op mobiel verder kunt waar je op desktop was)
     if (state.userSettings) {
         state.userSettings.currentBrewDay = { brewId: brewId };
-        // We roepen de save functie aan als die bestaat (in utils of app.js)
         if (window.saveUserSettings) window.saveUserSettings();
         else {
-            // Fallback save als functie niet bestaat
             try {
                 await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main'), { 
                     currentBrewDay: { brewId: brewId } 
                 }, { merge: true });
-            } catch(e) { console.warn("Settings save failed", e); }
+            } catch(error) { 
+                window.logSystemError(error, 'brewing.js -> startActualBrewDay (saveSettingsFallback)', 'ERROR');
+            }
         }
     }
     
-    // 4. UI Switch
     switchSubView('brew-day-1', 'brewing-main-view');
     renderBrewDay(brewId);
-}
+};
 
 // --- RENDER: Brew Day 1 (Dashboard / Detail Split) ---
 window.renderBrewDay = function(forceId = null) {
     const brewDayContent = document.getElementById('brew-day-content');
     if (!brewDayContent) return;
 
-    // 1. Bepaal Actieve Batch ID
     let activeId = forceId || tempState.activeBrewId;
-    
-    // Als we nog geen ID hebben, kijken we of er eentje in de settings stond
     if (!activeId && state.userSettings?.currentBrewDay?.brewId) {
-        if (tempState.activeBrewId !== null) { 
-             activeId = state.userSettings.currentBrewDay.brewId;
-        }
+        activeId = state.userSettings.currentBrewDay.brewId;
     }
 
-    // 2. Haal alle actieve primary batches op
     const activeBrews = state.brews.filter(b => b.logData?.brewDate && !b.primaryComplete);
 
-    // --- SCENARIO A: DETAIL WEERGAVE (We hebben een ID) ---
     if (activeId && activeId !== 'none') {
         const brew = state.brews.find(b => b.id === activeId);
-        
-        if (!brew) {
-            tempState.activeBrewId = null;
-            return window.renderBrewDay(); 
-        }
+        if (!brew) { tempState.activeBrewId = null; return window.renderBrewDay(); }
 
         tempState.activeBrewId = activeId;
         if(state.userSettings) { 
@@ -1166,13 +1139,11 @@ window.renderBrewDay = function(forceId = null) {
             const stepData = checklist[`step-${index}`];
             const isCompleted = stepData === true || (stepData && stepData.completed);
             const savedAmount = (stepData && stepData.actualAmount) ? stepData.actualAmount : '';
-
             const amountMatch = (step.title + " " + step.description).match(/(\d+[.,]?\d*)\s*(kg|g|l|ml|oz|lbs)/i);
-            let inputHtml = '';
             
+            let inputHtml = '';
             if (amountMatch && !isCompleted) {
-                inputHtml = `
-                <div class="mt-2 flex items-center bg-app-primary rounded border border-app-brand/20 w-32">
+                inputHtml = `<div class="mt-2 flex items-center bg-app-primary rounded border border-app-brand/20 w-32">
                     <span class="px-2 text-[9px] font-bold text-app-secondary uppercase border-r border-app-brand/10">Act</span>
                     <input type="number" id="step-input-${index}" class="w-full bg-transparent border-none p-1 text-center font-bold text-sm" placeholder="${amountMatch[1]}" value="${amountMatch[1]}">
                     <span class="pr-2 text-xs font-bold text-app-brand">${amountMatch[2]}</span>
@@ -1181,71 +1152,36 @@ window.renderBrewDay = function(forceId = null) {
                  inputHtml = `<div class="mt-2 inline-flex items-center gap-2 px-2 py-1 rounded bg-green-500/10 border border-green-500/20"><span class="text-[9px] font-bold text-green-700 uppercase">Recorded:</span><span class="font-mono font-bold text-green-800 text-xs">${savedAmount}</span></div>`;
             }
 
-            const timerHtml = step.duration > 0 
-                ? `<div class="timer-display my-2 text-sm font-mono font-bold text-app-brand bg-app-primary inline-block px-2 py-1 rounded border border-app-brand/20" id="timer-${index}">${formatTime(step.duration)}</div>` 
-                : '';
-            
-            const btnHtml = step.duration > 0 
-                ? `<button onclick="window.startStepTimer('${brew.id}', ${index})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn font-bold uppercase">Start Timer</button>` 
-                : `<button onclick="window.completeStep(${index})" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1.5 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase">Check</button>`;
+            const timerHtml = step.duration > 0 ? `<div class="timer-display my-2 text-sm font-mono font-bold text-app-brand bg-app-primary inline-block px-2 py-1 rounded border border-app-brand/20" id="timer-${index}">${formatTime(step.duration)}</div>` : '';
+            const btnHtml = step.duration > 0 ? `<button onclick="window.startStepTimer('${brew.id}', ${index})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn font-bold uppercase">Start Timer</button>` : `<button onclick="window.completeStep(${index})" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1.5 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase">Check</button>`;
 
-            return `
-            <div id="step-${index}" class="step-item p-4 border-b border-app-brand/10 ${isCompleted ? 'opacity-60 grayscale' : ''}">
+            return `<div id="step-${index}" class="step-item p-4 border-b border-app-brand/10 ${isCompleted ? 'opacity-60 grayscale' : ''}">
                 <div class="flex justify-between items-start gap-4">
                     <div class="flex-grow">
-                        <p class="font-bold text-sm text-app-header flex items-center gap-2">
-                            <span class="w-5 h-5 rounded-full bg-app-tertiary text-[10px] flex items-center justify-center border border-app-brand/20">${index + 1}</span> 
-                            ${step.title}
-                        </p>
-                        <div class="pl-7">
-                            <p class="text-xs text-app-secondary mt-1 opacity-90">${step.description}</p>
-                            ${inputHtml}
-                            ${timerHtml}
-                        </div>
+                        <p class="font-bold text-sm text-app-header flex items-center gap-2"><span class="w-5 h-5 rounded-full bg-app-tertiary text-[10px] flex items-center justify-center border border-app-brand/20">${index + 1}</span> ${step.title}</p>
+                        <div class="pl-7"><p class="text-xs text-app-secondary mt-1 opacity-90">${step.description}</p>${inputHtml}${timerHtml}</div>
                     </div>
-                    <div class="pt-1 flex flex-col items-end gap-1" id="controls-${index}">
-                        ${isCompleted 
-                            ? `<button onclick="window.undoStep(${index})" class="text-[10px] font-bold text-white bg-green-600 px-2 py-1 rounded shadow-sm hover:bg-red-500 transition-colors" title="Undo / Edit">DONE ↺</button>` 
-                            : btnHtml}
-                    </div>
+                    <div class="pt-1 flex flex-col items-end gap-1" id="controls-${index}">${isCompleted ? `<button onclick="window.undoStep(${index})" class="text-[10px] font-bold text-white bg-green-600 px-2 py-1 rounded shadow-sm hover:bg-red-500 transition-colors" title="Undo / Edit">DONE ↺</button>` : btnHtml}</div>
                 </div>
             </div>`;
         }).join('');
 
-        const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(brew.logData, brew.id) : '';
+        const logHtml = getBrewLogHtml(brew, brew.id);
 
         brewDayContent.innerHTML = `
             <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
                 <div class="flex items-center justify-between mb-4 pb-2 border-b border-app-brand/10">
-                    <button onclick="window.closePrimaryDetail()" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1">
-                        &larr; Back to Overview
-                    </button>
+                    <button onclick="window.closePrimaryDetail()" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1">&larr; Back to Overview</button>
                     <span class="text-[10px] font-bold uppercase tracking-widest text-app-brand opacity-60">Active Session</span>
                 </div>
-
                 <div class="text-center mb-6">
                     <h2 class="text-2xl font-header font-bold text-app-brand mb-1">${brew.recipeName}</h2>
                     <p class="text-[10px] font-bold uppercase tracking-widest text-app-secondary opacity-60">Primary Fermentation Protocol</p>
                 </div>
-
-                <div class="flex justify-between items-center mb-2 px-1">
-                    <span class="text-xs font-bold text-app-secondary uppercase tracking-wider">Checklist</span>
-                    <div class="flex gap-3">
-                                                               <button onclick="window.resetBrewDay()" class="text-[10px] text-orange-500 hover:text-orange-700 hover:underline font-bold uppercase tracking-wider transition-colors">Restart</button>
-                                                               <button onclick="window.deleteBrew('${brew.id}')" class="text-[10px] text-red-600 hover:text-red-800 hover:underline font-bold uppercase tracking-wider transition-colors">Delete</button>
-                                                    </div>
-                </div>
-                
-                <div class="bg-app-secondary rounded-xl shadow-sm border border-app-brand/10 overflow-hidden mb-8">
-                    ${stepsHtml}
-                </div>
-                
+                <div class="bg-app-secondary rounded-xl shadow-sm border border-app-brand/10 overflow-hidden mb-8">${stepsHtml}</div>
                 ${logHtml}
-                
                 <div class="mt-6 space-y-3 pb-2 border-t border-app-brand/10 pt-4">
-                    <button onclick="window.finishPrimaryManual('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn font-bold shadow-md uppercase tracking-wider flex items-center justify-center gap-2">
-                        Finish Primary & Go to Aging &rarr;
-                    </button>
+                    <button onclick="window.finishPrimaryManual('${brew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn font-bold shadow-md uppercase tracking-wider flex items-center justify-center gap-2">Finish Primary & Go to Aging &rarr;</button>
                     <div class="grid grid-cols-2 gap-3">
                         <button onclick="window.updateBrewLog('${brew.id}', 'brew-day-content')" class="bg-app-action text-white py-3 px-4 rounded-lg font-bold uppercase text-xs">Save Logs</button>
                         <button onclick="window.deductActualsFromInventory('${brew.id}')" class="bg-app-tertiary text-app-secondary border border-app-brand/20 py-3 px-4 rounded-lg font-bold uppercase text-xs">Update Stock</button>
@@ -1255,209 +1191,486 @@ window.renderBrewDay = function(forceId = null) {
         return;
     }
 
-    // --- SCENARIO B: LIJST WEERGAVE (Geen actief ID) ---
-    
-    // EERST HTML genereren
     const listHtml = activeBrews.map(b => {
         const startDate = b.logData?.brewDate || 'Unknown';
         const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
         const dayLabel = days >= 0 ? `Day ${days + 1}` : 'Pending';
-
-        return `
-        <div onclick="window.openPrimaryDetail('${b.id}')" class="p-4 card rounded-2xl cursor-pointer bg-surface-container border border-outline-variant hover:border-primary hover:shadow-elevation-1 mb-3 transition-all group relative">
+        return `<div onclick="window.openPrimaryDetail('${b.id}')" class="p-4 card rounded-2xl cursor-pointer bg-surface-container border border-outline-variant hover:border-primary hover:shadow-elevation-1 mb-3 transition-all group relative">
             <div class="flex justify-between items-center">
-                <div>
-                    <h4 class="font-bold text-lg font-header text-on-surface group-hover:text-primary transition-colors leading-tight">${b.recipeName}</h4>
-                    <div class="flex items-center gap-3 mt-1.5">
-                        <span class="text-[10px] font-bold uppercase bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded-full border border-outline-variant/30">${dayLabel}</span>
-                        <span class="text-xs text-on-surface-variant opacity-80">Started: ${startDate}</span>
-                    </div>
+                <div><h4 class="font-bold text-lg font-header text-on-surface group-hover:text-primary transition-colors leading-tight">${b.recipeName}</h4>
+                    <div class="flex items-center gap-3 mt-1.5"><span class="text-[10px] font-bold uppercase bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded-full border border-outline-variant/30">${dayLabel}</span><span class="text-xs text-on-surface-variant opacity-80">Started: ${startDate}</span></div>
                 </div>
-                <div class="text-primary opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
-                </div>
+                <div class="text-primary opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg></div>
             </div>
         </div>`;
     }).join('');
 
-    // DAN checken op leeg
     if (activeBrews.length === 0) {
-        brewDayContent.innerHTML = `
-            <div class="max-w-2xl mx-auto">
-                <div class="flex justify-between items-end mb-6 px-1 border-b border-outline-variant/50 pb-2">
-                    <div>
-                        <h2 class="text-2xl font-header font-bold text-primary uppercase tracking-wider">Fermentation Chamber</h2>
-                        <p class="text-xs text-on-surface-variant uppercase tracking-wider font-bold opacity-60">Empty</p>
-                    </div>
-                    <button onclick="window.promptNewBrewType()" class="text-xs bg-primary text-on-primary px-4 py-2 rounded-full font-bold shadow-elevation-1 hover:brightness-110 transition-all uppercase tracking-wide flex items-center gap-1">
-                        <span>+</span> New
-                    </button>
-                </div>
-                <div class="text-center py-12 px-4 opacity-60">
-                    <p class="text-sm text-on-surface-variant">No active brews found.<br>Start a new batch above!</p>
-                </div>
-            </div>`;
-        return;
+        brewDayContent.innerHTML = `<div class="max-w-2xl mx-auto"><div class="flex justify-between items-end mb-6 px-1 border-b border-outline-variant/50 pb-2"><div><h2 class="text-2xl font-header font-bold text-primary uppercase tracking-wider">Fermentation Chamber</h2><p class="text-xs text-on-surface-variant uppercase tracking-wider font-bold opacity-60">Empty</p></div><button onclick="window.promptNewBrewType()" class="text-xs bg-primary text-on-primary px-4 py-2 rounded-full font-bold shadow-elevation-1 hover:brightness-110 transition-all uppercase tracking-wide flex items-center gap-1"><span>+</span> New</button></div><div class="text-center py-12 px-4 opacity-60"><p class="text-sm text-on-surface-variant">No active brews found.<br>Start a new batch above!</p></div></div>`;
+    } else {
+        brewDayContent.innerHTML = `<div class="max-w-2xl mx-auto"><div class="flex justify-between items-end mb-6 px-1 border-b border-outline-variant/50 pb-2"><div><h2 class="text-2xl font-header font-bold text-primary uppercase tracking-wider">Fermentation Chamber</h2><p class="text-xs text-on-surface-variant uppercase tracking-wider font-bold opacity-60">${activeBrews.length} Active Batches</p></div><button onclick="window.promptNewBrewType()" class="text-xs bg-primary text-on-primary px-4 py-2 rounded-full font-bold shadow-elevation-1 hover:brightness-110 transition-all uppercase tracking-wide flex items-center gap-1"><span>+</span> New</button></div><div class="space-y-3">${listHtml}</div></div>`;
     }
+};
 
-    // ANDERS lijst tonen (Als er wél items zijn)
-    brewDayContent.innerHTML = `
-        <div class="max-w-2xl mx-auto">
-            <div class="flex justify-between items-end mb-6 px-1 border-b border-outline-variant/50 pb-2">
-                <div>
-                    <h2 class="text-2xl font-header font-bold text-primary uppercase tracking-wider">Fermentation Chamber</h2>
-                    <p class="text-xs text-on-surface-variant uppercase tracking-wider font-bold opacity-60">${activeBrews.length} Active Batches</p>
-                </div>
-                <button onclick="window.promptNewBrewType()" class="text-xs bg-primary text-on-primary px-4 py-2 rounded-full font-bold shadow-elevation-1 hover:brightness-110 transition-all uppercase tracking-wide flex items-center gap-1">
-                    <span>+</span> New
-                </button>
-            </div>
-            <div class="space-y-3">
-                ${listHtml}
-            </div>
-        </div>`;
-}
-
-// --- RENDER: Brew Day 2 (Aging/Secondary) - FINAL FIX ---
+// ============================================================================
+// MODIFICATIE: window.renderBrewDay2 met Split Batch Protocol UI-integratie
+// ============================================================================
 window.renderBrewDay2 = async function() {
     const container = document.getElementById('brew-day-2-view');
     if (!container) return;
 
-    // 1. Data ophalen
-    const agingBrews = state.brews.filter(b => b.primaryComplete && !b.isBottled);
-    const activeId = tempState.activeBrewId;
-    const activeBrew = activeId ? agingBrews.find(b => b.id === activeId) : null;
+    try {
+        // 1. Data ophalen (Sluit gesplitste ouderbatches uit van de actieve aging lijst)
+        const agingBrews = state.brews.filter(b => b.primaryComplete && !b.isBottled && b.status !== 'split');
+        const activeId = tempState.activeBrewId;
+        const activeBrew = activeId ? state.brews.find(b => b.id === activeId) : null;
 
-    // --- SCENARIO A: DETAIL ---
-    if (activeBrew) {
-        let steps = activeBrew.secondarySteps || [];
-        if (steps.length === 0 && activeBrew.recipeMarkdown) {
-            const extracted = extractStepsFromMarkdown(activeBrew.recipeMarkdown);
-            steps = extracted.day2;
-            activeBrew.secondarySteps = steps; 
-        }
-        if (steps.length === 0) steps = [{ title: "Racking", description: "Transfer." }, { title: "Bottling", description: "Package." }];
-
-        const checklist = activeBrew.checklist || {};
-        
-        const stepsHtml = steps.map((step, idx) => {
-            const key = `sec-step-${idx}`;
-            const isChecked = checklist[key] === true;
-            const btnHtml = isChecked 
-                ? `<span class="text-xs font-bold text-green-600 border border-green-600 px-2 py-0.5 rounded">DONE</span>` 
-                : `<button onclick="window.toggleSecondaryStep('${activeBrew.id}', '${key}')" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase">Check</button>`;
+        // --- SCENARIO A: DETAIL ---
+        if (activeBrew) {
+            let steps = activeBrew.secondarySteps || [];
+            if (steps.length === 0 && activeBrew.recipeMarkdown) {
+                const extracted = extractStepsFromMarkdown(activeBrew.recipeMarkdown);
+                steps = extracted.day2;
+                activeBrew.secondarySteps = steps; 
+            }
             
-            return `
-            <div class="p-4 border-b border-app-brand/10 flex justify-between items-start gap-4 ${isChecked ? 'opacity-60 grayscale' : ''}">
-                <div class="flex-grow">
-                    <p class="font-bold text-sm text-app-header flex items-center gap-2">
-                        <span class="w-5 h-5 rounded-full bg-app-tertiary text-[10px] flex items-center justify-center border border-app-brand/20">${idx + 1}</span> ${step.title}
-                    </p>
-                    <p class="text-xs text-app-secondary mt-1 pl-7 opacity-90">${step.description}</p>
+            const checklist = activeBrew.checklist || {};
+            
+            const stepsHtml = steps.map((step, idx) => {
+                const key = `sec-step-${idx}`;
+                const isChecked = checklist[key] === true;
+                const btnHtml = isChecked 
+                    ? `<span class="text-xs font-bold text-green-600 border border-green-600 px-2 py-0.5 rounded">DONE</span>` 
+                    : `<button onclick="window.toggleSecondaryStep('${activeBrew.id}', '${key}')" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase">Check</button>`;
+                
+                return `
+                <div class="p-4 border-b border-app-brand/10 flex justify-between items-start gap-4 ${isChecked ? 'opacity-60 grayscale' : ''}">
+                    <div class="flex-grow">
+                        <p class="font-bold text-sm text-app-header flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-app-tertiary text-[10px] flex items-center justify-center border border-app-brand/20">${idx + 1}</span> ${step.title}
+                        </p>
+                        <p class="text-xs text-app-secondary mt-1 pl-7 opacity-90">${step.description}</p>
+                    </div>
+                    <div class="pt-1">${btnHtml}</div>
+                </div>`;
+            }).join('');
+
+            // --- STABILIZATION GATEKEEPER SECTION ---
+            const currentPhStr = (activeBrew.logData?.actualFG_pH || activeBrew.logData?.pH || "").toString().replace(',', '.');
+            const abv = parseFloat(activeBrew.logData?.finalABV || activeBrew.logData?.targetABV || 0);
+            const fgVal = parseFloat(activeBrew.logData?.actualFG || 1.000); 
+            const phVal = parseFloat(currentPhStr);
+
+            // Hall/Delle Calculations
+            let delleDisplay = "--";
+            let isDelleStable = false;
+            let hallError = false;
+
+            if (fgVal >= 1.775) {
+                hallError = true;
+                delleDisplay = "LIMIT ERR";
+            } else {
+                const brixVal = (fgVal > 1) ? ((182.9622 * Math.pow(fgVal, 3)) - (777.3009 * Math.pow(fgVal, 2)) + (1264.5170 * fgVal) - 670.1831) : 0;
+                const delleValue = (abv * 4.5) + brixVal;
+                isDelleStable = delleValue >= 78 || abv >= 15; 
+                delleDisplay = `${delleValue.toFixed(1)} / 78.0`;
+            }
+
+            const gateHtml = `
+            <div id="stabilization-gatekeeper" class="mt-8 p-6 bg-app-tertiary/50 border-2 border-app-brand/20 rounded-xl no-print">
+                <div class="mb-6 p-4 bg-red-600 text-white rounded-lg text-xs font-bold shadow-lg border-2 border-red-800 ${abv >= 15 ? 'hidden' : 'animate-pulse'}">
+                    WAARSCHUWING: Kaliumsorbaat is een fungistatisch middel (sterilisator), geen fungicide (doder). 
+                    Het blokkeert uitsluitend de reproductie. Bestaande actieve gisten in een troebele most blijven suiker vergisten, 
+                    wat leidt tot explosieve flesbommen bij back-sweetening. Stabilisatie is enkel toegestaan bij een visueel geklaarde most.
                 </div>
-                <div class="pt-1">${btnHtml}</div>
+
+                <h3 class="text-xl font-header font-bold text-app-brand mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    Stabilization Gatekeeper
+                </h3>
+
+                <div class="space-y-4 mb-6">
+                    <label class="flex items-start gap-3 p-3 bg-app-secondary rounded-lg border border-app-brand/10 cursor-pointer">
+                        <input type="checkbox" id="cb-checklist-cleared" class="mt-1 w-5 h-5 text-app-brand rounded focus:ring-app-brand" 
+                            ${checklist.checklist_cleared ? 'checked' : ''} onchange="window.updateGateStatus('${activeBrew.id}', 'checklist_cleared')">
+                        <span class="text-sm text-app-header font-medium">Ik bevestig dat de mede hydrometrisch stabiel en visueel helder is (biomassa gedecimeerd).</span>
+                    </label>
+
+                    <label class="flex items-start gap-3 p-3 bg-app-secondary rounded-lg border border-app-brand/10 cursor-pointer">
+                        <input type="checkbox" id="cb-checklist-so2-sync" class="mt-1 w-5 h-5 text-app-brand rounded focus:ring-app-brand" 
+                            ${checklist.checklist_so2_sync ? 'checked' : ''} onchange="window.updateGateStatus('${activeBrew.id}', 'checklist_so2_sync')">
+                        <span class="text-sm text-app-header font-medium">Ik bevestig de aanwezigheid van actieve vrije SO2 (ter voorkoming van Geranium Taint).</span>
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="p-4 bg-app-primary rounded-lg border border-app-brand/10">
+                        <label class="text-[10px] font-bold text-app-secondary uppercase block mb-1">Actuele pH (Drempel: 2.8 - 4.5)</label>
+                        <input type="number" id="gate-ph-input" step="0.01" value="${currentPhStr}" 
+                            class="w-full bg-app-tertiary border border-app-brand/30 rounded p-2 text-lg font-mono font-bold text-app-brand focus:ring-1 focus:ring-app-brand" 
+                            placeholder="3.x" oninput="this.value = this.value.replace(',', '.'); window.renderBrewDay2()">
+                    </div>
+                    <div class="p-4 bg-app-primary rounded-lg border border-app-brand/10">
+                        <label class="text-[10px] font-bold text-app-secondary uppercase block mb-1">Delle-Stabiliteit Index</label>
+                        <div class="text-lg font-mono font-bold ${hallError ? 'text-red-600 animate-pulse' : (isDelleStable ? 'text-green-600' : 'text-orange-500')}">
+                            ${delleDisplay} ${!hallError ? (isDelleStable ? '✅' : '⚠️') : ''}
+                        </div>
+                    </div>
+                </div>
+
+                ${isDelleStable && !hallError ? `
+                    <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 text-green-700 rounded-lg text-xs font-bold animate-fade-in">
+                        Delle-stabiliteit of ABV gevarengrens (>=15%) bereikt. Gistmetabolisme fysiologisch geïnhibeerd door ethanoltoxiciteit. Chemische stabilisatie met kaliumsorbaat is overbodig en marginaal effectief.
+                    </div>
+                ` : ''}
+
+                ${hallError ? `
+                    <div class="mb-4 p-3 bg-red-600/20 border border-red-600 text-red-600 rounded-lg text-xs font-bold">
+                        ⚠️ LIMIT ERR: FG overschrijdt de Hall-limiet. Controleer meting.
+                    </div>
+                ` : ''}
+            </div>`;
+
+            const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(activeBrew, activeBrew.id + '-sec') : '';
+
+            // Validation Logic
+            const isPhValid = !isNaN(phVal) && phVal >= 2.8 && phVal <= 4.5;
+            const isGatePassed = checklist.checklist_cleared && checklist.checklist_so2_sync && isPhValid && !hallError;
+
+            container.innerHTML = `
+                <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
+                    <div class="flex items-center justify-between mb-4 pb-2 border-b border-app-brand/10">
+                        <div class="flex gap-2">
+                            <button onclick="window.closeSecondaryDetail()" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1">
+                                &larr; Back
+                            </button>
+                            <button onclick="window.revertToPrimary('${activeBrew.id}')" class="text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-wider flex items-center gap-1 ml-2 border-l border-app-brand/10 pl-2">
+                                ↺ Undo Finish
+                            </button>
+                        </div>
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-app-brand opacity-60">Secondary Phase</span>
+                    </div>
+
+                    <div class="text-center mb-6">
+                        <h2 class="text-2xl font-header font-bold text-app-brand mb-1">${activeBrew.recipeName}</h2>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-app-secondary opacity-60">Aging & Stabilization</p>
+                        <div class="mt-2 text-xs text-app-secondary font-mono bg-app-primary inline-block px-3 py-1 rounded border border-app-brand/10">
+                            Current Batch Volume: <span class="text-app-brand font-bold">${activeBrew.batchSize || 5}L</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-6 p-4 border border-purple-500/30 bg-purple-500/5 rounded-xl no-print flex justify-between items-center transition-all">
+                        <div>
+                            <h4 class="font-bold text-purple-700 text-sm uppercase flex items-center gap-2">Split Batch Protocol</h4>
+                            <p class="text-xs text-app-secondary mt-1">Split this aging vessel into multiple carboys or experimental fractions.</p>
+                        </div>
+                        <button onclick="window.showSplitModal('${activeBrew.id}', ${activeBrew.batchSize || 5})" class="bg-purple-600 text-white py-2 px-4 rounded-lg text-xs font-bold hover:bg-purple-700 btn transition-all shadow-sm whitespace-nowrap">Split Batch</button>
+                    </div>
+
+                    <div class="bg-app-secondary rounded-xl shadow-sm border border-app-brand/10 overflow-hidden mb-4">
+                        ${stepsHtml}
+                    </div>
+
+                    ${gateHtml}
+
+                    <div id="brew-day-2-log-container" class="mt-6">${logHtml}</div>
+
+                    <div class="mt-6 space-y-3 pb-2 border-t border-t-app-brand/10 pt-4">
+                        <button onclick="window.showBottlingModal('${activeBrew.id}')" 
+                            ${!isGatePassed ? 'disabled' : ''} 
+                            class="w-full ${isGatePassed ? 'bg-green-600' : 'bg-gray-400 cursor-not-allowed'} text-white py-3 px-4 rounded-lg btn font-bold shadow-md uppercase tracking-wider transition-all">
+                            ${isGatePassed ? 'Confirm Stabilization & Back-sweetening / Proceed to Bottling' : 'Check Requirements & pH (2.8-4.5)'}
+                        </button>
+                        <button onclick="window.updateBrewLog('${activeBrew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg btn font-bold uppercase tracking-wider text-xs">Save Log Notes</button>
+                    </div>
+                </div>`;
+            return;
+        }
+
+        const listHtml = agingBrews.map(b => {
+            const startDate = b.logData?.brewDate || 'Unknown';
+            const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
+            return `
+            <div onclick="window.openSecondaryDetail('${b.id}')" 
+                 class="p-4 rounded-xl cursor-pointer bg-surface-container border border-outline-variant/60 border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-all mb-3 relative group">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-lg font-header text-on-surface group-hover:text-purple-600 transition-colors leading-tight">${b.recipeName}</h4>
+                        <div class="flex items-center gap-3 mt-2">
+                            <span class="text-[10px] font-bold uppercase bg-purple-100 text-purple-700 px-2 py-0.5 rounded border border-purple-200">Aging: Day ${days}</span>
+                            <span class="text-xs text-on-surface-variant opacity-80">Vol: ${b.batchSize || 5}L</span>
+                            ${b.parentBrewId ? '<span class="text-[9px] font-bold uppercase bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded border border-amber-200">Fractioned</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="text-on-surface-variant/30 group-hover:text-purple-500 group-hover:translate-x-1 transition-all">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                </div>
             </div>`;
         }).join('');
 
-        const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(activeBrew.logData, activeBrew.id + '-sec') : '';
+        if (agingBrews.length === 0) {
+            container.innerHTML = `<div class="text-center py-12 opacity-60"><p class="text-sm text-on-surface-variant">No active batches in secondary.</p></div>`;
+            return;
+        }
+        
+        container.innerHTML = `<div class="max-w-2xl mx-auto"><h2 class="text-2xl font-header font-bold text-app-brand mb-6">Aging Chamber</h2><div class="space-y-3">${listHtml}</div></div>`;
 
-        container.innerHTML = `
-            <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
-                <div class="flex items-center justify-between mb-4 pb-2 border-b border-app-brand/10">
-                    <div class="flex gap-2">
-                        <button onclick="window.closeSecondaryDetail()" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1">
-                            &larr; Back
-                        </button>
-                        <button onclick="window.revertToPrimary('${activeBrew.id}')" class="text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-wider flex items-center gap-1 ml-2 border-l border-app-brand/10 pl-2" title="Send back to Primary">
-                            ↺ Undo Finish
-                        </button>
-                    </div>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-app-brand opacity-60">Secondary Phase</span>
-                </div>
-
-                <div class="text-center mb-6">
-                    <h2 class="text-2xl font-header font-bold text-app-brand mb-1">${activeBrew.recipeName}</h2>
-                    <p class="text-[10px] font-bold uppercase tracking-widest text-app-secondary opacity-60">Aging & Stabilization</p>
-                </div>
-
-                <div class="bg-app-secondary rounded-xl shadow-sm border border-app-brand/10 overflow-hidden mb-8">
-                    ${stepsHtml}
-                </div>
-
-                <div id="brew-day-2-log-container">${logHtml}</div>
-
-                <div class="mt-6 space-y-3 pb-2 border-t border-app-brand/10 pt-4">
-                    <button onclick="window.showBottlingModal('${activeBrew.id}')" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 btn font-bold shadow-md uppercase tracking-wider flex items-center justify-center gap-2">
-                        Proceed to Bottling
-                    </button>
-                    <button onclick="window.updateBrewLog('${activeBrew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg btn font-bold uppercase tracking-wider text-xs">Save Log Notes</button>
-                </div>
-            </div>`;
-        return;
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: renderBrewDay2', 'ERROR');
+        window.showToast("Fout bij renderen aging-view.", "error");
     }
+};
 
-    // --- SCENARIO B: LIJST ---
-    
-    const listHtml = agingBrews.map(b => {
-        const startDate = b.logData?.brewDate || 'Unknown';
-        const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
-        const dayLabel = days >= 0 ? `Day ${days}` : '?';
-
-        return `
-        <div onclick="window.openSecondaryDetail('${b.id}')" 
-             class="p-4 rounded-xl cursor-pointer bg-surface-container border border-outline-variant/60 border-l-4 border-l-purple-500 shadow-sm hover:shadow-md hover:border-purple-500/50 hover:scale-[1.01] transition-all mb-3 relative group">
-            
-            <div class="flex justify-between items-center">
-                <div>
-                    <h4 class="font-bold text-lg font-header text-on-surface group-hover:text-purple-600 transition-colors leading-tight">
-                        ${b.recipeName}
-                    </h4>
-                    <div class="flex items-center gap-3 mt-2">
-                        <span class="text-[10px] font-bold uppercase bg-purple-100 text-purple-700 px-2 py-0.5 rounded border border-purple-200">
-                            Aging: ${dayLabel}
-                        </span>
-                        <span class="text-xs text-on-surface-variant opacity-80">
-                            Started: ${startDate}
-                        </span>
-                    </div>
-                </div>
+// ============================================================================
+// MODIFICATIE: Globale functionaliteit voor het Split Batch Protocol
+// ============================================================================
+window.showSplitModal = function(brewId, currentVolume) {
+    let modal = document.getElementById('split-batch-modal');
+    if (!modal) {
+        const modalHtml = `
+        <div id="split-batch-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden animate-fade-in">
+            <div class="bg-app-secondary p-6 rounded-xl shadow-2xl border border-app-brand/20 w-full max-w-md relative">
+                <button onclick="window.closeSplitModal()" class="absolute top-3 right-4 text-app-secondary hover:text-red-500 font-bold text-xl">&times;</button>
+                <h3 class="text-xl font-header font-bold text-purple-600 mb-2">Split Batch Protocol</h3>
+                <p class="text-xs text-app-secondary mb-4">Verdeel de moederbatch in autonome sub-vaten voor fractionering of smaak-experimenten.</p>
                 
-                <div class="text-on-surface-variant/30 group-hover:text-purple-500 group-hover:translate-x-1 transition-all">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                <input type="hidden" id="split-parent-id">
+                <input type="hidden" id="split-max-volume">
+                
+                <div class="space-y-4">
+                    <div class="p-3 bg-app-primary rounded-lg border border-app-brand/10 text-xs">
+                        <span class="text-app-secondary uppercase font-bold block mb-1">Beschikbaar Volume</span>
+                        <span id="split-volume-display" class="text-base font-mono font-bold text-app-header">0.00 L</span>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-app-secondary uppercase block mb-1">Aantal splitsingen (Carboys)</label>
+                        <input type="number" id="split-count-input" min="2" max="10" value="2" class="w-full p-2 border rounded bg-app-tertiary text-app-header text-sm" oninput="window.generateSplitVolumeInputs()">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-app-secondary uppercase block mb-1">Systeem/Trub Verlies factor ($V_{loss}$ in Liters)</label>
+                        <input type="text" id="split-loss-input" value="1.0" class="w-full p-2 border rounded bg-app-tertiary font-mono text-sm" oninput="window.generateSplitVolumeInputs()">
+                    </div>
+                    
+                    <div id="split-volumes-container" class="space-y-2 max-h-48 overflow-y-auto p-1 border border-transparent border-t-app-brand/10 pt-3">
+                        </div>
+                    
+                    <div class="p-3 bg-app-primary rounded-lg border border-app-brand/10 text-xs flex justify-between items-center">
+                        <span class="text-app-secondary font-medium">Rest-volume balans:</span>
+                        <span id="split-balance-display" class="font-mono font-bold text-green-600">0.00 L</span>
+                    </div>
+                    
+                    <button onclick="window.executeSplitFromModal()" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-all btn uppercase text-sm shadow-md">Definitief splitsen & muteren</button>
                 </div>
             </div>
         </div>`;
-    }).join('');
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        modal = document.getElementById('split-batch-modal');
+    }
+    
+    document.getElementById('split-parent-id').value = brewId;
+    document.getElementById('split-max-volume').value = currentVolume;
+    document.getElementById('split-volume-display').textContent = `${parseFloat(currentVolume).toFixed(2)} Liter`;
+    modal.classList.remove('hidden');
+    window.generateSplitVolumeInputs();
+};
 
-    if (agingBrews.length === 0) {
-        container.innerHTML = `
-            <div class="max-w-2xl mx-auto">
-                <div class="flex justify-between items-end mb-6 px-1 border-b border-app-brand/10 pb-2">
-                    <div>
-                        <h2 class="text-2xl font-header font-bold text-app-brand uppercase tracking-wider">Aging Chamber</h2>
-                        <p class="text-xs text-app-secondary uppercase tracking-wider font-bold opacity-60">Empty</p>
-                    </div>
-                </div>
-                <div class="text-center py-12 px-4 opacity-60">
-                    <p class="text-sm text-app-secondary">No batches in secondary.<br>Finish a primary fermentation first.</p>
-                </div>
-            </div>`;
+window.closeSplitModal = function() {
+    const modal = document.getElementById('split-batch-modal');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.generateSplitVolumeInputs = function() {
+    const container = document.getElementById('split-volumes-container');
+    const parentVol = parseFloat(document.getElementById('split-max-volume').value) || 0;
+    const count = parseInt(document.getElementById('split-count-input').value) || 2;
+    const loss = parseFloat(String(document.getElementById('split-loss-input').value).replace(',', '.')) || 0;
+    
+    if (!container) return;
+    
+    // Bereken automatische gelijke verdeling voor de initiële placeholders
+    const netVol = Math.max(0, parentVol - loss);
+    const equalShare = (netVol / count).toFixed(2);
+    
+    let html = '<p class="text-[10px] font-bold text-app-secondary uppercase tracking-wider mb-1">Gespecificeerde Volumes per Child (L)</p>';
+    for (let i = 0; i < count; i++) {
+        html += `
+        <div class="flex items-center gap-2 bg-app-secondary p-1.5 rounded border border-app-brand/5">
+            <span class="text-xs font-bold text-app-secondary w-16 uppercase">Child ${i + 1}:</span>
+            <input type="text" class="child-volume-field w-full bg-app-tertiary border border-app-brand/20 p-1 text-center font-mono font-bold text-sm rounded focus:ring-1 focus:ring-purple-500" value="${equalShare}" oninput="window.calculateSplitBalance()">
+            <span class="text-xs font-bold text-app-brand pr-2">L</span>
+        </div>`;
+    }
+    container.innerHTML = html;
+    window.calculateSplitBalance();
+};
+
+window.calculateSplitBalance = function() {
+    const parentVol = parseFloat(document.getElementById('split-max-volume').value) || 0;
+    const loss = parseFloat(String(document.getElementById('split-loss-input').value).replace(',', '.')) || 0;
+    const fields = document.querySelectorAll('.child-volume-field');
+    const balanceDisplay = document.getElementById('split-balance-display');
+    
+    let sumChildren = 0;
+    fields.forEach(field => {
+        sumChildren += parseFloat(String(field.value).replace(',', '.')) || 0;
+    });
+    
+    const balance = parentVol - loss - sumChildren;
+    if (balanceDisplay) {
+        balanceDisplay.textContent = `${balance.toFixed(2)} L`;
+        if (Math.abs(balance) < 0.01) {
+            balanceDisplay.className = "font-mono font-bold text-green-600";
+        } else {
+            balanceDisplay.className = "font-mono font-bold text-red-500 animate-pulse";
+        }
+    }
+    return balance;
+};
+
+window.executeSplitFromModal = async function() {
+    const parentBrewId = document.getElementById('split-parent-id').value;
+    const loss = parseFloat(String(document.getElementById('split-loss-input').value).replace(',', '.')) || 0;
+    const fields = document.querySelectorAll('.child-volume-field');
+    
+    const childVolumes = [];
+    fields.forEach(field => {
+        childVolumes.push(parseFloat(String(field.value).replace(',', '.')) || 0);
+    });
+    
+    const balance = window.calculateSplitBalance();
+    if (Math.abs(balance) > 0.02) {
+        window.showToast(`Fout: Balans klopt niet. Rest-volume is ${balance.toFixed(2)}L. Zorg dat de som van Child-volumes en verlies exact gelijk is aan de Moederbatch.`, "error");
         return;
     }
     
-    container.innerHTML = `
-        <div class="max-w-2xl mx-auto">
-            <div class="flex justify-between items-end mb-6 px-1 border-b border-app-brand/10 pb-2">
-                <div>
-                    <h2 class="text-2xl font-header font-bold text-app-brand uppercase tracking-wider">Aging Chamber</h2>
-                    <p class="text-xs text-app-secondary uppercase tracking-wider font-bold opacity-60">${agingBrews.length} Batches Maturing</p>
-                </div>
-            </div>
-            <div class="space-y-3">
-                ${listHtml}
-            </div>
-        </div>`;
-}
+    if (confirm("Weet je zeker dat je deze batch wilt splitsen? Dit archiveert de huidige moederbatch en genereert autonome dochter-batches.")) {
+        await window.splitBatch(parentBrewId, childVolumes, loss);
+    }
+};
+
+window.splitBatch = async function(parentBrewId, childVolumes, lossVolume) {
+    if (!state.userId || !parentBrewId) return;
+
+    try {
+        // 1. Haal de Parent brouwbatch op uit state.brews
+        const parentBrew = state.brews.find(b => b.id === parentBrewId);
+        if (!parentBrew) throw new Error("Parent brew session missing from local context.");
+
+        // Input Sanitisatie op optioneel verliesvolume
+        const sanitizedLoss = parseFloat(String(lossVolume).replace(',', '.')) || 0;
+
+        // Base-init imports for write transactions
+        const { db, collection, addDoc, updateDoc, doc, serverTimestamp } = await import('./firebase-init.js');
+
+        // 2. Immutabele Overerving via Deep Cloning van kritieke trends
+        const recipeMarkdown = parentBrew.recipeMarkdown || "";
+        const originalOG = parentBrew.logData?.actualOG || "";
+        const originalFG = parentBrew.logData?.actualFG || "";
+        const originalABV = parentBrew.logData?.finalABV || "";
+        const fermentationLog = Array.isArray(parentBrew.logData?.fermentationLog) ? [...parentBrew.logData.fermentationLog] : [];
+        const brewDaySteps = Array.isArray(parentBrew.brewDaySteps) ? [...parentBrew.brewDaySteps] : [];
+        const flavorProfile = parentBrew.flavorProfile ? { ...parentBrew.flavorProfile } : {};
+        const model = parentBrew.model || "gemini-1.5-flash";
+
+        // Loop door gedefinieerde child volumes en instancieer deelbatches
+        for (let i = 0; i < childVolumes.length; i++) {
+            const childVol = parseFloat(String(childVolumes[i]).replace(',', '.')) || 0;
+            if (childVol <= 0) continue;
+
+            const childBrewObj = {
+                recipeName: `${parentBrew.recipeName || 'Untitled'} - Split [${i + 1}]`,
+                recipeMarkdown: recipeMarkdown,
+                batchSize: childVol,
+                parentBrewId: parentBrewId,
+                primaryComplete: true, // Behaalt direct status van primaire gisting
+                isBottled: false,
+                createdAt: serverTimestamp(),
+                model: model,
+                flavorProfile: flavorProfile,
+                brewDaySteps: brewDaySteps,
+                secondarySteps: [], // Secundaire stappen ontkoppelen voor schone start
+                checklist: {},       // Checklist resetten naar nul-mutatie
+                logData: {
+                    actualOG: originalOG,
+                    actualFG: originalFG,
+                    finalABV: originalABV,
+                    brewDate: parentBrew.logData?.brewDate || "",
+                    fermentationLog: fermentationLog, // Behoud onbreekbare primaire gistingstrend
+                    agingNotes: `Splitsing gefractioneerd uit moederbatch op ${new Date().toLocaleDateString()}. Toegewezen volume: ${childVol}L. Systeemverlies overgedragen: ${sanitizedLoss}L.`,
+                    tastingNotes: "",
+                    blendingLog: [],
+                    actualIngredients: []
+                }
+            };
+
+            // Schrijf autonoom Child naar Firestore
+            await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews'), childBrewObj);
+        }
+
+        // 3. Status Mutatie op de Parent (Vrijgeven uit actieve Aging Chamber)
+        const parentRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', parentBrewId);
+        await updateDoc(parentRef, {
+            status: 'split',
+            'logData.agingNotes': (parentBrew.logData?.agingNotes || "") + `\nBatch succesvol gesplitst in ${childVolumes.length} sub-vaten op ${new Date().toLocaleDateString()}. Totaal verlies: ${sanitizedLoss}L.`
+        });
+
+        // Update lokale cache status vlag
+        parentBrew.status = 'split';
+
+        // 4. UI-Sync en Sluiten van Modal
+        window.closeSplitModal();
+        tempState.activeBrewId = null; // Terugkeren naar lijstweergave van de kamer
+        window.renderBrewDay2();
+        window.showToast(`Batch succesvol gesplitst in ${childVolumes.length} autonome fracties!`, "success");
+
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: splitBatch', 'CRITICAL');
+        window.showToast(`Splitsing mislukt: ${error.message}`, "error");
+    }
+};
+
+// Bind nieuwe handlers aan het window-object om scope-leaks te voorkomen
+window.showSplitModal = showSplitModal;
+window.closeSplitModal = closeSplitModal;
+window.generateSplitVolumeInputs = generateSplitVolumeInputs;
+window.calculateSplitBalance = calculateSplitBalance;
+window.executeSplitFromModal = executeSplitFromModal;
+window.splitBatch = splitBatch;
+
+// Update voltooid. Voor de volgende stap heb ik brewing.js of tools.js nodig.
+
+// --- GATEKEEPER PERSISTENCE HELPER (Consolidated v2.6) ---
+window.updateGateStatus = async function(brewId, gateKey) {
+    try {
+        const brew = state.brews.find(b => b.id === brewId);
+        if (!brew) return;
+        if (!brew.checklist) brew.checklist = {};
+
+        const checkboxIdMap = {
+            'checklist_cleared': 'cb-checklist-cleared',
+            'checklist_so2_sync': 'cb-checklist-so2-sync',
+            'gate_clarity': 'cb-visual-clarity',
+            'gate_gravity': 'cb-gravity-stable'
+        };
+
+        const checkbox = document.getElementById(checkboxIdMap[gateKey]);
+        if (checkbox) {
+            brew.checklist[gateKey] = checkbox.checked;
+        }
+
+        // Firestore update via centralized init
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), {
+            checklist: brew.checklist
+        });
+
+        // UI Refresh
+        window.renderBrewDay2();
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: updateGateStatus', 'ERROR');
+        window.showToast("Kon checklist status niet opslaan.", "error");
+    }
+};
 
 // --- NIEUWE NAVIGATIE HELPERS ---
 
@@ -1620,23 +1833,24 @@ window.completeStep = async function(stepIndex, isSkipping = false) {
     const controls = document.getElementById(`controls-${stepIndex}`);
     if(controls) controls.innerHTML = `<span class="text-[10px] font-bold text-white bg-green-600 px-2 py-1 rounded shadow-sm">DONE</span>`;
 
-    // 3. Opslaan in Database
+    // 3. Opslaan in Database via gecentraliseerd logframework
     try { 
         await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { 
             checklist: brew.checklist
         }); 
-    } catch (e) { console.error(e); }
+    } catch (error) { 
+        window.logSystemError(error, 'brewing.js: completeStep', 'ERROR');
+        window.showToast("Database-fout bij het opslaan van deze stap.", "error");
+    }
 
     // 4. Auto-start de volgende timer? (Alleen bij korte timers)
     const allSteps = brew.brewDaySteps || [];
     const nextStep = allSteps[stepIndex + 1];
     
-    // Als de volgende stap een timer heeft die KORTER is dan een uur (3600 sec), start hem dan automatisch.
-    // Bij 24 uur (86400 sec) wachten we liever tot de gebruiker zelf klikt.
     if (nextStep && nextStep.duration > 0 && nextStep.duration < 3600 && !isSkipping) {
         window.startStepTimer(brewId, stepIndex + 1);
     }
-}
+};
 
 // --- MISSING FUNCTION: FINALIZE DAY 1 ---
 window.finalizeBrewDay1 = async function() {
@@ -1664,30 +1878,36 @@ window.finalizeBrewDay1 = async function() {
 
 // --- SCOPE FIX: USE STATE.BREWS & STATE.USERID ---
 window.toggleSecondaryStep = async function(brewId, stepKey) {
-    const brewIndex = state.brews.findIndex(b => b.id === brewId); // Was: brews.findIndex
-    if (brewIndex === -1) return;
-
-    // Initialiseer checklist als die niet bestaat
-    if (!state.brews[brewIndex].checklist) state.brews[brewIndex].checklist = {};
-
-    // Toggle de status
-    const currentStatus = state.brews[brewIndex].checklist[stepKey] === true;
-    state.brews[brewIndex].checklist[stepKey] = !currentStatus;
-
-    // UI Update
-    renderBrewDay2();
-
-    // Opslaan in Cloud
     try {
-        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { // Was: userId
-            checklist: state.brews[brewIndex].checklist
+        const brew = state.brews.find(b => b.id === brewId);
+        if (!brew) return;
+        if (!brew.checklist) brew.checklist = {};
+
+        // 1. GERANIUM TAINT TRIGGER (v2.6)
+        const stepObj = (brew.secondarySteps || [])[parseInt(stepKey.replace('sec-step-', ''))];
+        const isSorbateStep = stepKey.includes('sorbate') || (stepObj && (stepObj.title.toLowerCase().includes('sorbat') || stepObj.description.toLowerCase().includes('sorbat')));
+        
+        if (isSorbateStep && !brew.checklist[stepKey]) {
+            const currentPh = parseFloat(brew.logData?.actualFG_pH || brew.logData?.pH || 0);
+            if (currentPh > 3.8) {
+                window.showToast("⚠️ GEVAAR: pH > 3.8 gedetecteerd. Risico op Geranium Taint bij toevoeging van sorbaat!", "error", 8000);
+                window.logSystemError(`Geranium Taint waarschuwing: batch ${brew.recipeName} (pH: ${currentPh})`, 'Mead Medic: Safety', 'WARNING');
+            }
+        }
+
+        // 2. Toggle status
+        brew.checklist[stepKey] = !brew.checklist[stepKey];
+        renderBrewDay2();
+
+        // 3. Opslaan
+        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), {
+            checklist: brew.checklist
         });
-        if(navigator.vibrate) navigator.vibrate(10);
-    } catch (e) {
-        console.error("Checklist save failed:", e);
-        showToast("Saving failed", "error");
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: toggleSecondaryStep', 'ERROR');
+        showToast("Opslaan mislukt.", "error");
     }
-}
+};
 
 // --- LOGIC: Reset & Finish ---
 window.resetBrewDay = async function() {
@@ -1720,8 +1940,11 @@ window.finishPrimaryManual = async function(brewId) {
         tempState.activeBrewId = null; // Zorg dat lijst toont, niet direct detail
         renderBrewDay2();
         renderBrewDay('none'); // Clear day 1
-    } catch (e) { console.error(e); showToast("Error updating status", "error"); }
-}
+    } catch (error) { 
+        window.logSystemError(error, 'brewing.js: finishPrimaryManual', 'ERROR'); 
+        window.showToast("Fout bij transitiestatus naar de secundaire fase.", "error"); 
+    }
+};
 
 // --- MISSING HELPER: MARK PRIMARY AS COMPLETE ---
 async function markPrimaryAsComplete(brewId) {
@@ -1733,7 +1956,10 @@ async function markPrimaryAsComplete(brewId) {
         if (idx > -1) {
             state.brews[idx].primaryComplete = true;
         }
-    } catch (e) { console.error("Error marking primary complete:", e); }
+    } catch (error) { 
+        window.logSystemError(error, 'brewing.js -> markPrimaryAsComplete', 'CRITICAL');
+        window.showToast("Failed to update process transition status in database.", "error");
+    }
 }
 
 // ============================================================================
@@ -1918,129 +2144,98 @@ function getActualIngredientsHtml(brew) {
     </div>`;
 }
 
-// --- LOGBOOK: CARD LAYOUT (Mobile Friendly) ---
-function getBrewLogHtml(logData, idSuffix) {
-    const data = logData || {};
-    const fermLog = data.fermentationLog || [];
-
-    // CSS Definitions: ABV veld nu met pointer-events-none om verwarring te voorkomen
-    const inputBase = "bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary !p-2 !h-10 w-full";
-    const labelBase = "text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block ml-1";
-
-    const fermRows = fermLog.map(row => `
-    <div class="log-entry bg-surface-container-low p-3 rounded-xl border border-outline-variant/30 mb-3 shadow-sm animate-fade-in relative group">
-        <div class="flex justify-between items-end mb-3">
-            <div class="flex-grow mr-4">
-                <label class="${labelBase}">Date</label>
-                <input type="date" value="${row.date || ''}" class="${inputBase} font-medium">
-            </div>
-            <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-on-surface-variant hover:text-error hover:bg-error-container/20 p-2 rounded-lg transition-colors mb-[1px]" title="Delete Entry">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-            </button>
-        </div>
-        <div class="grid grid-cols-2 gap-3 mb-3">
-            <div>
-                <label class="${labelBase}">Temp (°C)</label>
-                <input type="number" step="0.5" value="${row.temp || ''}" class="${inputBase} text-center font-mono font-bold text-primary" placeholder="20">
-            </div>
-            <div>
-                <label class="${labelBase}">Gravity (SG)</label>
-                <input type="number" step="0.001" value="${row.sg || ''}" class="${inputBase} text-center font-mono font-bold text-primary sg-input" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')">
-            </div>
-        </div>
-        <div>
-             <input type="text" value="${row.notes || ''}" class="${inputBase} italic text-on-surface-variant" placeholder="Add notes...">
-        </div>
-    </div>`).join('');
-
-    return `
-    <div class="brew-log-section mt-6 bg-surface-container p-4 rounded-xl border border-outline-variant/30 shadow-sm" data-id="${idSuffix}">
-        <h3 class="font-header text-lg font-bold mb-4 text-primary uppercase tracking-wider flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-            Brew Log (Actuals)
-        </h3>
-        <div class="grid grid-cols-2 gap-3 mb-6 p-3 bg-surface-variant/20 rounded-lg border border-outline-variant/20">
-            <div>
-                <label class="${labelBase}">OG (Start)</label>
-                <input type="number" step="0.001" id="actualOG-${idSuffix}" value="${data.actualOG || ''}" class="bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary w-full p-2 font-bold text-primary" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
-            </div>
-            <div>
-                <label class="${labelBase}">FG (Current)</label>
-                <input type="number" step="0.001" id="actualFG-${idSuffix}" value="${data.actualFG || ''}" class="bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary w-full p-2 font-bold text-primary" placeholder="1.xxx" oninput="window.autoCalculateABV('${idSuffix}')">
-            </div>
-            <div>
-                <label class="${labelBase}">Real ABV</label>
-                <input type="text" id="finalABV-${idSuffix}" value="${data.finalABV || ''}" class="bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary w-full p-2 font-bold text-tertiary pointer-events-none" placeholder="0.00%" readonly>
-            </div>
-            <div>
-                <label class="${labelBase}">Brew Date</label>
-                <input type="date" id="brewDate-${idSuffix}" value="${data.brewDate || ''}" class="bg-surface-container-highest border border-outline-variant text-xs rounded focus:ring-1 focus:ring-primary w-full p-2">
-            </div>
-        </div>
-        <div class="mb-4">
-            <div id="fermentationContainer-${idSuffix}" class="space-y-3">
-                ${fermRows}
-            </div>
-            <button onclick="window.addLogLine('${idSuffix}')" class="mt-4 w-full text-xs font-bold text-primary hover:bg-primary-container/50 py-3 rounded-xl transition-colors border border-dashed border-primary/30 uppercase tracking-wider flex items-center justify-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Add Measurement
-            </button>
-        </div>
-        <div class="space-y-4 pt-4 border-t border-outline-variant/20">
-            <div>
-                <label class="${labelBase}">Process Notes</label>
-                <textarea id="agingNotes-${idSuffix}" rows="2" class="w-full bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary p-3" placeholder="Notes...">${data.agingNotes || ''}</textarea>
-            </div>
-            <div>
-                <label class="${labelBase}">Tasting Notes</label>
-                <textarea id="tastingNotes-${idSuffix}" rows="2" class="w-full bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary p-3" placeholder="Aroma, mouthfeel...">${data.tastingNotes || ''}</textarea>
-            </div>
-        </div>
-    </div>`;
-}
-
-// --- HELPER: Nieuwe log-regel (Card Style) ---
 window.addLogLine = function(idSuffix) {
-    const container = document.getElementById(`fermentationContainer-${idSuffix}`);
-    if(!container) return;
+    try {
+        const container = document.getElementById(`fermentationContainer-${idSuffix}`);
+        if (!container) return;
 
-    // Zelfde styling
-    const inputBase = "bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary !p-2 !h-10 w-full";
-    const labelBase = "text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block ml-1";
-    
-    const today = new Date().toISOString().split('T')[0];
-
-    const newEntry = document.createElement('div');
-    newEntry.className = "log-entry bg-surface-container-low p-3 rounded-xl border border-outline-variant/30 mb-3 shadow-sm animate-fade-in relative group";
-    
-    newEntry.innerHTML = `
-        <div class="flex justify-between items-end mb-3">
-            <div class="flex-grow mr-4">
-                <label class="${labelBase}">Date</label>
-                <input type="date" value="${today}" class="${inputBase} font-medium">
-            </div>
-            <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-on-surface-variant hover:text-error hover:bg-error-container/20 p-2 rounded-lg transition-colors mb-[1px]" title="Delete Entry">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-            </button>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3 mb-3">
-            <div>
-                <label class="${labelBase}">Temp (°C)</label>
-                <input type="number" step="0.5" class="${inputBase} text-center font-mono font-bold text-primary" placeholder="20">
-            </div>
-            <div>
-                <label class="${labelBase}">Gravity (SG)</label>
-                <input type="number" step="0.001" class="${inputBase} text-center font-mono font-bold text-primary sg-input" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')">
-            </div>
-        </div>
+        const today = new Date().toISOString().split('T');
+        const newEntry = document.createElement('div');
+        newEntry.className = "log-entry bg-surface-container-low p-3 rounded-xl border border-outline-variant/30 mb-3 shadow-sm animate-fade-in relative group";
         
-        <div>
-             <input type="text" class="${inputBase} italic text-on-surface-variant" placeholder="Add notes...">
-        </div>
-    `;
-    container.appendChild(newEntry);
-}
+        const labelBase = "text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block ml-1";
+        const inputBase = "bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary !p-2 !h-10 w-full";
+
+        newEntry.innerHTML = `
+            <div class="flex justify-between items-end mb-3">
+                <div class="flex-grow mr-4">
+                    <label class="${labelBase}">Date</label>
+                    <input type="date" value="${today}" class="${inputBase} font-medium">
+                </div>
+                <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${idSuffix}')" class="text-on-surface-variant hover:text-error hover:bg-error-container/20 p-2 rounded-lg transition-colors mb-[1px]" title="Delete Entry">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="${labelBase}">Temp (°C)</label>
+                    <input type="number" step="0.5" class="${inputBase} text-center font-mono font-bold text-primary temp-input" placeholder="20" oninput="window.autoCalculateABV(event, '${idSuffix}')" onchange="window.autoCalculateABV(event, '${idSuffix}')">
+                </div>
+                <div>
+                    <label class="${labelBase}">Gravity (SG/Brix)</label>
+                    <input type="number" step="0.001" class="${inputBase} text-center font-mono font-bold text-primary sg-input" placeholder="1.xxx" oninput="this.value = this.value.replace(',', '.'); window.autoCalculateABV(event, '${idSuffix}')" onchange="window.autoCalculateABV(event, '${idSuffix}')">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-3">
+                <div>
+                    <label class="${labelBase}">pH Level</label>
+                    <input type="number" step="0.01" class="${inputBase} text-primary font-bold" placeholder="3.x" oninput="this.value = this.value.replace(',', '.'); window.syncLogToFinal('${idSuffix}');" onchange="window.autoCalculateABV(event, '${idSuffix}')">
+                </div>
+                <input type="text" class="${inputBase} italic text-on-surface-variant" placeholder="Add notes...">
+            </div>
+        `;
+        
+        container.appendChild(newEntry);
+        newEntry.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: addLogLine', 'ERROR');
+    }
+};
+
+window.syncLogToFinal = function(idSuffix) {
+    try {
+        const container = document.getElementById(`fermentationContainer-${idSuffix}`);
+        if (!container) return;
+
+        const cleanId = idSuffix.replace('-sec', '');
+        const brew = state.brews.find(b => b.id === cleanId);
+
+        const entries = Array.from(container.querySelectorAll('.log-entry'));
+        const fermentationLog = entries.map(div => {
+            const inputs = div.querySelectorAll('input');
+            if (inputs.length < 5) return null;
+
+            // v2.6 Gecorrigeerde harde indexering op de NodeList inputs (Index 0 voor datum)
+            return {
+                date: inputs[0].value,
+                temp: inputs[1].value.replace(',', '.'),
+                sg: inputs[2].value.replace(',', '.'),
+                ph: inputs[3].value.replace(',', '.'),
+                notes: inputs[4].value
+            };
+        }).filter(e => e && e.sg);
+
+        if (fermentationLog.length > 0) {
+            const lastEntry = fermentationLog[fermentationLog.length - 1];
+            const fgField = document.getElementById(`actualFG-${idSuffix}`);
+            if (fgField) {
+                fgField.value = lastEntry.sg;
+                window.autoCalculateABV(null, idSuffix);
+            }
+        }
+
+        if (brew) {
+            if (!brew.logData) brew.logData = {};
+            brew.logData.fermentationLog = fermentationLog;
+            // v2.6 harde indexering en controle toegevoegd voor string splitsing
+            if (brew.logData.brewDate && typeof brew.logData.brewDate === 'string') {
+                brew.logData.brewDate = brew.logData.brewDate.split('T')[0];
+            }
+        }
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: syncLogToFinal', 'ERROR');
+    }
+};
 
 // --- RENDER: Detail View (RESTORED TARGET VS ACTUAL) ---
 window.showBrewDetail = function(brewId) {
@@ -2238,47 +2433,53 @@ window.updateBrewLog = async function(brewId, containerId) {
 
     try {
         const container = document.getElementById(containerId);
-        const suffix = container.querySelector('.brew-log-section').dataset.id;
+        const section = container.querySelector('.brew-log-section');
+        const suffix = section ? section.dataset.id : brewId;
         
-        // --- AANPASSING START ---
-        // 1. Fermentation Log Scrapen (DIV BASED)
-        // We zoeken nu naar de container 'fermentationContainer' en de divs met class 'log-entry'
-        // in plaats van de oude tabelstructuur.
         const entryDivs = Array.from(container.querySelectorAll(`#fermentationContainer-${suffix} .log-entry`));
         
         const fermentationLog = entryDivs.map(div => {
             const inputs = div.querySelectorAll('input');
-            // Volgorde in HTML is: 0=Date, 1=Temp, 2=SG, 3=Notes
-            if(inputs.length < 4) return null; 
+            if(inputs.length < 5) return null; 
+
+            const rawPH = inputs[3].value.replace(',', '.');
+            const pH = parseFloat(rawPH);
+
+            // v2.6 Fix: Harde indexering toegepast voor de datumwaarde uit NodeList
             return { 
                 date: inputs[0].value, 
-                temp: inputs[1].value, 
-                sg: inputs[2].value, 
-                notes: inputs[3].value 
+                temp: inputs[1].value.replace(',', '.'), 
+                sg: inputs[2].value.replace(',', '.'), 
+                ph: (!isNaN(pH) && pH > 0) ? rawPH : '',
+                notes: inputs[4].value 
             };
         }).filter(x => x && (x.date || x.sg));
-        // --- AANPASSING EIND ---
 
-        // 2. Blending Log Scrapen
-        // (Deze laten we staan voor het geval je blending gebruikt, zoekt nog wel in een tabel)
         const blendRows = Array.from(container.querySelectorAll(`#blendingTable-${suffix} tbody tr`));
         const blendingLog = blendRows.map(r => {
             const inputs = r.querySelectorAll('input');
             if(inputs.length < 4) return null;
-            return { date: inputs[0].value, name: inputs[1].value, vol: inputs[2].value, abv: inputs[3].value };
+            // v2.6 Fix: Harde indexering toegepast voor de datumwaarde uit NodeList (Blending)
+            return { 
+                date: inputs[0].value, 
+                name: inputs[1].value, 
+                vol: inputs[2].value.replace(',', '.'), 
+                abv: inputs[3].value.replace(',', '.') 
+            };
         }).filter(x => x && (x.name || x.vol));
 
-        // 3. Actual Ingredients Scrapen
         const actRows = Array.from(container.querySelectorAll(`#actualsTable-${brewId} tbody tr`));
-        const actualIngredients = actRows.map(r => ({ name: r.dataset.name, actualQty: r.querySelector('input').value }));
+        const actualIngredients = actRows.map(r => ({ 
+            name: r.dataset.name, 
+            actualQty: r.querySelector('input').value.replace(',', '.') 
+        }));
 
-        // 4. Alles verzamelen in één object
         const newData = {
-            actualOG: container.querySelector(`#actualOG-${suffix}`)?.value || '',
-            actualFG: container.querySelector(`#actualFG-${suffix}`)?.value || '',
+            actualOG: container.querySelector(`#actualOG-${suffix}`)?.value.replace(',', '.') || '',
+            actualFG: container.querySelector(`#actualFG-${suffix}`)?.value.replace(',', '.') || '',
             finalABV: container.querySelector(`#finalABV-${suffix}`)?.value || '',
             brewDate: container.querySelector(`#brewDate-${suffix}`)?.value || '',
-            currentVolume: container.querySelector(`#currentVol-${suffix}`)?.value || '', 
+            currentVolume: container.querySelector(`#currentVol-${suffix}`)?.value.replace(',', '.') || '', 
             agingNotes: container.querySelector(`#agingNotes-${suffix}`)?.value || '',
             bottlingNotes: container.querySelector(`#bottlingNotes-${suffix}`)?.value || '',
             tastingNotes: container.querySelector(`#tastingNotes-${suffix}`)?.value || '',
@@ -2287,41 +2488,27 @@ window.updateBrewLog = async function(brewId, containerId) {
             actualIngredients: actualIngredients
         };
 
-        // 5. Database Update
         const brewRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId);
         const snap = await getDoc(brewRef);
         
         if(snap.exists()) {
             const currentData = snap.data().logData || {};
             const merged = { ...currentData, ...newData };
-            
             await updateDoc(brewRef, { logData: merged });
             
-            // Update lokale state direct
             const idx = state.brews.findIndex(b => b.id === brewId);
             if(idx > -1) state.brews[idx].logData = merged;
             
             showToast("Log saved successfully!", "success");
-            
             if (typeof renderFermentationGraph === 'function') renderFermentationGraph(brewId);
         }
     } catch(e) { 
-        console.error(e); 
+        window.logSystemError(e, 'brewing.js: updateBrewLog', 'ERROR');
         showToast("Save failed", "error"); 
     } finally { 
         if(btn) { btn.disabled = false; btn.innerText = originalText; } 
     }
-}
-
-// --- HELPER: Nieuwe rij toevoegen aan logboek ---
-window.addLogLine = function(idSuffix) {
-    const tbody = document.querySelector(`#fermentationTable-${idSuffix} tbody`);
-    if(tbody) {
-        const row = document.createElement('tr');
-        row.innerHTML = `<td><input type="date" class="w-full bg-transparent border-none focus:ring-0 text-sm"></td><td><input type="number" step="0.5" class="w-full bg-transparent border-none focus:ring-0 text-center text-sm" placeholder="-"></td><td><input type="number" step="0.001" class="w-full bg-transparent border-none focus:ring-0 text-center text-sm font-mono" placeholder="1.xxx" oninput="window.syncLogToFinal('${idSuffix}')"></td><td><input type="text" class="w-full bg-transparent border-none focus:ring-0 text-sm" placeholder="..."></td>`;
-        tbody.appendChild(row);
-    }
-}
+};
 
 // --- COST CALCULATION (De herstelde logica) ---
 function parseIngredientsAndCalculateCost(markdown, inventoryList, batchSize) {
@@ -2372,7 +2559,7 @@ function parseIngredientsAndCalculateCost(markdown, inventoryList, batchSize) {
 
 // --- SCOPE FIX: USE STATE.BREWS & STATE.USERID & STATE.INVENTORY ---
 window.recalculateBatchCost = async function(brewId) {
-    const brew = state.brews.find(b => b.id === brewId); // Was: brews.find
+    const brew = state.brews.find(b => b.id === brewId); 
     if (!brew) return;
     
     // Check inventory
@@ -2381,27 +2568,28 @@ window.recalculateBatchCost = async function(brewId) {
         return;
     }
 
-    const costResult = parseIngredientsAndCalculateCost(brew.recipeMarkdown, state.inventory, brew.batchSize);
-    
-    if (costResult.warnings.length > 0) {
-        // Toon max 3 warnings in toast om overflow te voorkomen
-        const msg = costResult.warnings.slice(0, 3).join('\n') + (costResult.warnings.length > 3 ? '\n...' : '');
-        showToast(`Warnings:\n${msg}`, 'info');
-    }
-    
-    if (confirm(`Calculated Cost: €${costResult.cost.toFixed(2)}. Update batch?`)) {
-        try {
+    try {
+        const costResult = parseIngredientsAndCalculateCost(brew.recipeMarkdown, state.inventory, brew.batchSize);
+        
+        if (costResult.warnings.length > 0) {
+            const msg = costResult.warnings.slice(0, 3).join('\n') + (costResult.warnings.length > 3 ? '\n...' : '');
+            showToast(`Warnings:\n${msg}`, 'info');
+        }
+        
+        if (confirm(`Calculated Cost: €${costResult.cost.toFixed(2)}. Update batch?`)) {
             await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { totalCost: costResult.cost });
             brew.totalCost = costResult.cost; // Lokale update
             
-            // Als we in detail view zitten, ververs die dan
             if(document.getElementById('history-detail-container') && !document.getElementById('history-detail-container').classList.contains('hidden')) {
                 window.showBrewDetail(brewId);
             }
             showToast("Cost updated!", "success");
-        } catch(e) { console.error(e); }
+        }
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: recalculateBatchCost', 'ERROR');
+        window.showToast("Kostprijsberekening kon niet worden opgeslagen.", "error");
     }
-}
+};
 
 // --- TITLE MANAGEMENT ---
 window.showTitleEditor = (id) => { document.getElementById(`title-display-${id}`).classList.add('hidden'); document.getElementById(`title-editor-${id}`).classList.remove('hidden'); };
@@ -2435,7 +2623,7 @@ window.deleteBrew = async function(brewId) {
         // 1. Verwijder uit Database
         await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId));
 
-        // 2. CHECK: Was dit de actieve batch? (HERSTELD)
+        // 2. CHECK: Was dit de actieve batch? 
         if (tempState.activeBrewId === brewId) {
             console.log("Active batch deleted. Resetting UI.");
             
@@ -2459,8 +2647,11 @@ window.deleteBrew = async function(brewId) {
         showToast("Brew deleted.", "success");
         window.goBackToHistoryList();
 
-    } catch(e) { console.error(e); showToast("Delete failed", "error"); }
-}
+    } catch (error) { 
+        window.logSystemError(error, 'brewing.js: deleteBrew', 'ERROR'); 
+        showToast("Fout bij het verwijderen van de brouwbatch.", "error"); 
+    }
+};
 
 window.cloneBrew = async function(brewId) {
     const original = state.brews.find(b => b.id === brewId);
@@ -2484,8 +2675,11 @@ window.cloneBrew = async function(brewId) {
         
         // Direct openen in brouwdag modus
         window.startActualBrewDay(docRef.id);
-    } catch(e) { console.error(e); showToast("Clone failed", "error"); }
-}
+    } catch (error) { 
+        window.logSystemError(error, 'brewing.js: cloneBrew', 'ERROR'); 
+        showToast("Dupliceren van batch mislukt.", "error"); 
+    }
+};
 
 window.resumeBrew = function(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
@@ -2517,65 +2711,191 @@ window.saveBrewToHistory = async function(recipeText, flavorProfile) {
         });
         showToast("Recipe saved to history!", "success");
     } catch (error) {
-        console.error("Save error:", error);
-        showToast("Could not save.", "error");
+        window.logSystemError(error, 'brewing.js -> saveBrewToHistory', 'ERROR');
+        showToast("Could not save recipe to history.", "error");
     }
-}
+};
 
 // --- CHARTS & EXTRAS ---
 
-function renderFermentationGraph(brewId) {
+window.runAgingAnalysis = async function(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
-    if (!brew || !brew.logData || !brew.logData.fermentationLog) return;
-    
-    const ctx = document.getElementById(`fermChart-${brewId}`);
-    if (!ctx) return;
-    
-    const data = brew.logData.fermentationLog
-        .filter(r => r.date && r.sg)
-        .sort((a,b) => new Date(a.date) - new Date(b.date));
+    if (!brew) return;
+
+    try {
+        // v2.6 Fix: ISO Indexing toegevoegd aan TODAY en BOTTLED
+        const prompt = `Analyze aging potential:
+        Batch: ${brew.recipeName}
+        ABV: ${brew.logData?.finalABV || 'unknown'}
+        Current SG: ${brew.logData?.actualFG || 'unknown'}
+        TODAY: ${new Date().toISOString().split('T')[0]}
+        BOTTLED: ${brew.logData?.bottlingDate ? brew.logData.bottlingDate.split('T')[0] : 'Not yet'}
         
-    if(data.length === 0) { ctx.parentElement.classList.add('hidden'); return; }
+        Provide a JSON object with: "peak_months" (number), "flavor_evolution" (string), "stability_risk" (string).`;
 
-    if(window[`chart_${brewId}`]) window[`chart_${brewId}`].destroy();
-
-    // MD3 Kleuren ophalen
-    const cPrimary = `rgb(${window.getThemeColor('--md-sys-color-primary')})`;
-    const cSurface = `rgb(${window.getThemeColor('--md-sys-color-surface')})`;
-    const cOnSurface = `rgb(${window.getThemeColor('--md-sys-color-on-surface')})`;
-    const cGrid = `rgb(${window.getThemeColor('--md-sys-color-outline-variant')})`;
-
-    window[`chart_${brewId}`] = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: data.map(d => d.date),
-            datasets: [{ 
-                label: 'Gravity', 
-                data: data.map(d => d.sg), 
-                borderColor: cPrimary, 
-                backgroundColor: cPrimary,
-                tension: 0.3,
-                pointBackgroundColor: cSurface,
-                pointBorderWidth: 2,
-                pointRadius: 4
-            }]
-        },
-        options: {
-            scales: {
-                x: { 
-                    grid: { color: cGrid, tickColor: 'transparent' },
-                    ticks: { color: cOnSurface, font: { family: "'Barlow Semi Condensed'" } }
-                },
-                y: { 
-                    grid: { color: cGrid, tickColor: 'transparent' },
-                    ticks: { color: cOnSurface, font: { family: "'Barlow Semi Condensed'" } }
-                }
+        const schema = {
+            type: "OBJECT",
+            properties: {
+                "peak_months": { "type": "NUMBER" },
+                "flavor_evolution": { "type": "STRING" },
+                "stability_risk": { "type": "STRING" }
             },
-            plugins: {
-                legend: { display: false }
-            }
+            required: ["peak_months", "flavor_evolution", "stability_risk"]
+        };
+
+        const response = await performApiCall(prompt, schema);
+        return JSON.parse(response);
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: runAgingAnalysis', 'ERROR');
+        return null;
+    }
+};
+
+function renderFermentationGraph(brewId) {
+    try {
+        const brew = state.brews.find(b => b.id === brewId);
+        if (!brew || !brew.logData || !brew.logData.fermentationLog) return;
+        
+        const ctx = document.getElementById(`fermChart-${brewId}`);
+        if (!ctx) return;
+        
+        const rawData = brew.logData.fermentationLog
+            .filter(r => r.date && r.sg)
+            .sort((a,b) => new Date(a.date) - new Date(b.date));
+            
+        if(rawData.length === 0) { ctx.parentElement.classList.add('hidden'); return; }
+
+        const WCF = parseFloat(String(state.userSettings?.wcf || 1.04).replace(/,/g, '.'));
+        const ogInput = parseFloat(String(brew.logData.actualOG || 1.000).replace(/,/g, '.'));
+        
+        // v2.6 Fix: Bates-Brix altijd delen door WCF voor WRI_i
+        let WRI_i = 0;
+        if (ogInput >= 1.2) {
+            WRI_i = ogInput / WCF; 
+        } else {
+            const brixEquivalent = ((182.9622 * Math.pow(ogInput, 3)) - (777.3009 * Math.pow(ogInput, 2)) + (1264.5170 * ogInput) - 670.1831);
+            WRI_i = brixEquivalent / WCF;
         }
-    });
+
+        const processedData = rawData.map(d => {
+            let val = parseFloat(String(d.sg).replace(/,/g, '.'));
+            
+            if (val > 1.2) {
+                const WRI_f = val / WCF;
+                val = 1.0 - (0.002349 * WRI_i) + (0.006276 * WRI_f);
+            }
+            return { date: d.date, sg: val };
+        });
+
+        if(window[`chart_${brewId}`]) window[`chart_${brewId}`].destroy();
+
+        const cPrimary = `rgb(${window.getThemeColor('--md-sys-color-primary')})`;
+        const cOnSurface = `rgb(${window.getThemeColor('--md-sys-color-on-surface')})`;
+        const cGrid = `rgb(${window.getThemeColor('--md-sys-color-outline-variant')})`;
+
+        window[`chart_${brewId}`] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: processedData.map(d => d.date),
+                datasets: [{ 
+                    label: 'True Gravity (Novotny-Bates)', 
+                    data: processedData.map(d => d.sg), 
+                    borderColor: cPrimary, 
+                    backgroundColor: cPrimary + '33',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: cGrid }, ticks: { color: cOnSurface } },
+                    y: { 
+                        grid: { color: cGrid }, 
+                        ticks: { color: cOnSurface },
+                        suggestedMin: 0.990 
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    } catch (error) {
+        window.logSystemError(error, 'Graph: renderFermentation', 'ERROR');
+    }
+}
+
+// Bind de sync functie aan het window object voor de 'Opslaan' knop in de UI
+window.syncLogToFinal = syncLogToFinal;
+
+function getBrewLogHtml(brew, idSuffix = null) {
+    try {
+        const suffix = idSuffix || brew.id;
+        const logData = brew.logData || {};
+        const fermentationLog = logData.fermentationLog || [];
+        
+        const entriesHtml = fermentationLog.map((entry) => {
+            const labelBase = "text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block ml-1";
+            const inputBase = "bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary !p-2 !h-10 w-full";
+            
+            return `
+                <div class="log-entry bg-surface-container-low p-3 rounded-xl border border-outline-variant/30 mb-3 shadow-sm relative group">
+                    <div class="flex justify-between items-end mb-3">
+                        <div class="flex-grow mr-4">
+                            <label class="${labelBase}">Date</label>
+                            <input type="date" value="${entry.date || ''}" class="${inputBase} font-medium">
+                        </div>
+                        <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${suffix}')" class="text-on-surface-variant hover:text-error hover:bg-error-container/20 p-2 rounded-lg transition-colors mb-[1px]" title="Delete Entry">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="${labelBase}">Temp (°C)</label>
+                            <input type="number" step="0.5" class="${inputBase} text-center font-mono font-bold text-primary temp-input" value="${entry.temp || ''}" placeholder="20" oninput="window.autoCalculateABV(event, '${suffix}')" onchange="window.autoCalculateABV(event, '${suffix}')">
+                        </div>
+                        <div>
+                            <label class="${labelBase}">Gravity (SG/Brix)</label>
+                            <input type="number" step="0.001" class="${inputBase} text-center font-mono font-bold text-primary sg-input" value="${entry.sg || ''}" placeholder="1.xxx" oninput="this.value = this.value.replace(',', '.'); window.autoCalculateABV(event, '${suffix}')" onchange="window.autoCalculateABV(event, '${suffix}')">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3">
+                        <div>
+                            <label class="${labelBase}">pH Level</label>
+                            <input type="number" step="0.01" class="${inputBase} text-primary font-bold" value="${entry.ph || ''}" placeholder="3.x" oninput="this.value = this.value.replace(',', '.'); window.syncLogToFinal('${suffix}')" onchange="window.autoCalculateABV(event, '${suffix}')">
+                        </div>
+                        <input type="text" class="${inputBase} italic text-on-surface-variant" value="${entry.notes || ''}" placeholder="Add notes...">
+                    </div>
+                </div>`;
+        }).join('');
+
+        return `
+            <div class="brew-log-section mt-6 border-t border-app-brand/10 pt-4" data-id="${suffix}">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-header font-bold text-app-brand uppercase tracking-wider">Fermentation Logbook</h3>
+                    <div class="flex gap-2">
+                        <input type="number" step="0.001" id="actualOG-${suffix}" class="w-20 p-1 text-xs border rounded bg-app-tertiary text-center font-mono" placeholder="OG" value="${logData.actualOG || ''}" oninput="this.value = this.value.replace(',', '.'); window.autoCalculateABV(event, '${suffix}')" onchange="window.autoCalculateABV(event, '${suffix}')">
+                        <input type="number" step="0.001" id="actualFG-${suffix}" class="w-20 p-1 text-xs border rounded bg-app-tertiary text-center font-mono" placeholder="FG" value="${logData.actualFG || ''}" oninput="this.value = this.value.replace(',', '.'); window.autoCalculateABV(event, '${suffix}')" onchange="window.autoCalculateABV(event, '${suffix}')">
+                        <input type="text" id="finalABV-${suffix}" class="w-16 p-1 text-xs border rounded bg-app-primary text-center font-bold" placeholder="ABV%" value="${logData.finalABV || ''}" readonly>
+                    </div>
+                </div>
+                <div id="fermentationContainer-${suffix}" class="space-y-2">${entriesHtml}</div>
+                <button onclick="window.addLogLine('${suffix}')" class="w-full mt-4 bg-app-tertiary border border-app-brand/30 text-app-brand py-3 rounded-xl font-bold text-sm hover:bg-app-brand hover:text-white transition-all shadow-sm uppercase tracking-widest">+ Add Measurement</button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    <div class="card p-3 bg-app-tertiary/30 border-app">
+                        <label class="text-[10px] font-bold text-app-secondary uppercase block mb-1">Aging & Racking Notes</label>
+                        <textarea id="agingNotes-${suffix}" rows="3" class="w-full p-2 text-xs bg-transparent border-none focus:ring-0" placeholder="Describe clarity...">${logData.agingNotes || ''}</textarea>
+                    </div>
+                    <div class="card p-3 bg-app-tertiary/30 border-app">
+                        <label class="text-[10px] font-bold text-app-secondary uppercase block mb-1">Final Tasting Notes</label>
+                        <textarea id="tastingNotes-${suffix}" rows="3" class="w-full p-2 text-xs bg-transparent border-none focus:ring-0" placeholder="Flavor, aroma...">${logData.tastingNotes || ''}</textarea>
+                    </div>
+                </div>
+            </div>`;
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: getBrewLogHtml', 'ERROR');
+        return `<p class="text-red-500">Error loading log interface.</p>`;
+    }
 }
 
 function renderFlavorWheel(brewId, labels, data) {
@@ -2633,65 +2953,99 @@ window.printEmptyLog = function() {
     printWindow.document.close();
 }
 
-window.autoCalculateABV = function(idSuffix) {
-    const ogInput = document.getElementById(`actualOG-${idSuffix}`)?.value.replace(',', '.') || "";
-    const fgInput = document.getElementById(`actualFG-${idSuffix}`)?.value.replace(',', '.') || "";
-    const og = parseFloat(ogInput);
-    const fg = parseFloat(fgInput);
-    const abvField = document.getElementById(`finalABV-${idSuffix}`);
-
-    if (!isNaN(og) && !isNaN(fg) && abvField) {
+window.autoCalculateABV = function(event, idSuffix) {
+    try {
+        const cleanId = idSuffix.replace('-sec', ''); 
+        const logEntryRow = event ? event.target.closest('.log-entry') : null;
         
-        // 1. Hall-veiligheidscheck & Contextuele CRITICAL Logging (v2.4)
-        if (og >= 1.775) {
-            window.showToast(`Kritieke fout: Fysieke limiet overschreden (OG: ${og})`, "error");
-            
-            // Contextuele logging met Batch-ID voor diepere audit
-            window.logSystemError(`Fysieke limiet (OG: ${og}) overschreden in batch-ID: ${idSuffix}`, 'Auto-Log: ABV', 'CRITICAL');
-            
-            // Visuele feedback & Data integriteit
-            abvField.value = "LIMIT ERR";
-            abvField.classList.add('text-error');
-            if (window.tempState) window.tempState.lastCalculatedABV = 0;
-            return;
-        } else {
-            // Herstel visuele status
-            abvField.classList.remove('text-error');
-        }
+        const ogRaw = document.getElementById(`actualOG-${idSuffix}`)?.value || "";
+        const fgRaw = document.getElementById(`actualFG-${idSuffix}`)?.value || "";
         
-        if (og > fg) {
-            // Hall Equation (Scientific Standard v2.4)
-            const abw = (76.08 * (og - fg)) / (1.775 - og);
-            const abv = abw / 0.794;
+        const ogInput = parseFloat(ogRaw.replace(',', '.'));
+        const fgInput = parseFloat(fgRaw.replace(',', '.'));
+        const abvField = document.getElementById(`finalABV-${idSuffix}`);
+
+        if (!isNaN(ogInput) && !isNaN(fgInput) && abvField) {
+            const WCF = parseFloat(String(state.userSettings?.wcf || 1.00).replace(',', '.'));
+            let T_act = 20;
+            if (logEntryRow) {
+                const tempInp = logEntryRow.querySelector('.temp-input');
+                if (tempInp && tempInp.value) T_act = parseFloat(tempInp.value.replace(',', '.'));
+            }
+            const T_cal = 20;
+
+            const CF = (T) => 1.00130346 - 0.000134722124 * T + 0.00000204052596 * Math.pow(T, 2) - 0.00000000232820948 * Math.pow(T, 3);
+            const correctedOG = ogInput * (CF(T_act) / CF(T_cal));
+            const correctedFG = fgInput * (CF(T_act) / CF(T_cal));
+
+            if (correctedOG >= 1.775) {
+                window.showToast("Kritieke fout: OG overschrijdt Hall-limiet (1.775).", "error");
+                abvField.value = "LIMIT ERR";
+                return;
+            }
+
+            let finalOG = correctedOG;
+            let finalFG = correctedFG;
+
+            // Mixed-tool support (SG vs Brix)
+            if (ogInput > 1.2 || fgInput > 1.2) {
+                const getRI = (val) => val > 1.2 ? (val / WCF) : (((182.9622 * Math.pow(val, 3)) - (777.3009 * Math.pow(val, 2)) + (1264.5170 * val) - 670.1831) / WCF);
+                
+                const RI_i = getRI(correctedOG);
+                const RI_f = getRI(correctedFG);
+                
+                finalOG = (0.0000000578503 * Math.pow(RI_i, 3)) + (0.0000127414 * Math.pow(RI_i, 2)) + (0.00384577 * RI_i) + 1.0000;
+                finalFG = 1.0 - (0.002349 * RI_i) + (0.006276 * RI_f);
+                
+                // Herhaalde Hall-limiet check na Brix-naar-SG transformatie conform v2.6 mandaat
+                if (finalOG >= 1.775) {
+                    window.showToast("Kritieke fout: Getransmuteerde OG overschrijdt Hall-limiet (1.775).", "error");
+                    abvField.value = "LIMIT ERR";
+                    return;
+                }
+            }
             
-            // UI Update conform tools.js
-            abvField.value = abv.toFixed(2) + "%";
-            if (window.tempState) window.tempState.lastCalculatedABV = abv;
-        } else {
-            abvField.value = "0.00%";
-            if (window.tempState) window.tempState.lastCalculatedABV = 0;
+            if (finalOG > finalFG) {
+                const abw = (76.08 * (finalOG - finalFG)) / (1.775 - finalOG);
+                const abv = abw / 0.794; 
+                abvField.value = abv.toFixed(2) + "%";
+            } else {
+                abvField.value = "0.00%";
+            }
         }
-    }
-};
 
-// --- SYNC HELPER (Updated Selector) ---
-window.syncLogToFinal = function(idSuffix) {
-    // Zoek binnen de container naar inputs met de class 'sg-input'
-    const container = document.getElementById(`fermentationContainer-${idSuffix}`);
-    if (!container) return;
+        if (logEntryRow) {
+            const currentEntry = {
+                date: logEntryRow.querySelector('input[type="date"]')?.value,
+                temp: logEntryRow.querySelector('.temp-input')?.value,
+                ph: logEntryRow.querySelector('input[placeholder="3.x"]')?.value
+            };
+            
+            const safetyWarnings = window.evaluateBatchSafety(cleanId, currentEntry);
+            
+            if (event && event.type === 'change' && safetyWarnings.length > 0) {
+                safetyWarnings.forEach(msg => window.showToast(msg, "warning"));
+            }
+            
+            let indicator = logEntryRow.querySelector('.safety-indicator');
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.className = "safety-indicator absolute -left-1 top-0 bottom-0 w-6 rounded-l-xl flex items-center justify-center text-[10px]";
+                logEntryRow.appendChild(indicator);
+            }
 
-    const sgInputs = container.querySelectorAll('.sg-input');
-    let lastVal = "";
-    
-    // Pak de laatste ingevulde waarde
-    sgInputs.forEach(inp => { 
-        if(inp.value) lastVal = inp.value; 
-    });
-    
-    const finalFg = document.getElementById(`actualFG-${idSuffix}`);
-    if(finalFg && lastVal) {
-        finalFg.value = lastVal;
-        window.autoCalculateABV(idSuffix);
+            if (safetyWarnings.length > 0) {
+                indicator.classList.add('bg-red-500');
+                indicator.innerHTML = '<span class="text-white font-bold" title="' + safetyWarnings.join('\n') + '">⚠️</span>';
+            } else {
+                indicator.classList.remove('bg-red-500');
+                indicator.innerHTML = '';
+            }
+        }
+
+        window.syncLogToFinal(idSuffix);
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: autoCalculateABV', 'ERROR');
     }
 };
 
@@ -2794,158 +3148,164 @@ function setupBrewDayEventListeners() {
     console.log("Brew Day listeners handled via inline logic.");
 }
 
-// --- MISSING FEATURE 1: BLENDING TOOL ---
+// --- BLENDING TOOL ---
 window.addBlendingRow = function(idSuffix) {
-    const tbody = document.querySelector(`#blendingTable-${idSuffix} tbody`);
-    if(!tbody) return;
-    const today = new Date().toISOString().split('T')[0];
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-        <td><input type="date" value="${today}" class="w-full bg-transparent"></td>
-        <td><input type="text" class="w-full bg-transparent" placeholder="Spirit Name"></td>
-        <td><input type="number" step="0.01" class="w-full bg-transparent text-center" oninput="window.recalcTotalABV('${idSuffix}')"></td>
-        <td><input type="number" step="0.1" class="w-full bg-transparent text-center" oninput="window.recalcTotalABV('${idSuffix}')"></td>
-        <td class="text-center"><button onclick="this.closest('tr').remove(); window.recalcTotalABV('${idSuffix}')" class="text-red-500 font-bold">&times;</button></td>
-    `;
-    tbody.appendChild(tr);
+    try {
+        const tbody = document.querySelector(`#blendingTable-${idSuffix} tbody`);
+        if(!tbody) return;
+        const today = new Date().toISOString().split('T');
+        const tr = document.createElement('tr');
+        // V2.6 Fix: Directe komma-naar-punt vervanging op input niveau
+        tr.innerHTML = `
+            <td><input type="date" value="${today}" class="w-full bg-transparent"></td>
+            <td><input type="text" class="w-full bg-transparent" placeholder="Spirit Name"></td>
+            <td><input type="number" step="0.01" class="w-full bg-transparent text-center" oninput="this.value = this.value.replace(',', '.'); window.recalcTotalABV('${idSuffix}')"></td>
+            <td><input type="number" step="0.1" class="w-full bg-transparent text-center" oninput="this.value = this.value.replace(',', '.'); window.recalcTotalABV('${idSuffix}')"></td>
+            <td class="text-center"><button onclick="this.closest('tr').remove(); window.recalcTotalABV('${idSuffix}')" class="text-red-500 font-bold">&times;</button></td>
+        `;
+        tbody.appendChild(tr);
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: addBlendingRow', 'ERROR');
+    }
 };
 
 // --- SCOPE FIX: USE STATE.BREWS ---
 window.recalcTotalABV = function(idSuffix) {
-    // 1. Haal basis gegevens
-    const targetABVField = document.getElementById(`targetABV-${idSuffix}`);
-    const finalABVField = document.getElementById(`finalABV-${idSuffix}`);
-    const currentVolInput = document.getElementById(`currentVol-${idSuffix}`);
-    
-    // Probeer batch size te vinden als fallback
-    let fallbackVol = 5.0;
-    // FIX: Gebruik state.brews i.p.v. brews
-    const activeId = tempState.activeBrewId || (state.userSettings?.currentBrewDay?.brewId);
-
-    if(state.brews && activeId) {
-         const b = state.brews.find(x => x.id === activeId);
-         if(b) fallbackVol = b.batchSize || 5;
-    } else if (state.brews && tempState.activeBrewId) {
-         // Fallback voor als we in history view zitten
-         const b = state.brews.find(x => x.id === tempState.activeBrewId);
-         if(b) fallbackVol = b.batchSize || 5;
-    }
-
-    // Gebruik de input, of anders de fallback
-    let startVolume = parseFloat(currentVolInput.value);
-    if (isNaN(startVolume) || startVolume <= 0) {
-        startVolume = fallbackVol;
-    }
-
-    let baseABV = parseFloat(finalABVField.value) || parseFloat(targetABVField.value) || 0;
-    
-    // Check of we SG-based ABV moeten gebruiken
-    const ogVal = parseFloat(document.getElementById(`actualOG-${idSuffix}`).value.replace(',', '.'));
-           const fgVal = parseFloat(document.getElementById(`actualFG-${idSuffix}`).value.replace(',', '.'));
-    
-    if (!isNaN(ogVal) && !isNaN(fgVal) && ogVal > fgVal) {
-        // Updated to Hall Equation
-        const abw = (76.08 * (ogVal - fgVal)) / (1.775 - ogVal);
-        baseABV = abw / 0.794;
-    }
-
-    // --- DE REKENSOM ---
-    let totalAlcVolume = startVolume * (baseABV / 100);
-    let totalLiquidVolume = startVolume;
-
-    const rows = document.querySelectorAll(`#blendingTable-${idSuffix} tbody tr`);
-    rows.forEach(row => {
-        const inputs = row.querySelectorAll('input');
-        const vol = parseFloat(inputs[2].value) || 0;
-        const abv = parseFloat(inputs[3].value) || 0;
+    try {
+        const finalABVField = document.getElementById(`finalABV-${idSuffix}`);
+        const currentVolInput = document.getElementById(`currentVol-${idSuffix}`);
         
-        if (vol > 0) {
-            totalLiquidVolume += vol;
-            totalAlcVolume += (vol * (abv / 100));
-        }
-    });
+        let fallbackVol = 5.0;
+        let baseABV = 0;
 
-    const newABV = totalLiquidVolume > 0 ? (totalAlcVolume / totalLiquidVolume) * 100 : 0;
-    
-    finalABVField.value = newABV.toFixed(2) + '%';
-    
-    const summary = document.getElementById(`blending-summary-${idSuffix}`);
-    if(summary) {
-        summary.innerHTML = `
-            <div class="flex justify-between gap-4 text-xs text-app-secondary mb-1">
-                <span>Base (${startVolume.toFixed(2)}L):</span>
-                <span>${baseABV.toFixed(2)}%</span>
-            </div>
-            <div class="flex justify-between gap-4 text-sm font-bold text-app-brand border-t border-app-brand/20 pt-2 mt-1">
-                <span>New Total (${totalLiquidVolume.toFixed(2)}L):</span>
-                <span>${newABV.toFixed(2)}% ABV</span>
-            </div>
-        `;
+        const activeId = tempState.activeBrewId || (state.userSettings?.currentBrewDay?.brewId);
+        const activeBrew = state.brews ? state.brews.find(x => x.id === activeId) : null;
+
+        if (activeBrew) {
+            fallbackVol = activeBrew.batchSize || 5;
+            baseABV = parseFloat(activeBrew.logData?.targetABV || 0);
+        }
+
+        // Comma-to-Dot protocol
+        let startVolume = parseFloat(String(currentVolInput?.value || fallbackVol).replace(/,/g, '.')) || fallbackVol;
+        
+        // Hall Equation Integratie (v2.6) met Strikte Pre-check
+        const ogInputStr = document.getElementById(`actualOG-${idSuffix}`)?.value.replace(/,/g, '.') || "";
+        const fgInputStr = document.getElementById(`actualFG-${idSuffix}`)?.value.replace(/,/g, '.') || "";
+        const ogVal = parseFloat(ogInputStr);
+        const fgVal = parseFloat(fgInputStr);
+        
+        if (!isNaN(ogVal) && !isNaN(fgVal)) {
+            // STRIKTE EIS: Voorkom deling door nul of fysiek onmogelijke densiteit
+            if (ogVal >= 1.775) {
+                if (finalABVField) {
+                    finalABVField.value = "LIMIT ERR";
+                    finalABVField.classList.add('text-error');
+                }
+                window.logSystemError(`Hall Limit Error in Blending: OG ${ogVal}`, 'ABV Calc', 'WARNING');
+                return; 
+            }
+
+            if (ogVal > fgVal) {
+                // Hall Equation: ABW = (76.08 * (OG - FG)) / (1.775 - OG)
+                const abw = (76.08 * (ogVal - fgVal)) / (1.775 - ogVal);
+                baseABV = abw / 0.794;
+            }
+        }
+
+        let totalAlcVolume = startVolume * (baseABV / 100);
+        let totalLiquidVolume = startVolume;
+
+        const rows = document.querySelectorAll(`#blendingTable-${idSuffix} tbody tr`);
+        rows.forEach(row => {
+            const inputs = row.querySelectorAll('input');
+            const vol = parseFloat(String(inputs[2]?.value || "0").replace(/,/g, '.')) || 0;
+            const abv = parseFloat(String(inputs[3]?.value || "0").replace(/,/g, '.')) || 0;
+            
+            if (vol > 0) {
+                totalLiquidVolume += vol;
+                totalAlcVolume += (vol * (abv / 100));
+            }
+        });
+
+        const newABV = totalLiquidVolume > 0 ? (totalAlcVolume / totalLiquidVolume) * 100 : baseABV;
+        if (finalABVField) {
+            finalABVField.value = newABV.toFixed(2) + '%';
+            finalABVField.classList.remove('text-error');
+        }
+        
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: recalcTotalABV', 'ERROR');
     }
 };
 
-// --- MISSING FEATURE 2: INVENTORY SYNC ---
+// --- INVENTORY SYNC ---
 window.deductActualsFromInventory = async function(brewId) {
     if (!confirm("Deduct calculated ingredients from your Inventory Stock?")) return;
     
-    // We roepen een functie aan die in inventory.js moet bestaan.
-    // Omdat inventory.js als module geladen wordt, moet die functie aan window hangen.
-    if (window.performInventoryDeduction) {
-    // Haal de actuele data op (functie bestaat lokaal in new-brewing.js)
-    const logData = getLogDataFromDOM('brew-day-content'); 
-    
-    if (!logData.actualIngredients || logData.actualIngredients.length === 0) {
-        showToast("No actuals recorded. Save log first.", "warning");
-        return;
+    try {
+        if (window.performInventoryDeduction) {
+            const logData = getLogDataFromDOM('brew-day-content'); 
+            
+            if (!logData.actualIngredients || logData.actualIngredients.length === 0) {
+                showToast("No actuals recorded. Save log first.", "warning");
+                return;
+            }
+            
+            await window.performInventoryDeduction(logData.actualIngredients);
+        } else {
+            showToast("Inventory module not loaded.", "error");
+        }
+    } catch (error) {
+        window.logSystemError(error, 'Inventory: Deduct', 'ERROR');
+        showToast("Deduction failed. Check system logs.", "error");
     }
-    
-    await window.performInventoryDeduction(logData.actualIngredients);
-} else {
-    showToast("Inventory module not loaded.", "error");
-}
 }
 
-// --- MISSING FEATURE 3: PROMPT VIEWER ---
+// --- PROMPT VIEWER ---
 window.showLastPrompt = function() {
-    // We tonen de laatst gegenereerde prompt uit het geheugen
     if(!lastGeneratedPrompt) {
         showToast("No prompt in memory.", "info");
         return;
     }
-    // We gebruiken de algemene prompt modal uit index.html
-    const modal = document.getElementById('prompt-modal');
-    const content = document.getElementById('prompt-modal-content'); // Zorg dat dit ID in je HTML modal staat!
-    if(modal) {
-        if(content) content.textContent = lastGeneratedPrompt;
-        modal.classList.remove('hidden');
-    } else {
-        alert(lastGeneratedPrompt); // Fallback
-    }
+    window.showPromptModal(lastGeneratedPrompt);
 }
 
-// --- MISSING FEATURE 4: CLEAR HISTORY ---
+// --- CLEAR HISTORY ---
 window.clearHistory = async function() {
-    if(!confirm("DELETE ALL HISTORY? This cannot be undone.")) return;
-    if(!state.userId) return;
+    if (!state.userId) return;
+    if (!confirm("DELETE ALL HISTORY? This cannot be undone.")) return;
     
-    // Dit is een zware operatie, we loopen door de lokale state om reads te besparen
-    const batch = []; // Firestore batches supporten max 500
-    // Simpele implementatie: één voor één verwijderen (veiliger voor kleine apps)
     try {
+        const { writeBatch, collection, getDocs, query, doc } = await import('./firebase-init.js');
         const q = query(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews'));
-        // We moeten onSnapshot even uitzetten of negeren, maar dat is lastig.
-        // We sturen gewoon delete requests.
-        state.brews.forEach(async (b) => {
-             await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', b.id));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+            showToast("History already empty.", "info");
+            return;
+        }
+
+        const batch = writeBatch(db);
+        snapshot.docs.forEach((d) => {
+            batch.delete(d.ref);
         });
-        showToast("History clearing...", "info");
-    } catch(e) {
-        console.error(e);
-        showToast("Error clearing history", "error");
+
+        await batch.commit();
+        
+        // Reset pointers en UI
+        tempState.activeBrewId = null;
+        if (state.userSettings) state.userSettings.currentBrewDay = { brewId: null };
+        
+        showToast(`History cleared (${snapshot.size} items).`, "success");
+        window.renderBrewDay('none');
+    } catch (error) {
+        window.logSystemError(error, 'History: ClearAll', 'ERROR');
+        showToast("Clear failed.", "error");
     }
 }
 
-// --- MISSING FEATURE: RESTORE TIMER ON LOAD ---
+// --- RESTORE TIMER ON LOAD ---
 function initializeBrewDayState(brewId, steps) {
     // Check localstorage
     const savedTimer = localStorage.getItem('activeBrewDayTimer');
@@ -2968,7 +3328,7 @@ function initializeBrewDayState(brewId, steps) {
     }
 }
 
-// --- MISSING TOOL 1: TWEAK SAVED RECIPE ---
+// --- TWEAK SAVED RECIPE ---
 window.freeformTweakRecipe = async function(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
     if (!brew) return;
@@ -3003,22 +3363,12 @@ window.freeformTweakRecipe = async function(brewId) {
     }
 }
 
-// --- MISSING TOOL 2: SHOW SAVED PROMPT ---
+// --- SHOW SAVED PROMPT ---
 // Onderscheid: showLastPrompt toont geheugen, deze toont Database prompt
 window.showBrewPrompt = function(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
-    // Sommige oudere recepten hebben misschien geen opgeslagen prompt, toon dan info
     const text = brew?.prompt || "No prompt saved for this batch (created in older version).";
-    
-    // We gebruiken de algemene modal als die er is, anders alert
-    const modal = document.getElementById('prompt-modal');
-    const content = document.getElementById('prompt-modal-content');
-    if (modal && content) {
-        content.textContent = text;
-        modal.classList.remove('hidden');
-    } else {
-        alert(text);
-    }
+    window.showPromptModal(text);
 }
 
 window.undoStep = async function(stepIndex) {
@@ -3125,23 +3475,19 @@ window.revertToPrimary = async function(brewId) {
 
 // --- ROBUST REGENERATOR ---
 window.regenerateFlavorProfile = async function(brewId) {
-    // 1. Validatie
     if (!brewId) return showToast("Error: No brew ID found.", "error");
     
-    // 2. UI Feedback
     const container = document.getElementById(`flavor-wheel-container-${brewId}`);
     if (container) {
         container.innerHTML = getLoaderHtml("AI Sommelier is tasting...");
     }
 
-    // 3. Data Ophalen
     const brew = state.brews.find(b => b.id === brewId);
     if (!brew || !brew.recipeMarkdown) {
         if(container) container.innerHTML = `<p class="text-error text-sm">No recipe text found to analyze.</p>`;
         return;
     }
 
-    // 4. API Call
     const prompt = `You are a professional mead sommelier. Analyze this recipe and PREDICT its final flavor profile. 
     Assign a score from 0 to 5 for: Sweetness, Acidity, Fruity/Floral, Spiciness, Earthy/Woody, Body/Mouthfeel. 
     
@@ -3167,23 +3513,17 @@ window.regenerateFlavorProfile = async function(brewId) {
         const jsonResponse = await performApiCall(prompt, schema);
         const profileData = JSON.parse(jsonResponse);
 
-        // 5. OPSLAAN IN DATABASE (Cruciaal!)
-        // We importeren updateDoc en doc bovenaan brewing.js, zorg dat die beschikbaar zijn.
-        // Als ze niet direct beschikbaar zijn via import, gebruik de globale firebase objecten.
-        const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-        
-        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), {
+        // 5. OPSLAAN IN DATABASE (v2.6: Gebruik centrale firebase-init imports)
+        const brewRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId);
+        await updateDoc(brewRef, {
             flavorProfile: profileData
         });
 
-        // 6. Update Lokale State
         brew.flavorProfile = profileData;
 
-        // 7. Render Grafiek
         if (container) {
             container.innerHTML = `<canvas id="flavorChart-${brewId}"></canvas>`;
             
-            // Wacht heel even tot canvas in DOM zit
             setTimeout(() => {
                 renderFlavorWheel(brewId, 
                     ['Sweetness', 'Acidity', 'Fruity', 'Spicy', 'Earthy', 'Body'], 
@@ -3195,73 +3535,100 @@ window.regenerateFlavorProfile = async function(brewId) {
         showToast("Analysis saved permanently!", "success");
 
     } catch (error) {
-        console.error("Flavor Gen Error:", error);
+        window.logSystemError(error, 'brewing.js: regenerateFlavorProfile', 'ERROR');
         if(container) container.innerHTML = `<p class="text-error text-sm">Analysis failed. Try again.</p><button onclick="window.regenerateFlavorProfile('${brewId}')" class="btn bg-primary text-white mt-2">Retry</button>`;
     }
 };
 
-// ============================================================================
-// FINAL EXPORTS (COMPLETE & VERIFIED)
-// ============================================================================
+// --- NEW SAFETY LOGIC: Yeast-Specific Risk Detection (v2.6) ---
+window.evaluateBatchSafety = function(brewId, currentLogEntry) {
+    try {
+        const brew = state.brews.find(b => b.id === brewId);
+        if (!brew) return [];
 
-// Core & UI
-window.generateRecipe = generateRecipe;
-window.loadHistory = loadHistory;
-window.renderHistoryList = renderHistoryList;
-window.handleDescriptionInput = handleDescriptionInput;
-window.handleStyleChange = handleStyleChange;
-window.handleEquipmentTypeChange = handleEquipmentTypeChange;
+        const warnings = [];
+        const logData = brew.logData || {};
+        const recipeText = (brew.recipeMarkdown || "").toLowerCase();
+        const batchSize = parseFloat(brew.batchSize) || 5;
 
-// AI Tools
-window.applyWaterTweak = applyWaterTweak;
-window.getWaterAdvice = getWaterAdvice;
-window.getYeastAdvice = getYeastAdvice;
-window.showLastPrompt = showLastPrompt;
+        let yeastStrain = "unknown";
+        if (recipeText.includes("d47")) yeastStrain = "d47";
+        else if (recipeText.includes("us-05")) yeastStrain = "us-05";
+        else if (recipeText.includes("71b")) yeastStrain = "71b";
+        else if (recipeText.includes("ec-1118")) yeastStrain = "ec-1118";
+        else if (recipeText.includes("m05")) yeastStrain = "m05";
+        else if (recipeText.includes("qa23")) yeastStrain = "qa23";
 
-// Brew Day Engine
-window.startActualBrewDay = startActualBrewDay;
-window.renderBrewDay = renderBrewDay;
-window.renderBrewDay2 = renderBrewDay2;
-window.resetBrewDay = resetBrewDay;
-window.finishPrimaryManual = finishPrimaryManual;
-window.startStepTimer = startStepTimer;
-window.pauseStepTimer = pauseStepTimer;
-window.skipTimer = skipTimer;
-window.completeStep = completeStep;
-window.toggleSecondaryStep = toggleSecondaryStep;
-window.openSecondaryDetail = openSecondaryDetail;
-window.closeSecondaryDetail = closeSecondaryDetail;
-window.deductActualsFromInventory = deductActualsFromInventory;
-window.freeformTweakRecipe = freeformTweakRecipe;
-window.showBrewPrompt = showBrewPrompt;
-window.startBrewDay = startBrewDay;
-window.undoStep = undoStep;
+        const currentTemp = parseFloat(String(currentLogEntry.temp).replace(',', '.'));
+        if (yeastStrain === "d47" && currentTemp > 20) {
+            warnings.push("Lalvin D47 boven 20°C: Risico op foezelalcoholen.");
+        }
 
-// Logging & Details
-window.showBrewDetail = showBrewDetail;
-window.goBackToHistoryList = goBackToHistoryList;
-window.saveBrewToHistory = saveBrewToHistory;
-window.updateBrewLog = updateBrewLog;
-window.addLogLine = addLogLine;
-window.recalculateBatchCost = recalculateBatchCost;
-window.printEmptyLog = printEmptyLog;
+        if (yeastStrain === "us-05") {
+            const actuals = logData.actualIngredients || [];
+            let yanActual = 0;
+            actuals.forEach(ing => {
+                const qty = parseFloat(String(ing.actualQty).replace(',', '.'));
+                if (ing.name.toLowerCase().includes("fermaid o")) yanActual += (qty / batchSize) * 160;
+                if (ing.name.toLowerCase().includes("dap")) yanActual += (qty / batchSize) * 210;
+            });
+            const og = parseFloat(String(logData.actualOG || 1.000).replace(',', '.'));
+            const brix = ((182.9622 * Math.pow(og, 3)) - (777.3009 * Math.pow(og, 2)) + (1264.5170 * og) - 670.1831);
+            const yanTarget = 10 * brix * og * 1.25; 
+            if (yanActual < yanTarget && yanActual > 0) {
+                warnings.push("SafAle US-05 stikstoftekort: Risico op H2S (rotte eieren).");
+            }
+        }
 
-// Blending (Hersteld)
-window.addBlendingRow = addBlendingRow;
-window.recalcTotalABV = recalcTotalABV;
+        const ogVal = parseFloat(String(logData.actualOG || 1.000).replace(',', '.'));
+        if (!isNaN(ogVal) && ogVal < 1.775) {
+            const fgDry = 1.000;
+            const abwPot = (76.08 * (ogVal - fgDry)) / (1.775 - ogVal);
+            const abvPot = abwPot / 0.794;
+            if (yeastStrain === "71b" && abvPot > 14) warnings.push("ABV overschrijdt 14% limiet van 71B.");
+            if ((yeastStrain === "ec-1118" || yeastStrain === "m05") && abvPot > 18) {
+                warnings.push(`ABV overschrijdt 18% limiet van ${yeastStrain.toUpperCase()}.`);
+            }
+        }
 
-// Management
-window.deleteBrew = deleteBrew;
-window.clearHistory = clearHistory; // Hersteld
-window.cloneBrew = cloneBrew;
-window.resumeBrew = resumeBrew;
-window.saveNewTitle = saveNewTitle;
-window.showTitleEditor = showTitleEditor;
-window.hideTitleEditor = hideTitleEditor;
+        // pH-Monitor verfijning (Date dependency)
+        const currentPh = parseFloat(String(currentLogEntry.ph).replace(',', '.'));
+        if (currentPh < 3.2 && currentPh > 0) {
+            const brewDateRaw = logData.brewDate ? new Date(logData.brewDate) : null;
+            if (brewDateRaw) {
+                const currentLogDate = currentLogEntry.date ? new Date(currentLogEntry.date) : new Date();
+                const diffDays = (currentLogDate.getTime() - brewDateRaw.getTime()) / (1000 * 3600 * 24);
+                if (diffDays <= 3) warnings.push("PH-CRASH (Eerste 72u): Voeg 0.4 g/L K2CO3 toe.");
+            } else {
+                warnings.push("KRITIEKE LAGE pH: Voeg 0.4 g/L K2CO3 toe.");
+            }
+        }
 
-// Charts & Logic
-window.renderFermentationGraph = renderFermentationGraph;
-window.renderFlavorWheel = renderFlavorWheel;
-window.autoCalculateABV = autoCalculateABV;
-window.syncLogToFinal = syncLogToFinal;
-window.setupBrewDayEventListeners = setupBrewDayEventListeners;
+        // --- GRASACHTIGE OFF-FLAVOR & HOP-BURN SAFEGUARD ---
+        // Inspecteer dry-hop contacttijd via lognotities of ingevoerde data
+        const notesStr = (currentLogEntry.notes || "").toLowerCase();
+        const agingNotesStr = (logData.agingNotes || "").toLowerCase();
+        const collectiveNotes = notesStr + " " + agingNotesStr;
+        
+        let detectedContactHours = 0;
+        const hourMatch = collectiveNotes.match(/(\d+)\s*(hour|uur|hrs)/);
+        const dayMatch = collectiveNotes.match(/(\d+)\s*(day|dag|dagen|days)/);
+        
+        if (dayMatch) {
+            detectedContactHours = parseInt(dayMatch[1]) * 24;
+        } else if (hourMatch) {
+            detectedContactHours = parseInt(hourMatch[1]);
+        }
+        
+        if (detectedContactHours >= 168 || collectiveNotes.includes("dryhop 7 dagen") || collectiveNotes.includes("dryhop 8 dagen") || collectiveNotes.includes("dry-hop 7 days") || collectiveNotes.includes("dry-hop 8 days")) {
+            const overExtractionWarning = "Kritieke overextractie van polyphenolen en chlorofyl gedetecteerd (Grasachtige off-flavor / Hop-burn risico).";
+            warnings.push(overExtractionWarning);
+            window.logSystemError(`Hop Over-Extraction Event on Batch ${brew.recipeName || 'Unknown'}: ${detectedContactHours} hours calculated.`, 'Zymology: Hop Safeguard', 'WARNING');
+        }
+
+        return warnings;
+    } catch (error) {
+        window.logSystemError(error, "evaluateBatchSafety", "ERROR");
+        return [];
+    }
+};

@@ -1,6 +1,6 @@
 // ============================================================================
 // app.js - 
-// MEANDERY V2.5 - THE MAIN ORCHESTRATOR (ROBUST VERSION)
+// MEANDERY V2.6
 // ============================================================================
 
 // 1. MODULE IMPORTS (MOETEN BOVENAAN STAAN)
@@ -12,8 +12,7 @@ import './label-forge.js';
 import './tools.js';
 
 // 2. CORE IMPORTS
-import { auth, onAuthStateChanged, signInWithPopup, googleProvider, db } from './firebase-init.js';
-import { doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { auth, onAuthStateChanged, signInWithPopup, googleProvider, db, doc, deleteDoc, updateDoc } from './firebase-init.js';
 import { state } from './state.js';
 import { showToast } from './utils.js';
 
@@ -57,7 +56,6 @@ onAuthStateChanged(auth, async (user) => {
         if (appContainer) appContainer.classList.remove('hidden');
 
         // Start Data Loaders via de Safe Loader
-        // De volgorde kan belangrijk zijn (Settings vaak eerst)
         safeInit('loadUserSettings');      // Eerst settings (valuta, API keys)
         safeInit('loadHistory');           // Dan data
         safeInit('loadInventory');
@@ -67,12 +65,9 @@ onAuthStateChanged(auth, async (user) => {
         safeInit('loadLabelAssets');
         safeInit('loadUserWaterProfiles');
         safeInit('initLabelForge');
-        
-        // Initialiseer UI componente
-        safeInit('initLabelForge');
     
-        // START DE DASHBOARD UPDATER (Wacht even 1 sec zodat data zeker binnen is)
-        setTimeout(() => safeInit('updateDashboardInsights'), 1500);
+        // START DE DASHBOARD UPDATER (Gesynchroniseerd naar v2.6 updateDashboardStats)
+        setTimeout(() => safeInit('updateDashboardStats'), 1500);
 
     } else {
         console.log("🔒 No user.");
@@ -82,12 +77,8 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// ----------------------------------------------------------------------------
-// 2. GLOBAL EVENT LISTENERS
-// ----------------------------------------------------------------------------
-
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("🚀 Meandery V2.4 Modular System Active");
+    console.log("🚀 Meandery V2.6 Modular System Active");
 
     // --- GLOBAL AUTH FUNCTION (Nodig voor de HTML onclick) ---
     window.signInWithGoogle = async function() {
@@ -95,9 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const result = await signInWithPopup(auth, googleProvider);
             console.log("✅ Login Success:", result.user.uid);
-            // We hoeven hier niets te doen, de onAuthStateChanged listener pikt dit op!
         } catch (error) {
-            console.error("❌ Login Failed:", error);
+            // Gesaneerd naar centraal Black Box Framework
+            window.logSystemError(error, 'Auth: Google Sign-In', 'ERROR');
             showToast("Login failed: " + error.message, "error");
         }
     };
@@ -113,27 +104,23 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.sub-tab').forEach(tab => {
         tab.addEventListener('click', (e) => {
             const parentId = e.target.closest('[id$="-main-view"]').id;
-            // Haal 'brew-day-1' uit 'brew-day-1-sub-tab'
             const viewName = e.target.id.replace('-sub-tab', '');
             
             switchSubView(viewName, parentId);
 
-            // EXTRA CHECK: Als we naar Brew Day 1 gaan, forceer een render van de actieve batch
             if (viewName === 'brew-day-1') {
-                // Pak het ID uit de state (state wordt geïmporteerd in app.js)
                 const activeId = state.currentBrewDay?.brewId || (state.userSettings?.currentBrewDay?.brewId);
                 if (window.renderBrewDay) {
                     window.renderBrewDay(activeId || 'none');
                 }
             }
             
-            // EXTRA CHECK: Als we naar Brew Day 2 gaan
             if (viewName === 'brew-day-2' && window.renderBrewDay2) {
                 window.renderBrewDay2();
             }
 
             if (viewName === 'settings-data' && window.updateLogCount) {
-            window.updateLogCount();
+                window.updateLogCount();
             }
         });
     });
@@ -145,56 +132,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ARCHIVE BREW (Move to History, remove from Active) ---
     window.archiveBrew = async function(brewId, brewName) {
-       if(!confirm(`📦 ARCHIVE: "${brewName}"?\n\nThis will mark the batch as 'Completed'.\nIt will disappear from your Dashboard and Active lists,\nbut remains safe in your History.`)) return;
+        if(!confirm(`📦 ARCHIVE: "${brewName}"?\n\nThis will mark the batch as 'Completed'.\nIt will disappear from your Dashboard and Active lists,\nbut remains safe in your History.`)) return;
 
-    try {
-        // 1. Update Firestore: Zet archived op true (en voor de zekerheid primaryComplete/isBottled ook, zodat hij zeker weg is uit actieve lijsten)
-        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), {
-            archived: true,
-            primaryComplete: true, // Zorgt dat hij uit Brew Day 1 gaat
-            isBottled: true        // Zorgt dat hij uit Brew Day 2 gaat
-        });
-        
-        // 2. Update lokale state direct
-        const brew = state.brews.find(b => b.id === brewId);
-        if(brew) {
-            brew.archived = true;
-            brew.primaryComplete = true;
-            brew.isBottled = true;
+        try {
+            await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), {
+                archived: true,
+                primaryComplete: true,
+                isBottled: true
+            });
+            
+            const brew = state.brews.find(b => b.id === brewId);
+            if(brew) {
+                brew.archived = true;
+                brew.primaryComplete = true;
+                brew.isBottled = true;
+            }
+            
+            if (window.updateDashboardStats) window.updateDashboardStats();
+            if (window.renderBrewDay) window.renderBrewDay();
+            if (window.renderBrewDay2) window.renderBrewDay2();
+            
+            showToast(`📦 "${brewName}" archived to History.`, "success");
+        } catch (e) {
+            window.logSystemError(e, 'Archive Brew Failure', 'ERROR');
+            showToast("Error archiving: " + e.message, "error");
         }
-        
-        // 3. Ververs Dashboard en Lijsten
-        if (window.updateDashboardInsights) window.updateDashboardInsights();
-        if (window.renderBrewDay) window.renderBrewDay();
-        if (window.renderBrewDay2) window.renderBrewDay2();
-        
-        showToast(`📦 "${brewName}" archived to History.`, "success");
-    } catch (e) {
-        console.error(e);
-        showToast("Error archiving: " + e.message, "error");
-       }
-    }
+    };
 
     // --- GHOST BREW REMOVER ---
     window.deleteGhostBrew = async function(brewId, brewName) {
-       if(!confirm(`⚠️ FORCE DELETE: "${brewName}"?\n\nThis will permanently remove this ghost brew from the database. This cannot be undone.`)) return;
+        if(!confirm(`⚠️ FORCE DELETE: "${brewName}"?\n\nThis will permanently remove this ghost brew from the database. This cannot be undone.`)) return;
 
-    try {
-        // 1. Verwijder uit Firestore
-        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId));
-        
-        // 2. Verwijder uit lokale state (zodat hij direct verdwijnt zonder refresh)
-        state.brews = state.brews.filter(b => b.id !== brewId);
-        
-        // 3. Update dashboard direct
-        if (window.updateDashboardInsights) window.updateDashboardInsights();
-        
-        showToast(`👻 Ghost brew "${brewName}" busted!`, "success");
-    } catch (e) {
-        console.error(e);
-        showToast("Error deleting ghost brew: " + e.message, "error");
-       }
-    }
+        try {
+            await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId));
+            state.brews = state.brews.filter(b => b.id !== brewId);
+            if (window.updateDashboardStats) window.updateDashboardStats();
+            
+            showToast(`👻 Ghost brew "${brewName}" busted!`, "success");
+        } catch (e) {
+            window.logSystemError(e, 'Delete Ghost Brew Failure', 'ERROR');
+            showToast("Error deleting ghost brew: " + e.message, "error");
+        }
+    };
     
     // --- VOORRAAD ---
     document.getElementById('inventory-form')?.addEventListener('submit', (e) => window.addInventoryItem(e));
@@ -216,9 +195,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('saveSettingsBtn')?.addEventListener('click', () => window.saveUserSettings());
     document.getElementById('fetchModelsBtn')?.addEventListener('click', () => window.fetchAvailableModels());
     document.getElementById('theme-toggle-checkbox')?.addEventListener('change', (e) => {
-        if (e.target.checked) document.documentElement.classList.add('dark');
-        else document.documentElement.classList.remove('dark');
-    });
+    try {
+        if (e.target.checked) {
+            document.documentElement.classList.add('dark');
+        } else {
+            // Typo 'remove' gesaneerd naar de correcte string-identificator 'dark'
+            document.documentElement.classList.remove('dark');
+        }
+    } catch (error) {
+        window.logSystemError(error, 'UI: Theme Toggle Failure', 'ERROR');
+        window.showToast("Theme switch failed", "error");
+    }
+});
     
     // --- WATER TOOLS ---
     document.getElementById('water-profile-form')?.addEventListener('submit', (e) => window.saveWaterProfile(e));
@@ -270,21 +258,30 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('getYeastAdviceBtn')?.addEventListener('click', () => window.getYeastAdvice());
     
     // Chat / Troubleshoot System
-    // We koppelen de verzendknop aan de chat-functie
     document.getElementById('chat-send-btn')?.addEventListener('click', () => window.sendTroubleshootMessage());
-    // En de image upload
     document.getElementById('chat-image-input')?.addEventListener('change', (e) => window.handleChatImageSelect(e.target));
     
     // Social Media
     document.getElementById('generate-social-from-recipe-btn')?.addEventListener('click', () => window.runSocialMediaGenerator());
 
-    // Calculators
+    // --- CALCULATORS V2.6 ---
     document.getElementById('calcAbvBtn')?.addEventListener('click', () => window.calculateABV());
     document.getElementById('correctSgBtn')?.addEventListener('click', () => window.correctHydrometer());
     document.getElementById('calcTosnaBtn')?.addEventListener('click', () => window.calculateTOSNA());
     document.getElementById('calcDilutionBtn')?.addEventListener('click', () => window.calculateDilution());
     document.getElementById('calcBacksweetenBtn')?.addEventListener('click', () => window.calculateBacksweetening());
     document.getElementById('calcBlendBtn')?.addEventListener('click', () => window.calculateBlend());
+
+    // --- CALCULATORS V2.6 EVENT-MATRIX ---
+    document.getElementById('calcStabilizationBtn')?.addEventListener('click', () => window.calculateStabilization?.());
+    document.getElementById('calcBraggotBtn')?.addEventListener('click', () => window.calculateBraggot?.());
+    document.getElementById('calcSplitBatchBtn')?.addEventListener('click', () => window.calculateSplitBatch?.());
+    document.getElementById('calcTastingAssessmentBtn')?.addEventListener('click', () => window.calculateTastingAssessment?.());
+    document.getElementById('calcWaterMatchingBtn')?.addEventListener('click', () => window.calculateWaterMatching?.());
+    document.getElementById('calcBufferBtn')?.addEventListener('click', () => window.calculateBuffer?.());
+
+   // Click-actie gesynchroniseerd naar de correct geëxporteerde v2.6 functie
+   document.getElementById('calcTargetBrixBtn')?.addEventListener('click', () => window.calculateTargetApparentBrix?.());
 
     // Setup Timers & Listeners from Modules
     if(window.setupBrewDayEventListeners) window.setupBrewDayEventListeners();

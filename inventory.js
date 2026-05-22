@@ -1,14 +1,19 @@
 // ============================================================================
-// inventroy.js
-// MEANDERY V2.5 - ...
+// inventory.js
+// MEANDERY V2.6
 // ============================================================================
 
-import { db } from './firebase-init.js';
+import { db, collection, addDoc, query, onSnapshot, doc, updateDoc, deleteDoc, setDoc, getDoc, writeBatch } from './firebase-init.js';
 import { state } from './state.js'; 
-// LET OP: Omdat 'state' dynamisch is, is het beter om overal 'state.userId' etc. te gebruiken.
-// Maar omdat je code nu vol zit met 'userId', is het makkelijker om een helper te maken of 'state.' toe te voegen.
-import { showToast, performApiCall, switchMainView, switchSubView, getLoaderHtml } from './utils.js';
-import { collection, addDoc, query, onSnapshot, doc, updateDoc, deleteDoc, setDoc, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { showToast, performApiCall, switchMainView, switchSubView, getLoaderHtml, logSystemError } from './utils.js';
+
+// Helper: Comma-to-Dot Protocol 
+const sanitizeInput = (val) => {
+    if (typeof val === 'string') {
+        return parseFloat(val.replace(',', '.'));
+    }
+    return parseFloat(val);
+};
 
 let html5QrcodeScanner = null;
 let customBottles = []; // Deze ontbrak en wordt gebruikt in bottling
@@ -29,13 +34,16 @@ async function loadInventory() {
     if (!state.userId) return;
     const invCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'inventory');
     
+    // Toegevoegde error-handler voor listener veiligheid
     onSnapshot(query(invCol), (snapshot) => {
         state.inventory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderInventory();
-        // Update stats elders indien functies bestaan
         if (window.updateCostAnalysis) window.updateCostAnalysis();
         if (window.updateNextActionWidget) window.updateNextActionWidget();
         if (window.updateDashboardStats) window.updateDashboardStats();
+    }, (error) => {
+        window.logSystemError(error, 'inventory.js -> loadInventory (onSnapshot)', 'ERROR');
+        showToast("Failed to sync inventory data.", "error");
     });
 }
 
@@ -43,7 +51,7 @@ function renderInventory() {
     const listDiv = document.getElementById('inventory-list');
     if (!listDiv) return;
 
-    // Groepeer items
+    // Groepeer items inclusief 'Other' fallback
     const grouped = state.inventory.reduce((acc, item) => {
         const cat = item.category || 'Other';
         if (!acc[cat]) acc[cat] = [];
@@ -51,7 +59,8 @@ function renderInventory() {
         return acc;
     }, {});
 
-    const categories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
+    // Herstel Rendering: 'Other' expliciet toegevoegd aan de loop
+    const categories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water', 'Other'];
     const currency = state.userSettings.currencySymbol || '€';
     let html = '';
 
@@ -64,37 +73,39 @@ function renderInventory() {
                 const expDateStr = item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : 'N/A';
                 
                 let catClass = 'cat-yeast'; 
-                const c = item.category.toLowerCase();
+                const c = item.category ? item.category.toLowerCase() : 'other';
                 if(c.includes('honey')) catClass = 'cat-honey';
                 if(c.includes('fruit')) catClass = 'cat-fruit';
                 
-
-html += `
-<div id="item-${item.id}" class="p-4 card rounded-2xl border border-outline-variant shadow-none hover:shadow-elevation-1 transition-all bg-surface-container group relative">
-    <div class="flex justify-between items-start">
-        <div class="pr-4">
-            <div class="font-bold text-xl text-on-surface leading-tight">${item.name}</div>
-            <div class="text-xs text-on-surface-variant mt-1">Exp: ${expDateStr}</div>
-        </div>
-        <div class="text-right">
-            <div class="inline-block bg-surface-variant/20 px-2 py-1 rounded-lg border border-outline-variant/30 mb-2">
-                <div class="font-mono font-bold text-on-surface text-sm">${item.qty} <span class="text-xs font-normal text-on-surface-variant">${item.unit}</span></div>
-            </div>
-            <div class="text-xs text-on-surface-variant font-mono mb-3">${currency}${(item.price || 0).toFixed(2)}</div>
-        </div>
-    </div>
-    <div class="flex justify-end gap-4 mt-2 pt-2 border-t border-outline-variant/20">
-        <button onclick="window.editInventoryItem('${item.id}')" class="text-xs font-bold text-primary hover:brightness-110 uppercase tracking-wider">Edit</button>
-        <button onclick="window.deleteInventoryItem('${item.id}')" class="text-xs font-bold text-error hover:brightness-110 uppercase tracking-wider">Delete</button>
-    </div>
-</div>`; 
+                html += `
+                <div id="item-${item.id}" class="p-4 card rounded-2xl border border-outline-variant shadow-none hover:shadow-elevation-1 transition-all bg-surface-container group relative">
+                    <div class="flex justify-between items-start">
+                        <div class="pr-4">
+                            <div class="font-bold text-xl text-on-surface leading-tight">${item.name}</div>
+                            <div class="text-xs text-on-surface-variant mt-1">Exp: ${expDateStr}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="inline-block bg-surface-variant/20 px-2 py-1 rounded-lg border border-outline-variant/30 mb-2">
+                                <div class="font-mono font-bold text-on-surface text-sm">${item.qty} <span class="text-xs font-normal text-on-surface-variant">${item.unit}</span></div>
+                            </div>
+                            <div class="text-xs text-on-surface-variant font-mono mb-3">${currency}${(item.price || 0).toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-4 mt-2 pt-2 border-t border-outline-variant/20">
+                        <button onclick="window.editInventoryItem('${item.id}')" class="text-xs font-bold text-primary hover:brightness-110 uppercase tracking-wider">Edit</button>
+                        <button onclick="window.deleteInventoryItem('${item.id}')" class="text-xs font-bold text-error hover:brightness-110 uppercase tracking-wider">Delete</button>
+                    </div>
+                </div>`; 
             });
             html += `</div>`;
         }
     });
     
-    if (state.inventory.length === 0) listDiv.innerHTML = `<div class="text-center py-12 opacity-50"><p>The Cupboard is Bare</p></div>`;
-    else listDiv.innerHTML = html;
+    if (state.inventory.length === 0) {
+        listDiv.innerHTML = `<div class="text-center py-12 opacity-50"><p>The Cupboard is Bare</p></div>`;
+    } else {
+        listDiv.innerHTML = html;
+    }
 }
 
 // --- BOTTLING & CELLAR MANAGEMENT ---
@@ -103,29 +114,22 @@ let currentBrewToBottleId = null;
 
 // --- TOON BOTTLING MODAL (TELEPORT FIX) ---
 window.showBottlingModal = function(brewId) {
-    console.log("Probeer modal te openen voor:", brewId);
-
     const modal = document.getElementById('bottling-modal');
     
     if (modal) {
-        // STAP 1: DE "TELEPORTATIE" (CRUCIAAL)
-        // We verplaatsen de modal naar de <body> tag.
-        // Hierdoor heeft hij geen last meer van verborgen tabbladen.
         if (modal.parentNode !== document.body) {
             document.body.appendChild(modal);
         }
 
-        // STAP 2: Zichtbaar maken
         modal.classList.remove('hidden');
-        modal.style.display = 'flex'; // Forceer flexbox
-        modal.style.zIndex = '9999';  // Bovenop alles
+        modal.style.display = 'flex';
+        modal.style.zIndex = '9999';
         
     } else {
-        alert("CRITICAL ERROR: 'bottling-modal' niet gevonden in HTML!");
+        showToast("Bottling modal not found in DOM.", "error");
         return;
     }
 
-    // STAP 3: Data laden
     try {
         currentBrewToBottleId = brewId;
         customBottles = []; 
@@ -146,14 +150,13 @@ window.showBottlingModal = function(brewId) {
             dateInput.value = `${yyyy}-${mm}-${dd}`;
         }
 
-        // Velden leegmaken voor de zekerheid
         const peakDate = document.getElementById('peakFlavorDate');
         const peakReason = document.getElementById('peakFlavorReason');
         if(peakDate) peakDate.value = "";
         if(peakReason) peakReason.value = "";
 
     } catch (error) {
-        console.error("Fout bij laden data in modal:", error);
+        window.logSystemError(error, 'inventory.js -> showBottlingModal', 'ERROR');
     }
 }
 
@@ -205,7 +208,7 @@ window.removeCustomBottleFromList = function(index) {
     renderCustomBottlesList();
 }
 
-// --- AI ANALYSE VOOR RIJPING (V3.0) ---
+// --- AI ANALYSE VOOR RIJPING (V3.1 - AUDITOR REVISION) ---
 window.analyzeAgingPotential = async function() {
     if (!currentBrewToBottleId) return;
     
@@ -220,67 +223,34 @@ window.analyzeAgingPotential = async function() {
     btn.innerHTML = '<div class="loader" style="width:14px; height:14px; border-width:2px;"></div> Analyzing...';
     btn.disabled = true;
 
-    // 1. Data Verzamelen (De Waarheid)
-    const today = new Date().toISOString().split('T')[0];
-    const created = brew.createdAt ? brew.createdAt.toDate().toISOString().split('T')[0] : 'Unknown';
-    const log = brew.logData || {};
-    
-    const context = `
-    **RECIPE NAME:** ${brew.recipeName}
-    **BREW DATE:** ${log.brewDate || created}
-    **TODAY:** ${today}
-    
-    **STATS (TARGET vs ACTUAL):**
-    - OG: Target ${log.targetOG} vs Actual ${log.actualOG || 'Unknown'}
-    - FG: Target ${log.targetFG} vs Actual ${log.actualFG || 'Unknown'}
-    - ABV: Target ${log.targetABV} vs Actual ${log.finalABV || 'Unknown'}
-    
-    **INGREDIENTS:**
-    ${brew.recipeMarkdown ? brew.recipeMarkdown.substring(0, 500) : 'See logs'}
-    `;
-
-    // 2. De Prompt
-    const prompt = `You are an expert Mead Cellarmaster. 
-    Analyze this batch data to determine the specific **Peak Flavor Date**.
-    
-    **LOGIC RULES:**
-    1. **High ABV (>14%) or Bochet:** Needs 12-24 months aging.
-    2. **Hydromel (<8%):** Peak is soon (3-6 months).
-    3. **Missed FG (Too Sweet):** If Actual FG > Target FG significantly, add +3-6 months for sugar/acid integration.
-    4. **Spices/Oak:** Needs +3 months to mellow.
-    
-    **DATA:**
-    ${context}
-    
-    **OUTPUT:** Provide a JSON object with:
-    - "date": The specific calculated date (YYYY-MM-DD).
-    - "reason": A very short (max 15 words) explanation (e.g. "High residual sugar requires 12 months to balance").
-    `;
-
-    const schema = {
-        type: "OBJECT",
-        properties: {
-            "date": { "type": "STRING" },
-            "reason": { "type": "STRING" }
-        },
-        required: ["date", "reason"]
-    };
-
     try {
-        const jsonResponse = await performApiCall(prompt, schema);
-        const result = JSON.parse(jsonResponse);
-        
-        // 3. UI Invullen
-        dateInput.value = result.date;
-        reasonInput.value = result.reason;
-        
-        // Visuele feedback
-        dateInput.classList.add('ring-2', 'ring-purple-500');
-        setTimeout(() => dateInput.classList.remove('ring-2', 'ring-purple-500'), 1000);
+        // 1. Data acquisitie & Sanitisatie
+        const abv = brew.logData?.finalABV ? sanitizeInput(brew.logData.finalABV) : 12;
+        const fg = brew.logData?.finalGravity ? sanitizeInput(brew.logData.finalGravity) : 1.000;
+        const tCellar = sanitizeInput(state.userSettings.cellarTemp || 18);
+        const bottlingDate = new Date(); // Gebruikt huidige datum als basis bij bottelen
 
+        // 2. Wetenschappelijke Berekeningen (Auditor v2.5 Aging Matrix)
+        const RS = (fg - 1.000) * 2600;
+        const fABV = 1 + ((abv - 12) * 0.15);
+        const fSG = 1 + ((RS / 100) * 0.12);
+        const fTemp = Math.pow(2.1, (15 - tCellar) / 10);
+        
+        let mBase = 180; // Basis bewaartijd in dagen
+        if (abv > 15) mBase *= 1.10; // Delle-Bonus (Roadmap 3.1)
+
+        const totalAgingDays = mBase * fABV * fSG * fTemp;
+        const peakDate = new Date(bottlingDate);
+        peakDate.setDate(peakDate.getDate() + Math.round(totalAgingDays));
+
+        // 3. UI Update
+        dateInput.value = peakDate.toISOString().split('T')[0];
+        reasonInput.value = `Matrix v2.5: fABV=${fABV.toFixed(2)}, fSG=${fSG.toFixed(2)}, fTemp=${fTemp.toFixed(2)}. Calculated aging: ${Math.round(totalAgingDays)} days.`;
+        
+        showToast("Aging potential calculated via Auditor v2.5 Matrix.", "success");
     } catch (error) {
-        console.error("Aging analysis failed:", error);
-        showToast("Analysis failed. Please fill manually.", "error");
+        window.logSystemError(error, 'inventory.js -> analyzeAgingPotential', 'ERROR');
+        showToast("Scientific analysis failed.", "error");
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -301,7 +271,6 @@ window.bottleBatch = async function(e) {
         const originalBrew = state.brews.find(b => b.id === currentBrewToBottleId);
         if (!originalBrew) throw new Error("Could not find the original recipe.");
 
-        // 1. COLLECT BOTTLES
         const bottlesData = [
             { size: 750, quantity: parseInt(document.getElementById('qty750').value) || 0, price: null },
             { size: 500, quantity: parseInt(document.getElementById('qty500').value) || 0, price: null },
@@ -312,7 +281,6 @@ window.bottleBatch = async function(e) {
 
         if (bottlesData.length === 0) throw new Error("Enter quantity for at least one bottle.");
 
-        // 2. PHYSICS & VOLUME CHECK
         let totalLitersBottled = 0;
         bottlesData.forEach(b => totalLitersBottled += (b.size * b.quantity) / 1000);
 
@@ -330,12 +298,10 @@ window.bottleBatch = async function(e) {
             }
         }
 
-        // --- 3. SMARTER STOCK CHECK ---
         const closureType = document.getElementById('closureTypeSelect').value;
         const outOfStockItems = [];
         let totalBottles = 0;
 
-        // Check Bottles Stock
         bottlesData.forEach(bottle => {
             totalBottles += bottle.quantity;
             if (bottle.price === null) { 
@@ -347,89 +313,54 @@ window.bottleBatch = async function(e) {
             }
         });
 
-        // Check Closures (New Logic)
         if (closureType === 'auto') {
             const closuresNeeded = { cork: 0, crown_cap_26: 0, crown_cap_29: 0 };
-            
-            // --- FIX: SLIMMERE DETECTIE ---
             const recipeText = (originalBrew.recipeMarkdown || "").toLowerCase();
-            
-            // Check op échte bubbel-termen, en negeer chemische stoffen
-            const isSparkling = recipeText.includes('sparkling') || 
-                                recipeText.includes('pet-nat') || 
-                                recipeText.includes('bottle carbonat') || // Specifiek 'bottle carbonation'
-                                recipeText.includes('priming sugar') ||
-                                recipeText.includes('force carbonat');
-
-            // Debug log om te checken wat hij beslist (zie je in F12 console)
-            console.log("Auto-Closure Logic | Sparkling detected?", isSparkling);
+            const isSparkling = recipeText.includes('sparkling') || recipeText.includes('pet-nat') || recipeText.includes('bottle carbonat') || recipeText.includes('priming sugar') || recipeText.includes('force carbonat');
 
             bottlesData.forEach(b => {
                 if (b.size >= 750) {
-                    // 750ml: Kurk (Stil) of 29mm Dop (Bruisend)
                     if (isSparkling) closuresNeeded.crown_cap_29 += b.quantity;
                     else closuresNeeded.cork += b.quantity;
-                } 
-                else if (b.size === 500) {
-                    // 500ml: Kurk (Stil) of 26mm Dop (Bruisend - standaard biermaat)
+                } else if (b.size === 500) {
                     if (isSparkling) closuresNeeded.crown_cap_26 += b.quantity;
                     else closuresNeeded.cork += b.quantity;
-                }
-                else {
-                    // Klein (330/250): Altijd 26mm Kroonkurk (Bierflesje)
+                } else {
                     closuresNeeded.crown_cap_26 += b.quantity;
                 }
             });
 
-            // Verify Stock
-            if (closuresNeeded.cork > (state.packagingCosts['cork']?.qty || 0)) outOfStockItems.push(`Not enough Corks (Need ${closuresNeeded.cork})`);
-            if (closuresNeeded.crown_cap_26 > (state.packagingCosts['crown_cap_26']?.qty || 0)) outOfStockItems.push(`Not enough 26mm Caps (Need ${closuresNeeded.crown_cap_26})`);
-            if (closuresNeeded.crown_cap_29 > (state.packagingCosts['crown_cap_29']?.qty || 0)) outOfStockItems.push(`Not enough 29mm Caps (Need ${closuresNeeded.crown_cap_29})`);
+            if (closuresNeeded.cork > (state.packagingCosts['cork']?.qty || 0)) outOfStockItems.push(`Not enough Corks`);
+            if (closuresNeeded.crown_cap_26 > (state.packagingCosts['crown_cap_26']?.qty || 0)) outOfStockItems.push(`Not enough 26mm Caps`);
+            if (closuresNeeded.crown_cap_29 > (state.packagingCosts['crown_cap_29']?.qty || 0)) outOfStockItems.push(`Not enough 29mm Caps`);
             
         } else {
-            // Manual selection overrides everything
             if (totalBottles > (state.packagingCosts[closureType]?.qty || 0)) outOfStockItems.push(`Not enough ${closureType}`);
         }
 
-        // Check Labels
         if (totalBottles > (state.packagingCosts['label']?.qty || 0)) outOfStockItems.push(`Not enough Labels`);
-
         if (outOfStockItems.length > 0) throw new Error(`Stock missing:\n- ${outOfStockItems.join('\n- ')}`);
 
-        // --- 4. CALCULATE COSTS ---
         const packCosts = (typeof getPackagingCosts === 'function') ? getPackagingCosts() : {};
         let totalPackagingCost = 0;
         
         bottlesData.forEach(b => {
              const bCost = b.price !== null ? b.price : (packCosts[b.size] || 0);
-             // Simpele schatting closure kosten voor totaalberekening
-             let closureCost = 0;
-             if (closureType === 'auto') {
-                 // We nemen gemiddelde kosten of specifiek als we exact weten
-                 closureCost = packCosts.cork || 0.10; 
-             } else {
-                 closureCost = packCosts[closureType] || 0;
-             }
+             let closureCost = closureType === 'auto' ? (packCosts.cork || 0.10) : (packCosts[closureType] || 0);
              totalPackagingCost += b.quantity * (bCost + closureCost + (packCosts.label || 0));
         });
         
         const finalTotalCost = (originalBrew.totalCost || 0) + totalPackagingCost;
 
-        // --- 5. SAVE ---
         if (confirm(`Total Cost (with packaging): €${finalTotalCost.toFixed(2)}. Proceed?`)) {
-            
-            // Deduct Stock
             const deduct = (id, qty) => {
                 if (state.packagingCosts[id]) state.packagingCosts[id].qty = Math.max(0, state.packagingCosts[id].qty - qty);
             };
             
             bottlesData.forEach(b => { if(b.price === null) deduct(`bottle_${b.size}`, b.quantity); });
             
-            // Deduct Closures Correctly
             if (closureType === 'auto') {
-                // Herbereken de exacte aantallen om af te boeken (kopie van logica boven)
                 const isSparkling = (originalBrew.recipeMarkdown || "").toLowerCase().includes('sparkling') || (originalBrew.recipeMarkdown || "").toLowerCase().includes('bottle carbonat');
-                
                 bottlesData.forEach(b => {
                     if (b.size >= 750) {
                         if (isSparkling) deduct('crown_cap_29', b.quantity);
@@ -446,10 +377,8 @@ window.bottleBatch = async function(e) {
             }
             deduct('label', totalBottles);
             
-            // Save updates
             await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'packaging'), state.packagingCosts);
 
-            // Create Cellar Entry
             const bottlingDate = new Date(document.getElementById('bottlingDate').value);
             const peakDate = document.getElementById('peakFlavorDate').value || null;
             const peakReason = document.getElementById('peakFlavorReason').value || '';
@@ -481,16 +410,13 @@ window.bottleBatch = async function(e) {
             hideBottlingModal();
             showToast("Batch bottled successfully!", "success");
             
-            if(typeof loadHistory === 'function') loadHistory();
-            if(typeof loadCellar === 'function') loadCellar();
             if(typeof renderBrewDay === 'function') renderBrewDay('none');
-            
             switchMainView('management');
             switchSubView('state.cellar', 'management-main-view');
         }
 
     } catch (error) {
-        console.error(error);
+        window.logSystemError(error, 'inventory.js -> bottleBatch', 'ERROR');
         showToast(error.message, "error");
     } finally {
         submitButton.disabled = false;
@@ -667,7 +593,7 @@ async function fetchProductInfo(barcode) {
             showToast("Product not found in database.", "error");
         }
    } catch (error) {
-       console.error("Barcode lookup failed:", error);
+       window.logSystemError(error, 'inventory.js -> fetchProductInfo', 'ERROR');
        showToast("Could not look up barcode info.", "error");
    } finally {
        itemNameInput.placeholder = originalPlaceholder;
@@ -678,38 +604,30 @@ async function addInventoryItem(e) {
     e.preventDefault();
     if (!state.userId) return;
     
-    const name = document.getElementById('itemName').value;
-    const qty = parseFloat(document.getElementById('itemQty').value);
-    const unit = document.getElementById('itemUnit').value;
-    const price = parseFloat(document.getElementById('itemPrice').value);
-    const category = document.getElementById('itemCategory').value;
-    const expirationDate = document.getElementById('itemExpirationDate').value || null;
-
-    if (!name || isNaN(qty) || isNaN(price)) {
-        showToast("Please fill in valid name, quantity and price.", "error");
-        return;
-    }
-
-    const itemData = { userId: state.userId, name, qty, unit, price, category, expirationDate };
-
     try {
+        const name = document.getElementById('itemName').value;
+        const qty = sanitizeInput(document.getElementById('itemQty').value);
+        const unit = document.getElementById('itemUnit').value;
+        const price = sanitizeInput(document.getElementById('itemPrice').value);
+        const category = document.getElementById('itemCategory').value;
+        const expirationDate = document.getElementById('itemExpirationDate').value || null;
+
+        if (!name || isNaN(qty) || isNaN(price)) {
+            showToast("Please fill in valid name, quantity and price.", "error");
+            return;
+        }
+
+        const itemData = { userId: state.userId, name, qty, unit, price, category, expirationDate };
         const appId = 'meandery-aa05e';
         const invCol = collection(db, 'artifacts', appId, 'users', state.userId, 'inventory');
+        
         await addDoc(invCol, itemData);
         document.getElementById('inventory-form').reset();
         showToast("Ingredient added to inventory!", "success");
     } catch (error) {
-        console.error("Error adding inventory item:", error);
+        logSystemError(error, 'inventory.js -> addInventoryItem', 'ERROR');
         showToast("Could not add ingredient.", "error");
     }
-}
-
-window.deleteInventoryItem = async function(itemId) {
-    if (!state.userId) return;
-    try {
-        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'inventory', itemId));
-        showToast("Item deleted.", "success");
-    } catch (error) { showToast("Error deleting item.", "error"); }
 }
 
 window.editInventoryItem = function(itemId) {
@@ -734,16 +652,18 @@ window.editInventoryItem = function(itemId) {
 
 window.updateInventoryItem = async function(itemId) {
     if (!state.userId) return;
-    const data = {
-        name: document.getElementById(`edit-name-${itemId}`).value,
-        qty: parseFloat(document.getElementById(`edit-qty-${itemId}`).value),
-        price: parseFloat(document.getElementById(`edit-price-${itemId}`).value)
-    };
     try {
+        const data = {
+            name: document.getElementById(`edit-name-${itemId}`).value,
+            qty: sanitizeInput(document.getElementById(`edit-qty-${itemId}`).value),
+            price: sanitizeInput(document.getElementById(`edit-price-${itemId}`).value)
+        };
         await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'inventory', itemId), data);
         showToast("Item updated!", "success");
-        // Snapshot listener update de UI automatisch
-    } catch (error) { showToast("Update failed.", "error"); }
+    } catch (error) { 
+        logSystemError(error, 'inventory.js -> updateInventoryItem', 'ERROR');
+        showToast("Update failed.", "error"); 
+    }
 }
 
 // --- INVENTORY DEDUCTION LOGIC ---
@@ -834,18 +754,23 @@ window.renderPackagingUI = function() {
 async function addPackagingStock(e) {
     e.preventDefault();
     if (!state.userId) return;
-    const itemId = document.getElementById('packaging-item-select').value;
-    const qtyAdded = parseFloat(document.getElementById('packaging-item-qty').value) || 0;
-    const priceAdded = parseFloat(document.getElementById('packaging-item-price').value) || 0;
+    try {
+        const itemId = document.getElementById('packaging-item-select').value;
+        const qtyAdded = sanitizeInput(document.getElementById('packaging-item-qty').value) || 0;
+        const priceAdded = sanitizeInput(document.getElementById('packaging-item-price').value) || 0;
 
-    if (!itemId || qtyAdded <= 0) { showToast("Invalid input.", "error"); return; }
+        if (!itemId || qtyAdded <= 0) { throw new Error("Invalid quantity."); }
 
-    const currentQty = state.packagingCosts[itemId]?.qty || 0;
-    const currentPrice = state.packagingCosts[itemId]?.price || 0;
-    state.packagingCosts[itemId] = { qty: currentQty + qtyAdded, price: currentPrice + priceAdded };
-    
-    await savePackagingCosts(); 
-    document.getElementById('packaging-add-form').reset();
+        const currentQty = state.packagingCosts[itemId]?.qty || 0;
+        const currentPrice = state.packagingCosts[itemId]?.price || 0;
+        state.packagingCosts[itemId] = { qty: currentQty + qtyAdded, price: currentPrice + priceAdded };
+        
+        await savePackagingCosts(); 
+        document.getElementById('packaging-add-form').reset();
+    } catch (error) {
+        logSystemError(error, 'inventory.js -> addPackagingStock', 'ERROR');
+        showToast(error.message, "error");
+    }
 }
 
 async function loadPackagingCosts() {
@@ -855,7 +780,10 @@ async function loadPackagingCosts() {
         state.packagingCosts = docSnap.exists() ? docSnap.data() : {};
         renderPackagingUI();
         populatePackagingDropdown();
-    } catch (error) { console.error("Error loading packaging costs:", error); }
+    } catch (error) { 
+        window.logSystemError(error, 'inventory.js -> loadPackagingCosts', 'ERROR');
+        console.error("Error loading packaging costs:", error); 
+    }
 }
 
 async function savePackagingCosts() {
@@ -864,7 +792,10 @@ async function savePackagingCosts() {
         await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'packaging'), state.packagingCosts);
         showToast('Packaging updated!', 'success');
         await loadPackagingCosts();
-    } catch (error) { console.error(error); showToast('Failed to save packaging.', 'error'); }
+    } catch (error) { 
+        logSystemError(error, 'inventory.js -> savePackagingCosts', 'ERROR');
+        showToast('Failed to save packaging.', 'error'); 
+    }
 }
 
 window.editPackagingItem = function(itemId) {
@@ -901,21 +832,28 @@ window.clearPackagingItem = function(itemId) {
     }
 }
 
-function getPackagingCosts() {
-    const costs = {};
-    PACKAGING_ITEMS.forEach(item => {
-        const d = state.packagingCosts[item.id];
-        let cpu = (d && d.qty > 0) ? d.price / d.qty : 0;
-        if (item.id === 'bottle_750') costs['750'] = cpu;
-        if (item.id === 'bottle_500') costs['500'] = cpu;
-        if (item.id === 'bottle_330') costs['330'] = cpu;
-        if (item.id === 'bottle_250') costs['250'] = cpu;
-        if (item.id === 'cork') costs['cork'] = cpu;
-        if (item.id === 'crown_cap_26') costs['crown_cap_26'] = cpu;
-        if (item.id === 'crown_cap_29') costs['crown_cap_29'] = cpu;
-        if (item.id === 'label') costs['label'] = cpu;
-    });
-    return costs;
+window.getPackagingCosts = function() {
+    try {
+        const costs = {};
+        PACKAGING_ITEMS.forEach(item => {
+            const d = state.packagingCosts[item.id];
+            // Beveiliging tegen deling door nul en NaN
+            let cpu = (d && d.qty > 0 && d.price > 0) ? (d.price / d.qty) : 0;
+            
+            if (item.id === 'bottle_750') costs['750'] = cpu;
+            if (item.id === 'bottle_500') costs['500'] = cpu;
+            if (item.id === 'bottle_330') costs['330'] = cpu;
+            if (item.id === 'bottle_250') costs['250'] = cpu;
+            if (item.id === 'cork') costs['cork'] = cpu;
+            if (item.id === 'crown_cap_26') costs['crown_cap_26'] = cpu;
+            if (item.id === 'crown_cap_29') costs['crown_cap_29'] = cpu;
+            if (item.id === 'label') costs['label'] = cpu;
+        });
+        return costs;
+    } catch (error) {
+        window.logSystemError(error, 'inventory.js -> getPackagingCosts', 'ERROR');
+        return { 750:0, 500:0, 330:0, 250:0, cork:0, crown_cap_26:0, crown_cap_29:0, label:0 };
+    }
 }
 
 // --- EQUIPMENT PROFILE MANAGEMENT ---
@@ -924,33 +862,34 @@ async function addEquipmentProfile(e) {
     e.preventDefault();
     if (!state.userId) return;
     
-    const name = document.getElementById('equipProfileName').value;
-    const type = document.getElementById('equipProfileType').value;
-    const quantity = parseInt(document.getElementById('equipProfileQuantity').value) || 1;
-    const capacityLiters = parseFloat(document.getElementById('equipCapacityLiters').value) || null;
-    const trubLossLiters = parseFloat(document.getElementById('trubLossLiters').value) || 0;
-    const boilOffRateLitersPerHour = (type === 'Kettle') ? parseFloat(document.getElementById('boilOffRateLitersPerHour').value) || 0 : 0;
-
-    if (!name) {
-        showToast("Profile Name is required.", "error");
-        return;
-    }
-
-    const profileData = { userId: state.userId, name, type, quantity, capacityLiters, trubLossLiters, boilOffRateLitersPerHour };
-
     try {
+        const name = document.getElementById('equipProfileName').value;
+        const type = document.getElementById('equipProfileType').value;
+        const quantity = parseInt(document.getElementById('equipProfileQuantity').value) || 1;
+        
+        // Herstel Comma-to-Dot: sanitizeInput toegepast op alle numerieke velden
+        const capacityLiters = sanitizeInput(document.getElementById('equipCapacityLiters').value) || null;
+        const trubLossLiters = sanitizeInput(document.getElementById('trubLossLiters').value) || 0;
+        const boilOffRateLitersPerHour = (type === 'Kettle') ? sanitizeInput(document.getElementById('boilOffRateLitersPerHour').value) || 0 : 0;
+
+        if (!name) {
+            showToast("Profile Name is required.", "error");
+            return;
+        }
+
+        const profileData = { userId: state.userId, name, type, quantity, capacityLiters, trubLossLiters, boilOffRateLitersPerHour };
         const appId = 'meandery-aa05e';
         const equipCol = collection(db, 'artifacts', appId, 'users', state.userId, 'equipmentProfiles');
+        
         await addDoc(equipCol, profileData);
         
         document.getElementById('equipment-profile-form').reset();
         document.getElementById('equipProfileQuantity').value = 1;
-        // Zorg dat de UI update (bijv. boil-off veld verbergen)
         if(window.handleEquipmentTypeChange) window.handleEquipmentTypeChange(); 
         
         showToast("Equipment profile added!", "success");
     } catch (error) {
-        console.error("Error adding equipment profile:", error);
+        window.logSystemError(error, 'inventory.js -> addEquipmentProfile', 'ERROR');
         showToast("Could not add profile.", "error");
     }
 }
@@ -966,7 +905,7 @@ function loadEquipmentProfiles() {
         renderEquipmentProfiles();
         populateEquipmentProfilesDropdown();
     }, (error) => {
-        console.error("Error loading equipment profiles: ", error);
+        window.logSystemError(error, 'inventory.js -> loadEquipmentProfiles (onSnapshot)', 'ERROR');
         const list = document.getElementById('equipment-profiles-list');
         if(list) list.innerHTML = `<p class="text-red-500">Could not load equipment profiles.</p>`;
     });
@@ -1041,23 +980,28 @@ window.editEquipmentProfile = function(profileId) {
 
 window.updateEquipmentProfile = async function(profileId, type) {
     if (!state.userId) return;
-    const updatedData = {
-        name: document.getElementById(`edit-equip-name-${profileId}`).value,
-        quantity: parseInt(document.getElementById(`edit-equip-quantity-${profileId}`).value) || 1,
-        capacityLiters: parseFloat(document.getElementById(`edit-equip-cap-${profileId}`).value) || null,
-        trubLossLiters: parseFloat(document.getElementById(`edit-equip-trub-${profileId}`).value) || 0,
-        boilOffRateLitersPerHour: (type === 'Kettle') ? parseFloat(document.getElementById(`edit-equip-boiloff-${profileId}`).value) || 0 : 0
-    };
-
-    if (!updatedData.name) { showToast("Name required.", "error"); return; }
-
     try {
+        const updatedData = {
+            name: document.getElementById(`edit-equip-name-${profileId}`).value,
+            quantity: parseInt(document.getElementById(`edit-equip-quantity-${profileId}`).value) || 1,
+            capacityLiters: sanitizeInput(document.getElementById(`edit-equip-cap-${profileId}`).value) || null,
+            trubLossLiters: sanitizeInput(document.getElementById(`edit-equip-trub-${profileId}`).value) || 0,
+            boilOffRateLitersPerHour: (type === 'Kettle') ? sanitizeInput(document.getElementById(`edit-equip-boiloff-${profileId}`).value) || 0 : 0
+        };
+
+        if (!updatedData.name) { 
+            showToast("Name required.", "error"); 
+            return; 
+        }
+
         const appId = 'meandery-aa05e';
         const itemDocRef = doc(db, 'artifacts', appId, 'users', state.userId, 'equipmentProfiles', profileId);
         await updateDoc(itemDocRef, updatedData);
         showToast("Profile updated!", "success");
-        // De onSnapshot listener regelt de refresh
-    } catch (error) { console.error(error); showToast("Update failed.", "error"); }
+    } catch (error) { 
+        window.logSystemError(error, 'inventory.js -> updateEquipmentProfile', 'ERROR');
+        showToast("Update failed.", "error"); 
+    }
 }
 
 window.deleteEquipmentProfile = async function(profileId) {
@@ -1066,7 +1010,21 @@ window.deleteEquipmentProfile = async function(profileId) {
         const appId = 'meandery-aa05e';
         await deleteDoc(doc(db, 'artifacts', appId, 'users', state.userId, 'equipmentProfiles', profileId));
         showToast("Deleted.", "success");
-    } catch (error) { console.error(error); showToast("Delete failed.", "error"); }
+    } catch (error) { 
+        window.logSystemError(error, 'inventory.js -> deleteEquipmentProfile', 'ERROR');
+        showToast("Delete failed.", "error"); 
+    }
+}
+
+window.deleteInventoryItem = async function(itemId) {
+    if (!state.userId) return;
+    try {
+        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'inventory', itemId));
+        showToast("Item deleted.", "success");
+    } catch (error) { 
+        window.logSystemError(error, 'inventory.js -> deleteInventoryItem', 'ERROR');
+        showToast("Error deleting item.", "error"); 
+    }
 }
 
 function populateEquipmentProfilesDropdown() {
@@ -1110,6 +1068,9 @@ function loadCellar() {
         if (typeof renderCellar === 'function') renderCellar();
         if (typeof updateCostAnalysis === 'function') updateCostAnalysis();
         if (typeof updateDashboardStats === 'function') updateDashboardStats();
+    }, (error) => {
+        window.logSystemError(error, 'inventory.js -> loadCellar (onSnapshot)', 'CRITICAL');
+        showToast("Failed to sync cellar database records.", "error");
     });
 }
 
@@ -1194,11 +1155,27 @@ window.renderCellar = function() {
 
 window.saveCellarTemp = async function(temp) {
     if (!state.userId) return;
-    state.userSettings.cellarTemp = temp;
-    // Sla op in Firestore (in settings doc)
-    const settingsRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
-    await updateDoc(settingsRef, { cellarTemp: temp });
-    showToast(`Cellar temperature set to ${temp}°C`, "success");
+    try {
+        // Architecturale Sanitisatie: Sla alleen gevalideerde getallen op in de Source of Truth
+        const cleanTemp = sanitizeInput(temp);
+        
+        if (isNaN(cleanTemp)) {
+            showToast("Invalid temperature value.", "error");
+            return;
+        }
+
+        state.userSettings.cellarTemp = cleanTemp;
+        
+        // Sla op in Firestore (settings/main doc)
+        const settingsRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
+        await updateDoc(settingsRef, { cellarTemp: cleanTemp });
+        
+        showToast(`Cellar temperature set to ${cleanTemp}°C`, "success");
+    } catch (error) {
+        // Verplichte Black Box Error Handling 
+        window.logSystemError(error, 'inventory.js -> saveCellarTemp', 'ERROR');
+        showToast("Failed to save cellar temperature.", "error");
+    }
 }
 
 // --- AGING MANAGER MODAL (MET HISTORIE) ---
@@ -1262,50 +1239,60 @@ window.runAgingAnalysis = async function(cellarId) {
     btn.innerHTML = 'Thinking...';
     btn.disabled = true;
 
-    const item = state.cellar.find(c => c.id === cellarId);
-    const temp = state.userSettings.cellarTemp || 18;
-    const history = document.getElementById('aging-history').value; // We lezen jouw input
-    const today = new Date().toISOString().split('T')[0];
-
-    const originalBrew = state.brews.find(b => b.id === item.brewId);
-    const recipeContext = originalBrew ? originalBrew.recipeMarkdown.substring(0, 500) : "No full recipe data.";
-
-    const prompt = `You are a Mead Cellarmaster. Recalculate the aging potential based on specific conditions.
-    
-    **BATCH DATA:**
-    - Name: ${item.recipeName}
-    - Current Date: ${today}
-    - Bottled Date: ${item.bottlingDate ? new Date(item.bottles ? item.bottlingDate.toDate() : item.bottlingDate).toLocaleDateString() : 'Unknown'}
-    
-    **CONDITIONS:**
-    1. **CURRENT TEMP:** ${temp}°C (The cellar right now).
-    2. **HISTORY / CONTEXT:** "${history}" (User provided history of storage).
-    3. **RECIPE:** ${recipeContext}
-
-    **CALCULATION RULES (ARRHENIUS):**
-    - You MUST account for the history provided. 
-    - Example: If user says "Stored at 25C for 3 months", that counts as ~6-9 months of standard aging. DEDUCT this "accelerated aging" from the remaining time needed.
-    - If current temp is high (>20°C), remaining time is shorter but risk of oxidation increases.
-
-    **OUTPUT:** JSON with:
-    - "date": (YYYY-MM-DD) The new optimal drinking date.
-    - "reason": (Max 20 words) Explain logic: e.g. "Accelerated due to 3 months at 25°C, ready sooner."
-    `;
-
-    const schema = {
-        type: "OBJECT",
-        properties: { "date": { "type": "STRING" }, "reason": { "type": "STRING" } },
-        required: ["date", "reason"]
-    };
-
     try {
+        const item = state.cellar.find(c => c.id === cellarId);
+        if (!item) throw new Error("Cellar item not found.");
+
+        const tCellar = sanitizeInput(state.userSettings.cellarTemp || 18);
+        const history = document.getElementById('aging-history').value;
+        const today = new Date();
+        const bDate = item.bottlingDate ? new Date(item.bottles ? item.bottlingDate.toDate() : item.bottlingDate) : new Date();
+
+        // 1. Matrix Herberekening (Auditor v2.5)
+        const originalBrew = state.brews.find(b => b.id === item.brewId);
+        const abv = originalBrew?.logData?.finalABV ? sanitizeInput(originalBrew.logData.finalABV) : 12;
+        const fg = originalBrew?.logData?.finalGravity ? sanitizeInput(originalBrew.logData.finalGravity) : 1.000;
+        
+        const RS = (fg - 1.000) * 2600;
+        const fABV = 1 + ((abv - 12) * 0.15);
+        const fSG = 1 + ((RS / 100) * 0.12);
+        const fTemp = Math.pow(2.1, (15 - tCellar) / 10);
+        
+        let mBase = 180;
+        if (abv > 15) mBase *= 1.10;
+
+        const totalAgingDays = mBase * fABV * fSG * fTemp;
+        const peakDate = new Date(bDate);
+        peakDate.setDate(peakDate.getDate() + Math.round(totalAgingDays));
+        const peakDateStr = peakDate.toISOString().split('T');
+
+        // 2. AI Smaakfase Interpretatie - Datum Sanitisatie Fix
+        const prompt = `Identify the exact Mead Aging Phase (Juvenile, Integration, Apex, or Senescence) based on:
+        BATCH: ${item.recipeName}
+        TODAY: ${today.toISOString().split('T')}
+        BOTTLED: ${bDate.toISOString().split('T')}
+        ESTIMATED PEAK: ${peakDateStr}
+        CONDITIONS: Temp ${tCellar}C, History: "${history}"
+        OUTPUT JSON: {"phase": "string", "reason": "max 15 words"}`;
+
+        const schema = {
+            type: "OBJECT",
+            properties: { 
+                "phase": { "type": "STRING" }, 
+                "reason": { "type": "STRING" } 
+            },
+            required: ["phase", "reason"]
+        };
+
         const jsonResponse = await performApiCall(prompt, schema);
         const result = JSON.parse(jsonResponse);
         
-        document.getElementById('edit-peak-date').value = result.date;
-        document.getElementById('edit-peak-reason').value = result.reason;
+        // 3. UI Update (Nog niet in DB tot gebruiker op Save klikt)
+        document.getElementById('edit-peak-date').value = peakDateStr;
+        document.getElementById('edit-peak-reason').value = `[${result.phase}] ${result.reason} (Matrix: ${Math.round(totalAgingDays)}d)`;
         
     } catch (error) {
+        window.logSystemError(error, 'inventory.js -> runAgingAnalysis', 'ERROR');
         showToast("Analysis failed: " + error.message, "error");
     } finally {
         btn.innerHTML = originalText;
@@ -1316,7 +1303,7 @@ window.runAgingAnalysis = async function(cellarId) {
 window.saveAgingUpdate = async function(cellarId) {
     const date = document.getElementById('edit-peak-date').value;
     const reason = document.getElementById('edit-peak-reason').value;
-    const history = document.getElementById('aging-history').value; // Opslaan!
+    const history = document.getElementById('aging-history').value;
 
     if (!date) return showToast("Pick a date first.", "error");
 
@@ -1324,133 +1311,150 @@ window.saveAgingUpdate = async function(cellarId) {
         await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar', cellarId), {
             peakFlavorDate: date,
             peakFlavorJustification: reason,
-            agingHistory: history // Nieuw veld in de database
+            agingHistory: history
         });
         
-        document.getElementById('aging-modal').remove();
+        const modal = document.getElementById('aging-modal');
+        if (modal) modal.remove();
         showToast("Aging profile updated!", "success");
-        // Herlaad de kelder om de 'Peak Date' label te updaten
-        renderCellar(); 
-    } catch (e) {
-        console.error(e);
+    } catch (error) {
+        window.logSystemError(error, 'inventory.js -> saveAgingUpdate', 'ERROR');
         showToast("Save failed.", "error");
     }
 }
 
 window.consumeBottle = async function(cellarId, size) {
     if (!state.userId) return;
-    const itemRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar', cellarId);
-    const item = state.cellar.find(c => c.id === cellarId);
-    if (!item) return;
-    
-    const updatedBottles = item.bottles.map(b => {
-        if (b.size === size && b.quantity > 0) return { ...b, quantity: b.quantity - 1 };
-        return b;
-    }).filter(b => b.quantity > 0);
-    
-    if (updatedBottles.length === 0) {
-        if(confirm("Last bottle consumed! Remove batch from cellar?")) {
-            await deleteDoc(itemRef);
+    try {
+        const itemRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar', cellarId);
+        const item = state.cellar.find(c => c.id === cellarId);
+        if (!item) return;
+        
+        const updatedBottles = item.bottles.map(b => {
+            if (b.size === size && b.quantity > 0) return { ...b, quantity: b.quantity - 1 };
+            return b;
+        }).filter(b => b.quantity > 0);
+        
+        if (updatedBottles.length === 0) {
+            if(confirm("Last bottle consumed! Remove batch from cellar?")) {
+                await deleteDoc(itemRef);
+            } else {
+                await updateDoc(itemRef, { bottles: [] });
+            }
         } else {
-            await updateDoc(itemRef, { bottles: [] }); // Houdt lege entry
+            await updateDoc(itemRef, { bottles: updatedBottles });
         }
-    } else {
-        await updateDoc(itemRef, { bottles: updatedBottles });
+        showToast("Cheers! 🥂", "success");
+    } catch (error) {
+        window.logSystemError(error, 'inventory.js -> consumeBottle', 'ERROR');
+        showToast("Error updating bottle count.", "error");
     }
-    showToast("Cheers! 🥂", "success");
 }
 
 window.deleteCellarItem = async function(id, name) {
-    if(confirm(`Delete ${name} from cellar?`)) {
-        await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar', id));
+    if (!state.userId) return;
+    try {
+        if(confirm(`Delete ${name} from cellar?`)) {
+            await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar', id));
+            showToast("Item removed from cellar.", "success");
+        }
+    } catch (error) {
+        window.logSystemError(error, 'inventory.js -> deleteCellarItem', 'ERROR');
+        showToast("Delete failed.", "error");
     }
 }
 
 // --- FINANCIALS & STATS ---
 
 window.updateCostAnalysis = function() {
-    const currency = state.userSettings.currencySymbol || '€';
-    
-    // 1. Bereken Totalen (Ongewijzigd)
-    let invValue = state.inventory.reduce((sum, item) => sum + (item.price || 0), 0);
-    let activeValue = state.brews.filter(b => !b.isBottled).reduce((sum, b) => sum + (b.totalCost || 0), 0);
-    let cellarValue = state.cellar.reduce((sum, c) => sum + (c.totalBatchCost || 0), 0);
-    
-    // Update Tekst Elementen
-    const elInv = document.getElementById('total-inventory-value');
-    const elActive = document.getElementById('total-active-value');
-    const elCellar = document.getElementById('total-cellar-value');
-    const elGrand = document.getElementById('grand-total-value');
-    
-    if(elInv) elInv.textContent = `${currency}${invValue.toFixed(2)}`;
-    if(elActive) elActive.textContent = `${currency}${activeValue.toFixed(2)}`;
-    if(elCellar) elCellar.textContent = `${currency}${cellarValue.toFixed(2)}`;
-    if(elGrand) elGrand.textContent = `${currency}${(invValue + activeValue + cellarValue).toFixed(2)}`;
-    
-    // 2. Update de Grafiek met MD3 THEMA KLEUREN
-    const ctx = document.getElementById('cost-chart');
-    if (ctx && window.Chart) {
+    try {
+        const currency = state.userSettings.currencySymbol || '€';
         
-        const spendByCategory = state.inventory.reduce((acc, item) => {
-            const cat = item.category || 'Other';
-            acc[cat] = (acc[cat] || 0) + (item.price || 0);
-            return acc;
-        }, {});
-
-        // We mappen categorieën aan jouw CSS Variabelen voor consistentie
-        // Helper: rgb(${window.getThemeColor('--md-sys-color-primary')})
-        const cPrimary = `rgb(${window.getThemeColor('--md-sys-color-primary')})`;
-        const cSecondary = `rgb(${window.getThemeColor('--md-sys-color-secondary')})`;
-        const cTertiary = `rgb(${window.getThemeColor('--md-sys-color-tertiary')})`;
-        const cError = `rgb(${window.getThemeColor('--md-sys-color-error')})`;
-        const cSurfaceVar = `rgb(${window.getThemeColor('--md-sys-color-surface-variant')})`;
-
-        const categoryColors = {
-            'Honey': cPrimary,           // Honey -> Primary (Amber)
-            'Yeast': cTertiary,          // Yeast -> Tertiary (Slate)
-            'Nutrient': cSecondary,      // Nutrient -> Secondary (Green)
-            'Malt Extract': '#7c2d12',   // Custom Brown (blijft mooi)
-            'Fruit': cError,             // Fruit -> Error (Red-ish)
-            'Spice': '#ea580c',          
-            'Adjunct': cSurfaceVar,
-            'Chemical': '#2563eb',
-            'Water': '#0891b2',
-            'Other': cSurfaceVar
-        };
-
-        const labels = Object.keys(spendByCategory);
-        const data = Object.values(spendByCategory);
-        const backgroundColors = labels.map(cat => categoryColors[cat] || cSurfaceVar);
-
-        if (window.costChart) window.costChart.destroy();
+        // 1. Bereken Totalen met Sanitisatie
+        let invValue = state.inventory.reduce((sum, item) => sum + (sanitizeInput(item.price) || 0), 0);
+        let activeValue = state.brews.filter(b => !b.isBottled).reduce((sum, b) => sum + (sanitizeInput(b.totalCost) || 0), 0);
+        let cellarValue = state.cellar.reduce((sum, c) => sum + (sanitizeInput(c.totalBatchCost) || 0), 0);
         
-        window.costChart = new Chart(ctx.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{ 
-                    data: data, 
-                    backgroundColor: backgroundColors,
-                    borderColor: `rgb(${window.getThemeColor('--md-sys-color-surface')})`, // Rand matcht achtergrond
-                    borderWidth: 2
-                }]
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            usePointStyle: true,
-                            padding: 20,
-                            color: `rgb(${window.getThemeColor('--md-sys-color-on-surface')})`,
-                            font: { family: "'Barlow Semi Condensed', sans-serif" }
+        // Update Tekst Elementen
+        const elInv = document.getElementById('total-inventory-value');
+        const elActive = document.getElementById('total-active-value');
+        const elCellar = document.getElementById('total-cellar-value');
+        const elGrand = document.getElementById('grand-total-value');
+        
+        const grandTotal = invValue + activeValue + cellarValue;
+
+        if(elInv) elInv.textContent = `${currency}${invValue.toFixed(2)}`;
+        if(elActive) elActive.textContent = `${currency}${activeValue.toFixed(2)}`;
+        if(elCellar) elCellar.textContent = `${currency}${cellarValue.toFixed(2)}`;
+        if(elGrand) elGrand.textContent = `${currency}${grandTotal.toFixed(2)}`;
+        
+        // 2. Update de Grafiek met MD3 THEMA KLEUREN
+        const ctx = document.getElementById('cost-chart');
+        if (ctx && window.Chart) {
+            
+            const spendByCategory = state.inventory.reduce((acc, item) => {
+                const cat = item.category || 'Other';
+                const price = sanitizeInput(item.price) || 0;
+                acc[cat] = (acc[cat] || 0) + price;
+                return acc;
+            }, {});
+
+            const cPrimary = `rgb(${window.getThemeColor('--md-sys-color-primary')})`;
+            const cSecondary = `rgb(${window.getThemeColor('--md-sys-color-secondary')})`;
+            const cTertiary = `rgb(${window.getThemeColor('--md-sys-color-tertiary')})`;
+            const cError = `rgb(${window.getThemeColor('--md-sys-color-error')})`;
+            const cSurfaceVar = `rgb(${window.getThemeColor('--md-sys-color-surface-variant')})`;
+
+            const categoryColors = {
+                'Honey': cPrimary,
+                'Yeast': cTertiary,
+                'Nutrient': cSecondary,
+                'Malt Extract': '#7c2d12',
+                'Fruit': cError,
+                'Spice': '#ea580c',          
+                'Adjunct': cSurfaceVar,
+                'Chemical': '#2563eb',
+                'Water': '#0891b2',
+                'Other': cSurfaceVar
+            };
+
+            const labels = Object.keys(spendByCategory);
+            const data = Object.values(spendByCategory);
+            const backgroundColors = labels.map(cat => categoryColors[cat] || cSurfaceVar);
+
+            if (window.costChart) window.costChart.destroy();
+            
+            window.costChart = new Chart(ctx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{ 
+                        data: data, 
+                        backgroundColor: backgroundColors,
+                        borderColor: `rgb(${window.getThemeColor('--md-sys-color-surface')})`,
+                        borderWidth: 2
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                color: `rgb(${window.getThemeColor('--md-sys-color-on-surface')})`,
+                                font: { family: "'Barlow Semi Condensed', sans-serif" }
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
+    } catch (error) {
+        window.logSystemError(error, 'Cost Calculation', 'ERROR');
+        window.showToast("Failed to update cost analysis.", "error");
     }
 }
 

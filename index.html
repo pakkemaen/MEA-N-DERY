@@ -779,23 +779,42 @@
             </div>
 
             <div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow">
-                <div class="flex items-center gap-3 mb-4">
-                    <span class="w-10 h-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold">BRIX</span>
-                    <h3 class="text-lg font-bold text-on-surface m-0">Refractometer</h3>
-                </div>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Original Brix</label>
-                        <input type="number" id="refract_ob" placeholder="22" step="0.1">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Current Brix</label>
-                        <input type="number" id="refract_cb" placeholder="9" step="0.1">
-                    </div>
-                    <button id="calcRefractBtn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-full hover:brightness-110 transition-all">Calculate Gravity</button>
-                    <div id="refractResult" class="hidden mt-2 p-3 bg-purple-50 rounded-xl text-center text-purple-700 font-medium"></div>
-                </div>
-            </div>
+    <div class="flex items-center gap-3 mb-4">
+        <span class="w-10 h-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold">BRIX</span>
+        <h3 class="text-lg font-bold text-on-surface m-0">Refractometer</h3>
+    </div>
+    <div class="space-y-4">
+        <div>
+            <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Original Brix</label>
+            <input type="number" id="refract_ob" placeholder="22" step="0.1">
+        </div>
+        <div>
+            <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Current Brix</label>
+            <input type="number" id="refract_cb" placeholder="9" step="0.1">
+        </div>
+        <div>
+            <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Wort Correction (WCF)</label>
+            <input type="number" id="refract_wcf" placeholder="1.04" step="0.01" value="1.04">
+        </div>
+        <button id="calcRefractBtn" onclick="window.calculateRefractometerCorrection()" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-full hover:brightness-110 transition-all">Calculate Gravity</button>
+        <div id="refractResult" class="hidden mt-2 p-3 bg-purple-50 rounded-xl text-center text-purple-700 font-medium border border-purple-100"></div>
+    </div>
+</div>
+
+<div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow">
+    <div class="flex items-center gap-3 mb-4">
+        <span class="w-10 h-10 rounded-full bg-app-primary-container text-app-brand flex items-center justify-center font-bold">BX</span>
+        <h3 class="text-lg font-bold text-on-surface m-0">Target Apparent Brix</h3>
+    </div>
+    <div class="space-y-4">
+        <div class="grid grid-cols-1 gap-2">
+            <input type="number" id="target_brix_og" placeholder="OG (1.xxx)" step="0.001" class="text-xs p-2 rounded-xl border border-outline-variant">
+            <input type="number" id="target_brix_sg" placeholder="Target SG (1.xxx)" step="0.001" class="text-xs p-2 rounded-xl border border-outline-variant">
+        </div>
+        <button onclick="window.calculateTargetApparentBrix()" class="w-full bg-app-brand text-on-primary font-bold py-3 rounded-full text-xs uppercase tracking-widest hover:brightness-110">Calculate Stop Point</button>
+        <div id="targetBrixResult" class="hidden mt-2 animate-fade-in"></div>
+    </div>
+</div>
 
             <div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow md:col-span-2 xl:col-span-3">
                 <div class="flex items-center gap-3 mb-4">
@@ -825,20 +844,86 @@
             </div>
             
             <div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow">
-                 <h3 class="text-lg font-bold text-on-surface mb-4">Blend / Fortify</h3>
-                 <div class="space-y-3">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="number" id="vol1" placeholder="Base L">
-                        <input type="number" id="abv1" placeholder="Base %">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="number" id="vol2" placeholder="Add L">
-                        <input type="number" id="abv2" placeholder="Add %">
-                    </div>
-                    <button id="calcBlendBtn" class="w-full bg-primary text-on-primary font-bold py-2 px-4 rounded-full mt-2">Calculate New ABV</button>
-                    <div id="blendResult" class="text-center font-bold text-sm text-primary mt-2 h-8 flex items-center justify-center"></div>
-                 </div>
-             </div>
+    <div class="flex items-center gap-3 mb-4">
+        <span class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">MIX</span>
+        <h3 class="text-lg font-bold text-on-surface m-0">Ternary Blending</h3>
+    </div>
+    <div class="space-y-4">
+        <div class="p-3 bg-surface-variant/10 rounded-2xl space-y-2 border border-outline-variant/20">
+            <p class="text-[10px] font-bold uppercase opacity-60 tracking-wider">Liquid A (Base)</p>
+            <div class="grid grid-cols-2 gap-2">
+                <input type="number" id="vol1" placeholder="Vol (L)" class="text-xs">
+                <input type="number" id="abv1" placeholder="ABV %" class="text-xs">
+                <input type="number" id="sg1" placeholder="SG (1.xxx)" step="0.001" class="text-xs">
+                <input type="number" id="ph1" placeholder="pH" step="0.01" class="text-xs">
+            </div>
+        </div>
+        <div class="p-3 bg-surface-variant/10 rounded-2xl space-y-2 border border-outline-variant/20">
+            <p class="text-[10px] font-bold uppercase opacity-60 tracking-wider">Liquid B (Additive)</p>
+            <div class="grid grid-cols-2 gap-2">
+                <input type="number" id="vol2" placeholder="Vol (L)" class="text-xs">
+                <input type="number" id="abv2" placeholder="ABV %" class="text-xs">
+                <input type="number" id="sg2" placeholder="SG (1.xxx)" step="0.001" class="text-xs">
+                <input type="number" id="ph2" placeholder="pH" step="0.01" class="text-xs">
+            </div>
+        </div>
+        <button id="calcBlendBtn" onclick="window.calculateBlend()" class="w-full bg-primary text-on-primary font-bold py-3 px-4 rounded-full shadow-sm hover:brightness-110 transition-all text-xs uppercase tracking-widest">
+            Calculate Full Blend Profile
+        </button>
+        <div id="blendResult" class="hidden mt-2 p-4 bg-primary-container/20 rounded-2xl border border-primary/20 animate-fade-in">
+            </div>
+    </div>
+</div>
+
+<div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow">
+    <div class="flex items-center gap-3 mb-4">
+        <span class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">CO2</span>
+        <h3 class="text-lg font-bold text-on-surface m-0">Priming Sugar</h3>
+    </div>
+    <div class="space-y-4">
+        <div class="grid grid-cols-1 gap-2">
+            <input type="number" id="carbVol" placeholder="Target CO2 Volumes" step="0.1" class="text-xs p-2 rounded-xl border border-outline-variant">
+            <input type="number" id="carbTemp" placeholder="Max Temp (°C)" class="text-xs p-2 rounded-xl border border-outline-variant">
+            <input type="number" id="carbBatchSize" placeholder="Batch Size (L)" class="text-xs p-2 rounded-xl border border-outline-variant">
+        </div>
+        <button onclick="window.calculatePrimingSugar()" class="w-full bg-primary text-on-primary font-bold py-3 rounded-full text-xs uppercase tracking-widest hover:brightness-110">Calculate Sugar</button>
+        <div id="sugarResult" class="hidden mt-2 p-3 bg-primary-container/20 rounded-2xl text-center font-mono font-bold text-sm"></div>
+    </div>
+</div>
+
+<div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow">
+    <div class="flex items-center gap-3 mb-4">
+        <span class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs">pH+</span>
+        <h3 class="text-lg font-bold text-on-surface m-0">Buffer / TA Adjust</h3>
+    </div>
+    <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-2">
+            <input type="number" id="buffer_vol" placeholder="Vol (L)" class="text-xs p-2 rounded-xl border border-outline-variant">
+            <input type="number" id="buffer_ta_current" placeholder="Cur. TA (g/L)" class="text-xs p-2 rounded-xl border border-outline-variant">
+            <input type="number" id="buffer_ta_target" placeholder="Tar. TA (g/L)" class="text-xs p-2 rounded-xl border border-outline-variant">
+            <input type="number" id="buffer_ph_current" placeholder="Cur. pH" class="text-xs p-2 rounded-xl border border-outline-variant">
+        </div>
+        <button onclick="window.calculateBuffer()" class="w-full bg-secondary text-on-secondary font-bold py-3 rounded-full text-xs uppercase tracking-widest hover:brightness-110">Calculate Buffer</button>
+        <div id="bufferResult" class="hidden mt-2 p-3 bg-secondary-container/20 rounded-2xl text-xs space-y-1"></div>
+    </div>
+</div>
+
+<div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow">
+    <div class="flex items-center gap-3 mb-4">
+        <span class="w-10 h-10 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center font-bold text-xs">SAFE</span>
+        <h3 class="text-lg font-bold text-on-surface m-0">Stabilization</h3>
+    </div>
+    <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-2">
+            <input type="number" id="stab_vol" placeholder="Vol (L)" class="text-xs p-2 rounded-xl border border-outline-variant">
+            <input type="number" id="stab_abv" placeholder="ABV %" class="text-xs p-2 rounded-xl border border-outline-variant">
+            <input type="number" id="stab_fg" placeholder="FG (1.xxx)" step="0.001" class="text-xs p-2 rounded-xl border border-outline-variant">
+            <input type="number" id="stab_ph" placeholder="pH" step="0.01" class="text-xs p-2 rounded-xl border border-outline-variant">
+        </div>
+        <button onclick="window.calculateStabilization()" class="w-full bg-tertiary text-on-tertiary font-bold py-3 rounded-full text-xs uppercase tracking-widest hover:brightness-110">Check Delle/Sorbate</button>
+        <div id="stabilizationResult" class="hidden mt-2 p-3 bg-tertiary-container/20 rounded-2xl text-xs space-y-1"></div>
+    </div>
+</div>
              
              <div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow">
                 <h3 class="text-lg font-bold text-on-surface mb-4">Backsweetening</h3>
@@ -1385,7 +1470,14 @@
                     <div class="bg-white dark:bg-gray-900 rounded-[2rem] overflow-hidden h-[600px] flex flex-col relative">
                         <div id="social-image-container" class="w-full aspect-square bg-gray-100 flex items-center justify-center relative">
                             <span class="text-gray-400 text-xs">Image Preview</span>
-                            <button id="generate-social-image-btn" class="hidden absolute bottom-4 right-4 bg-white/90 text-black text-xs font-bold py-2 px-3 rounded-full shadow-lg">✨ AI Generate</button>
+                            <div id="social-action-wrapper" class="hidden absolute bottom-4 right-4 flex items-center gap-2">
+    <div id="social-credit-badge" class="bg-tertiary-container text-on-tertiary-container text-[10px] font-bold py-1 px-3 rounded-full shadow-elevation-1 border border-outline-variant/30 flex items-center gap-1 min-h-[32px]">
+        🪙 <span id="social-credit-count">--</span>
+    </div>
+    <button id="generate-social-image-btn" class="bg-primary text-on-primary text-xs font-bold py-2 px-4 rounded-full shadow-elevation-1 hover:shadow-elevation-2 active:scale-95 transition-all min-h-[44px] flex items-center gap-2" onclick="window.generateSocialImage()">
+        ✨ Generate Art
+    </button>
+</div>
                         </div>
                         <div class="p-4 flex-grow overflow-y-auto">
                             <div id="social-content-container" class="text-sm leading-relaxed text-gray-800 dark:text-gray-200"></div>

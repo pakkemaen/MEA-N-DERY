@@ -6,7 +6,7 @@
 // 1. IMPORTS - Gecentraliseerd via firebase-init.js
 import { 
     db, auth, collection, addDoc, updateDoc, doc, deleteDoc, 
-    getDoc, setDoc, query, onSnapshot, serverTimestamp, arrayUnion 
+    getDoc, setDoc, query, onSnapshot, serverTimestamp 
 } from './firebase-init.js';
 
 import { state, tempState } from './state.js';
@@ -1105,7 +1105,7 @@ window.startActualBrewDay = async function(brewId) {
 };
 
 // --- RENDER: Brew Day 1 (Dashboard / Detail Split) ---
-window.renderBrewDay = function(forceId = null) {
+window.renderBrewDay = async function(forceId = null) {
     const brewDayContent = document.getElementById('brew-day-content');
     if (!brewDayContent) return;
 
@@ -1118,7 +1118,30 @@ window.renderBrewDay = function(forceId = null) {
 
     if (activeId && activeId !== 'none') {
         const brew = state.brews.find(b => b.id === activeId);
-        if (!brew) { tempState.activeBrewId = null; return window.renderBrewDay(); }
+        
+        // --- CRISIS MANAGEMENT & RECURSIELUS FIX (v2.6) ---
+        if (!brew) { 
+            console.warn("Active batch missing from local cache. Sanitizing Source of Truth to prevent infinite loops.");
+            tempState.activeBrewId = null; 
+            
+            if (state.userSettings) {
+                state.userSettings.currentBrewDay = { brewId: null };
+                
+                try {
+                    if (typeof window.saveUserSettings === 'function') {
+                        await window.saveUserSettings();
+                    } else {
+                        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main'), {
+                            currentBrewDay: { brewId: null }
+                        });
+                    }
+                } catch (error) {
+                    window.logSystemError(error, 'brewing.js -> renderBrewDay (Sanitize Fallback)', 'ERROR');
+                }
+            }
+            // Herstart de renderer met een schone lei zonder argumenten
+            return window.renderBrewDay(null); 
+        }
 
         tempState.activeBrewId = activeId;
         if(state.userSettings) { 

@@ -894,6 +894,8 @@ window.applyWaterTweak = applyWaterTweak;
 window.handleDescriptionInput = handleDescriptionInput;
 window.handleStyleChange = handleStyleChange;
 window.handleEquipmentTypeChange = handleEquipmentTypeChange;
+window.loadHistory = loadHistory;
+
 window.regenerateFlavorProfile = async function() {
     // Retry knop wrapper
     if (currentRecipeMarkdown && typeof renderRecipeOutput === 'function') {

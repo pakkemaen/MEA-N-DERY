@@ -30,7 +30,8 @@ import {
     limit,
     Timestamp,
     arrayUnion,
-    serverTimestamp
+    serverTimestamp,
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { 
@@ -55,8 +56,6 @@ const googleProvider = new GoogleAuthProvider();
 // import { enableIndexedDbPersistence } from ... (kan later toegevoegd worden)
 
 // 4. Exports
-// We exporteren hier ALLE Firebase functionaliteit die de app nodig heeft.
-// Andere modules hoeven hierdoor nooit rechtstreeks van de CDN te importeren.
 export { 
     // Instanties
     app, 
@@ -86,6 +85,7 @@ export {
     Timestamp,
     arrayUnion,
     serverTimestamp,
+    onSnapshot,
 
     // Storage Functies
     ref, 

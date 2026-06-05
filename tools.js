@@ -796,7 +796,10 @@ window.fetchAvailableModels = async function() {
     const imageSelect = document.getElementById('imageModelInput');
     const btn = document.getElementById('fetchModelsBtn');
 
-    if (!apiKey) { showToast("Vul eerst je Google API Key in.", "error"); return; }
+    if (!apiKey) { 
+        showToast("Vul eerst je Google API Key in.", "error"); 
+        return; 
+    }
 
     const originalBtnText = btn.innerText;
     btn.innerText = "Scanning...";
@@ -804,7 +807,12 @@ window.fetchAvailableModels = async function() {
 
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-        if (!response.ok) throw new Error("API Error");
+        
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            const serverMessage = errData.error?.message || `Status: ${response.status}`;
+            throw new Error(`Google API geweigerd (${serverMessage})`);
+        }
         
         const data = await response.json();
         
@@ -815,18 +823,14 @@ window.fetchAvailableModels = async function() {
         );
 
         // --- 1.5 FORCEER THINKING MODEL (Handmatige injectie) ---
-        // Dit ontbrak in je bestand:
         const thinkingModelId = "models/gemini-2.0-flash-thinking-exp-01-21"; 
         
-        // Check of hij er al tussen staat, zo niet: voeg toe
         if (!textModels.some(m => m.name === thinkingModelId)) {
             textModels.push({ name: thinkingModelId });
         }
-        // Voeg ook de generieke pointer toe (veiliger voor toekomst)
         if (!textModels.some(m => m.name === "models/gemini-2.0-flash-thinking-exp")) {
             textModels.push({ name: "models/gemini-2.0-flash-thinking-exp" });
         }
-        // -------------------------------------------------------
 
         textModels.sort((a, b) => b.name.localeCompare(a.name));
 
@@ -882,13 +886,13 @@ window.fetchAvailableModels = async function() {
         showToast(`Scan compleet! Models updated.`, "success");
 
     } catch (error) {
-        console.error(error);
+        window.logSystemError(error, 'Tools: Model Scan', 'ERROR');
         showToast("Scan mislukt. " + error.message, "error");
     } finally {
         btn.innerText = originalBtnText;
         btn.disabled = false;
     }
-}
+};
 
 // --- DEEL 6: LABELS, SOCIAL & DATA MANAGEMENT ---
 // --- SOCIAL MEDIA ---

@@ -1123,9 +1123,9 @@ window.renderBrewDay = async function(forceId = null) {
         
         // --- CRISIS MANAGEMENT & RECURSIELUS FIX (v2.6 Data Guard) ---
         if (!brew) { 
-            // Blokkeer destructieve sanitisatie als de lokale cache nog leeg is (wacht op eerste onSnapshot sync)
-            if (state.brews.length === 0) {
-                console.log("Local history cache is uninitialized. Postponing purge execution until snapshot synchronization stabilizes.");
+            // Blokkeer destructieve sanitisatie zolang de onSnapshot datastroom nog niet minimaal één keer succesvol is verwerkt
+            if (!tempState.historyLoaded) {
+                console.log("Local history cache snapshot sync is in progress. Postponing query validation.");
                 brewDayContent.innerHTML = getLoaderHtml("Syncing Fermentation Chamber...");
                 return;
             }
@@ -2023,6 +2023,9 @@ async function loadHistory() {
             return b;
         });
 
+        // Markeer de initialisatie/synchronisatie-status als voltooid binnen de Single Source of Truth
+        tempState.historyLoaded = true;
+
         // Sorteer: Nieuwste bovenaan
         state.brews.sort((a, b) => {
             const dateA = a.createdAt ? a.createdAt.toDate() : new Date(0);
@@ -2037,6 +2040,19 @@ async function loadHistory() {
         if(window.updateDashboardStats) window.updateDashboardStats();
         if(typeof updateCostAnalysis === 'function') updateCostAnalysis(); // Oude functionaliteit
         if(typeof renderActiveBrewTimeline === 'function') renderActiveBrewTimeline(); // Oude functionaliteit
+
+        // Automatische UI-wedergeboorte trigger bij koude start/refresh
+        const activeId = tempState.activeBrewId || state.userSettings?.currentBrewDay?.brewId;
+        if (activeId && activeId !== 'none') {
+            const brewCheck = state.brews.find(b => b.id === activeId);
+            if (brewCheck) {
+                if (brewCheck.primaryComplete) {
+                    if (typeof window.renderBrewDay2 === 'function') window.renderBrewDay2();
+                } else {
+                    if (typeof window.renderBrewDay === 'function') window.renderBrewDay(activeId);
+                }
+            }
+        }
     });
 }
 

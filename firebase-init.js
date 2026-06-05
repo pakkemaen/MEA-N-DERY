@@ -32,7 +32,8 @@ import {
     arrayUnion,
     serverTimestamp,
     onSnapshot,
-    writeBatch
+    writeBatch,
+    getCountFromServer
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { 
@@ -89,6 +90,7 @@ export {
     serverTimestamp,
     onSnapshot,
     writeBatch,
+    getCountFromServer,
 
     // Storage Functies
     ref, 

@@ -1121,8 +1121,15 @@ window.renderBrewDay = async function(forceId = null) {
     if (activeId && activeId !== 'none') {
         const brew = state.brews.find(b => b.id === activeId);
         
-        // --- CRISIS MANAGEMENT & RECURSIELUS FIX (v2.6) ---
+        // --- CRISIS MANAGEMENT & RECURSIELUS FIX (v2.6 Data Guard) ---
         if (!brew) { 
+            // Blokkeer destructieve sanitisatie als de lokale cache nog leeg is (wacht op eerste onSnapshot sync)
+            if (state.brews.length === 0) {
+                console.log("Local history cache is uninitialized. Postponing purge execution until snapshot synchronization stabilizes.");
+                brewDayContent.innerHTML = getLoaderHtml("Syncing Fermentation Chamber...");
+                return;
+            }
+
             console.warn("Active batch missing from local cache. Sanitizing Source of Truth to prevent infinite loops.");
             tempState.activeBrewId = null; 
             
@@ -1161,7 +1168,7 @@ window.renderBrewDay = async function(forceId = null) {
 
         const stepsHtml = primarySteps.map((step, index) => {
             const checklist = brew.checklist || {};
-            const stepData = checklist[`step-${index}`];
+            const stepData = checklist["step-" + index];
             const isCompleted = stepData === true || (stepData && stepData.completed);
             const savedAmount = (stepData && stepData.actualAmount) ? stepData.actualAmount : '';
             const amountMatch = (step.title + " " + step.description).match(/(\d+[.,]?\d*)\s*(kg|g|l|ml|oz|lbs)/i);
@@ -1170,8 +1177,8 @@ window.renderBrewDay = async function(forceId = null) {
             if (amountMatch && !isCompleted) {
                 inputHtml = `<div class="mt-2 flex items-center bg-app-primary rounded border border-app-brand/20 w-32">
                     <span class="px-2 text-[9px] font-bold text-app-secondary uppercase border-r border-app-brand/10">Act</span>
-                    <input type="number" id="step-input-${index}" class="w-full bg-transparent border-none p-1 text-center font-bold text-sm" placeholder="${amountMatch[1]}" value="${amountMatch[1]}">
-                    <span class="pr-2 text-xs font-bold text-app-brand">${amountMatch[2]}</span>
+                    <input type="number" id="step-input-${index}" class="w-full bg-transparent border-none p-1 text-center font-bold text-sm" placeholder="${amountMatch.at(1)}" value="${amountMatch.at(1)}">
+                    <span class="pr-2 text-xs font-bold text-app-brand">${amountMatch.at(2)}</span>
                 </div>`;
             } else if (isCompleted && savedAmount) {
                  inputHtml = `<div class="mt-2 inline-flex items-center gap-2 px-2 py-1 rounded bg-green-500/10 border border-green-500/20"><span class="text-[9px] font-bold text-green-700 uppercase">Recorded:</span><span class="font-mono font-bold text-green-800 text-xs">${savedAmount}</span></div>`;

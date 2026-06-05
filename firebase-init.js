@@ -32,8 +32,7 @@ import {
     arrayUnion,
     serverTimestamp,
     onSnapshot,
-    writeBatch,
-    uploadString
+    writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { 
@@ -41,7 +40,8 @@ import {
     ref, 
     uploadBytes, 
     getDownloadURL,
-    deleteObject
+    deleteObject,
+    uploadString
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 // 2. Import Config (Zorg dat secrets.js bestaat en firebaseConfig exporteert!)
@@ -89,11 +89,11 @@ export {
     serverTimestamp,
     onSnapshot,
     writeBatch,
-    uploadString,
 
     // Storage Functies
     ref, 
     uploadBytes, 
     getDownloadURL,
-    deleteObject
+    deleteObject,
+    uploadString
 };

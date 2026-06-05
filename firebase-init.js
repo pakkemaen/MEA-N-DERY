@@ -33,6 +33,7 @@ import {
     serverTimestamp,
     onSnapshot,
     writeBatch
+    uploadString
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { 
@@ -88,6 +89,7 @@ export {
     serverTimestamp,
     onSnapshot,
     writeBatch,
+    uploadString,
 
     // Storage Functies
     ref, 

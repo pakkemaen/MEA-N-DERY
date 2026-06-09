@@ -1897,35 +1897,53 @@ async function findCommercialWaterMatch() {
 window.exportSystemLogs = async function() {
     if (!state.userId) return;
     
-    showToast("Fetching logs...", "info");
+    showToast("Fetching system logs...", "info");
     
     try {
         const logsRef = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'systemLogs');
-        const q = query(logsRef, orderBy("timestamp", "desc"), limit(100)); // Laatste 100 fouten
+        const q = query(logsRef, orderBy("timestamp", "desc"), limit(100));
         const snapshot = await getDocs(q);
         
         const logs = snapshot.docs.map(doc => doc.data());
         
         if (logs.length === 0) {
-            showToast("No errors found! Great job.", "success");
+            showToast("No error logs found within server registry.", "info");
             return;
         }
 
-        // Download als JSON
-        const blob = new Blob([JSON.stringify(logs, null, 2)], {type: 'application/json'});
+        // 1. Genereer en activeer bestand-download trigger
+        const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
         const a = document.createElement('a'); 
         a.href = URL.createObjectURL(blob); 
-        // CORRECTIE: Datum-extrapolatie herleid via de chat-veilige .at(0) methode na de split-operatie
+        
+        // Anti-Parsing Bug: split resultaat extraheren via de veilige .at(0) methodiek
         const dateStamp = new Date().toISOString().split('T').at(0);
         a.download = `debug_logs_${dateStamp}.json`;
         a.click();
         
-        showToast("Logs downloaded.", "success");
-    } catch (e) {
-        console.error(e);
-        showToast("Failed to fetch logs.", "error");
+        // 2. Directe UI Counter-Badge Reset (Material Design 3)
+        const badge = document.getElementById('log-count-badge');
+        if (badge) {
+            badge.innerText = '0';
+            badge.classList.add('hidden');
+        }
+
+        // 3. Atomaire server-schoonmaak via Firestore writeBatch pipeline
+        const batch = writeBatch(db);
+        snapshot.docs.forEach(docSnap => {
+            batch.delete(docSnap.ref);
+        });
+        await batch.commit();
+        
+        // 4. Internationale Notificatie
+        showToast("System logs successfully exported and purged.", "success");
+
+    } catch (error) {
+        // Gecentraliseerde Foutafhandeling met gedefinieerde procescontext
+        window.logSystemError(error, 'System Logs Export and Purge Cycle', 'ERROR');
+        showToast("System logs transmission or database purge routine aborted.", "error");
     }
-}
+};
 
 // --- LOG COUNTER (BADGE) ---
 window.updateLogCount = async function() {

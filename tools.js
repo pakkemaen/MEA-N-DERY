@@ -108,6 +108,34 @@ async function saveUserSettings() {
     }
 }
 
+// --- API KEY EYE-TOGGLE INFRASTRUCTUUR (v2.6) ---
+window.toggleApiKeyVisibility = function() {
+    try {
+        const keyInput = document.getElementById('apiKeyInput');
+        const toggleBtn = document.getElementById('apiKeyToggleBtn');
+        
+        if (!keyInput) return;
+        
+        if (keyInput.type === 'password') {
+            keyInput.type = 'text';
+            if (toggleBtn) {
+                // Wijzig het Material Design / Utility icoon naar 'verbergen' (Oog met streep of tekst)
+                toggleBtn.innerHTML = '🙈 <span class="sr-only">Hide Key</span>';
+                toggleBtn.classList.add('text-primary');
+            }
+            showToast("API Key visibility unmasked temporarily.", "info");
+        } else {
+            keyInput.type = 'password';
+            if (toggleBtn) {
+                toggleBtn.innerHTML = '👁️ <span class="sr-only">Show Key</span>';
+                toggleBtn.classList.remove('text-primary');
+            }
+        }
+    } catch (error) {
+        window.logSystemError(error, 'User Interface Input Masking Anomaly', 'ERROR');
+    }
+};
+
 // --- WATER PROFILE MANAGEMENT ---
 
 async function findWaterProfileWithAI() {
@@ -2418,3 +2446,4 @@ window.calculateBraggot = calculateBraggot;
 window.calculateSplitBatch = calculateSplitBatch;
 window.calculateTastingAssessment = calculateTastingAssessment;
 window.calculateWaterMatching = calculateWaterMatching;
+window.toggleApiKeyVisibility = toggleApiKeyVisibility;

@@ -46,8 +46,8 @@ async function loadUserSettings() {
             applySettings();
         }
     } catch (error) {
-        window.logSystemError(error, 'Settings: Load', 'ERROR');
-        window.showToast("Fout bij het inladen van de gebruikersinstellingen. Gebruikersinstellingen konden niet worden ingeladen.", "error");
+        window.logSystemError(error, 'User Settings Profile Retrieval', 'ERROR');
+        window.showToast("Error loading user configuration settings.", "error");
     }
 }
 
@@ -76,12 +76,12 @@ async function saveUserSettings() {
         const wcfInput = parseFloat(document.getElementById('wcfInput')?.value.replace(/,/g, '.')) || 1.00;
 
         if (wcfInput < 1.00 || wcfInput > 1.04) {
-            showToast("WCF moet tussen 1.00 en 1.04 liggen.", "error");
+            showToast("WCF allocation must be calibrated between 1.00 and 1.04.", "error");
             return;
         }
 
         if (!apiKeyVal) {
-            showToast("Let op: Zonder API Key zullen AI-functies (recepten, chat) niet werken.", "warning");
+            showToast("Warning: AI integration engines (recipes, diagnosis chat) require a valid API Key configuration.", "warning");
         }
         
         const newSettings = {
@@ -103,9 +103,8 @@ async function saveUserSettings() {
             window.renderFermentationGraph(window.tempState.activeBrewId);
         }
     } catch (error) {
-        // CORRECTION: Omschrijving in het catch-blok aangepast naar een representatieve tekst voor deze module
-        window.logSystemError(error, 'Settings: Save', 'ERROR');
-        window.showToast("Fout bij het opslaan van de gebruikersinstellingen.", "error");
+        window.logSystemError(error, 'User Settings Modification Certification', 'ERROR');
+        showToast("System error: Unable to commit user configuration parameters.", "error");
     }
 }
 
@@ -142,7 +141,7 @@ async function findWaterProfileWithAI() {
 
         if (profile.ca === 0 && profile.mg === 0) {
             showToast(`Could not find a profile for "${brandName}".`, 'info');
-            window.logSystemError(`AI Water Search: Geen resultaten voor ${brandName}`, 'Tools: Water', 'INFO');
+            window.logSystemError(`AI Water Search: No results found for ${brandName}`, 'Water Profile AI Synthesis', 'INFO');
         } else {
             document.getElementById('water-profile-name').value = brandName;
             document.getElementById('manual_ca').value = profile.ca;
@@ -154,7 +153,7 @@ async function findWaterProfileWithAI() {
             showToast(`Profile for "${brandName}" found! Review and save.`, 'success');
         }
     } catch (error) {
-        window.logSystemError(error, 'Tools: findWaterProfileWithAI', 'ERROR');
+        window.logSystemError(error, 'Water Profile AI Synthesis', 'ERROR');
         showToast("AI search failed. Please try again.", "error");
     } finally {
         searchBtn.disabled = false;
@@ -224,7 +223,7 @@ async function saveWaterProfile(e) {
         document.getElementById('water-profile-form').reset();
         document.getElementById('water-profile-id').value = '';
     } catch (error) {
-        window.logSystemError(error, 'WaterProfile: Save', 'ERROR');
+        window.logSystemError(error, 'User Water Profile Persistence', 'ERROR');
         showToast("Error saving water profile.", "error");
     }
 }
@@ -322,7 +321,7 @@ async function runPromptEngineer() {
     
     // VALIDATIE
     if (!promptEngineerImageBase64 && !artistInput) {
-        showToast("Vul een naam in OF upload een foto.", "error");
+        showToast("Please enter an artist name OR upload an image.", "error");
         return;
     }
 
@@ -338,7 +337,7 @@ async function runPromptEngineer() {
     let apiKey = state.userSettings.apiKey;
     if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.firebase) apiKey = CONFIG.firebase.apiKey;
     if (!apiKey) {
-        showToast("Geen API Key.", "error");
+        showToast("Google API Key validation failure.", "error");
         btn.innerHTML = originalText;
         btn.disabled = false;
         return;
@@ -404,7 +403,7 @@ async function runPromptEngineer() {
 
     } catch (e) {
         console.error("Prompt Engineer Error:", e);
-        showToast("Mislukt: " + e.message, "error");
+        showToast("Analysis failed: " + e.message, "error");
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -429,46 +428,44 @@ window.clearPromptEngineerImage = function() {
 }
 
 async function importData(event, collectionName) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    if (!state.userId) return showToast("Log in to import.", "error");
+    try {
+        const file = event.target.files.item(0);
+        if (!file) return;
+        
+        if (!state.userId) return showToast("Log in to import data.", "error");
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const data = JSON.parse(e.target.result);
-            if (!Array.isArray(data)) throw new Error("Invalid format: Not an array");
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (!Array.isArray(data)) throw new Error("Invalid format: Not an array");
 
-            const batchLimit = 500;
-            let count = 0;
-            
-            // We voegen ze één voor één toe (batch write is complexer hier)
-            for (const item of data) {
-                // Verwijder ID uit de data, laat Firestore een nieuwe maken
-                const { id, ...docData } = item;
-                // Fix timestamps als het nodig is
-                if (docData.createdAt && typeof docData.createdAt === 'string') {
-                    docData.createdAt = new Date(docData.createdAt);
+                let count = 0;
+                for (const item of data) {
+                    const { id, ...docData } = item;
+                    if (docData.createdAt && typeof docData.createdAt === 'string') {
+                        docData.createdAt = new Date(docData.createdAt);
+                    }
+                    
+                    await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, collectionName), docData);
+                    count++;
                 }
                 
-                await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, collectionName), docData);
-                count++;
-            }
-            
-            showToast(`Imported ${count} items into ${collectionName}!`, "success");
-            
-            // Ververs de data
-            if (collectionName === 'brews' && window.loadHistory) window.loadHistory();
-            if (collectionName === 'inventory' && window.loadInventory) window.loadInventory();
+                showToast(`Imported ${count} items into ${collectionName}!`, "success");
+                
+                if (collectionName === 'brews' && window.loadHistory) window.loadHistory();
+                if (collectionName === 'inventory' && window.loadInventory) window.loadInventory();
 
-        } catch (err) {
-            // SANISATIE: Rauwe console.error geconverteerd naar gecentraliseerd loggen en toast notificatie
-            window.logSystemError(err, 'Tools: Data Import', 'ERROR');
-            showToast("Import failed: " + err.message, "error");
-        }
-    };
-    reader.readAsText(file);
+            } catch (err) {
+                window.logSystemError(err, 'Data Import Serialization Analysis', 'ERROR');
+                showToast("Import failed: " + err.message, "error");
+            }
+        };
+        reader.readAsText(file);
+    } catch (globalErr) {
+        window.logSystemError(globalErr, 'Data Import Infrastructure Initialization', 'ERROR');
+        showToast("Import initialization failed.", "error");
+    }
 }
 
 // --- MEAD MEDIC CHAT SYSTEM (MET GESCHIEDENIS) ---
@@ -797,7 +794,7 @@ window.fetchAvailableModels = async function() {
     const btn = document.getElementById('fetchModelsBtn');
 
     if (!apiKey) { 
-        showToast("Vul eerst je Google API Key in.", "error"); 
+        showToast("Please authenticate by entering a Google API Key configuration.", "error"); 
         return; 
     }
 
@@ -886,8 +883,8 @@ window.fetchAvailableModels = async function() {
         showToast(`Scan compleet! Models updated.`, "success");
 
     } catch (error) {
-        window.logSystemError(error, 'Tools: Model Scan', 'ERROR');
-        showToast("Scan mislukt. " + error.message, "error");
+        window.logSystemError(error, 'Model Discovery Scan Evaluation', 'ERROR');
+        showToast("Model discovery scan aborted: " + error.message, "error");
     } finally {
         btn.innerText = originalBtnText;
         btn.disabled = false;
@@ -964,7 +961,7 @@ async function runSocialMediaGenerator() {
         
         let credits = state.userSettings?.credits;
         if (credits !== undefined && credits !== null && credits <= 0) {
-            showToast("Geen credits meer beschikbaar.", "error");
+            showToast("No credits available.", "error");
             return;
         }
 
@@ -977,10 +974,14 @@ async function runSocialMediaGenerator() {
         const persona = document.getElementById('social-persona').value;
         const platform = document.getElementById('social-platform').value;
         const tweak = document.getElementById('social-tweak').value;
-        const selectedStyleValue = document.getElementById('social-art-style').value;
+        
+        const styleSelect = document.getElementById('social-art-style');
+        const selectedStyleValue = styleSelect && styleSelect.selectedOptions && styleSelect.selectedOptions.length > 0
+            ? styleSelect.selectedOptions.item(0).value
+            : (styleSelect?.value || 'none');
         
         if (!brewId && !tweak) { 
-            showToast("Selecteer een recept of typ een onderwerp.", "error"); 
+            showToast("Please select a recipe or type a topic.", "error"); 
             return; 
         }
 
@@ -992,7 +993,7 @@ async function runSocialMediaGenerator() {
         if (brewId) {
             const brew = state.brews.find(b => b.id === brewId);
             if (!brew) {
-                showToast("Geselecteerd recept niet gevonden.", "error");
+                showToast("Selection mapping failed: Recipe not found.", "error");
                 if (container) container.innerHTML = "";
                 return;
             }
@@ -1023,7 +1024,6 @@ async function runSocialMediaGenerator() {
 
         if (rawText.includes("IMG_PROMPT:")) {
             const parts = rawText.split("IMG_PROMPT:");
-            // CORRECTIE: Elementen uit de parts-array geïsoleerd via de stabiele .at() indexatie
             finalPost = parts.at(0).trim(); 
             imgPrompt = parts.at(1).trim(); 
         }
@@ -1051,11 +1051,11 @@ async function runSocialMediaGenerator() {
             imageBtn.onclick = () => window.generateSocialImage(imgPrompt);
         }
 
-        showToast("Social Studio geladen", "success");
+        showToast("Social Studio loaded successfully.", "success");
 
     } catch (error) {
-        window.logSystemError(error, 'SocialMedia: runGenerator', 'ERROR');
-        showToast("Fout bij laden Social Studio: " + error.message, "error");
+        window.logSystemError(error, 'Social Studio Evaluation', 'ERROR');
+        showToast("Generation failure within Social Studio: " + error.message, "error");
         if (container) container.innerHTML = "";
     }
 }
@@ -1163,8 +1163,8 @@ function handleWaterSourceChange() {
             updateWaterProfileDisplay(profile);
         }
     } catch (error) {
-        window.logSystemError(error, 'WaterTools: handleSourceChange', 'ERROR');
-        showToast("Fout bij selecteren waterprofiel.", "error");
+        window.logSystemError(error, 'Water Source Matrix Selection', 'ERROR');
+        showToast("Error selecting target mineral water profile.", "error");
     }
 }
 
@@ -1189,13 +1189,13 @@ window.calculateABV = function() {
         const resultDiv = document.getElementById('abvResult');
 
         if (isNaN(og) || isNaN(fg)) {
-            window.showToast("Voer zowel OG als FG in.", "error");
+            window.showToast("Metrics required: Please enter valid parameters for both OG and FG.", "error");
             return;
         }
 
         if (og >= 1.775) {
-            window.showToast("Hall Limit: OG te hoog (max 1.774).", "error");
-            return; // CRITICAL FIX: Stop executie
+            window.showToast("Hall Limit Breach: Gravity baseline input equals or exceeds structural limits (max 1.774).", "error");
+            return;
         }
 
         const abw = (76.08 * (og - fg)) / (1.775 - og);
@@ -1206,8 +1206,8 @@ window.calculateABV = function() {
             resultDiv.classList.remove('hidden');
         }
     } catch (error) {
-        window.logSystemError(error, 'tools.js: calculateABV', 'ERROR');
-        window.showToast("Fout bij het uitvoeren van de berekening. Controleer de invoerwaarden.", "error");
+        window.logSystemError(error, 'Tools: ABV Equation Calculation', 'ERROR');
+        window.showToast("Algorithmic calculation error. Verify input value formats.", "error");
     }
 };
 
@@ -1223,11 +1223,11 @@ window.correctHydrometer = function() {
         const resultDiv = document.getElementById('sgResult');
 
         if (t > 40) {
-            window.showToast("⚠️ Waarschuwing: Temperatuur > 40°C. Gebruik Celsius.", "warning");
+            window.showToast("Temperature threshold > 40°C detected. Ensure inputs utilize the Celsius scale.", "warning");
         }
 
         if (isNaN(sg) || isNaN(t) || isNaN(c)) {
-            window.showToast("Vul alle velden in.", "error");
+            window.showToast("Incomplete profile: All configuration fields must be populated.", "error");
             return;
         }
 
@@ -1240,8 +1240,8 @@ window.correctHydrometer = function() {
             resultDiv.textContent = `Corrected: ${correctedSg.toFixed(3)}`;
         }
     } catch (error) {
-        window.logSystemError(error, 'Calculator: Hydrometer Correction', 'ERROR');
-        window.showToast("Fout bij het uitvoeren van de berekening. Controleer de invoerwaarden.", "error");
+        window.logSystemError(error, 'Tools: Hydrometer Matrix Correction', 'ERROR');
+        window.showToast("Calculation execution failure. Check metric variables.", "error");
     }
 };
 
@@ -1255,7 +1255,7 @@ window.calculatePrimingSugar = function() {
         const resultDiv = document.getElementById('sugarResult');
 
         if (isNaN(vol) || isNaN(temp) || isNaN(size)) { 
-            window.showToast("Vul alle velden in voor suikerberekening.", "error");
+            window.showToast("Metrics required: Populate all parameter vectors for sugar calculations.", "error");
             return; 
         }
 
@@ -1267,8 +1267,8 @@ window.calculatePrimingSugar = function() {
             resultDiv.classList.remove('hidden');
         }
     } catch (error) {
-        window.logSystemError(error, 'tools.js: calculatePrimingSugar', 'ERROR');
-        window.showToast("Fout bij het uitvoeren van de berekening. Controleer de invoerwaarden.", "error");
+        window.logSystemError(error, 'Tools: Priming Sugar Equation', 'ERROR');
+        window.showToast("Calculation crash. Review dataset integrity.", "error");
     }
 };
 
@@ -1330,7 +1330,6 @@ window.calculateBlend = function() {
             tableRows.forEach(row => {
                 const inputs = row.querySelectorAll('input');
                 if (inputs.length >= 4) {
-                    // CORRECTIE: NodeList indexering hersteld via de verplichte .item(index) methodiek
                     const v = parseFloat(String(inputs.item(0).value || '0').replace(/,/g, '.')) || 0;
                     const abv = parseFloat(String(inputs.item(1).value || '0').replace(/,/g, '.')) || 0;
                     const sg = parseFloat(String(inputs.item(2).value || '1.000').replace(/,/g, '.')) || 1.000;
@@ -1345,7 +1344,7 @@ window.calculateBlend = function() {
         }
 
         if (totalVolume <= 0) {
-            if (resultDiv) resultDiv.innerHTML = `<span class="text-xs text-on-surface-variant">Voer volumes in om de blend te berekenen.</span>`;
+            if (resultDiv) resultDiv.innerHTML = `<span class="text-xs text-on-surface-variant">Enter volume values to calculate the blend profile.</span>`;
             return;
         }
 
@@ -1361,7 +1360,7 @@ window.calculateBlend = function() {
         }
 
         if (finalSg >= 1.775) {
-            window.showToast("Kritieke fout: De berekende SG overschrijdt de Hall-limiet (1.775).", "error");
+            window.showToast("Critical error: Calculated Specific Gravity exceeds the Hall limit (1.775).", "error");
             if (resultDiv) resultDiv.innerHTML = `<span class="text-error font-bold">LIMIT ERR</span>`;
             return;
         }
@@ -1390,8 +1389,8 @@ window.calculateBlend = function() {
         }
 
     } catch (error) {
-        window.logSystemError(error, 'Tools: Blending Engine', 'ERROR');
-        window.showToast("Fout bij het berekenen van de blend. Controleer de invoerwaarden.", "error");
+        window.logSystemError(error, 'Blending Matrix Evaluation', 'ERROR');
+        window.showToast("Error processing the blending calculation. Verify input metrics.", "error");
     }
 };
 
@@ -1408,14 +1407,13 @@ window.calculateBacksweetening = function() {
         const resultDiv = document.getElementById('backsweetenResult');
 
         if (isNaN(vol) || isNaN(currentSg) || isNaN(targetSg)) { 
-            window.showToast("Vul alle waarden in.", "error");
+            window.showToast("Incomplete values: Populate all operational variables.", "error");
             return; 
         }
 
-        // 2. Hall-veiligheidscheck
         if (currentSg >= 1.775 || targetSg >= 1.775) {
-            window.showToast("Fysieke limiet overschreden (1.775).", "error");
-            window.logSystemError(`Backsweetening: SG ${currentSg}/${targetSg} >= 1.775`, 'Tools: Backsweeten', 'CRITICAL');
+            window.showToast("Physical system boundary exceeded: Specific Gravity inputs cannot match or transcend the Hall Limit (1.775).", "error");
+            window.logSystemError(`Backsweetening Bound Override: SG ${currentSg}/${targetSg} >= 1.775`, 'Tools: Backsweeten Boundary Check', 'CRITICAL');
             return;
         }
 
@@ -1443,8 +1441,8 @@ window.calculateBacksweetening = function() {
             `;
         }
     } catch (error) {
-        window.logSystemError(error, 'Calculator: Backsweetening', 'ERROR');
-        window.showToast("Fout bij berekening zoetheid.", "error");
+        window.logSystemError(error, 'Backsweetening Matrix Evaluation', 'ERROR');
+        window.showToast("Saccharose volume correction modeling failed.", "error");
     }
 };
 
@@ -1458,12 +1456,12 @@ window.calculateDilution = function() {
         const resultDiv = document.getElementById('dilutionResult');
 
         if (isNaN(startVol) || isNaN(startSg) || isNaN(targetSg)) { 
-            window.showToast("Voer geldige SG en Volume waarden in.", "error");
+            window.showToast("Please enter valid SG and Volume values.", "error");
             return; 
         }
 
         if (startSg <= targetSg) {
-            window.showToast("Start SG moet hoger zijn dan Target SG.", "error");
+            window.showToast("Start SG must be higher than Target SG.", "error");
             return;
         }
 
@@ -1477,7 +1475,8 @@ window.calculateDilution = function() {
             resultDiv.textContent = `Add ${waterToAdd.toFixed(2)}L water`;
         }
     } catch (error) {
-        window.logSystemError(error, 'tools.js: calculateDilution', 'ERROR');
+        window.logSystemError(error, 'Dilution Profile Evaluation', 'ERROR');
+        window.showToast("Calculation crash inside dilution forecasting engine.", "error");
     }
 };
 
@@ -1497,7 +1496,7 @@ window.calculateBuffer = function() {
         const resultDiv = document.getElementById('bufferResult');
 
         if (isNaN(vol) || vol <= 0) {
-            window.showToast("Voer een geldig volume in.", "error");
+            window.showToast("Input violation: Enter a valid, non-zero system volume metric.", "error");
             return;
         }
 
@@ -1514,14 +1513,14 @@ window.calculateBuffer = function() {
             
             // Kalium-check: minimaal 0.26 g/L K2CO3 voor ~300ppm
             let potassiumNote = dosePerLiter < 0.26 
-                ? `<p class="mt-2 text-[9px] text-amber-600 font-bold uppercase">⚠️ Opmerking: Kaliumgehalte mogelijk onder 300 ppm drempel.</p>` 
-                : `<p class="mt-2 text-[9px] text-green-600 font-bold uppercase">✓ Kalium verhoging: +${Math.round(potassiumPpm)} ppm K⁺</p>`;
+                ? `<p class="mt-2 text-[9px] text-amber-600 font-bold uppercase">⚠️ Notice: Potassium concentration potentially under the 300 ppm threshold.</p>` 
+                : `<p class="mt-2 text-[9px] text-green-600 font-bold uppercase">✓ Potassium increase: +${Math.round(potassiumPpm)} ppm K⁺</p>`;
             
             htmlContent = `
                 <div class="p-4 bg-app-tertiary rounded-xl border border-app-brand/20 shadow-sm animate-fade-in">
-                    <span class="block text-[10px] uppercase opacity-60 font-bold tracking-widest text-app-brand">Proactieve Buffer (K₂CO₃)</span>
+                    <span class="block text-[10px] uppercase opacity-60 font-bold tracking-widest text-app-brand">Proactive Buffer (K₂CO₃)</span>
                     <span class="text-3xl font-bold text-app-brand font-header">${proactiveGrams.toFixed(2)}g</span>
-                    <p class="mt-2 text-[10px] opacity-80 uppercase leading-tight">Voorkomt pH-crash < 3.2 in honingmost.</p>
+                    <p class="mt-2 text-[10px] opacity-80 uppercase leading-tight">Prevents structural pH crashes < 3.2 in raw honey musts.</p>
                     ${potassiumNote}
                 </div>`;
         } else {
@@ -1542,29 +1541,29 @@ window.calculateBuffer = function() {
             if (currentPh > 4.2 && deltaTA > 0) {
                 warningHtml = `
                     <div class="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded text-[10px] text-red-600 font-bold uppercase animate-pulse">
-                        ⚠️ GEVAAR: pH > 4.2 gedetecteerd. Verdere reductie kan pH > 4.6 pushen. 
-                        Risico op botulisme bij pH > 4.6 indien niet gecorrigeerd!
+                        ⚠️ SYSTEM DANGER: pH > 4.2 detected. Further acid attenuation threats to push equilibrium past pH > 4.6. 
+                        Critical risk of botulism outbreak conditions at pH > 4.6 if left uncorrected!
                     </div>`;
             }
 
             let potassiumNote = k2co3DosePerLiter < 0.26 
-                ? `<p class="mt-2 text-[9px] text-amber-600 font-bold uppercase">⚠️ Opmerking: Kaliumgehalte (K₂CO₃) mogelijk onder 300 ppm drempel.</p>` 
-                : `<p class="mt-2 text-[9px] text-green-600 font-bold uppercase">✓ Est. K⁺: +${Math.round(ppmK2CO3)} ppm (Carbonaat) / +${Math.round(ppmKHCO3)} ppm (Bicarbonaat)</p>`;
+                ? `<p class="mt-2 text-[9px] text-amber-600 font-bold uppercase">⚠️ Notice: Potassium concentration (K₂CO₃) potentially under the 300 ppm threshold.</p>` 
+                : `<p class="mt-2 text-[9px] text-green-600 font-bold uppercase">✓ Est. K⁺: +${Math.round(ppmK2CO3)} ppm (Carbonate) / +${Math.round(ppmKHCO3)} ppm (Bicarbonate)</p>`;
 
             htmlContent = `
                 <div class="p-4 bg-app-primary-container rounded-xl border border-app-brand/20 shadow-sm animate-fade-in">
-                    <span class="block text-[10px] uppercase opacity-60 font-bold tracking-widest text-app-brand">Correctieve Zuurreductie (ΔTA: ${deltaTA.toFixed(1)}g/L)</span>
+                    <span class="block text-[10px] uppercase opacity-60 font-bold tracking-widest text-app-brand">Corrective Acid Deacidification (ΔTA: ${deltaTA.toFixed(1)}g/L)</span>
                     <div class="grid grid-cols-2 gap-4 mt-2">
                         <div>
-                            <span class="block text-[9px] font-bold opacity-70">K₂CO₃ (Carbonaat)</span>
+                            <span class="block text-[9px] font-bold opacity-70">K₂CO₃ (Carbonate)</span>
                             <span class="text-xl font-bold text-app-brand">${k2co3Grams.toFixed(2)}g</span>
                         </div>
                         <div>
-                            <span class="block text-[9px] font-bold opacity-70">KHCO₃ (Bicarbonaat)</span>
+                            <span class="block text-[9px] font-bold opacity-70">KHCO₃ (Bicarbonate)</span>
                             <span class="text-xl font-bold text-app-brand">${khco3Grams.toFixed(2)}g</span>
                         </div>
                     </div>
-                    <p class="mt-3 text-[9px] italic opacity-70">Bicarbonaat (KHCO₃) zorgt voor minder agressieve schuimvorming.</p>
+                    <p class="mt-3 text-[9px] italic opacity-70">Potassium Bicarbonate (KHCO₃) limits aggressive CO₂ outgassing out-foaming.</p>
                     ${potassiumNote}
                     ${warningHtml}
                 </div>`;
@@ -1575,8 +1574,8 @@ window.calculateBuffer = function() {
         }
 
     } catch (error) {
-        window.logSystemError(error, 'tools.js: calculateBuffer', 'ERROR');
-        window.showToast("Fout bij buffer-berekening.", "error");
+        window.logSystemError(error, 'Electrochemical Buffer Analysis', 'ERROR');
+        window.showToast("Potassium matrix stabilization assessment crashed.", "error");
     }
 };
 
@@ -1594,7 +1593,7 @@ window.calculateTOSNA = function() {
         const resultDiv = document.getElementById('tosnaResult');
 
         if (isNaN(og) || isNaN(vol) || og < 1.000 || vol <= 0) {
-            window.showToast("Voer een geldige OG (1.xxx) en Volume in.", "error");
+            window.showToast("Validation failed: Enter valid parameters for baseline Specific Gravity (1.xxx) and liquid volume.", "error");
             return;
         }
 
@@ -1631,8 +1630,8 @@ window.calculateTOSNA = function() {
             resultDiv.classList.remove('hidden');
         }
     } catch (error) {
-        window.logSystemError(error, 'tools.js: calculateTOSNA', 'ERROR');
-        window.showToast("Fout bij TOSNA berekening.", "error");
+        window.logSystemError(error, 'TOSNA Metabolism Evaluation', 'ERROR');
+        showToast("Assimilable Nitrogen tracking calculation aborted.", "error");
     }
 };
 
@@ -1649,7 +1648,7 @@ window.calculateTargetApparentBrix = function() {
         const resultDiv = document.getElementById('targetBrixResult');
 
         if (isNaN(og) || isNaN(targetSg)) {
-            window.showToast("Voer OG en Target SG in.", "error");
+            window.showToast("Missing baseline attributes: Enter profile parameters for both OG and target SG.", "error");
             return;
         }
 
@@ -1667,8 +1666,8 @@ window.calculateTargetApparentBrix = function() {
             resultDiv.classList.remove('hidden');
         }
     } catch (error) {
-        window.logSystemError(error, 'tools.js: calculateTargetApparentBrix', 'ERROR');
-        window.showToast("Fout bij het uitvoeren van de berekening. Controleer de invoerwaarden.", "error");
+        window.logSystemError(error, 'Refractometric Target Brix Evaluation', 'ERROR');
+        window.showToast("Mathematical conversion aborted. Verify numerical limits.", "error");
     }
 };
 
@@ -1682,13 +1681,12 @@ window.calculateStabilization = function() {
         const resultDiv = document.getElementById('stabilizationResult');
 
         if (isNaN(abv) || isNaN(fg) || isNaN(ph) || isNaN(vol)) {
-            window.showToast("Vul alle waarden in.", "error");
+            window.showToast("Verification failed: Operational datasets must be fully populated.", "error");
             return;
         }
 
-        // Hall-safety pre-check (App_Context v2.6)
         if (fg >= 1.775) {
-            window.showToast("Hall Limit: FG te hoog.", "error");
+            window.showToast("Hall Boundary Conflict: Final Gravity configuration exceeds maximum system threshold.", "error");
             return;
         }
 
@@ -1724,8 +1722,8 @@ window.calculateStabilization = function() {
             resultDiv.classList.remove('hidden');
         }
     } catch (error) {
-        window.logSystemError(error, 'tools.js: calculateStabilization', 'ERROR');
-        window.showToast("Fout bij het uitvoeren van de berekening. Controleer de invoerwaarden.", "error");
+        window.logSystemError(error, 'Fungistatic Stabilization Evaluation', 'ERROR');
+        window.showToast("Synergistic equilibrium calculations compromised.", "error");
     }
 };
 
@@ -1742,7 +1740,7 @@ window.calculateRefractometerCorrection = function() {
         const resultDiv = document.getElementById('refractResult');
 
         if (isNaN(ri_i) || isNaN(ri_f)) {
-            window.showToast("Vul beide Brix-waarden in.", "error");
+            window.showToast("Dataset incomplete: Gaps identified in baseline or current Brix inputs.", "error");
             return;
         }
 
@@ -1755,8 +1753,8 @@ window.calculateRefractometerCorrection = function() {
             (0.0000000578503 * Math.pow(ri_i, 3)) + (0.0000127414 * Math.pow(ri_i, 2)) + (0.00384577 * ri_i) + 1.0000 : ri_i;
 
         if (finalOG >= 1.775) {
-             window.showToast("Hall Limit Error: OG te hoog.", "error");
-             return; // CRITICAL FIX: Stop executie
+             window.showToast("Hall Limit Override: Extrapolated Original Gravity matches or exceeds system bounds.", "error");
+             return;
         }
 
         let abv = 0;
@@ -1775,8 +1773,8 @@ window.calculateRefractometerCorrection = function() {
             resultDiv.classList.remove('hidden');
         }
     } catch (error) {
-        window.logSystemError(error, 'tools.js: calculateRefractometerCorrection', 'ERROR');
-        window.showToast("Fout bij het uitvoeren van de berekening. Controleer de invoerwaarden.", "error");
+        window.logSystemError(error, 'Refractometric Aberration Evaluation', 'ERROR');
+        window.showToast("Error processing the optical density adjustment.", "error");
     }
 };
 
@@ -1967,7 +1965,7 @@ window.calculateBraggot = function() {
         const targetVolume = parseFloat(targetVolInput.replace(/,/g, '.')) || 0;
 
         if (targetVolume <= 0) {
-            window.showToast("Voer een geldig doelvolume in groter dan 0 L.", "error");
+            window.showToast("Invalid baseline: Targeted system volume metrics must be greater than zero liters.", "error");
             return;
         }
 
@@ -1990,7 +1988,7 @@ window.calculateBraggot = function() {
         if (totalGP > 0) {
             const xMalt = gpMalt / totalGP;
             if (xMalt < 0.30 || xMalt > 0.50) {
-                window.showToast(`Zymologische waarschuwing: Het molaandeel van de moutstorting (${(xMalt * 100).toFixed(1)}%) valt buiten de braggot-restricties (strikte grens: 30% - 50%).`, "error");
+                window.showToast(`Zymological constraints breach: The grist mole fraction contribution (${(xMalt * 100).toFixed(1)}%) drifts outside strict Braggot parameter configurations (Limit: 30% - 50%).`, "error");
                 if (resultDiv) resultDiv.innerHTML = `<span class="text-error font-bold">BRAG_BOUNDS_ERR</span>`;
                 return;
             }
@@ -1999,9 +1997,8 @@ window.calculateBraggot = function() {
         const calculatedPoints = totalGP / targetVolume;
         const ogTheoretisch = 1.000 + (calculatedPoints / 1000);
 
-        // 5. Strikte Hall-precheck tegen crashes en corrupte data (OG mag niet >= 1.775 zijn)
         if (ogTheoretisch >= 1.775) {
-            window.showToast("Kritieke fout: De theoretische OG overschrijdt de Hall-limiet (1.775).", "error");
+            window.showToast("Critical baseline failure: Calculated theoretical OG equals or transcends the system Hall Limit (1.775).", "error");
             if (resultDiv) resultDiv.innerHTML = `<span class="text-error font-bold">LIMIT ERR</span>`;
             return;
         }
@@ -2036,8 +2033,8 @@ window.calculateBraggot = function() {
         }
 
     } catch (error) {
-        window.logSystemError(error, 'tools.js: calculateBraggot', 'ERROR');
-        window.showToast("Fout bij het berekenen van de Braggot-extracten.", "error");
+        window.logSystemError(error, 'Braggot Grist Balance Evaluation', 'ERROR');
+        window.showToast("Enzymatic grist mash prediction model crashed.", "error");
     }
 };
 
@@ -2084,8 +2081,8 @@ window.calculateSplitBatch = function() {
         }
 
     } catch (error) {
-        window.logSystemError(error, 'tools.js: calculateSplitBatch', 'ERROR');
-        window.showToast("Fout bij het berekenen van de split-batch dichtheid.", "error");
+        window.logSystemError(error, 'Split Volume Density Evaluation', 'ERROR');
+        window.showToast("System error compiling parallel maturation data.", "error");
     }
 };
 
@@ -2097,13 +2094,13 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
     try {
         // 1. INPUT-SANITISATIE & MATHEMATISCHE PRE-CHECK (Comma-to-Dot Protocol)
         if (!brewId) {
-            window.showToast("Fout: Geen actief brouwsel geselecteerd.", "error");
+            window.showToast("Context conflict: No active brew record selected for evaluation.", "error");
             return;
         }
 
         const brew = state.brews.find(b => b.id === brewId);
         if (!brew) {
-            window.showToast("Fout: Brouwsel niet gevonden in database.", "error");
+            window.showToast("Database mismatch: Target profile record could not be extracted.", "error");
             return;
         }
 
@@ -2116,16 +2113,14 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
         const titratableAcidity = parseFloat(taRaw.replace(/,/g, '.')) || 0;
         const measuredPh = parseFloat(phRaw.replace(/,/g, '.')) || 3.6;
 
-        // Harde Veiligheidsgrens: Voorkom division-by-zero
         if (titratableAcidity <= 0) {
-            window.showToast("Kritieke fout: Titreerbare zuurgraad (TA) moet groter zijn dan 0 g/L.", "error");
-            window.logSystemError(new Error("Tasting Assessment division-by-zero pre-check failed: TA <= 0"), 'Tools: Tasting Assessment', 'CRITICAL');
+            window.showToast("Mathematical violation: Titratable Acidity (TA) must exceed 0 g/L to prevent calculation crash.", "error");
+            window.logSystemError(new Error("Tasting Assessment zero divisor check failed: TA <= 0"), 'Tasting Assessment Engine Evaluation', 'CRITICAL');
             return;
         }
 
-        // Pre-check op Hall Equation limiet om algoritmische crashes te voorkomen
         if (finalGravity >= 1.775) {
-            window.showToast("Fysieke limiet overschreden: FG is groter of gelijk aan de Hall-limiet (1.775).", "error");
+            window.showToast("System boundary override: Final Gravity allocation breaches the Hall equation framework (1.775).", "error");
             return;
         }
 
@@ -2146,12 +2141,11 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
         // 3. ALGORITMISCHE FEEDBACK-MATRIX
         let oenologicalFeedback = "";
         if (meadHarmonyIndex < 25) {
-            oenologicalFeedback = "🚨 **Profiel: Te Droog / Acide.** De mede vertoont een analytische onbalans met dominante zuren of excessieve tannines vergeleken met de restsuikers. Advies: Overweeg back-sweetening (zoeten) via de Bates-v2.6 calculator of voeg een milde carbonaatbuffer toe.";
+            oenologicalFeedback = "🚨 **Profile: Imbalanced / Acid-Dominant.** The mead exhibits an analytical deficit in sweetness, causing acids or wood-derived tannins to overpower the sensory balance. Recommendation: Formulate a backsweetening dose using the Bates-v2.6 tracking module or apply a subtle carbonate buffer matrix.";
         } else if (meadHarmonyIndex >= 25 && meadHarmonyIndex <= 65) {
-            oenologicalFeedback = "✨ **Profiel: Uitstekende Mede-Harmonie.** Smaakcomponenten zijn organoleptisch in perfect evenwicht. De verhouding tussen restsuikers, zuren en astringentie weerspiegelt een superieure zymologische structuur.";
+            oenologicalFeedback = "✨ **Profile: Perfect Mead Harmony.** Taste components exist in exceptional structural equilibrium. The balancing index between residual sugars, titratable acidity, and astringency factors represents superior zymological design.";
         } else {
-            // meadHarmonyIndex > 65
-            oenologicalFeedback = "🍯 **Profiel: Excessief Zoet / Flauw.** De suikerconcentratie overheerst het smaakprofiel door een gebrek aan ondersteunende zuren. Advies: Kwalitatief finetunen door voorzichtige additie van wijnsteenzuur of appelzuur om de frisheid te herstellen.";
+            oenologicalFeedback = "🍯 **Profile: Excessively Sweet / Flaccid.** Residual sugar volumes exceed organoleptic boundaries due to insufficient supporting acidity. Recommendation: Fine-tune structural crispness by making calculated adjustments with Tartaric or Malic acid solutions.";
         }
 
         // 4. OFF-FLAVOR KINETISCHE CHECKS
@@ -2160,7 +2154,7 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
         // Kinetische Check A: Reductie & Stikstoftekort
         if (activeOffFlavors?.reduction && brew.logData?.yanDelta > 0) {
             const extraFermaidO = brew.logData.yanDelta / 40;
-            offFlavorNotes.push(`• **Reductie gedetecteerd:** Aanwezigheid van zwavelaroma's correleert met een stikstoftekort van ${Math.round(brew.logData.yanDelta)} ppm YAN tijdens de vergisting. Voeg proactief ${extraFermaidO.toFixed(2)} g/L Fermaid O toe bij een volgende iteratie.`);
+            offFlavorNotes.push(`• **Reduction Detected:** Volatile sulfur characteristics correlate directly to a nutritional gap of ${Math.round(brew.logData.yanDelta)} ppm YAN during early logistics. Proactively inject ${extraFermaidO.toFixed(2)} g/L of organic Fermaid O in the next iteration batch.`);
         }
 
         // Kinetische Check B: Foezelalcoholen bij Lalvin D47 thermische stress
@@ -2168,7 +2162,7 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
         const maxTemp = parseFloat(brew.logData?.maxFermentationTemp) || 0;
         if (activeOffFlavors?.fusels && yeastStrain.includes("D47") && maxTemp > 20) {
             const deltaTStress = maxTemp - 20;
-            offFlavorNotes.push(`• **Thermische Stress (Lalvin D47):** Foezelalcoholen gesynthetiseerd door temperatuuroverschrijding tijdens de logaritmische groeifase. Giststam onderging een thermische stressfactor van +${deltaTStress.toFixed(1)}°C boven de kritieke 20°C grens.`);
+            offFlavorNotes.push(`• **Thermal Kinetics Stress (Lalvin D47):** Fusel higher alcohol synthesis triggered by temperature ceilings overriding threshold levels during log growth. The culture underwent a heat stress factor of +${deltaTStress.toFixed(1)}°C above the maximum 20°C standard.`);
         }
 
         // Kinetische Check C: Binaris Risico op Geranium Taint (Kritieke Veiligheidscheck)
@@ -2178,13 +2172,13 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
             const mSO2 = freeSO2 / (1 + Math.pow(10, (measuredPh - 1.81)));
 
             if (measuredPh > 3.8 && hasSorbaat && mSO2 < 0.8) {
-                offFlavorNotes.push(`⚠️ **KRITIEK GERANIUM RISICO:** Extreme biochemische kwetsbaarheid gedetecteerd! pH is groter dan 3.8 met actieve kaliumsorbaat-aanwezigheid, terwijl de Vrije SO₂ suboptimaal is (M_SO₂ < 0.8 ppm). Melkzuurbacteriën kunnen sorbinezuur reduceren tot sorbinol, wat leidt tot onomkeerbare ethylsorbaat-degradatie ("Geranium Taint").`);
+                offFlavorNotes.push(`⚠️ **CRITICAL GERANIUM TAINT RISK:** Extreme biochemical vulnerability discovered! Solution pH transcends 3.8 under active potassium sorbate addition while free sulfur dioxide protection parameters are depleted (M_SO₂ < 0.8 ppm). Facultative lactic acid bacteria can convert sorbic acid into sorbinol, inducing permanent ethyl sorbate structural spoilage.`);
             }
         }
 
         const combinedNotesString = offFlavorNotes.length > 0 
             ? offFlavorNotes.join("\n") 
-            : "• Geen directe kinetische off-flavor afwijkingen geconstateerd op basis van brouwdata.";
+            : "• No severe kinetic off-flavor deviations mapped from available fermentation logs.";
 
         // 5. RATING-BEREKENING (Sterrenscore met Off-Flavor Aftrek)
         const aroma = parseFloat(sensoryScores?.aromaSlider) || 3.0;
@@ -2200,7 +2194,7 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
 
         // 6. DATABASE SYNC & STATE-AFHANDELING
         if (!state.userId) {
-            window.showToast("Waarschuwing: Beoordeling lokaal berekend. Log in om op te slaan.", "warning");
+            window.showToast("Local caching only: Authenticate user profile to allow server-side synchronization.", "warning");
             renderTastingResultsUI(sugarConcentration, meadHarmonyIndex, calculatedStars, oenologicalFeedback, combinedNotesString);
             return;
         }
@@ -2221,25 +2215,23 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
         // Schrijf direct weg naar Firestore (Single Source of Truth)
         await updateDoc(brewDocRef, tastingPayload);
 
-        // Update lokale state cache na succesvolle Firestore bevestiging
+        // Update lokale state cache na succesvolle Firestore bevestiging via de veilige .at() methodiek
         const localBrewIndex = state.brews.findIndex(b => b.id === brewId);
         if (localBrewIndex !== -1) {
-            state.brews[localBrewIndex].tastingAssessment = tastingPayload.tastingAssessment;
+            state.brews.at(localBrewIndex).tastingAssessment = tastingPayload.tastingAssessment;
         }
 
         // Render de resultaten live in de UI
         renderTastingResultsUI(sugarConcentration, meadHarmonyIndex, calculatedStars, oenologicalFeedback, combinedNotesString);
-        window.showToast("Sommelier-beoordeling succesvol gesynchroniseerd!", "success");
+        window.showToast("Organoleptic profiles synchronized with server database.", "success");
 
     } catch (error) {
-        window.logSystemError(error, 'tools.js: calculateTastingAssessment', 'ERROR');
-        window.showToast("Fout bij het genereren van de sommelier-beoordeling.", "error");
+        window.logSystemError(error, 'Tasting Assessment Engine Evaluation', 'ERROR');
+        window.showToast("Critical exception within sensoric analysis rendering.", "error");
     }
 };
 
-/**
- * Helper-functie om de geavanceerde analytische metrics te renderen conform MD3-standaarden.
- */
+
 function renderTastingResultsUI(sugar, harmony, stars, feedback, notes) {
     const outputDiv = document.getElementById('tasting-assessment-output');
     if (!outputDiv) return;
@@ -2301,7 +2293,7 @@ window.calculateWaterMatching = function() {
         const resultDiv = document.getElementById('waterMatchingResult');
 
         if (vWater <= 0) {
-            window.showToast("Voer een geldig watervolume in groter dan 0 L.", "error");
+            window.showToast("Metric error: Mineral distribution target requires volume parameters greater than 0 L.", "error");
             return;
         }
 
@@ -2332,7 +2324,7 @@ window.calculateWaterMatching = function() {
 
         let ratioOutput = "";
         if (targetCl === 0) {
-            ratioOutput = "Pure Bitter / Strak (Cl = 0)";
+            ratioOutput = "Pure Bitter / Crisp (Cl = 0)";
         } else {
             const ratio = targetSo4 / targetCl;
             ratioOutput = ratio.toFixed(2);
@@ -2374,8 +2366,8 @@ window.calculateWaterMatching = function() {
         }
 
     } catch (error) {
-        window.logSystemError(error, 'Tools: Water Matching', 'ERROR');
-        window.showToast("Fout bij het berekenen van het waterprofiel.", "error");
+        window.logSystemError(error, 'Water Matching Matrix Evaluation', 'ERROR');
+        window.showToast("Error processing mineral configuration mapping matrix.", "error");
     }
 };
 

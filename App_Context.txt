@@ -395,3 +395,18 @@ v2.5: Volledige implementatie van Hall Equation in alle rekenmodules, introducti
 3.  **State Management & UI Bindings:**
     * Verificatie van `state.js` als de absolute *Single Source of Truth*.
     * Alle globale HTML-event-bindings aan het `window`-object zijn intact en correct gescoped zonder risico op regressie.
+
+Knowledge Update
+Bij het bouwen van recursieve UI-renderers binnen een Vanilla JS-architectuur (v2.6) is het strikt verplicht om bij een 'cache-miss' of data-inconsistentie de bronvariabele in de Single Source of Truth op te schonen vóór de recursieve aanroep plaatsvindt. Gebeurt dit niet, dan zal de functie de persistente foutieve staat blijven herkauwen met een stack-overflow tot gevolg.
+
+Binnen de v2.6-architectuur van de applicatie worden server-side tellingen (getCountFromServer) gebruikt om metadata (zoals het aantal actieve batches in de kelder of het logboek) op te vragen zonder de volledige documenten te hoeven downloaden. Dit minimaliseert het API-verbruik en optimaliseert de prestaties in de kelderomgeving.
+
+In het Firebase-ecosysteem is de taakverdeling strikt gescheiden: Firestore beheert uitsluitend JSON-achtige documenten en query's. Storage beheert binaire data en bestanden (zoals afbeeldingen voor labels). Functies die te maken hebben met bestandsoverdracht, waaronder string-uploads voor gegenereerde afbeeldingen, moeten daarom altijd uit de opslag-bibliotheek gepuurd worden.
+
+Binnen de v2.6-architectuur van de applicatie is het strikt verboden om Firebase-functionaliteiten rechtstreeks te gebruiken zonder dat ze via de centrale hub zijn geregistreerd. Atomaire database-operaties die meerdere documenten tegelijk muteren, zijn volledig afhankelijk van deze correcte registratie om data-corruptie te voorkomen.
+
+Binnen de Vanilla ES6-architectuur (v2.6) van de applicatie draait elke module in zijn eigen geïsoleerde scope. Functies die door de centrale orchestrator in app.js via safeInit worden aangeroepen, of vanuit de HTML-DOM via event-listeners worden geactiveerd, moeten onverbiddelijk aan de globale window-omgeving worden vastgeketend.
+
+In een reactieve Vanilla JS-architectuur die steunt op asynchrone clouddatabases, mag een lege lokale cache-array nooit direct worden geïnterpreteerd als een "data-verwijdering" door de gebruiker. Er moet altijd een expliciet onderscheid worden gemaakt tussen een ongevulde status (tijdens de opstartfase) en een daadwerkelijk lege database.
+
+Binnen de stabiele v2.6-architectuur van de Meandery App geeft de eigenschap selectedOptions van een <select> element altijd een array-achtige HTMLCollection terug. Bewerkingen of attribuut-uitlezingen (zoals .text of .value) kunnen nooit rechtstreeks op deze collectie worden uitgevoerd, maar moeten altijd via een specifieke index (zoals `` of via de veilige .at(0) methodiek) naar het individuele element worden geleid.

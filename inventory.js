@@ -228,7 +228,7 @@ window.analyzeAgingPotential = async function() {
         const abv = brew.logData?.finalABV ? sanitizeInput(brew.logData.finalABV) : 12;
         const fg = brew.logData?.finalGravity ? sanitizeInput(brew.logData.finalGravity) : 1.000;
         const tCellar = sanitizeInput(state.userSettings.cellarTemp || 18);
-        const bottlingDate = new Date(); // Gebruikt huidige datum als basis bij bottelen
+        const bottlingDate = new Date(); 
 
         // 2. Wetenschappelijke Berekeningen (Auditor v2.5 Aging Matrix)
         const RS = (fg - 1.000) * 2600;
@@ -236,15 +236,15 @@ window.analyzeAgingPotential = async function() {
         const fSG = 1 + ((RS / 100) * 0.12);
         const fTemp = Math.pow(2.1, (15 - tCellar) / 10);
         
-        let mBase = 180; // Basis bewaartijd in dagen
-        if (abv > 15) mBase *= 1.10; // Delle-Bonus (Roadmap 3.1)
+        let mBase = 180; 
+        if (abv > 15) mBase *= 1.10; 
 
         const totalAgingDays = mBase * fABV * fSG * fTemp;
         const peakDate = new Date(bottlingDate);
         peakDate.setDate(peakDate.getDate() + Math.round(totalAgingDays));
 
-        // 3. UI Update
-        dateInput.value = peakDate.toISOString().split('T')[0];
+        // 3. UI Update - Hersteld met stabiele .at(0) indexering
+        dateInput.value = peakDate.toISOString().split('T').at(0);
         reasonInput.value = `Matrix v2.5: fABV=${fABV.toFixed(2)}, fSG=${fSG.toFixed(2)}, fTemp=${fTemp.toFixed(2)}. Calculated aging: ${Math.round(totalAgingDays)} days.`;
         
         showToast("Aging potential calculated via Auditor v2.5 Matrix.", "success");
@@ -460,9 +460,9 @@ window.generateShoppingList = function(brewId = null, renderToScreen = true) {
 
     let ingredients = [];
     try {
-        ingredients = JSON.parse(match[1]);
+        ingredients = JSON.parse(match.at(1));
     } catch (e) {
-        console.error("JSON Parse error:", e);
+        window.logSystemError(e, 'Shopping List Extraction Analysis', 'ERROR');
         return;
     }
 
@@ -547,7 +547,7 @@ function startScanner() {
 
     html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess)
          .catch(err => {
-             console.error("Unable to start scanning.", err);
+             window.logSystemError(err, 'Barcode Scanner Infrastructure Initialization', 'ERROR');
              alert("Could not start camera. Please grant camera permissions.");
          });
 }
@@ -558,7 +558,7 @@ function stopScanner() {
             const container = document.getElementById('barcode-scanner-container');
             if (container) container.classList.add('hidden');
             html5QrcodeScanner.clear();
-        }).catch(err => console.error("Error stopping scanner:", err));
+        }).catch(err => window.logSystemError(err, 'Barcode Scanner Session Termination', 'ERROR'));
     } else {
          const container = document.getElementById('barcode-scanner-container');
          if (container) container.classList.add('hidden');
@@ -793,8 +793,7 @@ async function savePackagingCosts() {
         showToast('Packaging updated!', 'success');
         await loadPackagingCosts();
     } catch (error) { 
-        logSystemError(error, 'inventory.js -> savePackagingCosts', 'ERROR');
-        showToast('Failed to save packaging.', 'error'); 
+        window.logSystemError(error, 'Packaging Cost Specification Retrieval', 'ERROR');
     }
 }
 
@@ -1264,13 +1263,13 @@ window.runAgingAnalysis = async function(cellarId) {
         const totalAgingDays = mBase * fABV * fSG * fTemp;
         const peakDate = new Date(bDate);
         peakDate.setDate(peakDate.getDate() + Math.round(totalAgingDays));
-        const peakDateStr = peakDate.toISOString().split('T');
+        const peakDateStr = peakDate.toISOString().split('T').at(0);
 
         // 2. AI Smaakfase Interpretatie - Datum Sanitisatie Fix
         const prompt = `Identify the exact Mead Aging Phase (Juvenile, Integration, Apex, or Senescence) based on:
         BATCH: ${item.recipeName}
-        TODAY: ${today.toISOString().split('T')}
-        BOTTLED: ${bDate.toISOString().split('T')}
+        TODAY: ${today.toISOString().split('T').at(0)}
+        BOTTLED: ${bDate.toISOString().split('T').at(0)}
         ESTIMATED PEAK: ${peakDateStr}
         CONDITIONS: Temp ${tCellar}C, History: "${history}"
         OUTPUT JSON: {"phase": "string", "reason": "max 15 words"}`;

@@ -500,8 +500,26 @@ input:checked + .slider:before { transform: translateX(24px); }
     pointer-events: auto !important;
 }
 
+/* =========================================
+   6. MEANDERY V2.6 LAYOUT ARCHITECTURE
+   ========================================= */
+.max-h-dashboard {
+    max-height: 88vh;
+    overflow-y: auto;
+}
+
+.max-h-panel {
+    max-height: 75vh;
+    overflow-y: auto;
+}
+
+.max-h-calculator-panel {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
 /* Avery Stanslijnen Gids (Alleen zichtbaar in preview) */
-.show-guides #label-preview-container::after {
+.show-guides #label-preview-container .label-sheet > div {
     content: '';
     position: absolute;
     inset: 0;

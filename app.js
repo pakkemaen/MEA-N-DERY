@@ -103,24 +103,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.sub-tab').forEach(tab => {
         tab.addEventListener('click', (e) => {
-            const parentId = e.target.closest('[id$="-main-view"]').id;
-            const viewName = e.target.id.replace('-sub-tab', '');
-            
-            switchSubView(viewName, parentId);
+            try {
+                const parentId = e.target.closest('[id$="-main-view"]').id;
+                const viewName = e.target.id.replace('-sub-tab', '');
+                
+                switchSubView(viewName, parentId);
 
-            if (viewName === 'brew-day-1') {
-                const activeId = state.currentBrewDay?.brewId || (state.userSettings?.currentBrewDay?.brewId);
-                if (window.renderBrewDay) {
-                    window.renderBrewDay(activeId || 'none');
+                if (viewName === 'brew-day-1') {
+                    const activeId = state.currentBrewDay?.brewId || (state.userSettings?.currentBrewDay?.brewId);
+                    if (window.renderBrewDay) {
+                        window.renderBrewDay(activeId || 'none');
+                    }
                 }
-            }
-            
-            if (viewName === 'brew-day-2' && window.renderBrewDay2) {
-                window.renderBrewDay2();
-            }
+                
+                if (viewName === 'brew-day-2' && window.renderBrewDay2) {
+                    window.renderBrewDay2();
+                }
 
-            if (viewName === 'settings-data' && window.updateLogCount) {
-                window.updateLogCount();
+                if (viewName === 'settings-data' && window.updateLogCount) {
+                    window.updateLogCount();
+                }
+            } catch (error) {
+                if (window.logSystemError) {
+                    window.logSystemError(error, "Sub-Tab Navigation Lifecycle Verification", "ERROR");
+                }
+                if (window.showToast) {
+                    window.showToast("Navigation lifecycle exception caught", "error");
+                }
             }
         });
     });
@@ -194,19 +203,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- INSTELLINGEN ---
     document.getElementById('saveSettingsBtn')?.addEventListener('click', () => window.saveUserSettings());
     document.getElementById('fetchModelsBtn')?.addEventListener('click', () => window.fetchAvailableModels());
+    // Theme Toggle Listener
     document.getElementById('theme-toggle-checkbox')?.addEventListener('change', (e) => {
-    try {
-        if (e.target.checked) {
-            document.documentElement.classList.add('dark');
-        } else {
-            // Typo 'remove' gesaneerd naar de correcte string-identificator 'dark'
-            document.documentElement.classList.remove('dark');
+        try {
+            const isDark = e.target.checked;
+            
+            if (!state.userSettings) {
+                state.userSettings = {};
+            }
+            state.userSettings.theme = isDark ? 'dark' : 'light';
+            
+            if(isDark) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        } catch (error) {
+            window.logSystemError?.(error, "Theme State Synchronization Lifecycle", "ERROR");
+            window.showToast?.("Error synchronizing theme state", "error");
         }
-    } catch (error) {
-        window.logSystemError(error, 'UI: Theme Toggle Failure', 'ERROR');
-        window.showToast("Theme switch failed", "error");
-    }
-});
+    });
     
     // --- WATER TOOLS ---
     document.getElementById('water-profile-form')?.addEventListener('submit', (e) => window.saveWaterProfile(e));

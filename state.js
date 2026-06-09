@@ -61,5 +61,5 @@ export function resetState() {
     state.waterProfiles = [];
     state.labelAssets = { savedStyles: [], savedFonts: [] };
     
-    console.log("🧹 State volledig gewist.");
+    console.log("🧹 Global state container successfully purged.");
 }

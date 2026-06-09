@@ -184,6 +184,8 @@ function buildPrompt() {
             mathContext += `\n- **JUICE WARNING:** If replacing water with Fruit Juice, reduce honey to prevent overshooting ABV.`;
         }
 
+        // De-repressie architectuur variabele expliciet initialiseren ter voorkoming van conditionele scope referentiefouten
+        let ncrContext = "";
         if (inputString.includes("qa23") || inputString.includes("us-05") || inputString.includes("71b") || inputString.includes("ec-1118") || inputString.includes("d47") || inputString.includes("m05")) {
             ncrContext = `
             - **NCR DE-REPRESSION ARCHITECTURE (IRC7-L Allele Activation):** If the prescribed yeast strain is Lalvin QA23 or SafAle US-05, you MUST compile an advanced nutrient schedule that exploits transcriptional de-repressive enzyme mechanics for up to a 10x higher free volatile thiol release (3MH).

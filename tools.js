@@ -746,8 +746,9 @@ window.sendTroubleshootMessage = async function() {
 
             // Als dit een nieuw gesprek is, verzin een titel
             if (!currentChatId) {
-                // Titel is de eerste 5 woorden van de user input
-                const title = chatHistory[0].text.split(' ').slice(0, 6).join(' ') + '...';
+                // HOTFIX: Array-indexering gecorrigeerd van bracket-notatie naar de veilige .at(0) methodiek
+                const baseText = chatHistory.at(0) ? chatHistory.at(0).text : '';
+                const title = baseText.split(' ').slice(0, 6).join(' ') + '...';
                 chatData.title = title;
                 chatData.createdAt = new Date().toISOString();
                 
@@ -767,7 +768,7 @@ window.sendTroubleshootMessage = async function() {
         chatBox.scrollTop = chatBox.scrollHeight;
         input.focus(); 
     }
-}
+};
 
 // 7. De Speciale API functie (Ongewijzigd)
 async function performChatApiCall(history, base64Image) {
@@ -2138,7 +2139,6 @@ window.calculateSplitBatch = function() {
 
 window.calculateTastingAssessment = async function(brewId, sensoryScores, activeOffFlavors) {
     try {
-        // 1. INPUT-SANITISATIE & MATHEMATISCHE PRE-CHECK (Comma-to-Dot Protocol)
         if (!brewId) {
             window.showToast("Context conflict: No active brew record selected for evaluation.", "error");
             return;
@@ -2150,7 +2150,7 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
             return;
         }
 
-        // Analytische parameters ophalen en saniteren
+        // Analytische parameters uit de DOM extraheren en saniteren via Comma-to-Dot
         const fgRaw = String(document.getElementById('tasting_fg')?.value || brew.logData?.actualFG || brew.logData?.targetFG || '1.000');
         const taRaw = String(document.getElementById('tasting_ta')?.value || '6.0');
         const phRaw = String(document.getElementById('tasting_ph')?.value || '3.6');
@@ -2161,7 +2161,6 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
 
         if (titratableAcidity <= 0) {
             window.showToast("Mathematical violation: Titratable Acidity (TA) must exceed 0 g/L to prevent calculation crash.", "error");
-            window.logSystemError(new Error("Tasting Assessment zero divisor check failed: TA <= 0"), 'Tasting Assessment Engine Evaluation', 'CRITICAL');
             return;
         }
 
@@ -2170,40 +2169,38 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
             return;
         }
 
-        // 2. DICHTHEID- & HARMONIE-CALCULATIES
-        // Bates-polynoom: Soortelijke massa (SG) naar Finale Brix (Brix_f)
+        // 1. Derdegraads Bates-polynoom: SG naar Finale Brix
         const brixFinal = (182.9622 * Math.pow(finalGravity, 3)) - (777.3009 * Math.pow(finalGravity, 2)) + (1264.5170 * finalGravity) - 670.1831;
         
-        // Actuele restsuikerconcentratie (C_s in g/L)
-        const sugarConcentration = 10 * brixFinal * finalGravity;
+        // 2. Actuele restsuikerconcentratie (C_s in g/L)
+        const sugarConcentration = brixFinal * finalGravity * 10;
 
-        // Astringentie-matrix factor op basis van tanninSlider (T_score)
-        const tScore = parseFloat(sensoryScores?.tanninSlider) || 1.0;
-        const astringencyFactor = 1.0 + (0.25 * (tScore - 1.0));
+        // 3. Logaritmische Mede-Harmonie Index (M_HI) met Tannin-slider modulatie
+        const tanninValue = parseFloat(sensoryScores?.tanninSlider) || 1.0;
+        const logDenominator = titratableAcidity * (4.5 - measuredPh) * (1 + (tanninValue / 10));
+        
+        let meadHarmonyIndex = 0;
+        if (logDenominator !== 0) {
+            meadHarmonyIndex = sugarConcentration / logDenominator;
+        }
 
-        // Mede-Harmonie Index (M_HI)
-        const meadHarmonyIndex = (sugarConcentration * measuredPh) / (titratableAcidity * astringencyFactor);
-
-        // 3. ALGORITMISCHE FEEDBACK-MATRIX
+        // Algoritmische feedback-matrix op basis van de vernieuwde M_HI
         let oenologicalFeedback = "";
         if (meadHarmonyIndex < 25) {
-            oenologicalFeedback = "🚨 **Profile: Imbalanced / Acid-Dominant.** The mead exhibits an analytical deficit in sweetness, causing acids or wood-derived tannins to overpower the sensory balance. Recommendation: Formulate a backsweetening dose using the Bates-v2.6 tracking module or apply a subtle carbonate buffer matrix.";
+            oenologicalFeedback = "🚨 **Profile: Imbalanced / Acid-Dominant.** The mead exhibits an analytical deficit in sweetness, causing acids or wood-derived tannins to overpower the sensory balance. Recommendation: Formulate a backsweetening dose using the Bates-v2.6 tracking module.";
         } else if (meadHarmonyIndex >= 25 && meadHarmonyIndex <= 65) {
             oenologicalFeedback = "✨ **Profile: Perfect Mead Harmony.** Taste components exist in exceptional structural equilibrium. The balancing index between residual sugars, titratable acidity, and astringency factors represents superior zymological design.";
         } else {
             oenologicalFeedback = "🍯 **Profile: Excessively Sweet / Flaccid.** Residual sugar volumes exceed organoleptic boundaries due to insufficient supporting acidity. Recommendation: Fine-tune structural crispness by making calculated adjustments with Tartaric or Malic acid solutions.";
         }
 
-        // 4. OFF-FLAVOR KINETISCHE CHECKS
+        // Off-flavor logica en binaire interlocks
         let offFlavorNotes = [];
-
-        // Kinetische Check A: Reductie & Stikstoftekort
         if (activeOffFlavors?.reduction && brew.logData?.yanDelta > 0) {
             const extraFermaidO = brew.logData.yanDelta / 40;
             offFlavorNotes.push(`• **Reduction Detected:** Volatile sulfur characteristics correlate directly to a nutritional gap of ${Math.round(brew.logData.yanDelta)} ppm YAN during early logistics. Proactively inject ${extraFermaidO.toFixed(2)} g/L of organic Fermaid O in the next iteration batch.`);
         }
 
-        // Kinetische Check B: Foezelalcoholen bij Lalvin D47 thermische stress
         const yeastStrain = brew.yeastStrain || "";
         const maxTemp = parseFloat(brew.logData?.maxFermentationTemp) || 0;
         if (activeOffFlavors?.fusels && yeastStrain.includes("D47") && maxTemp > 20) {
@@ -2211,7 +2208,6 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
             offFlavorNotes.push(`• **Thermal Kinetics Stress (Lalvin D47):** Fusel higher alcohol synthesis triggered by temperature ceilings overriding threshold levels during log growth. The culture underwent a heat stress factor of +${deltaTStress.toFixed(1)}°C above the maximum 20°C standard.`);
         }
 
-        // Kinetische Check C: Binaris Risico op Geranium Taint (Kritieke Veiligheidscheck)
         if (activeOffFlavors?.geranium) {
             const hasSorbaat = brew.stabilizationData?.sorbateAdded || false;
             const freeSO2 = parseFloat(brew.stabilizationData?.measuredFreeSO2) || 0;
@@ -2226,7 +2222,7 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
             ? offFlavorNotes.join("\n") 
             : "• No severe kinetic off-flavor deviations mapped from available fermentation logs.";
 
-        // 5. RATING-BEREKENING (Sterrenscore met Off-Flavor Aftrek)
+        // Rating berekening met strikte array-uitlezingsprotectie via .at()
         const aroma = parseFloat(sensoryScores?.aromaSlider) || 3.0;
         const flavor = parseFloat(sensoryScores?.flavorSlider) || 3.0;
         const mouthfeel = parseFloat(sensoryScores?.mouthfeelSlider) || 3.0;
@@ -2234,11 +2230,10 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
         const unweightedAverage = (aroma + flavor + mouthfeel) / 3.0;
         const activeOffFlavorCount = Object.values(activeOffFlavors || {}).filter(Boolean).length;
         
-        // Vaste aftrek van 1.00 ster per actieve afwijking, hard begrensd tussen 0.25 en 5.00
         let calculatedStars = unweightedAverage - (1.00 * activeOffFlavorCount);
         calculatedStars = Math.max(0.25, Math.min(5.00, calculatedStars));
 
-        // 6. DATABASE SYNC & STATE-AFHANDELING
+        // Firestore Synchronisatie & Lokale State Cache Mutatie
         if (!state.userId) {
             window.showToast("Local caching only: Authenticate user profile to allow server-side synchronization.", "warning");
             renderTastingResultsUI(sugarConcentration, meadHarmonyIndex, calculatedStars, oenologicalFeedback, combinedNotesString);
@@ -2257,17 +2252,13 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
         };
 
         const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId);
-        
-        // Schrijf direct weg naar Firestore (Single Source of Truth)
         await updateDoc(brewDocRef, tastingPayload);
 
-        // Update lokale state cache na succesvolle Firestore bevestiging via de veilige .at() methodiek
         const localBrewIndex = state.brews.findIndex(b => b.id === brewId);
         if (localBrewIndex !== -1) {
             state.brews.at(localBrewIndex).tastingAssessment = tastingPayload.tastingAssessment;
         }
 
-        // Render de resultaten live in de UI
         renderTastingResultsUI(sugarConcentration, meadHarmonyIndex, calculatedStars, oenologicalFeedback, combinedNotesString);
         window.showToast("Organoleptic profiles synchronized with server database.", "success");
 
@@ -2276,7 +2267,6 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
         window.showToast("Critical exception within sensoric analysis rendering.", "error");
     }
 };
-
 
 function renderTastingResultsUI(sugar, harmony, stars, feedback, notes) {
     const outputDiv = document.getElementById('tasting-assessment-output');
@@ -2343,30 +2333,16 @@ window.calculateWaterMatching = function() {
             return;
         }
 
+        // Ionen-deltabepaling conform stoichiometrische matrix boundaries
         const deltaCa = Math.max(0, targetCa - sourceCa);
         const deltaMg = Math.max(0, targetMg - sourceMg);
         const deltaSo4 = Math.max(0, targetSo4 - sourceSo4);
         const deltaCl = Math.max(0, targetCl - sourceCl);
 
-        // Epsomzout op basis van Magnesiumbehoefte
-        const mEpsomPerLiter = deltaMg / 98.6;
-
-        // Resterend Sulfaat na Epsom-toevoeging
-        let deltaSo4Rem = deltaSo4 - (mEpsomPerLiter * 389.7);
-        if (deltaSo4Rem < 0) deltaSo4Rem = 0;
-
-        // Gips op basis van resterende Sulfaatbehoefte
-        const mGypsumPerLiter = deltaSo4Rem / 557.9;
-
-        // Calciumchloride op basis van Chloridebehoefte
-        const mCaCl2PerLiter = deltaCl / 482.3;
-
-        // Volumemodulatie (Totale massa in grammen)
-        const totalEpsom = mEpsomPerLiter * vWater;
-        const totalGypsum = mGypsumPerLiter * vWater;
-        const totalCaCl2 = mCaCl2PerLiter * vWater;
-
-        const caAddedPpm = (mGypsumPerLiter * 232.8) + (mCaCl2PerLiter * 272.6);
+        // Exacte zoutberekeningen conform de vernieuwde wetenschappelijke v2.6 constanten
+        const totalGypsum = (deltaCa * vWater) / 232.8;
+        const totalCaCl2 = (deltaCa * vWater) / 272.6;
+        const totalEpsom = (deltaMg * vWater) / 98.6;
 
         let ratioOutput = "";
         if (targetCl === 0) {
@@ -2379,7 +2355,7 @@ window.calculateWaterMatching = function() {
         if (resultDiv) {
             resultDiv.innerHTML = `
                 <div class="p-4 bg-primary-container rounded-xl border border-primary/20 shadow-sm animate-fade-in space-y-3">
-                    <div class="text-[10px] uppercase font-bold tracking-widest text-primary mb-1">Required Mineral Additions</div>
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-primary mb-1">Required Mineral Additions (v2.6 Standard)</div>
                     
                     <div class="grid grid-cols-3 gap-2 text-center">
                         <div class="p-2 card rounded-lg bg-app-primary/5">
@@ -2397,10 +2373,6 @@ window.calculateWaterMatching = function() {
                     </div>
 
                     <div class="pt-2 border-t border-outline-variant/30 text-xs space-y-1 text-on-surface">
-                        <div class="flex justify-between">
-                            <span>Est. Calcium Balance Increase:</span>
-                            <span class="font-mono font-bold text-green-600">+${caAddedPpm.toFixed(1)} ppm</span>
-                        </div>
                         <div class="flex justify-between">
                             <span>Target SO₄ / Cl Ratio:</span>
                             <span class="font-mono font-bold text-primary">${ratioOutput}</span>

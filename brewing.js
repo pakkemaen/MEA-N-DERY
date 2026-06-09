@@ -1069,6 +1069,7 @@ window.startActualBrewDay = async function(brewId) {
 
     if (!brew.logData) brew.logData = {};
     if (!brew.logData.brewDate) {
+        // Anti-Parsing Bug: split resultaat extraheren via de veilige .at(0) methodiek
         brew.logData.brewDate = new Date().toISOString().split('T').at(0);
         try {
             await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { 
@@ -1757,17 +1758,16 @@ window.startStepTimer = function(brewId, stepIndex, resumeTime = null) {
     }
     
     // 3. Haal de stappen op (Day 1)
-    // We moeten zeker weten dat brewDaySteps gevuld is
     let allSteps = brew.brewDaySteps;
     if (!allSteps || allSteps.length === 0) {
-        // Fallback: probeer ze opnieuw te parsen als ze ontbreken
         console.warn("Timer Warning: Steps missing, reparsing...");
         const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
         allSteps = extracted.day1;
-        brew.brewDaySteps = allSteps; // Cache herstellen
+        brew.brewDaySteps = allSteps; 
     }
 
-    const step = allSteps[stepIndex];
+    // Anti-Parsing Bug: Elementen indexeren via .at() methodiek
+    const step = allSteps.at(stepIndex);
     if (!step) {
         console.error("Timer Error: Step not found at index", stepIndex);
         return;
@@ -1785,9 +1785,8 @@ window.startStepTimer = function(brewId, stepIndex, resumeTime = null) {
     // 5. Starttijd bepalen
     let timeLeft = resumeTime !== null ? resumeTime : step.duration;
     
-    // Direct updaten zodat je niet 1 seconde hoeft te wachten
     timerDisplay.textContent = formatTime(timeLeft);
-    timerDisplay.classList.add('text-green-600', 'scale-110'); // Visuele feedback
+    timerDisplay.classList.add('text-green-600', 'scale-110'); 
 
     // 6. Knoppen veranderen naar Pause
     if (controlsDiv) {
@@ -1803,7 +1802,6 @@ window.startStepTimer = function(brewId, stepIndex, resumeTime = null) {
         
         if (timerDisplay) timerDisplay.textContent = formatTime(timeLeft);
         
-        // Opslaan in LocalStorage voor als de pagina ververst wordt (Mini-feature)
         const timerState = { brewId, stepIndex, endTime: Date.now() + (timeLeft * 1000) };
         localStorage.setItem('activeBrewDayTimer', JSON.stringify(timerState));
 
@@ -1817,7 +1815,6 @@ window.startStepTimer = function(brewId, stepIndex, resumeTime = null) {
                 timerDisplay.classList.remove('text-green-600', 'scale-110');
             }
             
-            // Geluidje / Trillen
             if(navigator.vibrate) navigator.vibrate([200, 100, 200]); 
             
             window.completeStep(stepIndex, true); 
@@ -1879,7 +1876,8 @@ window.completeStep = async function(stepIndex, isSkipping = false) {
 
     // 4. Auto-start de volgende timer? (Alleen bij korte timers)
     const allSteps = brew.brewDaySteps || [];
-    const nextStep = allSteps[stepIndex + 1];
+    // Anti-Parsing Bug: indexeren via de .at() methodiek
+    const nextStep = allSteps.at(stepIndex + 1);
     
     if (nextStep && nextStep.duration > 0 && nextStep.duration < 3600 && !isSkipping) {
         window.startStepTimer(brewId, stepIndex + 1);
@@ -1918,7 +1916,8 @@ window.toggleSecondaryStep = async function(brewId, stepKey) {
         if (!brew.checklist) brew.checklist = {};
 
         // 1. GERANIUM TAINT TRIGGER (v2.6)
-        const stepObj = (brew.secondarySteps || [])[parseInt(stepKey.replace('sec-step-', ''))];
+        // Anti-Parsing Bug: Indexering herleid via de chat-veilige .at() methodiek
+        const stepObj = (brew.secondarySteps || []).at(parseInt(stepKey.replace('sec-step-', '')));
         const isSorbateStep = stepKey.includes('sorbate') || (stepObj && (stepObj.title.toLowerCase().includes('sorbat') || stepObj.description.toLowerCase().includes('sorbat')));
         
         if (isSorbateStep && !brew.checklist[stepKey]) {
@@ -2108,21 +2107,26 @@ export function parseIngredientsFromMarkdown(markdown) {
     let insideTable = false;
 
     for (let i = 0; i < lines.length; i++) {
-        let line = lines.at(i);
-        if (line.includes('|---')) { insideTable = true; continue; }
-        
-        if (insideTable && line.trim().startsWith('|')) {
-            const cols = line.split('|').map(c => c.trim()).filter(c => c);
-            if (cols.length >= 2) {
-                if (cols.at(0).toLowerCase().includes('ingredient')) continue;
-                ingredients.push({
-                    name: cols.at(0), 
-                    quantity: parseFloat(cols.at(1)) || 0, 
-                    unit: cols.at(2) || ''
-                });
+        try {
+            let line = lines.at(i);
+            if (line.includes('|---')) { insideTable = true; continue; }
+            
+            if (insideTable && line.trim().startsWith('|')) {
+                const cols = line.split('|').map(c => c.trim()).filter(c => c);
+                if (cols.length >= 2) {
+                    if (cols.at(0).toLowerCase().includes('ingredient')) continue;
+                    ingredients.push({
+                        name: cols.at(0), 
+                        quantity: parseFloat(cols.at(1)) || 0, 
+                        unit: cols.at(2) || ''
+                    });
+                }
+            } else if (insideTable && line.trim() === '') {
+                insideTable = false;
             }
-        } else if (insideTable && line.trim() === '') {
-            insideTable = false;
+        } catch (tableError) {
+            // Foutisolatie conform v2.6 foutafhandelingsarchitectuur
+            window.logSystemError(tableError, 'Recipe Table Markdown Serialization Analysis', 'ERROR');
         }
     }
 
@@ -2764,13 +2768,16 @@ window.runAgingAnalysis = async function(brewId) {
     if (!brew) return;
 
     try {
-        // v2.6 Fix: ISO Indexing toegevoegd aan TODAY en BOTTLED
+        // Anti-Parsing Bug: split resultaten via de veilige .at(0) methodiek extraheren
+        const todayStamp = new Date().toISOString().split('T').at(0);
+        const bottledStamp = brew.logData?.bottlingDate ? brew.logData.bottlingDate.split('T').at(0) : 'Not yet';
+
         const prompt = `Analyze aging potential:
         Batch: ${brew.recipeName}
         ABV: ${brew.logData?.finalABV || 'unknown'}
         Current SG: ${brew.logData?.actualFG || 'unknown'}
-        TODAY: ${new Date().toISOString().split('T')[0]}
-        BOTTLED: ${brew.logData?.bottlingDate ? brew.logData.bottlingDate.split('T')[0] : 'Not yet'}
+        TODAY: ${todayStamp}
+        BOTTLED: ${bottledStamp}
         
         Provide a JSON object with: "peak_months" (number), "flavor_evolution" (string), "stability_risk" (string).`;
 

@@ -1681,10 +1681,17 @@
                 </div>
                 
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Google AI Key</label>
-                        <input type="password" id="apiKeyInput" placeholder="Enter API Key">
-                    </div>
+    <div class="text-sm font-bold text-primary flex items-center gap-2">
+        <span>🧠</span> Brain Power
+    </div>
+    <div>
+        <label class="block text-[10px] text-on-surface-variant mb-1 ml-1">OpenAI API Key (Stored locally)</label>
+        <div class="flex gap-2 items-center relative">
+            <input type="password" id="apiKeyInput" placeholder="sk-..." class="w-full bg-surface border-outline-variant rounded-xl p-2 text-xs font-mono pr-10">
+            <button type="button" id="apiKeyToggleBtn" onclick="window.toggleApiKeyVisibility()" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-surface-variant/20 rounded-lg transition-colors text-xs" title="Toggle Key Visibility">👁️<span class="sr-only">Show Key</span></button>
+        </div>
+    </div>
+</div>
                     
                     <div class="pt-4 border-t border-outline-variant">
                         <div class="flex justify-between items-end mb-2">

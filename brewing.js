@@ -92,7 +92,13 @@ function buildPrompt() {
 
         const sweetness = document.getElementById('sweetness')?.value;
         const styleSelect = document.getElementById('style');
-        const style = (styleSelect && styleSelect.selectedOptions.length > 0) ? styleSelect.selectedOptions.item(0).text : 'Traditional Mead';
+        let style = 'Traditional Mead';
+        if (styleSelect && styleSelect.selectedOptions && styleSelect.selectedOptions.length > 0) {
+            const firstSelectedOption = styleSelect.selectedOptions.item(0);
+            if (firstSelectedOption) {
+                style = firstSelectedOption.text;
+            }
+        }
         
         const inputString = (customDescription + " " + style).toLowerCase();
         const noWaterCheckbox = document.getElementById('isNoWaterCheckbox');
@@ -408,10 +414,24 @@ async function generateRecipe() {
         const prompt = buildPrompt();
         lastGeneratedPrompt = prompt; 
         
-        let rawResponse = await performApiCall(prompt); 
+        // STRIKT MANDATORISCH V2.6 MANDAAT: Haal actieve configuratie uit state.js
+        const userApiKey = state.userSettings?.apiKey || "";
+        const userModel = state.userSettings?.aiModel || "gemini-2.0-flash";
+
+        if (!userApiKey) {
+            if (thinkingInterval) clearInterval(thinkingInterval);
+            window.showToast("Configuration failure: Local OpenAI/Google API Key registry is vacant.", "error");
+            if(recipeOutput) recipeOutput.innerHTML = `<p class="text-error p-4 font-bold">Authentication mismatch: Please provide a valid API Key within system settings.</p>`;
+            return;
+        }
+
+        // Voer de aanroep uit en passeer de expliciete configuratieparameters naar de API handler
+        let rawResponse = await performApiCall(prompt, null, userApiKey, userModel); 
         
         let cleanedResponse = rawResponse.trim();
-        if (cleanedResponse.startsWith("```")) {
+        if (cleanedResponse.startsWith("```markdown")) {
+            cleanedResponse = cleanedResponse.substring(11, cleanedResponse.lastIndexOf("```")).trim();
+        } else if (cleanedResponse.startsWith("```")) {
             const firstNewLine = cleanedResponse.indexOf('\n');
             const lastBackticks = cleanedResponse.lastIndexOf("```");
             
@@ -429,17 +449,18 @@ async function generateRecipe() {
         if(typeof renderRecipeOutput === 'function') {
             await renderRecipeOutput(currentRecipeMarkdown); 
         } else {
-            console.warn("renderRecipeOutput nog niet geladen.");
+            console.warn("renderRecipeOutput not loaded yet.");
             if(recipeOutput) recipeOutput.innerText = currentRecipeMarkdown; 
         }
 
     } catch (error) {
         if (thinkingInterval) clearInterval(thinkingInterval);
-        // v2.6 Sluitend gecentraliseerd logframework geïntegreerd
-        window.logSystemError(error, 'brewing.js: generateRecipe', 'CRITICAL');
-        window.showToast("Failed to generate recipe. Check system logs.", "error");
-        if(recipeOutput) recipeOutput.innerHTML = `<p class="text-red-500 p-4">Error generating recipe: ${error.message}</p>`;
-    } finally {
+        window.logSystemError(error, "brewing.js: tweakUnsavedRecipe", "CRITICAL");
+        window.showToast("Failed to regenerate recipe modification request.", "error");
+        tweakOutput.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+        tweakBtn.disabled = false;
+    }
+} finally {
         if(generateBtn) {
             generateBtn.disabled = false;
             generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -553,6 +574,7 @@ async function generateAndInjectCreativeTitle(markdown) {
             tempState.currentRecipe = currentRecipeMarkdown;
         }
     } catch (error) {
+        window.logSystemError(error, "brewing.js: generateAndInjectCreativeTitle", "ERROR");
         titleHeader.textContent = originalTitle; // Fallback naar origineel bij fout
     }
 }
@@ -642,93 +664,82 @@ async function renderRecipeOutput(markdown, isTweak = false) {
 
     let finalMarkdown = markdown;
     
-    // Zorg dat er altijd een titel is (nodig voor opslaan)
     if (!finalMarkdown.trim().startsWith('# ')) {
         finalMarkdown = `# Untitled Batch\n\n${finalMarkdown}`;
     }
     
-    // Update state
     currentRecipeMarkdown = finalMarkdown;
     tempState.currentRecipe = finalMarkdown;
 
-    // 1. Flavor Profile berekenen (Async)
-    // We doen dit parallel aan het renderen zodat de tekst er alvast staat
-    currentPredictedProfile = await getPredictedFlavorProfile(markdown); 
+    // v2.6 STRUCTUURWIJZIGING: Schakel automatische, parallelle achtergrondaanvragen resoluut uit
+    // Er wordt nu een on-demand placeholder gerenderd om concurrent rate limits (HTTP 429) te elimineren
+    let flavorProfileHtml = `
+    <div id="flavor-profile-section" class="mt-8 pt-6 border-t border-outline-variant/30 no-print">
+        <h3 class="text-2xl font-header font-bold text-center mb-4 text-on-surface">Organoleptic Analysis</h3>
+        <div id="flavor-wheel-container-wrapper" class="card p-6 rounded-2xl max-w-sm mx-auto text-center bg-surface-container-low border border-outline-variant/50">
+            <div class="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+            </div>
+            <p class="text-xs text-on-surface-variant mb-4 leading-relaxed">Predict the sensory equilibrium, mouthfeel, sweetness, and complexity matrix of this recipe configuration.</p>
+            <button id="btn-generate-flavor-wheel" onclick="window.triggerOnDemandFlavorAnalysis()" class="bg-primary text-on-primary font-bold py-2.5 px-5 rounded-full text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-sm">
+                Generate Flavor Wheel
+            </button>
+            <div id="flavor-generation-status" class="mt-2 text-xs font-mono text-primary hidden"></div>
+        </div>
+    </div>`;
     
-    // HTML voor flavor sectie
-    let flavorProfileHtml = '<div id="flavor-profile-section" class="mt-8 pt-6 border-t border-app">';
-    flavorProfileHtml += '<h3 class="text-2xl font-header font-bold text-center mb-4">Predicted Flavor Profile</h3>';
-
-    if (currentPredictedProfile) {
-        flavorProfileHtml += `<div class="card p-4 rounded-lg max-w-sm mx-auto"><canvas id="generated-flavor-wheel"></canvas></div>`;
-    } else {
-        flavorProfileHtml += `<div class="card p-4 rounded-lg max-w-sm mx-auto text-center"><p class="text-sm mb-4">Could not generate profile.</p><button id="retry-flavor-btn" onclick="window.regenerateFlavorProfile()" class="bg-purple-600 text-white py-2 px-4 rounded btn text-sm">Generate Profile</button><div id="flavor-generation-status" class="mt-2 text-sm"></div></div>`;
-    }
-    flavorProfileHtml += '</div>';
-    
-    // 2. Markdown formatteren (Tabellen netjes maken)
-    // We gebruiken de helper functie uit Deel 4
     let processedMarkdown = formatRecipeMarkdown(finalMarkdown);
-
-    // 3. Timers opschonen (verwijder [d:00:00] debug codes indien aanwezig)
     processedMarkdown = processedMarkdown.replace(/\[d:[\d:]+\]/g, ''); 
     
-    // 4. Markdown naar HTML converteren
     if (typeof marked === 'undefined') {
         recipeOutput.innerHTML = `<pre>${processedMarkdown}</pre><p class="text-red-500">Error: Marked.js library missing.</p>`;
         return;
     }
     const recipeHtml = marked.parse(processedMarkdown);
     
-    // 5. HTML Injecteren
     const fullHtml = `
-            <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
-                <button onclick="window.generateRecipe()" class="bg-app-action text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors btn text-sm flex items-center gap-1">
-                   Retry
-                </button>
-                <button onclick="window.print()" class="bg-app-tertiary text-app-header border border-app-brand/30 py-2 px-4 rounded-lg hover:bg-app-secondary transition-colors btn">Print Recipe</button>
-            </div>
-            
-            <div class="recipe-content prose dark:prose-invert max-w-none text-app-header">${recipeHtml}</div>
+        <div class="print-button-container text-right mb-4 flex justify-end flex-wrap gap-2 no-print">
+            <button onclick="window.generateRecipe()" class="bg-primary text-on-primary py-2 px-4 rounded-xl hover:opacity-90 transition-colors btn text-sm flex items-center gap-1 font-bold uppercase tracking-wider">
+               Retry
+            </button>
+            <button onclick="window.print()" class="bg-surface-container border border-outline-variant text-on-surface py-2 px-4 rounded-xl hover:bg-surface-container-high transition-colors btn text-sm font-bold uppercase tracking-wider">Print Recipe</button>
+        </div>
         
-        <div id="water-recommendation-card" class="mt-4 p-4 border border-app-brand/30 bg-app-tertiary rounded-lg no-print transition-all">
+        <div class="recipe-content prose dark:prose-invert max-w-none text-on-surface">${recipeHtml}</div>
+    
+        <div id="water-recommendation-card" class="mt-4 p-4 border border-outline-variant/50 bg-surface-container-low rounded-2xl no-print transition-all">
             <div class="flex justify-between items-center">
                 <div>
-                    <h4 class="font-bold text-app-brand text-sm uppercase flex items-center gap-2">Water Chemistry</h4>
-                    <p class="text-xs text-app-secondary mt-1">Don't want to mess with salts? Find a bottled water that matches.</p>
+                    <h4 class="font-bold text-primary text-sm uppercase flex items-center gap-2">Water Chemistry</h4>
+                    <p class="text-xs text-on-surface-variant mt-1">Don't want to mess with salts? Find a bottled water that matches.</p>
                 </div>
-                <button onclick="window.findCommercialWaterMatch()" class="bg-app-brand text-white py-2 px-3 rounded text-sm hover:opacity-90 btn shadow-sm whitespace-nowrap">Find Matching Brand</button>
+                <button onclick="window.findCommercialWaterMatch()" class="bg-primary text-on-primary py-2.5 px-4 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 btn shadow-sm whitespace-nowrap">Find Matching Brand</button>
             </div>
-            <div id="water-brand-results" class="hidden mt-4 pt-4 border-t border-app-brand/20 text-sm text-app-header"></div>
+            <div id="water-brand-results" class="hidden mt-4 pt-4 border-t border-outline-variant/30 text-sm text-on-surface"></div>
         </div>
 
         ${flavorProfileHtml}
         
-        <div id="tweak-unsaved-section" class="mt-6 pt-6 border-t-2 border-app-brand no-print">
-            <h3 class="text-2xl font-header font-bold text-center mb-4">Not quite right? Tweak it.</h3>
-            <div class="card p-4 rounded-lg">
-                <label for="tweak-unsaved-request" class="block text-sm font-bold mb-2">Describe what you want to change:</label>
-                <textarea id="tweak-unsaved-request" rows="3" class="w-full p-2 border rounded-md bg-app-tertiary border-app text-app-header" placeholder="e.g., 'Make this for 20 liters', or 'Replace the apples with pears'"></textarea>
-                <button id="tweak-unsaved-btn" class="w-full mt-3 bg-app-brand text-white py-3 px-4 rounded-lg hover:opacity-90 btn">Generate Tweaked Recipe</button>
+        <div id="tweak-unsaved-section" class="mt-6 pt-6 border-t border-outline-variant/30 no-print">
+            <h3 class="text-2xl font-header font-bold text-center mb-4 text-on-surface">Not quite right? Tweak it.</h3>
+            <div class="card p-4 rounded-2xl bg-surface-container-low border border-outline-variant/50">
+                <label for="tweak-unsaved-request" class="block text-xs font-bold mb-2 uppercase text-on-surface-variant tracking-wider ml-1">Describe what you want to change:</label>
+                <textarea id="tweak-unsaved-request" rows="3" class="w-full p-3 border rounded-xl bg-surface border-outline-variant text-sm text-on-surface focus:ring-1 focus:ring-primary" placeholder="e.g., 'Make this for 20 liters', or 'Replace the apples with pears'"></textarea>
+                <button id="tweak-unsaved-btn" class="w-full mt-3 bg-primary text-on-primary font-bold py-3 px-4 rounded-full text-xs uppercase tracking-widest hover:opacity-90 btn">Generate Tweaked Recipe</button>
             </div>
             <div id="tweak-unsaved-output" class="mt-6"></div>
         </div>
 
         <div class="mt-6 no-print">
-            <button id="saveBtn" class="w-full bg-app-action text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-colors btn">Save to Brew History</button>
+            <button id="saveBtn" class="w-full bg-primary text-on-primary font-bold py-3.5 px-4 rounded-full hover:opacity-90 transition-colors btn text-sm uppercase tracking-widest shadow-elevation-1">Save to Brew History</button>
         </div>
     `;
 
     recipeOutput.innerHTML = fullHtml;
 
-    // 6. Grafiek tekenen (als we data hebben)
-    if (currentPredictedProfile) renderGeneratedFlavorWheel(currentPredictedProfile);
-
-    // 7. Event Listeners koppelen aan de nieuwe knoppen
     const saveBtn = document.getElementById('saveBtn');
     if(saveBtn) {
         saveBtn.addEventListener('click', () => {
-            // saveBrewToHistory komt in een later blok, dus we checken of hij bestaat
             if(window.saveBrewToHistory) window.saveBrewToHistory(currentRecipeMarkdown, currentPredictedProfile);
             else { console.error("saveBrewToHistory function missing!"); showToast("Error: Save function missing", "error"); }
         });
@@ -739,11 +750,71 @@ async function renderRecipeOutput(markdown, isTweak = false) {
         tweakBtn.addEventListener('click', tweakUnsavedRecipe);
     }
 
-    // 8. Branding genereren (alleen bij verse recepten, niet bij tweaks)
+    // ON-DEMAND MARKT-TITEL GENERATIE (Eerst pas uitvoeren na stabilisatie van het hoofd-recept)
     if (!isTweak) {
-        generateAndInjectCreativeTitle(finalMarkdown);
+        setTimeout(async () => {
+            try {
+                const userApiKey = state.userSettings?.apiKey || "";
+                if (userApiKey) {
+                    await generateAndInjectCreativeTitle(finalMarkdown);
+                }
+            } catch (e) {
+                console.warn("Sequential branding routine bypassed.");
+            }
+        }, 100);
     }
 }
+
+// --- ON-DEMAND INTERACTIE INTERLOCK (v2.6) ---
+window.triggerOnDemandFlavorAnalysis = async function() {
+    const wrapper = document.getElementById('flavor-wheel-container-wrapper');
+    const statusDiv = document.getElementById('flavor-generation-status');
+    const btn = document.getElementById('btn-generate-flavor-wheel');
+
+    if (!currentRecipeMarkdown) return;
+    
+    if (btn) btn.disabled = true;
+    if (statusDiv) {
+        statusDiv.innerText = "Analyzing Sensory DNA...";
+        statusDiv.classList.remove('hidden');
+    }
+
+    try {
+        const userApiKey = state.userSettings?.apiKey || "";
+        const userModel = state.userSettings?.aiModel || "gemini-2.0-flash";
+
+        const prompt = `You are a professional mead sommelier. Analyze this recipe and PREDICT its final flavor profile. Assign score 0-5 for: Sweetness, Acidity, Fruity/Floral, Spiciness, Earthy/Woody, Body/Mouthfeel. Output ONLY JSON. Recipe: "${currentRecipeMarkdown}"`;
+        
+        const schema = {
+            type: "OBJECT",
+            properties: { 
+                "sweetness": { "type": "NUMBER" }, 
+                "acidity": { "type": "NUMBER" }, 
+                "fruity_floral": { "type": "NUMBER" }, 
+                "spiciness": { "type": "NUMBER" }, 
+                "earthy_woody": { "type": "NUMBER" }, 
+                "body_mouthfeel": { "type": "NUMBER" } 
+            },
+            required: ["sweetness", "acidity", "fruity_floral", "spiciness", "earthy_woody", "body_mouthfeel"]
+        };
+
+        const jsonResponse = await performApiCall(prompt, schema, userApiKey, userModel);
+        currentPredictedProfile = JSON.parse(jsonResponse);
+
+        if (wrapper) {
+            wrapper.innerHTML = `<canvas id="generated-flavor-wheel" style="max-height: 280px;"></canvas>`;
+            renderGeneratedFlavorWheel(currentPredictedProfile);
+            window.showToast("Organoleptic profiling complete.", "success");
+        }
+    } catch (error) {
+        window.logSystemError(error, 'On-Demand Sensory Execution Anomaly', 'ERROR');
+        window.showToast("Sensory evaluation rate limit constraint mapped.", "error");
+        if (btn) btn.disabled = false;
+        if (statusDiv) statusDiv.classList.add('hidden');
+    }
+};
+
+window.triggerOnDemandFlavorAnalysis = window.triggerOnDemandFlavorAnalysis;
 
 // --- SCOPE FIX: USE STATE.INVENTORY ---
 async function tweakUnsavedRecipe() {
@@ -1309,8 +1380,10 @@ window.renderBrewDay2 = async function() {
                 hallError = true;
                 delleDisplay = "LIMIT ERR";
             } else {
-                const brixVal = (fgVal > 1) ? ((182.9622 * Math.pow(fgVal, 3)) - (777.3009 * Math.pow(fgVal, 2)) + (1264.5170 * fgVal) - 670.1831) : 0;
-                const delleValue = (abv * 4.5) + brixVal;
+                // Polynoom altijd berekenen over de volledige fgVal om legitieme negatieve waarden toe te staan
+                const brixVal = (182.9622 * Math.pow(fgVal, 3)) - (777.3009 * Math.pow(fgVal, 2)) + (1264.5170 * fgVal) - 670.1831;
+                // Clamping-vloer via Math.max om negatieve suikerfracties te isoleren van de Delle-index
+                const delleValue = (abv * 4.5) + Math.max(0, brixVal);
                 isDelleStable = delleValue >= 78 || abv >= 15; 
                 delleDisplay = `${delleValue.toFixed(1)} / 78.0`;
             }
@@ -3026,12 +3099,6 @@ window.autoCalculateABV = function(event, idSuffix) {
             const correctedOG = ogInput * (CF(T_act) / CF(T_cal));
             const correctedFG = fgInput * (CF(T_act) / CF(T_cal));
 
-            if (correctedOG >= 1.775) {
-                window.showToast("Critical system conflict: Original Gravity parameter matches or exceeds structural limits (1.775).", "error");
-                abvField.value = "LIMIT ERR";
-                return;
-            }
-
             let finalOG = correctedOG;
             let finalFG = correctedFG;
 
@@ -3044,20 +3111,35 @@ window.autoCalculateABV = function(event, idSuffix) {
                 
                 finalOG = (0.0000000578503 * Math.pow(RI_i, 3)) + (0.0000127414 * Math.pow(RI_i, 2)) + (0.00384577 * RI_i) + 1.0000;
                 finalFG = 1.0 - (0.002349 * RI_i) + (0.006276 * RI_f);
-                
-                // Herhaalde Hall-limiet check na Brix-naar-SG transformatie conform v2.6 mandaat
-                if (finalOG >= 1.775) {
-                    window.showToast("Critical system conflict: Transmuted Original Gravity value breaches the Hall equation framework (1.775).", "error");
-                    abvField.value = "LIMIT ERR";
-                    return;
-                }
+            }
+
+            // Interlock 1: Asymptotische Singulariteit & Ondergrens
+            if (finalOG >= 1.775 || finalOG <= 1.000) {
+                window.showToast("Critical system conflict: Transmuted Original Gravity value breaches the density thresholds.", "error");
+                abvField.value = "LIMIT ERR";
+                return;
+            }
+
+            // Interlock 2: Thermodynamische Attenuatie Check
+            if (finalFG > finalOG) {
+                window.showToast("Critical system conflict: Negative attenuation detected. Data alignment is inconsistent.", "error");
+                abvField.value = "LIMIT ERR";
+                return;
+            }
+
+            // Interlock 3: Fysische Dichtheidsvloer (Pure Ethanol Limit)
+            if (finalFG < 0.794) {
+                window.showToast("Critical system conflict: Final Gravity falls below physical limits of ethanol.", "error");
+                abvField.value = "LIMIT ERR";
+                return;
             }
             
-            if (finalOG > finalFG) {
-                const abw = (76.08 * (finalOG - finalFG)) / (1.775 - finalOG);
-                const abv = abw / 0.794; 
-                abvField.value = abv.toFixed(2) + "%";
-            } else {
+            // Veilige Hall-berekening na passeren van alle defensieve interlocks
+            const abw = (76.08 * (finalOG - finalFG)) / (1.775 - finalOG);
+            const abv = abw / 0.794; 
+            abvField.value = abv.toFixed(2) + "%";
+        } else {
+            if (abvField) {
                 abvField.value = "0.00%";
             }
         }

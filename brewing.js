@@ -455,12 +455,18 @@ async function generateRecipe() {
 
     } catch (error) {
         if (thinkingInterval) clearInterval(thinkingInterval);
-        window.logSystemError(error, "brewing.js: tweakUnsavedRecipe", "CRITICAL");
-        window.showToast("Failed to regenerate recipe modification request.", "error");
-        tweakOutput.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
-        tweakBtn.disabled = false;
-} finally {
-        if(generateBtn) {
+        window.logSystemError(error, "brewing.js: generateRecipe", "CRITICAL");
+        window.showToast("Recipe creation failed or API quota exceeded. Calibration required.", "error");
+        if (recipeOutput) {
+            recipeOutput.innerHTML = `
+                <div class="p-4 bg-error-container/20 border border-error/30 rounded-xl text-xs text-error font-medium max-w-none text-center">
+                    ⚠️ <strong>Execution Failure:</strong> ${error.message}<br>
+                    <span class="opacity-70">Please check your network connectivity, API key alignment, or try again after a cooling period.</span>
+                </div>
+            `;
+        }
+    } finally {
+        if (generateBtn) {
             generateBtn.disabled = false;
             generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
@@ -749,20 +755,53 @@ async function renderRecipeOutput(markdown, isTweak = false) {
         tweakBtn.addEventListener('click', tweakUnsavedRecipe);
     }
 
-    // ON-DEMAND MARKT-TITEL GENERATIE (Eerst pas uitvoeren na stabilisatie van het hoofd-recept)
-    if (!isTweak) {
-        setTimeout(async () => {
-            try {
-                const userApiKey = state.userSettings?.apiKey || "";
-                if (userApiKey) {
-                    await generateAndInjectCreativeTitle(finalMarkdown);
-                }
-            } catch (e) {
-                console.warn("Sequential branding routine bypassed.");
-            }
-        }, 100);
-    }
+    // ON-DEMAND CREATIVE BRANDING INTERFACE (v2.6)
+    // Automatische achtergrondpijplijn gedecimeerd ter voorkoming van HTTP 429 concurrency rate limits.
+    const titleSectionHtml = `
+    <div id="creative-branding-section" class="mt-4 pt-4 border-t border-outline-variant/30 no-print flex justify-between items-center bg-surface-container-low p-4 rounded-2xl border border-outline-variant/50">
+        <div>
+            <h4 class="font-bold text-primary text-sm uppercase flex items-center gap-2">Creative Branding</h4>
+            <p class="text-xs text-on-surface-variant mt-1">Refactor the default title into a unique commercial craft name line.</p>
+        </div>
+        <button id="btn-generate-creative-title" onclick="window.triggerOnDemandBrandingAnalysis()" class="bg-primary text-on-primary py-2.5 px-4 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 btn shadow-sm whitespace-nowrap">
+            Generate Name
+        </button>
+    </div>`;
+
+    recipeOutput.insertAdjacentHTML('beforeend', titleSectionHtml);
 }
+
+// --- ON-DEMAND BRANDING INTERACTION BLOCK (v2.6) ---
+window.triggerOnDemandBrandingAnalysis = async function() {
+    const btn = document.getElementById('btn-generate-creative-title');
+    if (!currentRecipeMarkdown) return;
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Branding...";
+    }
+
+    try {
+        const userApiKey = state.userSettings?.apiKey || "";
+        if (userApiKey) {
+            await generateAndInjectCreativeTitle(currentRecipeMarkdown);
+            window.showToast("Creative batch branding sequence complete.", "success");
+            document.getElementById('creative-branding-section')?.classList.add('hidden');
+        } else {
+            window.showToast("Authentication missing: Provide an API Key configuration.", "error");
+            if (btn) btn.disabled = false;
+        }
+    } catch (error) {
+        window.logSystemError(error, 'On-Demand Branding Execution Anomaly', 'ERROR');
+        window.showToast("Branding generation rate limit constraint mapped.", "error");
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Generate Name";
+        }
+    }
+};
+
+window.triggerOnDemandBrandingAnalysis = window.triggerOnDemandBrandingAnalysis;
 
 // --- ON-DEMAND INTERACTIE INTERLOCK (v2.6) ---
 window.triggerOnDemandFlavorAnalysis = async function() {
@@ -896,11 +935,13 @@ async function tweakUnsavedRecipe() {
 
     } catch (error) {
         if (thinkingInterval) clearInterval(thinkingInterval);
-        console.error("Error tweaking:", error);
-        tweakOutput.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
-        tweakBtn.disabled = false;
-    }
-}
+        window.logSystemError(error, "brewing.js: generateRecipe", "CRITICAL");
+        window.showToast("Failed to compile or parse the new recipe structure.", "error");
+        if (recipeOutput) {
+            recipeOutput.innerHTML = `<p class="text-error p-4 font-bold">Execution failure: ${error.message}</p>`;
+        }
+    } finally {
+        if(generateBtn) {
 
 function applyWaterTweak(brandName, technicalInstruction) {
     const tweakInput = document.getElementById('tweak-unsaved-request');

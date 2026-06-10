@@ -930,18 +930,33 @@ async function tweakUnsavedRecipe() {
             if(newNameInput) newNameInput.value = preservedTitle;
         }
         
-        tweakBtn.disabled = false;
         tweakOutput.innerHTML = '';
 
     } catch (error) {
         if (thinkingInterval) clearInterval(thinkingInterval);
-        window.logSystemError(error, "brewing.js: generateRecipe", "CRITICAL");
+        window.logSystemError(error, "brewing.js: tweakUnsavedRecipe", "CRITICAL");
         window.showToast("Failed to compile or parse the new recipe structure.", "error");
+        
+        const recipeOutput = document.getElementById('recipe-output');
         if (recipeOutput) {
-            recipeOutput.innerHTML = `<p class="text-error p-4 font-bold">Execution failure: ${error.message}</p>`;
+            recipeOutput.innerHTML = `
+                <div class="p-4 bg-error-container/20 border border-error/30 rounded-xl text-xs text-error font-medium max-w-none text-center">
+                    ⚠️ <strong>Tweak Modification Failure:</strong> ${error.message}<br>
+                    <span class="opacity-70">Please check your network connectivity, API key alignment, or try again after a cooling period.</span>
+                </div>
+            `;
         }
     } finally {
-        if(generateBtn) {
+        if (tweakBtn) {
+            tweakBtn.disabled = false;
+        }
+        const generateBtn = document.getElementById('generateBtn');
+        if (generateBtn) {
+            generateBtn.disabled = false;
+            generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+}
 
 function applyWaterTweak(brandName, technicalInstruction) {
     const tweakInput = document.getElementById('tweak-unsaved-request');
@@ -2193,7 +2208,7 @@ function renderHistoryList() {
 // ============================================================================
 
 // --- PARSER: Haal ingrediënten uit Markdown (JSON, Tabel of Lijst) ---
-export function parseIngredientsFromMarkdown(markdown)
+export function parseIngredientsFromMarkdown(markdown) {
     let ingredients = [];
     if (!markdown) return ingredients;
 

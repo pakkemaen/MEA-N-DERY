@@ -2193,7 +2193,7 @@ function renderHistoryList() {
 // ============================================================================
 
 // --- PARSER: Haal ingrediënten uit Markdown (JSON, Tabel of Lijst) ---
-export function parseIngredientsFromMarkdown(markdown) {
+export function parseIngredientsFromMarkdown(markdown)
     let ingredients = [];
     if (!markdown) return ingredients;
 

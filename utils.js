@@ -227,18 +227,26 @@ export function showPromptModal(promptText) {
 // Update de window binding
 window.showPromptModal = showPromptModal;
 
-// --- AI CORE ---
-export async function performApiCall(prompt, schema = null) {
-    let apiKey = state.userSettings.apiKey;
+// --- AI CORE (v2.6 CONCURRENT PARAMETER OVERRIDES) ---
+export async function performApiCall(prompt, schema = null, overrideApiKey = null, overrideModel = null) {
+    // 1. Resolve API sleutel via hiërarchische fallback matrix
+    let apiKey = overrideApiKey;
+    if (!apiKey || apiKey.trim() === "") {
+        apiKey = state.userSettings?.apiKey;
+    }
     const CONFIG = window.CONFIG || {};
-    if (!apiKey && CONFIG.firebase && CONFIG.firebase.apiKey) {
+    if ((!apiKey || apiKey.trim() === "") && CONFIG.firebase && CONFIG.firebase.apiKey) {
         apiKey = CONFIG.firebase.apiKey;
     }
 
-    if (!apiKey) throw new Error("⛔ Geen API Key! Ga naar Settings.");
+    if (!apiKey || apiKey.trim() === "") throw new Error("⛔ Geen API Key! Ga naar Settings.");
 
-    const model = (state.userSettings.aiModel && state.userSettings.aiModel.trim() !== "") 
-        ? state.userSettings.aiModel : "gemini-1.5-flash";
+    // 2. Resolve AI model met v2.6 systeemstandaard fallback
+    let model = overrideModel;
+    if (!model || model.trim() === "") {
+        model = (state.userSettings?.aiModel && state.userSettings.aiModel.trim() !== "") 
+            ? state.userSettings.aiModel : "gemini-1.5-flash";
+    }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const requestBody = { contents: [{ parts: [{ text: prompt }] }] };
@@ -258,7 +266,15 @@ export async function performApiCall(prompt, schema = null) {
     }
 
     const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    
+    // 3. Strikte indexeringsarchitectuur (.at) ter voorkoming van chat parsing corruptie
+    if (data && data.candidates && data.candidates.length > 0) {
+        const firstCandidate = data.candidates.at(0);
+        if (firstCandidate && firstCandidate.content && firstCandidate.content.parts && firstCandidate.content.parts.length > 0) {
+            return firstCandidate.content.parts.at(0).text || "";
+        }
+    }
+    return "";
 }
 
 // --- DASHBOARD WIDGET ---

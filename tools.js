@@ -304,21 +304,22 @@ function setupPromptEngineer() {
         upload.parentNode.replaceChild(newUpload, upload);
         
         newUpload.addEventListener('change', function(e) {
-            const file = e.target.files;
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    // CORRECTIE: Extractie van de base64-string via de chat-veilige .at(1) methodiek
-                    promptEngineerImageBase64 = evt.target.result.split(',').at(1);
-                    const previewContainer = document.getElementById('prompt-engineer-preview');
-                    const previewImg = document.getElementById('pe-preview-img');
-                    if (previewContainer && previewImg) {
-                        previewImg.src = evt.target.result;
-                        previewContainer.classList.remove('hidden');
-                        document.getElementById('pe-clear-btn')?.classList.remove('hidden');
-                    }
-                };
-                reader.readAsDataURL(file);
+            if (e.target.files) {
+                const fileInstance = e.target.files.item(0);
+                if (fileInstance) {
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        promptEngineerImageBase64 = evt.target.result.split(',').at(1);
+                        const previewContainer = document.getElementById('prompt-engineer-preview');
+                        const previewImg = document.getElementById('pe-preview-img');
+                        if (previewContainer && previewImg) {
+                            previewImg.src = evt.target.result;
+                            previewContainer.classList.remove('hidden');
+                            document.getElementById('pe-clear-btn')?.classList.remove('hidden');
+                        }
+                    };
+                    reader.readAsDataURL(fileInstance);
+                }
             }
         });
         console.log("✅ Upload listener gekoppeld.");
@@ -468,15 +469,23 @@ async function importData(event, collectionName) {
                 const data = JSON.parse(e.target.result);
                 if (!Array.isArray(data)) throw new Error("Invalid format: Not an array");
 
+                const batch = writeBatch(db);
+                const colRef = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, collectionName);
                 let count = 0;
+
                 for (const item of data) {
                     const { id, ...docData } = item;
                     if (docData.createdAt && typeof docData.createdAt === 'string') {
                         docData.createdAt = new Date(docData.createdAt);
                     }
                     
-                    await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, collectionName), docData);
+                    const newDocRef = doc(colRef);
+                    batch.set(newDocRef, docData);
                     count++;
+                }
+
+                if (count > 0) {
+                    await batch.commit();
                 }
                 
                 showToast(`Imported ${count} items into ${collectionName}!`, "success");
@@ -664,17 +673,19 @@ window.deleteMedicChat = async function(chatId) {
 
 // 5. Foto Selectie Handling (Ongewijzigd)
 window.handleChatImageSelect = function(input) {
-    if (input.files && input.files) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            // CORRECTIE: Extractie van de base64-string via de chat-veilige .at(1) methodiek
-            currentChatImageBase64 = e.target.result.split(',').at(1); 
-            document.getElementById('chat-preview-img').src = e.target.result;
-            document.getElementById('chat-image-preview').classList.remove('hidden');
+    if (input.files) {
+        const fileInstance = input.files.item(0);
+        if (fileInstance) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentChatImageBase64 = e.target.result.split(',').at(1); 
+                document.getElementById('chat-preview-img').src = e.target.result;
+                document.getElementById('chat-image-preview').classList.remove('hidden');
+            };
+            reader.readAsDataURL(fileInstance);
         }
-        reader.readAsDataURL(input.files);
     }
-}
+};
 
 window.clearChatImage = function() {
     currentChatImageBase64 = null;
@@ -1117,18 +1128,21 @@ window.generateSocialImage = async function(finalPrompt) {
         
         const data = await response.json();
         
-        // CORRECTIE: Optionele chaining en array-extractie volledig omgebouwd naar de chat-veilige .at(0) methodiek
         if (data && data.predictions && data.predictions.length > 0 && data.predictions.at(0)?.bytesBase64Encoded) {
-            const base64Img = data.predictions.at(0).bytesBase64Encoded;
-            if (container) container.innerHTML = `<img src="data:image/png;base64,${base64Img}" class="w-full h-full object-cover rounded-xl shadow-inner animate-fade-in">`;
-        } else {
-            throw new Error("No image data received.");
+            const base64Img = data.predictions.at(0)?.bytesBase64Encoded;
+            if (base64Img && container) {
+                container.innerHTML = `<img src="data:image/png;base64,${base64Img}" class="w-full h-full object-cover rounded-xl shadow-inner animate-fade-in">`;
+            }
+        } else { 
+            throw new Error("No image data received."); 
         }
     } catch (e) {
         console.error(e);
         if (container) container.innerHTML = `<p class="text-red-500 text-xs p-4">${e.message}</p>`;
-        // Toon knop weer als het mislukt, zodat je opnieuw kunt proberen
-        if (btn) btn.classList.remove('hidden'); 
+        if (btn) {
+            btn.innerHTML = `<span>🎨 Generate Image</span>`;
+            btn.classList.remove('hidden'); 
+        }
     }
 };
 
@@ -2304,6 +2318,14 @@ function renderTastingResultsUI(sugar, harmony, stars, feedback, notes) {
 
 window.calculateWaterMatching = function() {
     try {
+        // Stoichiometrische Constanten uit de wetenschappelijke blauwdruk v2.6
+        const CA_FROM_GYPSUM = 232.80;
+        const SO4_FROM_GYPSUM = 557.94;
+        const CA_FROM_CACL2 = 272.62;
+        const CL_FROM_CACL2 = 482.32;
+        const MG_FROM_EPSOM = 98.61;
+        const SO4_FROM_EPSOM = 389.74;
+
         // Aangepaste hulpfunctie dwingt een numerieke 0 af bij mislukte parsing of lege strings
         const getSanitizedVal = (id) => {
             const el = document.getElementById(id);
@@ -2333,23 +2355,49 @@ window.calculateWaterMatching = function() {
             return;
         }
 
-        // Ionen-deltabepaling conform stoichiometrische matrix boundaries
+        // Deficiëntie-Analyse: Bereken de netto behoefte per ion in milligrammen per liter (ppm)
         const deltaCa = Math.max(0, targetCa - sourceCa);
         const deltaMg = Math.max(0, targetMg - sourceMg);
         const deltaSo4 = Math.max(0, targetSo4 - sourceSo4);
         const deltaCl = Math.max(0, targetCl - sourceCl);
 
-        // Exacte zoutberekeningen conform de vernieuwde wetenschappelijke v2.6 constanten
-        const totalGypsum = (deltaCa * vWater) / 232.8;
-        const totalCaCl2 = (deltaCa * vWater) / 272.6;
-        const totalEpsom = (deltaMg * vWater) / 98.6;
+        // Deterministische Resolutie van de zoutmatrix
+        // 1. Bereken Epsomzout op basis van pure Magnesiumbehoefte
+        const totalEpsom = (deltaMg * vWater) / MG_FROM_EPSOM;
+        
+        // 2. Bereken Calciumchloride op basis van pure Chloridebehoefte
+        const totalCaCl2 = (deltaCl * vWater) / CL_FROM_CACL2;
+        
+        // 3. Isoleer de resterende Calciumbehoefte na aftrek van de CaCl2-bijdrage
+        const caFromCaCl2 = totalCaCl2 * CA_FROM_CACL2 / vWater;
+        const remainingCaPpm = deltaCa - caFromCaCl2;
+        
+        // 4. Bereken Gips op basis van de overgebleven Calciumbehoefte
+        const totalGypsum = (Math.max(0, remainingCaPpm) * vWater) / CA_FROM_GYPSUM;
 
+        // Sulfaat-Validatie: Bereken de totale hoeveelheid toegevoegd Sulfaat
+        const so4FromGypsum = (totalGypsum * SO4_FROM_GYPSUM) / vWater;
+        const so4FromEpsom = (totalEpsom * SO4_FROM_EPSOM) / vWater;
+        const predictedFinalSo4 = sourceSo4 + so4FromGypsum + so4FromEpsom;
+
+        // Bereken de streefverhouding tussen Sulfaat en Chloride
         let ratioOutput = "";
         if (targetCl === 0) {
             ratioOutput = "Pure Bitter / Crisp (Cl = 0)";
         } else {
             const ratio = targetSo4 / targetCl;
             ratioOutput = ratio.toFixed(2);
+        }
+
+        // Visuele Waarschuwing genereren bij ongewilde Calcium-overdosering door CaCl2
+        let warningBannerHtml = "";
+        if (remainingCaPpm < 0) {
+            const calciumOvershoot = Math.abs(remainingCaPpm);
+            warningBannerHtml = `
+                <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs text-amber-600 font-medium">
+                    ⚠️ <strong>Calcium Target Exceeded:</strong> Due to the high Chloride demand, Calcium Chloride addition has pushed the final Calcium concentration <span class="font-bold font-mono">+${calciumOvershoot.toFixed(1)} ppm</span> above your target profile.
+                </div>
+            `;
         }
 
         if (resultDiv) {
@@ -2372,12 +2420,18 @@ window.calculateWaterMatching = function() {
                         </div>
                     </div>
 
-                    <div class="pt-2 border-t border-outline-variant/30 text-xs space-y-1 text-on-surface">
+                    <div class="pt-2 border-t border-outline-variant/30 text-xs space-y-2 text-on-surface">
+                        <div class="flex justify-between">
+                            <span>Predicted Final SO₄:</span>
+                            <span class="font-mono font-bold text-primary">${predictedFinalSo4.toFixed(1)} ppm</span>
+                        </div>
                         <div class="flex justify-between">
                             <span>Target SO₄ / Cl Ratio:</span>
                             <span class="font-mono font-bold text-primary">${ratioOutput}</span>
                         </div>
                     </div>
+                    
+                    ${warningBannerHtml}
                 </div>
             `;
             resultDiv.classList.remove('hidden');

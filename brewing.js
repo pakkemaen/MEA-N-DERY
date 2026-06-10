@@ -459,7 +459,6 @@ async function generateRecipe() {
         window.showToast("Failed to regenerate recipe modification request.", "error");
         tweakOutput.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
         tweakBtn.disabled = false;
-    }
 } finally {
         if(generateBtn) {
             generateBtn.disabled = false;

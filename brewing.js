@@ -1228,31 +1228,27 @@ window.renderBrewDay = async function(activeId) {
 
         // 2. MD3 Empty State Interlock (Voorkomen van Spookmeldingen bij Lege Status)
         if (!resolvedId || resolvedId === 'none') {
-            const stepsContainer = document.getElementById('brewDayStepsContainer');
-            if (stepsContainer) {
-                stepsContainer.innerHTML = `
-                    <div class="p-8 text-center max-w-sm mx-auto animate-fade-in flex flex-col items-center justify-center space-y-4">
-                        <div class="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center border border-primary/20">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                            </svg>
+            const container = document.getElementById('brew-day-dynamic-container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-16 px-4 text-center max-w-sm mx-auto">
+                        <div class="w-16 h-16 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant mb-4 animate-pulse">
+                            🍺
                         </div>
-                        <h4 class="text-base font-header font-bold text-on-surface">No Active Fermentation</h4>
-                        <p class="text-xs text-on-surface-variant leading-relaxed">No active brew session found. Start a batch via the Creator or select an existing recipe from your History.</p>
-                        <button onclick="window.switchMainView('brewing'); window.switchSubView('creator', 'brewing-main-view');" 
-                                class="bg-primary text-on-primary font-bold py-2.5 px-5 rounded-full text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-sm">
-                            Go to AI Creator
-                        </button>
-                    </div>`;
+                        <h3 class="text-xl font-header font-bold text-on-surface mb-2">No Active Brew Day</h3>
+                        <p class="text-xs text-on-surface-variant leading-relaxed">
+                            There is currently no brew active in your production pipeline. Head over to the Recipe Creator or select a batch from your history to kick off your brew day.
+                        </p>
+                    </div>
+                `;
             }
-            
-            const headline = document.getElementById('brewDayHeadline');
-            if (headline) headline.textContent = "Brew Day Dashboard";
-            return; // Geruisloze break uit de functie
+            const headline = document.getElementById('active-brew-headline');
+            if (headline) headline.textContent = "Production Pipeline - Inactive";
+            return; // EXPLICIT PIPELINE TERMINATION TO PREVENT FALSE DATABASE MISMATCH WARNINGS
         }
 
-        // 3. Bestaande functionele logica: Toon pas een error als er wél een ID is, maar geen brouwsel
-        const brew = state.brews.find(b => b.id === resolvedId);
+        // Fetch Brew & Validate State
+        const brewDoc = await getDoc(doc(db, `users/${state.userId}/brews`, resolvedId))
         if (!brew) {
             window.showToast("Database mismatch: Target brew profile could not be extracted.", "error");
             return;

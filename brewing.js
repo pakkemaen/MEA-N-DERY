@@ -1870,87 +1870,92 @@ window.closeSecondaryDetail = () => {
 
 // --- LOGIC: Timers & Checklist (Primary) ---
 
-window.startStepTimer = function(brewId, stepIndex, resumeTime = null) {
-    console.log(`⏱️ Starting Timer: Brew ${brewId}, Step ${stepIndex}`);
-
-    // 1. Stop lopende timers
-    if (stepTimerInterval) {
-        clearInterval(stepTimerInterval);
-        stepTimerInterval = null;
-    }
-    
-    // 2. Zoek het recept in het geheugen
-    const brew = state.brews.find(b => b.id === brewId);
-    if (!brew) {
-        console.error("Timer Error: Brew not found in state.");
-        alert("Error: Could not find active batch data. Please refresh the page.");
-        return;
-    }
-    
-    // 3. Haal de stappen op (Day 1)
-    let allSteps = brew.brewDaySteps;
-    if (!allSteps || allSteps.length === 0) {
-        console.warn("Timer Warning: Steps missing, reparsing...");
-        const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
-        allSteps = extracted.day1;
-        brew.brewDaySteps = allSteps; 
-    }
-
-    // Anti-Parsing Bug: Elementen indexeren via .at() methodiek
-    const step = allSteps.at(stepIndex);
-    if (!step) {
-        console.error("Timer Error: Step not found at index", stepIndex);
-        return;
-    }
-
-    // 4. UI Elementen zoeken
-    const timerDisplay = document.getElementById(`timer-${stepIndex}`);
-    const controlsDiv = document.getElementById(`controls-${stepIndex}`);
-
-    if (!timerDisplay) {
-        console.error(`Timer Error: Display element 'timer-${stepIndex}' not found.`);
-        return;
-    }
-
-    // 5. Starttijd bepalen
-    let timeLeft = resumeTime !== null ? resumeTime : step.duration;
-    
-    timerDisplay.textContent = formatTime(timeLeft);
-    timerDisplay.classList.add('text-green-600', 'scale-110'); 
-
-    // 6. Knoppen veranderen naar Pause
-    if (controlsDiv) {
-        controlsDiv.innerHTML = `
-            <button onclick="window.pauseStepTimer('${brewId}', ${stepIndex})" class="text-xs bg-yellow-500 text-white py-1.5 px-3 rounded font-bold uppercase mr-1 hover:bg-yellow-600">Pause</button>
-            <button onclick="window.skipTimer('${brewId}', ${stepIndex})" class="text-xs bg-gray-500 text-white py-1.5 px-3 rounded font-bold uppercase hover:bg-gray-600">Skip</button>
-        `;
-    }
-
-    // 7. De Interval Loop
-    stepTimerInterval = setInterval(() => {
-        timeLeft--;
-        
-        if (timerDisplay) timerDisplay.textContent = formatTime(timeLeft);
-        
-        const timerState = { brewId, stepIndex, endTime: Date.now() + (timeLeft * 1000) };
-        localStorage.setItem('activeBrewDayTimer', JSON.stringify(timerState));
-
-        if (timeLeft <= 0) {
+window.startStepTimer = function(durationSeconds) {
+    try {
+        if (stepTimerInterval) {
             clearInterval(stepTimerInterval);
-            stepTimerInterval = null;
-            localStorage.removeItem('activeBrewDayTimer');
-            
-            if (timerDisplay) {
-                timerDisplay.textContent = "Done!";
-                timerDisplay.classList.remove('text-green-600', 'scale-110');
-            }
-            
-            if(navigator.vibrate) navigator.vibrate([200, 100, 200]); 
-            
-            window.completeStep(stepIndex, true); 
         }
-    }, 1000);
-}
+
+        remainingTime = parseInt(durationSeconds);
+        const timerDisplay = document.getElementById('stepTimerDisplay');
+        const startBtn = document.getElementById('startTimerBtn');
+        
+        if (startBtn) {
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50', 'pointer-events-none');
+        }
+
+        if (timerDisplay) {
+            timerDisplay.textContent = formatTime(remainingTime);
+            timerDisplay.classList.remove('text-outline', 'animate-pulse');
+            timerDisplay.classList.add('text-app-brand', 'font-black');
+        }
+
+        // Bewaar de actieve timer-status in localStorage voor persistentie
+        localStorage.setItem('activeStepTimer', JSON.stringify({
+            endTime: Date.now() + (remainingTime * 1000),
+            duration: durationSeconds,
+            recipeName: document.getElementById('brew_recipeName')?.value || "Active Batch"
+        }));
+
+        stepTimerInterval = setInterval(() => {
+            try {
+                // Defensieve controle: Bestaan het element en de actieve view nog in de DOM?
+                const activeDisplay = document.getElementById('stepTimerDisplay');
+                const activeView = document.getElementById('brewingView');
+                
+                if (!activeDisplay || !activeView || activeView.classList.contains('hidden')) {
+                    clearInterval(stepTimerInterval);
+                    stepTimerInterval = null;
+                    localStorage.removeItem('activeStepTimer');
+                    return;
+                }
+
+                if (remainingTime <= 0) {
+                    clearInterval(stepTimerInterval);
+                    stepTimerInterval = null;
+                    localStorage.removeItem('activeStepTimer');
+                    
+                    activeDisplay.textContent = "00:00 -- STAP VOLTOOID";
+                    activeDisplay.classList.remove('text-app-brand');
+                    activeDisplay.classList.add('text-red-500', 'animate-pulse');
+                    
+                    window.showToast("Brouwstap timer verstreken. Activeer handmatig de volgende controle.", "success");
+                    
+                    if (startBtn) {
+                        startBtn.disabled = false;
+                        startBtn.classList.remove('opacity-50', 'pointer-events-none');
+                    }
+                    return;
+                }
+
+                remainingTime--;
+                activeDisplay.textContent = formatTime(remainingTime);
+                
+                // Werk de resterende tijd bij in localStorage
+                localStorage.setItem('activeStepTimer', JSON.stringify({
+                    endTime: Date.now() + (remainingTime * 1000),
+                    duration: remainingTime,
+                    recipeName: document.getElementById('brew_recipeName')?.value || "Active Batch"
+                }));
+
+            } catch (innerError) {
+                // Robuuste Foutisolatie: Ruim de actieve interval op en log de runtime-fout
+                if (stepTimerInterval) {
+                    clearInterval(stepTimerInterval);
+                    stepTimerInterval = null;
+                }
+                localStorage.removeItem('activeStepTimer');
+                window.logSystemError(innerError, 'brewing.js: startStepTimer setInterval callback', 'ERROR');
+                window.showToast("Runtime-fout in de actieve brouw-timer gedetecteerd.", "error");
+            }
+        }, 1000);
+
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: startStepTimer initializing', 'ERROR');
+        window.showToast("Kan de brouwstap-timer niet initialiseren.", "error");
+    }
+};
 
 window.pauseStepTimer = function(brewId, stepIndex) {
     if (stepTimerInterval) { clearInterval(stepTimerInterval); stepTimerInterval = null; }
@@ -1964,53 +1969,37 @@ window.skipTimer = function(brewId, stepIndex) {
     window.completeStep(stepIndex, true);
 }
 
-window.completeStep = async function(stepIndex, isSkipping = false) {
-    const brewId = tempState.activeBrewId;
-    if (!brewId) return;
-    const brew = state.brews.find(b => b.id === brewId);
-    if(!brew) return;
-    
-    if (!brew.checklist) brew.checklist = {};
-    
-    // 1. Data Opslaan
-    const inputEl = document.getElementById(`step-input-${stepIndex}`);
-    const actualAmount = inputEl ? inputEl.value : null;
-    
-    if (inputEl) {
-        inputEl.disabled = true; // Maak het veld onbruikbaar
-        inputEl.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-100'); // Visuele feedback
-    }
-    
-    brew.checklist[`step-${stepIndex}`] = { 
-        completed: true, 
-        actualAmount: actualAmount,
-        timestamp: new Date().toISOString()
-    };
+window.completeStep = function(stepIndex) {
+    try {
+        // Stop en wis de actieve timer-interval onmiddellijk bij afronding
+        if (stepTimerInterval) {
+            clearInterval(stepTimerInterval);
+            stepTimerInterval = null;
+        }
+        localStorage.removeItem('activeStepTimer');
 
-    // 2. UI Update (Direct feedback: maak grijs en toon DONE)
-    const stepDiv = document.getElementById(`step-${stepIndex}`);
-    if(stepDiv) stepDiv.classList.add('opacity-60', 'grayscale');
-    
-    const controls = document.getElementById(`controls-${stepIndex}`);
-    if(controls) controls.innerHTML = `<span class="text-[10px] font-bold text-white bg-green-600 px-2 py-1 rounded shadow-sm">DONE</span>`;
+        const checkboxes = document.querySelectorAll('.step-checkbox');
+        const targetCheckbox = checkboxes.item(stepIndex);
+        if (targetCheckbox) {
+            targetCheckbox.checked = true;
+            targetCheckbox.disabled = true;
+        }
 
-    // 3. Opslaan in Database via gecentraliseerd logframework
-    try { 
-        await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { 
-            checklist: brew.checklist
-        }); 
-    } catch (error) { 
+        const stepCards = document.querySelectorAll('.step-card');
+        const currentCard = stepCards.item(stepIndex);
+        if (currentCard) {
+            currentCard.classList.add('opacity-40', 'bg-app-primary/5');
+            currentCard.classList.remove('border-app-brand');
+        }
+
+        window.showToast("Brouwstap succesvol gevalideerd en gemarkeerd als voltooid.", "success");
+
+        // SECTIE 4: AUTOMATISCHE TIMER-CASCADE EN CASCADE-LOGICA VOLLEDIG GEËLIMINEERD (v2.6)
+        // Elke brouwstap mag uitsluitend en onverbiddelijk handmatig worden geactiveerd door de oenoloog.
+        
+    } catch (error) {
         window.logSystemError(error, 'brewing.js: completeStep', 'ERROR');
-        window.showToast("Database error persisting track progression parameters.", "error");
-    }
-
-    // 4. Auto-start de volgende timer? (Alleen bij korte timers)
-    const allSteps = brew.brewDaySteps || [];
-    // Anti-Parsing Bug: indexeren via de .at() methodiek
-    const nextStep = allSteps.at(stepIndex + 1);
-    
-    if (nextStep && nextStep.duration > 0 && nextStep.duration < 3600 && !isSkipping) {
-        window.startStepTimer(brewId, stepIndex + 1);
+        window.showToast("Fout bij het registreren van de voltooide brouwstap.", "error");
     }
 };
 

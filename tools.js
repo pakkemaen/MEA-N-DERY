@@ -18,6 +18,11 @@ import {
 // Fallback als CONFIG niet globaal beschikbaar is (wat in modules vaak zo is)
 const CONFIG = window.CONFIG || { firebase: { apiKey: "" } };
 
+const BUILT_IN_WATER_PROFILES = { 
+    spa: { name: 'Spa Reine', ca: 5, mg: 2, na: 3, so4: 4, cl: 5, hco3: 17 },
+    chaudfontaine: { name: 'Chaudfontaine', ca: 65, mg: 18, na: 44, so4: 40, cl: 35, hco3: 305 },
+};
+
 let userWaterProfiles = [];
 
 // --- SETTINGS MANAGEMENT ---
@@ -1261,16 +1266,16 @@ function handleWaterSourceChange() {
     }
 }
 
-function updateWaterProfileDisplay(profile) {
-    ['ca', 'mg', 'na', 'so4', 'cl', 'hco3'].forEach(k => {
-        document.getElementById(`val-${k}`).textContent = profile[k];
-    });
-}
-
-const BUILT_IN_WATER_PROFILES = { 
-    spa: { name: 'Spa Reine', ca: 5, mg: 2, na: 3, so4: 4, cl: 5, hco3: 17 },
-    chaudfontaine: { name: 'Chaudfontaine', ca: 65, mg: 18, na: 44, so4: 40, cl: 35, hco3: 305 },
-};
+/// Chat Parsing Bug Preventie: Expliciete object-property extractie zonder brackets [] te introduceren
+    function updateWaterProfileDisplay(profile) {
+        if (!profile) return;
+        document.getElementById('val-ca').textContent = profile.ca;
+        document.getElementById('val-mg').textContent = profile.mg;
+        document.getElementById('val-na').textContent = profile.na;
+        document.getElementById('val-so4').textContent = profile.so4;
+        document.getElementById('val-cl').textContent = profile.cl;
+        document.getElementById('val-hco3').textContent = profile.hco3;
+    }
 
 // --- CALCULATORS ---
 window.calculateABV = function() {

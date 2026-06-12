@@ -1311,25 +1311,27 @@ window.renderBrewDay = async function(forceId = null) {
             
             let inputHtml = '';
             if (amountMatch && !isCompleted) {
-                inputHtml = `<div class="mt-2 flex items-center bg-app-primary rounded border border-app-brand/20 w-32">
-                    <span class="px-2 text-[9px] font-bold text-app-secondary uppercase border-r border-app-brand/10">Act</span>
-                    <input type="number" id="step-input-${index}" class="w-full bg-transparent border-none p-1 text-center font-bold text-sm" placeholder="${amountMatch.at(1)}" value="${amountMatch.at(1)}">
-                    <span class="pr-2 text-xs font-bold text-app-brand">${amountMatch.at(2)}</span>
+                inputHtml = `<div class="mt-2.5 flex items-center bg-surface border border-outline rounded-xl px-2 py-0.5 w-40 shadow-inner">
+                    <span class="px-2 text-[10px] font-bold text-on-surface-variant uppercase border-r border-outline-variant/40">Act</span>
+                    <input type="number" id="step-input-${index}" class="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-1 text-center font-mono font-bold text-sm text-on-surface" placeholder="${amountMatch.at(1)}" value="${amountMatch.at(1)}">
+                    <span class="pr-1 text-xs font-bold text-primary">${amountMatch.at(2)}</span>
                 </div>`;
             } else if (isCompleted && savedAmount) {
-                 inputHtml = `<div class="mt-2 inline-flex items-center gap-2 px-2 py-1 rounded bg-green-500/10 border border-green-500/20"><span class="text-[9px] font-bold text-green-700 uppercase">Recorded:</span><span class="font-mono font-bold text-green-800 text-xs">${savedAmount}</span></div>`;
+                 inputHtml = `<div class="mt-2.5 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20"><span class="text-[9px] font-bold text-green-700 uppercase tracking-wider">Recorded:</span><span class="font-mono font-bold text-green-800 text-xs">${savedAmount}</span></div>`;
             }
 
-            const timerHtml = step.duration > 0 ? `<div class="timer-display my-2 text-sm font-mono font-bold text-app-brand bg-app-primary inline-block px-2 py-1 rounded border border-app-brand/20" id="timer-${index}">${formatTime(step.duration)}</div>` : '';
-            const btnHtml = step.duration > 0 ? `<button onclick="window.startStepTimer('${brew.id}', ${index})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded shadow hover:bg-green-700 btn font-bold uppercase">Start Timer</button>` : `<button onclick="window.completeStep(${index})" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1.5 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase">Check</button>`;
+            const timerHtml = step.duration > 0 ? `<div class="timer-display my-2 text-xs font-mono font-bold text-primary bg-primary-container text-on-primary-container inline-block px-2.5 py-1 rounded-lg border border-primary/20" id="timer-${index}">${formatTime(step.duration)}</div>` : '';
+            const btnHtml = step.duration > 0 
+                ? `<button onclick="window.startStepTimer('${brew.id}', ${index})" class="text-xs bg-green-600 text-white font-bold py-2 px-4 rounded-full shadow-elevation-1 hover:brightness-110 active:scale-95 transition-all uppercase tracking-wide">Start Timer</button>` 
+                : `<button onclick="window.completeStep(${index})" class="text-xs bg-surface-container-high border border-outline text-primary font-bold py-2 px-4 rounded-full hover:bg-primary/10 active:scale-95 transition-all uppercase tracking-wide">Check</button>`;
 
-            return `<div id="step-${index}" class="step-item p-4 border-b border-app-brand/10 ${isCompleted ? 'opacity-60 grayscale' : ''}">
+            return `<div id="step-${index}" class="step-item p-4 border-b border-outline-variant/30 ${isCompleted ? 'opacity-60 grayscale' : ''}">
                 <div class="flex justify-between items-start gap-4">
                     <div class="flex-grow">
-                        <p class="font-bold text-sm text-app-header flex items-center gap-2"><span class="w-5 h-5 rounded-full bg-app-tertiary text-[10px] flex items-center justify-center border border-app-brand/20">${index + 1}</span> ${step.title}</p>
-                        <div class="pl-7"><p class="text-xs text-app-secondary mt-1 opacity-90">${step.description}</p>${inputHtml}${timerHtml}</div>
+                        <p class="font-bold text-sm text-on-surface flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-surface-container-highest text-[10px] font-bold text-on-surface-variant flex items-center justify-center border border-outline-variant">${index + 1}</span> ${step.title}</p>
+                        <div class="pl-8"><p class="text-xs text-on-surface-variant mt-1.5 leading-relaxed">${step.description}</p>${inputHtml}${timerHtml}</div>
                     </div>
-                    <div class="pt-1 flex flex-col items-end gap-1" id="controls-${index}">${isCompleted ? `<button onclick="window.undoStep(${index})" class="text-[10px] font-bold text-white bg-green-600 px-2 py-1 rounded shadow-sm hover:bg-red-500 transition-colors" title="Undo / Edit">DONE ↺</button>` : btnHtml}</div>
+                    <div class="pt-1 flex flex-col items-end gap-1" id="controls-${index}">${isCompleted ? `<button onclick="window.undoStep(${index})" class="text-[10px] font-bold text-white bg-green-600 px-3 py-1.5 rounded-full shadow-elevation-1 hover:bg-red-600 transition-colors flex items-center gap-1 uppercase tracking-wide" title="Undo / Edit">DONE ↺</button>` : btnHtml}</div>
                 </div>
             </div>`;
         }).join('');

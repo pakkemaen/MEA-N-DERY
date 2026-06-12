@@ -52,19 +52,65 @@ async function loadUserSettings() {
 }
 
 function applySettings() {
-    // Vul de velden in settings-view
-    const s = state.userSettings;
-    
-    if(document.getElementById('apiKeyInput')) document.getElementById('apiKeyInput').value = s.apiKey || '';
-    if(document.getElementById('defaultBatchSizeInput')) document.getElementById('defaultBatchSizeInput').value = s.defaultBatchSize || 5;
-    if(document.getElementById('defaultCurrencyInput')) {
-        document.getElementById('defaultCurrencyInput').value = s.currencySymbol || '€';
+    try {
+        // Vul de velden in settings-view
+        const s = state.userSettings;
+        
+        if (document.getElementById('apiKeyInput')) document.getElementById('apiKeyInput').value = s.apiKey || '';
+        if (document.getElementById('defaultBatchSizeInput')) document.getElementById('defaultBatchSizeInput').value = s.defaultBatchSize || 5;
+        if (document.getElementById('defaultCurrencyInput')) {
+            document.getElementById('defaultCurrencyInput').value = s.currencySymbol || '€';
+        }
+        if (document.getElementById('defaultCarbonationInput')) {
+            document.getElementById('defaultCarbonationInput').value = s.carbonationMethod || 'bottle';
+        }
+        
+        // Defensieve synchronisatie van AI Engine selectie-elementen (v2.6)
+        const aiModelInputEl = document.getElementById('aiModelInput');
+        if (aiModelInputEl && s.aiModel) {
+            const optionsArray = Array.from(aiModelInputEl.options);
+            const exists = optionsArray.some(opt => opt.value === s.aiModel);
+            if (!exists) {
+                const newOpt = document.createElement('option');
+                newOpt.value = s.aiModel;
+                newOpt.text = s.aiModel.includes('thinking') ? `🧠 ${s.aiModel}` : s.aiModel;
+                aiModelInputEl.appendChild(newOpt);
+            }
+            aiModelInputEl.value = s.aiModel;
+        }
+        
+        const chatModelInputEl = document.getElementById('chatModelInput');
+        if (chatModelInputEl && s.chatModel) {
+            const optionsArray = Array.from(chatModelInputEl.options);
+            const exists = optionsArray.some(opt => opt.value === s.chatModel);
+            if (!exists) {
+                const newOpt = document.createElement('option');
+                newOpt.value = s.chatModel;
+                newOpt.text = s.chatModel.includes('thinking') ? `🧠 ${s.chatModel}` : s.chatModel;
+                chatModelInputEl.appendChild(newOpt);
+            }
+            chatModelInputEl.value = s.chatModel;
+        }
+        
+        const imageModelInputEl = document.getElementById('imageModelInput');
+        if (imageModelInputEl && s.imageModel) {
+            const optionsArray = Array.from(imageModelInputEl.options);
+            const exists = optionsArray.some(opt => opt.value === s.imageModel);
+            if (!exists) {
+                const newOpt = document.createElement('option');
+                newOpt.value = s.imageModel;
+                newOpt.text = s.imageModel.includes('thinking') ? `🧠 ${s.imageModel}` : s.imageModel;
+                imageModelInputEl.appendChild(newOpt);
+            }
+            imageModelInputEl.value = s.imageModel;
+        }
+        
+        if (s.theme === 'dark') document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+    } catch (error) {
+        window.logSystemError(error, 'User Settings UI Synchronization Matrix', 'ERROR');
+        window.showToast("System error: Unable to map active configuration parameters to the interface.", "error");
     }
-    if(document.getElementById('defaultCarbonationInput')) {
-        document.getElementById('defaultCarbonationInput').value = s.carbonationMethod || 'bottle';
-    }
-    if (s.theme === 'dark') document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
 }
 
 async function saveUserSettings() {
@@ -90,7 +136,11 @@ async function saveUserSettings() {
             currencySymbol: document.getElementById('defaultCurrencyInput').value || '€',
             carbonationMethod: document.getElementById('defaultCarbonationInput').value,
             wcf: wcfInput,
-            theme: document.getElementById('theme-toggle-checkbox').checked ? 'dark' : 'light'
+            theme: document.getElementById('theme-toggle-checkbox').checked ? 'dark' : 'light',
+            // Defensieve extractie van actieve AI-modellen via optionele chaining en fallback strings (v2.6)
+            aiModel: document.getElementById('aiModelInput')?.value || '',
+            chatModel: document.getElementById('chatModelInput')?.value || '',
+            imageModel: document.getElementById('imageModelInput')?.value || ''
         };
         
         await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main'), newSettings, { merge: true });

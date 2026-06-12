@@ -1223,9 +1223,38 @@ window.startActualBrewDay = async function() {
 // --- RENDER: Brew Day 1 (Dashboard / Detail Split) ---
 window.renderBrewDay = async function(activeId) {
     try {
-        const brew = state.brews.find(b => b.id === activeId);
+        // 1. Hiërarchische Fallback-Matrix voor ID-Resolutie (v2.6 Architectuur)
+        const resolvedId = activeId || tempState.activeBrewId || state.userSettings?.currentBrewDay?.brewId;
+
+        // 2. MD3 Empty State Interlock (Voorkomen van Spookmeldingen bij Lege Status)
+        if (!resolvedId || resolvedId === 'none') {
+            const stepsContainer = document.getElementById('brewDayStepsContainer');
+            if (stepsContainer) {
+                stepsContainer.innerHTML = `
+                    <div class="p-8 text-center max-w-sm mx-auto animate-fade-in flex flex-col items-center justify-center space-y-4">
+                        <div class="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center border border-primary/20">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                            </svg>
+                        </div>
+                        <h4 class="text-base font-header font-bold text-on-surface">No Active Fermentation</h4>
+                        <p class="text-xs text-on-surface-variant leading-relaxed">No active brew session found. Start a batch via the Creator or select an existing recipe from your History.</p>
+                        <button onclick="window.switchMainView('brewing'); window.switchSubView('creator', 'brewing-main-view');" 
+                                class="bg-primary text-on-primary font-bold py-2.5 px-5 rounded-full text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-sm">
+                            Go to AI Creator
+                        </button>
+                    </div>`;
+            }
+            
+            const headline = document.getElementById('brewDayHeadline');
+            if (headline) headline.textContent = "Brew Day Dashboard";
+            return; // Geruisloze break uit de functie
+        }
+
+        // 3. Bestaande functionele logica: Toon pas een error als er wél een ID is, maar geen brouwsel
+        const brew = state.brews.find(b => b.id === resolvedId);
         if (!brew) {
-            window.showToast("Brouwsel niet gevonden voor deze actieve brouw-sessie.", "error");
+            window.showToast("Database mismatch: Target brew profile could not be extracted.", "error");
             return;
         }
 
@@ -1235,19 +1264,18 @@ window.renderBrewDay = async function(activeId) {
         if (brewingView) brewingView.classList.add('hidden');
         if (brewDayView) {
             brewDayView.classList.remove('hidden');
-            // Zorg dat de view naar boven scrollt bij het laden
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // Lokale state.userSettings synchroniseren
         if (!state.userSettings) state.userSettings = {};
-        state.userSettings.currentBrewDay = { brewId: activeId };
+        state.userSettings.currentBrewDay = { brewId: resolvedId };
 
         // Directe, asynchrone cloudupdate via Firestore SDK zonder tussenkomst van saveUserSettings()
         if (state.userId) {
             const settingsDocRef = doc(db, "artifacts/meandery-aa05e/users", state.userId, "settings", "main");
             await updateDoc(settingsDocRef, {
-                currentBrewDay: { brewId: activeId }
+                currentBrewDay: { brewId: resolvedId }
             });
         }
 
@@ -1255,8 +1283,16 @@ window.renderBrewDay = async function(activeId) {
         const stepsContainer = document.getElementById('brewDayStepsContainer');
         if (stepsContainer) {
             if (!brew.steps || brew.steps.length === 0) {
+                // Genereren van stappen on-the-fly als deze ontbreken in het model (v2.6 fallback)
+                if (brew.recipeMarkdown) {
+                    const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
+                    brew.steps = extracted.day1.map(s => ({ name: s.title, description: s.description, duration: s.duration, completed: false }));
+                }
+            }
+
+            if (!brew.steps || brew.steps.length === 0) {
                 stepsContainer.innerHTML = `
-                    <div class="p-8 text-center text-outline text-sm italic">
+                    <div class="p-8 text-center text-on-surface-variant text-sm italic">
                         Geen specifieke brouwstappen gedefinieerd in dit receptprofiel.
                     </div>`;
                 return;
@@ -1268,13 +1304,13 @@ window.renderBrewDay = async function(activeId) {
                 const opacityClass = step.completed ? "opacity-40 bg-app-primary/5" : "border-app-brand";
                 
                 stepsHtml += `
-                    <div class="step-card p-4 rounded-xl border ${opacityClass} bg-surface transition-all duration-300 flex items-start gap-4">
+                    <div class="step-card p-4 rounded-xl border ${opacityClass} bg-surface transition-all duration-300 flex items-start gap-4 mb-3">
                         <div class="pt-0.5">
                             <input type="checkbox" id="step_check_${idx}" class="step-checkbox checkbox-custom" ${isChecked} onclick="window.completeStep(${idx})">
                         </div>
                         <div class="flex-1 space-y-1">
                             <p class="font-bold text-sm text-on-surface">${step.name || 'Onbenoemde actie'}</p>
-                            ${step.duration ? `<p class="text-[11px] text-app-brand font-mono">Tijdsduur: ${window.formatTime ? window.formatTime(step.duration) : step.duration + 's'}</p>` : ''}
+                            ${step.duration ? `<p class="text-[11px] text-app-brand font-mono">Tijdsduur: ${formatTime(step.duration)}</p>` : ''}
                             ${step.description ? `<p class="text-xs opacity-70 leading-relaxed text-on-surface-variant">${step.description}</p>` : ''}
                         </div>
                         ${step.duration && !step.completed ? `
@@ -1288,9 +1324,16 @@ window.renderBrewDay = async function(activeId) {
             stepsContainer.innerHTML = stepsHtml;
         }
 
-        // Receptnaam en meta-informatie binden aan UI
+        // Receptnaam en logboekgegevens binden aan UI
         const headline = document.getElementById('brewDayHeadline');
         if (headline) headline.textContent = `Brouwdag: ${brew.recipeName || 'Active Batch'}`;
+
+        // Laad het logboek onderaan de actieve brouwdag card
+        const logContainer = document.getElementById('brew-day-log-container');
+        if (logContainer) {
+            logContainer.innerHTML = getBrewLogHtml(brew, resolvedId);
+            setTimeout(() => { if (window.syncLogToFinal) window.syncLogToFinal(resolvedId); }, 50);
+        }
 
     } catch (error) {
         window.logSystemError(error, 'brewing.js: window.renderBrewDay', 'ERROR');

@@ -3010,67 +3010,96 @@ function getBrewLogHtml(brew, idSuffix = null) {
         const logData = brew.logData || {};
         const fermentationLog = logData.fermentationLog || [];
         
+        // DESIGN REFACTOR: Gecentraliseerde text- en input-classes conform MD3 richtlijnen
+        const labelBase = "text-[11px] font-semibold text-on-surface-variant/80 uppercase tracking-wider mb-1.5 block ml-1";
+        const inputBase = "bg-surface-container-highest border border-outline-variant text-sm rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all !p-3 !h-11 w-full text-on-surface font-medium";
+        
         const entriesHtml = fermentationLog.map((entry) => {
-            const labelBase = "text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block ml-1";
-            const inputBase = "bg-surface-container-highest border border-outline-variant text-sm rounded-lg focus:ring-1 focus:ring-primary !p-2 !h-10 w-full";
-            
             return `
-                <div class="log-entry bg-surface-container-low p-3 rounded-xl border border-outline-variant/30 mb-3 shadow-sm relative group">
-                    <div class="flex justify-between items-end mb-3">
-                        <div class="flex-grow mr-4">
-                            <label class="${labelBase}">Date</label>
-                            <input type="date" value="${entry.date || ''}" class="${inputBase} font-medium">
-                        </div>
-                        <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${suffix}')" class="text-on-surface-variant hover:text-error hover:bg-error-container/20 p-2 rounded-lg transition-colors mb-[1px]" title="Delete Entry">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <div class="log-entry bg-surface-container-low p-5 rounded-2xl shadow-sm border border-outline-variant/10 mb-4 shadow-sm relative animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-xs font-bold text-primary bg-primary-container text-on-primary-container px-2.5 py-1 rounded-full border border-primary/10 font-mono">Measurement Logs</span>
+                        <button onclick="this.closest('.log-entry').remove(); window.syncLogToFinal('${suffix}')" 
+                                class="text-on-surface-variant hover:text-error hover:bg-error-container/20 p-2.5 rounded-xl transition-all duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer" 
+                                title="Delete Entry">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
                         </button>
                     </div>
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                        <div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="flex flex-col">
+                            <label class="${labelBase}">Date</label>
+                            <input type="date" value="${entry.date || ''}" class="${inputBase}">
+                        </div>
+                        <div class="flex flex-col">
                             <label class="${labelBase}">Temp (°C)</label>
                             <input type="number" step="0.5" class="${inputBase} text-center font-mono font-bold text-primary temp-input" value="${entry.temp || ''}" placeholder="20" oninput="window.autoCalculateABV(event, '${suffix}')" onchange="window.autoCalculateABV(event, '${suffix}')">
                         </div>
-                        <div>
+                        <div class="flex flex-col">
                             <label class="${labelBase}">Gravity (SG/Brix)</label>
                             <input type="number" step="0.001" class="${inputBase} text-center font-mono font-bold text-primary sg-input" value="${entry.sg || ''}" placeholder="1.xxx" oninput="this.value = this.value.replace(',', '.'); window.autoCalculateABV(event, '${suffix}')" onchange="window.autoCalculateABV(event, '${suffix}')">
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 gap-3">
-                        <div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="flex flex-col md:col-span-1">
                             <label class="${labelBase}">pH Level</label>
                             <input type="number" step="0.01" class="${inputBase} text-primary font-bold" value="${entry.ph || ''}" placeholder="3.x" oninput="this.value = this.value.replace(',', '.'); window.syncLogToFinal('${suffix}')" onchange="window.autoCalculateABV(event, '${suffix}')">
                         </div>
-                        <input type="text" class="${inputBase} italic text-on-surface-variant" value="${entry.notes || ''}" placeholder="Add notes...">
+                        <div class="flex flex-col md:col-span-2">
+                            <label class="${labelBase}">Measurement Notes</label>
+                            <input type="text" class="${inputBase} italic text-on-surface-variant" value="${entry.notes || ''}" placeholder="Describe bubbles, clarification, aromas...">
+                        </div>
                     </div>
                 </div>`;
         }).join('');
 
         return `
-            <div class="brew-log-section mt-6 border-t border-app-brand/10 pt-4" data-id="${suffix}">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-header font-bold text-app-brand uppercase tracking-wider">Fermentation Logbook</h3>
-                    <div class="flex gap-2">
-                        <input type="number" step="0.001" id="actualOG-${suffix}" class="w-20 p-1 text-xs border rounded bg-app-tertiary text-center font-mono" placeholder="OG" value="${logData.actualOG || ''}" oninput="this.value = this.value.replace(',', '.'); window.autoCalculateABV(event, '${suffix}')" onchange="window.autoCalculateABV(event, '${suffix}')">
-                        <input type="number" step="0.001" id="actualFG-${suffix}" class="w-20 p-1 text-xs border rounded bg-app-tertiary text-center font-mono" placeholder="FG" value="${logData.actualFG || ''}" oninput="this.value = this.value.replace(',', '.'); window.autoCalculateABV(event, '${suffix}')" onchange="window.autoCalculateABV(event, '${suffix}')">
-                        <input type="text" id="finalABV-${suffix}" class="w-16 p-1 text-xs border rounded bg-app-primary text-center font-bold" placeholder="ABV%" value="${logData.finalABV || ''}" readonly>
+            <div class="brew-log-section mt-8 pt-6 border-t border-outline-variant/30 text-on-surface" data-id="${suffix}">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                    <h3 class="text-xl font-header font-bold text-primary uppercase tracking-wider">Fermentation Logbook</h3>
+                    
+                    <div class="flex flex-row items-center gap-2 bg-surface-container-low p-2 rounded-2xl border border-outline-variant/40 shadow-sm w-full md:w-auto justify-center">
+                        <div class="flex flex-col items-center px-3 border-r border-outline-variant/50">
+                            <label for="actualOG-${suffix}" class="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mb-0.5">Original OG</label>
+                            <input type="number" step="0.001" id="actualOG-${suffix}" class="w-20 p-1 bg-surface border border-outline-variant rounded-lg text-center font-mono text-xs font-bold text-on-surface focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="OG" value="${logData.actualOG || ''}" oninput="this.value = this.value.replace(',', '.'); window.autoCalculateABV(event, '${suffix}')" onchange="window.autoCalculateABV(event, '${suffix}')">
+                        </div>
+                        <div class="flex flex-col items-center px-3 border-r border-outline-variant/50">
+                            <label for="actualFG-${suffix}" class="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mb-0.5">Current FG</label>
+                            <input type="number" step="0.001" id="actualFG-${suffix}" class="w-20 p-1 bg-surface border border-outline-variant rounded-lg text-center font-mono text-xs font-bold text-on-surface focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="FG" value="${logData.actualFG || ''}" oninput="this.value = this.value.replace(',', '.'); window.autoCalculateABV(event, '${suffix}')" onchange="window.autoCalculateABV(event, '${suffix}')">
+                        </div>
+                        <div class="flex flex-col items-center px-3">
+                            <label for="finalABV-${suffix}" class="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mb-0.5">Alcohol ABV</label>
+                            <input type="text" id="finalABV-${suffix}" class="w-16 p-1 bg-primary-container text-on-primary-container rounded-lg text-center font-mono text-xs font-bold border border-primary/10" placeholder="ABV%" value="${logData.finalABV || ''}" readonly>
+                        </div>
                     </div>
                 </div>
-                <div id="fermentationContainer-${suffix}" class="space-y-2">${entriesHtml}</div>
-                <button onclick="window.addLogLine('${suffix}')" class="w-full mt-4 bg-app-tertiary border border-app-brand/30 text-app-brand py-3 rounded-xl font-bold text-sm hover:bg-app-brand hover:text-white transition-all shadow-sm uppercase tracking-widest">+ Add Measurement</button>
+                
+                <div id="fermentationContainer-${suffix}" class="space-y-3">${entriesHtml}</div>
+                
+                <button onclick="window.addLogLine('${suffix}')" class="w-full mt-4 bg-surface-container border border-outline hover:border-primary hover:bg-surface-container-high text-on-surface py-3.5 rounded-2xl font-bold text-sm transition-all duration-200 shadow-sm uppercase tracking-widest min-h-[48px] flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Add Measurement Entry
+                </button>
+                
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                    <div class="card p-3 bg-app-tertiary/30 border-app">
-                        <label class="text-[10px] font-bold text-app-secondary uppercase block mb-1">Aging & Racking Notes</label>
-                        <textarea id="agingNotes-${suffix}" rows="3" class="w-full p-2 text-xs bg-transparent border-none focus:ring-0" placeholder="Describe clarity...">${logData.agingNotes || ''}</textarea>
+                    <div class="card p-4 bg-surface-container-low border border-outline-variant/40 rounded-2xl shadow-sm">
+                        <label for="agingNotes-${suffix}" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1.5 ml-1">Aging & Racking Notes</label>
+                        <textarea id="agingNotes-${suffix}" rows="3" class="w-full p-2 text-xs bg-transparent border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent text-on-surface" placeholder="Describe clarity, racking events, oak additions...">${logData.agingNotes || ''}</textarea>
                     </div>
-                    <div class="card p-3 bg-app-tertiary/30 border-app">
-                        <label class="text-[10px] font-bold text-app-secondary uppercase block mb-1">Final Tasting Notes</label>
-                        <textarea id="tastingNotes-${suffix}" rows="3" class="w-full p-2 text-xs bg-transparent border-none focus:ring-0" placeholder="Flavor, aroma...">${logData.tastingNotes || ''}</textarea>
+                    <div class="card p-4 bg-surface-container-low border border-outline-variant/40 rounded-2xl shadow-sm">
+                        <label for="tastingNotes-${suffix}" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1.5 ml-1">Final Tasting Notes</label>
+                        <textarea id="tastingNotes-${suffix}" rows="3" class="w-full p-2 text-xs bg-transparent border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent text-on-surface" placeholder="Flavor evolution, perceived sweetness, tannin structure, mouthfeel, fruit/hop integration...">${logData.tastingNotes || ''}</textarea>
                     </div>
                 </div>
             </div>`;
     } catch (error) {
         window.logSystemError(error, 'brewing.js: getBrewLogHtml', 'ERROR');
-        return `<p class="text-red-500">Error loading log interface.</p>`;
+        return `<div class="p-4 bg-error-container/20 border border-error/30 rounded-xl text-xs text-error font-medium text-center">⚠️ Error building the interactive log interface.</div>`;
     }
 }
 

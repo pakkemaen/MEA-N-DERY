@@ -1266,7 +1266,6 @@ function handleWaterSourceChange() {
     }
 }
 
-/// Chat Parsing Bug Preventie: Expliciete object-property extractie zonder brackets [] te introduceren
     function updateWaterProfileDisplay(profile) {
         if (!profile) return;
         document.getElementById('val-ca').textContent = profile.ca;
@@ -1771,30 +1770,48 @@ window.calculateTargetApparentBrix = function() {
 
 window.calculateStabilization = function() {
     try {
-        const getVal = (id) => parseFloat(document.getElementById(id)?.value.replace(/,/g, '.')) || NaN;
-        const abv = getVal('stab_abv');
-        const fg = getVal('stab_fg');
-        const ph = getVal('stab_ph');
-        const vol = getVal('stab_vol');
+        // 1. Inputs ophalen & direct saniteren via Comma-to-Dot protocol (v2.6)
+        const abvInput = document.getElementById('stab_abv')?.value.replace(/,/g, '.') || "";
+        const fgInput = document.getElementById('stab_fg')?.value.replace(/,/g, '.') || "";
+        const phInput = document.getElementById('stab_ph')?.value.replace(/,/g, '.') || "";
+        const volInput = document.getElementById('stab_vol')?.value.replace(/,/g, '.') || "";
+        // Optionele uitlezing voor actueel gemeten vrije SO2 (standaardiseert naar 0 indien leeg/niet aanwezig)
+        const currentSo2Input = document.getElementById('stab_current_so2')?.value.replace(/,/g, '.') || "0";
+
+        const abv = parseFloat(abvInput);
+        const fg = parseFloat(fgInput);
+        const ph = parseFloat(phInput);
+        const vol = parseFloat(volInput);
+        const currentSo2 = parseFloat(currentSo2Input);
         const resultDiv = document.getElementById('stabilizationResult');
 
-        if (isNaN(abv) || isNaN(fg) || isNaN(ph) || isNaN(vol)) {
+        // 2. Input-Validatie & Systeemlimiet pre-checks
+        if (isNaN(abv) || isNaN(fg) || isNaN(ph) || isNaN(vol) || isNaN(currentSo2)) {
             window.showToast("Verification failed: Operational datasets must be fully populated.", "error");
             return;
         }
 
-        if (fg >= 1.775) {
-            window.showToast("Hall Boundary Conflict: Final Gravity configuration exceeds maximum system threshold.", "error");
+        if (vol <= 0) {
+            window.showToast("Validation failure: System liquid volume parameters must exceed zero liters.", "error");
             return;
         }
 
+        if (fg >= 1.775) {
+            window.showToast("Hall Boundary Conflict: Final Gravity configuration exceeds maximum system threshold (1.774).", "error");
+            return;
+        }
+
+        // 3. Biochemische Risico-Interlock (Roadmap-Punt 1.3 / v2.6 Systeemgrens)
+        if (ph > 3.8) {
+            window.showToast("pH-waarde kritiek hoog (>3.8). Benodigde sulfietoverschrijding tast organoleptische profiel aan (brandende lucifer). Titreer eerst met wijnsteenzuur of appelzuur naar pH ≤ 3.5 alvorens te stabiliseren.", "warning");
+        }
+
+        // 4. Delle-eenheden & Basis Stabiliteit
         const residualBrix = (182.9622 * Math.pow(fg, 3)) - (777.3009 * Math.pow(fg, 2)) + (1264.5170 * fg) - 670.1831;
         const delleUnits = (4.5 * abv) + residualBrix;
-        
-        // STRIKTE DELLE-LIMIET & PHYSIOLOGISCHE WETMATIGHEID v2.6 VERIFICATIE
         const isStable = delleUnits >= 78.0 || abv >= 15.0;
 
-        // Piecewise Sorbate Scale (Auditor Model)
+        // 5. Piecewise Sorbate Scale (Auditor Model)
         let sorbateMgL = 200;
         if (abv < 10) sorbateMgL = 200;
         else if (abv >= 10 && abv < 11) sorbateMgL = 200 - (abv - 10) * 35;
@@ -1804,24 +1821,58 @@ window.calculateStabilization = function() {
         else if (abv >= 14 && abv < 15) sorbateMgL = 65 - (abv - 14) * 15;
         else sorbateMgL = 50;
 
+        const totalSorbateGrams = (sorbateMgL * vol) / 1000;
+
+        // 6. Henderson-Hasselbalch Matrix (Roadmap-Punt 1.3)
+        // Formule: Target Vrije SO2 = 0.8 * (1 + 10^(pH - 1.81))
+        const targetFreeSo2 = 0.8 * (1 + Math.pow(10, (ph - 1.81)));
+        
+        // 7. Stoichiometrische K-meta Massabalans (Gassubstraat-efficiëntiecoëfficiënt van 57.6%)
+        const deltaSo2 = Math.max(0, targetFreeSo2 - currentSo2);
+        const volInGallons = vol / 3.78541;
+        const totalKMetaGrams = (deltaSo2 * 3.785 * volInGallons) / 570;
+
+        // 8. Real-time Reactive UI Synchronization (Material Design 3)
         if (resultDiv) {
             resultDiv.innerHTML = `
-                <div class="p-4 rounded-2xl border ${isStable ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'} animate-fade-in">
-                    <p class="text-center font-bold text-sm mb-3">${isStable ? '✅ MOLECULAR STABLE' : '⚠️ STABILIZATION REQUIRED'}</p>
-                    <div class="grid grid-cols-2 gap-4 text-center mb-3">
-                        <div><p class="text-[9px] uppercase opacity-60">Delle Units</p><p class="text-xl font-bold">${delleUnits.toFixed(1)}</p></div>
-                        <div><p class="text-[9px] uppercase opacity-60">Residual Brix</p><p class="text-xl font-bold">${residualBrix.toFixed(1)}°</p></div>
+                <div class="p-5 rounded-2xl border ${isStable ? 'bg-green-500/10 border-green-500/30 text-green-800 dark:text-green-200' : 'bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-200'} animate-fade-in space-y-4">
+                    <p class="text-center font-bold text-sm uppercase tracking-wider">${isStable ? '✅ Molecular Stable (Delle Verified)' : '⚠️ Stabilization Required'}</p>
+                    
+                    <div class="grid grid-cols-2 gap-4 text-center">
+                        <div class="p-3 card rounded-xl bg-app-primary/5 border border-app-brand/10">
+                            <p class="text-[9px] uppercase opacity-60 font-bold tracking-widest">Delle Units</p>
+                            <p class="text-xl font-black font-header">${delleUnits.toFixed(1)}</p>
+                        </div>
+                        <div class="p-3 card rounded-xl bg-app-primary/5 border border-app-brand/10">
+                            <p class="text-[9px] uppercase opacity-60 font-bold tracking-widest">Residual Brix</p>
+                            <p class="text-xl font-black font-header">${residualBrix.toFixed(1)}°Bx</p>
+                        </div>
                     </div>
-                    <div class="pt-2 border-t border-black/5">
-                        <div class="flex justify-between text-sm"><span>K-Sorbate:</span><span class="font-bold">${((sorbateMgL * vol) / 1000).toFixed(2)}g</span></div>
-                        <p class="text-[8px] italic mt-1 opacity-70">*Target: ${Math.round(sorbateMgL)} ppm (Auditor Piecewise Model).</p>
+
+                    <div class="pt-3 border-t border-black/5 dark:border-white/5 space-y-2 text-xs">
+                        <div class="flex justify-between items-center bg-white/40 dark:bg-black/20 p-2 rounded-lg border border-outline-variant/20">
+                            <span class="font-medium">Target Vrije SO₂:</span>
+                            <span class="font-mono font-bold px-2 py-0.5 bg-primary text-on-primary rounded text-[11px]">${targetFreeSo2.toFixed(1)} ppm</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center bg-white/40 dark:bg-black/20 p-2 rounded-lg border border-outline-variant/20">
+                            <span class="font-medium">Required K-Metabisulfiet (K-Meta):</span>
+                            <span class="font-mono font-bold px-2 py-0.5 bg-secondary-onContainer text-secondary rounded text-[11px]">${totalKMetaGrams.toFixed(3)} g</span>
+                        </div>
+
+                        <div class="flex justify-between items-center bg-white/40 dark:bg-black/20 p-2 rounded-lg border border-outline-variant/20">
+                            <span class="font-medium">Required Kaliumsorbaat:</span>
+                            <span class="font-mono font-bold text-app-brand">${totalSorbateGrams.toFixed(2)} g</span>
+                        </div>
+                        
+                        <p class="text-[8px] italic opacity-70 text-center pt-1">*Target parameters: 0.8 ppm Molecular SO₂ threshold & Piecewise Auditor Fungistatic alignment.</p>
                     </div>
                 </div>`;
             resultDiv.classList.remove('hidden');
         }
     } catch (error) {
-        window.logSystemError(error, 'Fungistatic Stabilization Evaluation', 'ERROR');
-        window.showToast("Synergistic equilibrium calculations compromised.", "error");
+        window.logSystemError(error, 'Fungistatic Stabilization Evaluation Matrix', 'ERROR');
+        window.showToast("Synergistic equilibrium stabilization calculation failed.", "error");
     }
 };
 

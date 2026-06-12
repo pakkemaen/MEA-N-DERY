@@ -1311,10 +1311,9 @@ window.renderBrewDay = async function(forceId = null) {
             
             let inputHtml = '';
             if (amountMatch && !isCompleted) {
-                inputHtml = `<div class="mt-2.5 flex items-center bg-surface border border-outline rounded-xl px-2 py-0.5 w-40 shadow-inner">
-                    <span class="px-2 text-[10px] font-bold text-on-surface-variant uppercase border-r border-outline-variant/40">Act</span>
-                    <input type="number" id="step-input-${index}" class="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-1 text-center font-mono font-bold text-sm text-on-surface" placeholder="${amountMatch.at(1)}" value="${amountMatch.at(1)}">
-                    <span class="pr-1 text-xs font-bold text-primary">${amountMatch.at(2)}</span>
+                inputHtml = `<div class="mt-2.5 relative w-44">
+                    <input type="number" id="step-input-${index}" class="w-full bg-transparent border border-slate-300 dark:border-outline focus:border-primary focus:outline-none rounded-md py-2.5 pl-3 pr-12 font-mono font-bold text-sm text-on-surface transition-all" placeholder="${amountMatch.at(1)}" value="${amountMatch.at(1)}">
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-primary bg-surface px-1 pointer-events-none">${amountMatch.at(2)}</span>
                 </div>`;
             } else if (isCompleted && savedAmount) {
                  inputHtml = `<div class="mt-2.5 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20"><span class="text-[9px] font-bold text-green-700 uppercase tracking-wider">Recorded:</span><span class="font-mono font-bold text-green-800 text-xs">${savedAmount}</span></div>`;
@@ -1322,16 +1321,16 @@ window.renderBrewDay = async function(forceId = null) {
 
             const timerHtml = step.duration > 0 ? `<div class="timer-display my-2 text-xs font-mono font-bold text-primary bg-primary-container text-on-primary-container inline-block px-2.5 py-1 rounded-lg border border-primary/20" id="timer-${index}">${formatTime(step.duration)}</div>` : '';
             const btnHtml = step.duration > 0 
-                ? `<button onclick="window.startStepTimer('${brew.id}', ${index})" class="text-xs bg-green-600 text-white font-bold py-2 px-4 rounded-full shadow-elevation-1 hover:brightness-110 active:scale-95 transition-all uppercase tracking-wide">Start Timer</button>` 
-                : `<button onclick="window.completeStep(${index})" class="text-xs bg-surface-container-high border border-outline text-primary font-bold py-2 px-4 rounded-full hover:bg-primary/10 active:scale-95 transition-all uppercase tracking-wide">Check</button>`;
+                ? `<button onclick="window.startStepTimer('${brew.id}', ${index})" class="h-11 px-5 rounded-full bg-green-600 text-white font-bold shadow-elevation-1 hover:brightness-110 active:scale-95 transition-all uppercase tracking-wide text-xs">Start Timer</button>` 
+                : `<button onclick="window.completeStep(${index})" class="h-11 px-5 rounded-full bg-surface-container-high border border-outline text-primary font-bold hover:bg-primary/10 active:scale-95 transition-all uppercase tracking-wide text-xs">Check</button>`;
 
             return `<div id="step-${index}" class="step-item p-4 border-b border-outline-variant/30 ${isCompleted ? 'opacity-60 grayscale' : ''}">
                 <div class="flex justify-between items-start gap-4">
                     <div class="flex-grow">
                         <p class="font-bold text-sm text-on-surface flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-surface-container-highest text-[10px] font-bold text-on-surface-variant flex items-center justify-center border border-outline-variant">${index + 1}</span> ${step.title}</p>
-                        <div class="pl-8"><p class="text-xs text-on-surface-variant mt-1.5 leading-relaxed">${step.description}</p>${inputHtml}${timerHtml}</div>
+                        <div class="pl-8"><p class="text-xs text-slate-600 dark:text-on-surface-variant mt-1.5 leading-relaxed">${step.description}</p>${inputHtml}${timerHtml}</div>
                     </div>
-                    <div class="pt-1 flex flex-col items-end gap-1" id="controls-${index}">${isCompleted ? `<button onclick="window.undoStep(${index})" class="text-[10px] font-bold text-white bg-green-600 px-3 py-1.5 rounded-full shadow-elevation-1 hover:bg-red-600 transition-colors flex items-center gap-1 uppercase tracking-wide" title="Undo / Edit">DONE ↺</button>` : btnHtml}</div>
+                    <div class="pt-1 flex flex-col items-end gap-1" id="controls-${index}">${isCompleted ? `<button onclick="window.undoStep(${index})" class="h-9 px-4 rounded-full font-bold text-white bg-green-600 shadow-elevation-1 hover:bg-red-600 transition-colors flex items-center gap-1 uppercase tracking-wide text-[10px]" title="Undo / Edit">DONE ↺</button>` : btnHtml}</div>
                 </div>
             </div>`;
         }).join('');
@@ -1342,8 +1341,9 @@ window.renderBrewDay = async function(forceId = null) {
             <div class="bg-app-secondary p-4 md:p-6 rounded-lg shadow-lg">
                 <div class="flex items-center justify-between mb-4 pb-2 border-b border-app-brand/10">
                     <button onclick="window.closePrimaryDetail()" class="text-xs font-bold text-app-secondary hover:text-app-brand uppercase tracking-wider flex items-center gap-1">&larr; Back to Overview</button>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-app-brand opacity-60">Active Session</span>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Active Session</span>
                 </div>
+
                 <div class="text-center mb-6">
                     <h2 class="text-2xl font-header font-bold text-app-brand mb-1">${brew.recipeName}</h2>
                     <p class="text-[10px] font-bold uppercase tracking-widest text-app-secondary opacity-60">Primary Fermentation Protocol</p>
@@ -1407,16 +1407,16 @@ window.renderBrewDay2 = async function() {
                 const key = `sec-step-${idx}`;
                 const isChecked = checklist[key] === true;
                 const btnHtml = isChecked 
-                    ? `<span class="text-xs font-bold text-green-600 border border-green-600 px-2 py-0.5 rounded">DONE</span>` 
-                    : `<button onclick="window.toggleSecondaryStep('${activeBrew.id}', '${key}')" class="text-xs bg-app-tertiary border border-app-brand/30 text-app-brand font-bold py-1 px-3 rounded hover:bg-app-brand hover:text-white transition-colors btn uppercase">Check</button>`;
+                    ? `<span class="px-3 py-1 rounded-full text-xs font-bold text-green-600 bg-green-500/10 border border-green-500/20 uppercase tracking-wide">DONE</span>` 
+                    : `<button onclick="window.toggleSecondaryStep('${activeBrew.id}', '${key}')" class="h-11 px-5 rounded-full bg-surface-container-high border border-outline text-primary font-bold hover:bg-primary/10 active:scale-95 transition-all text-xs uppercase tracking-wide flex items-center justify-center">Check</button>`;
                 
                 return `
-                <div class="p-4 border-b border-app-brand/10 flex justify-between items-start gap-4 ${isChecked ? 'opacity-60 grayscale' : ''}">
+                <div class="p-4 border-b border-outline-variant/30 flex justify-between items-start gap-4 ${isChecked ? 'opacity-60 grayscale' : ''}">
                     <div class="flex-grow">
-                        <p class="font-bold text-sm text-app-header flex items-center gap-2">
-                            <span class="w-5 h-5 rounded-full bg-app-tertiary text-[10px] flex items-center justify-center border border-app-brand/20">${idx + 1}</span> ${step.title}
+                        <p class="font-bold text-sm text-on-surface flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-surface-container-highest text-[10px] font-bold text-on-surface-variant flex items-center justify-center border border-outline-variant">${idx + 1}</span> ${step.title}
                         </p>
-                        <p class="text-xs text-app-secondary mt-1 pl-7 opacity-90">${step.description}</p>
+                        <p class="text-xs text-slate-600 dark:text-on-surface-variant mt-1.5 leading-relaxed pl-8">${step.description}</p>
                     </div>
                     <div class="pt-1">${btnHtml}</div>
                 </div>`;
@@ -1517,7 +1517,7 @@ window.renderBrewDay2 = async function() {
                                 ↺ Undo Finish
                             </button>
                         </div>
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-app-brand opacity-60">Secondary Phase</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">Secondary Phase</span>
                     </div>
 
                     <div class="text-center mb-6">

@@ -231,20 +231,20 @@
 
         <div id="brewing-main-view" class="hidden">
     
-    <div class="flex items-center justify-between mb-4 no-print">
-        <button class="back-to-dashboard-btn flex items-center gap-2 text-primary font-bold hover:bg-surface-variant/20 px-4 py-2 rounded-full transition-colors text-sm uppercase tracking-wide">
+    <div class="flex items-center justify-between mb-4 no-print min-h-[44px]">
+        <button class="back-to-dashboard-btn flex items-center gap-2 text-primary font-bold hover:bg-surface-variant/20 px-4 py-2.5 min-h-[44px] rounded-full transition-colors text-sm uppercase tracking-wide">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             Back to Dashboard
         </button>
     </div>
 
-    <div class="mb-6 overflow-x-auto no-scrollbar py-1">
-        <nav class="flex space-x-2 min-w-max p-1 bg-surface-container rounded-full border border-outline-variant w-fit mx-auto md:mx-0"> 
-            <button id="creator-sub-tab" class="sub-tab active">Creator</button>
-            <button id="shopping-list-sub-tab" class="sub-tab">Shopping List</button>
-            <button id="brew-day-1-sub-tab" class="sub-tab">Brew Day 1</button>
-            <button id="brew-day-2-sub-tab" class="sub-tab">Brew Day 2</button>
-            <button id="history-sub-tab" class="sub-tab">History</button>
+    <div class="mb-6 py-1 no-print">
+        <nav class="flex items-center gap-2 overflow-x-auto whitespace-nowrap px-2 py-1 bg-surface-container rounded-full border border-outline-variant w-full md:w-fit mx-auto md:mx-0 no-scrollbar select-none"> 
+            <button id="creator-sub-tab" class="sub-tab active min-h-[44px] py-2 px-4 rounded-full transition-all">Creator</button>
+            <button id="shopping-list-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Shopping List</button>
+            <button id="brew-day-1-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Brew Day 1</button>
+            <button id="brew-day-2-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Brew Day 2</button>
+            <button id="history-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">History</button>
         </nav>
     </div>
     
@@ -461,12 +461,12 @@
         <div id="history-list-container">
             <h2 class="text-3xl font-header font-normal mb-6 text-center text-primary">Brew History</h2>
             
-            <div class="relative mb-6 max-w-lg mx-auto">
-                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <div class="relative mb-6 max-w-lg mx-auto w-full">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
                     <svg class="h-5 w-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
                 <input type="text" id="history-search-input" placeholder="Search brews..." 
-                       class="w-full pl-12 pr-4 py-3 rounded-full bg-surface-variant/30 border-none focus:ring-2 focus:ring-primary focus:bg-surface-variant/50 text-on-surface placeholder-on-surface-variant transition-all shadow-sm">
+                       class="w-full pl-12 pr-4 py-3 rounded-full bg-surface-variant/30 border-none focus:ring-2 focus:ring-primary focus:bg-surface-variant/50 text-on-surface placeholder-on-surface-variant transition-all shadow-sm min-h-[44px]">
             </div>
 
             <div id="history-list" class="space-y-3">
@@ -497,20 +497,20 @@
 
      <div id="management-main-view" class="hidden min-h-screen w-full flex flex-col">
          
-         <div class="flex items-center justify-between mb-4 no-print">
-             <button class="back-to-dashboard-btn flex items-center gap-2 text-primary font-bold hover:bg-surface-variant/20 px-4 py-2 rounded-full transition-colors text-sm uppercase tracking-wide">
+         <div class="flex items-center justify-between mb-4 no-print min-h-[44px]">
+             <button class="back-to-dashboard-btn flex items-center gap-2 text-primary font-bold hover:bg-surface-variant/20 px-4 py-2.5 min-h-[44px] rounded-full transition-colors text-sm uppercase tracking-wide">
                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                  Back to Dashboard
              </button>
          </div>
 
-     <div class="mb-6 overflow-x-auto no-scrollbar py-1">
-        <nav class="flex space-x-2 min-w-max p-1 bg-surface-container rounded-full border border-outline-variant w-fit mx-auto md:mx-0">
-            <button id="inventory-sub-tab" class="sub-tab active">Inventory</button>
-            <button id="equipment-sub-tab" class="sub-tab">Equipment</button>
-            <button id="packaging-sub-tab" class="sub-tab">Packaging</button>
-            <button id="cellar-sub-tab" class="sub-tab">Cellar</button>
-            <button id="financials-sub-tab" class="sub-tab">Financials</button>
+     <div class="mb-6 py-1 no-print">
+        <nav class="flex items-center gap-2 overflow-x-auto whitespace-nowrap px-2 py-1 bg-surface-container rounded-full border border-outline-variant w-full md:w-fit mx-auto md:mx-0 no-scrollbar select-none">
+            <button id="inventory-sub-tab" class="sub-tab active min-h-[44px] py-2 px-4 rounded-full transition-all">Inventory</button>
+            <button id="equipment-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Equipment</button>
+            <button id="packaging-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Packaging</button>
+            <button id="cellar-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Cellar</button>
+            <button id="financials-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Financials</button>
         </nav>
     </div>
             <div id="inventory-view" class="hidden mt-6 flex-grow w-full">
@@ -705,21 +705,21 @@
 
         <div id="tools-main-view" class="hidden">
     
-    <div class="flex items-center justify-between mb-4 no-print">
-        <button class="back-to-dashboard-btn flex items-center gap-2 text-primary font-bold hover:bg-surface-variant/20 px-4 py-2 rounded-full transition-colors text-sm uppercase tracking-wide">
+    <div class="flex items-center justify-between mb-4 no-print min-h-[44px]">
+        <button class="back-to-dashboard-btn flex items-center gap-2 text-primary font-bold hover:bg-surface-variant/20 px-4 py-2.5 min-h-[44px] rounded-full transition-colors text-sm uppercase tracking-wide">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             Back to Dashboard
         </button>
     </div>
     
-    <div class="mb-6 overflow-x-auto no-scrollbar py-1">
-        <nav class="flex space-x-2 min-w-max p-1 bg-surface-container rounded-full border border-outline-variant w-fit mx-auto md:mx-0">
-            <button id="calculators-sub-tab" class="sub-tab active">Calculators</button>
-            <button id="labels-sub-tab" class="sub-tab">Labels</button>
-            <button id="water-sub-tab" class="sub-tab">Water</button>
-            <button id="troubleshoot-sub-tab" class="sub-tab">Mead Medic</button>
-            <button id="social-sub-tab" class="sub-tab">Social</button>
-            <button id="library-sub-tab" class="sub-tab">Library</button>
+    <div class="mb-6 py-1 no-print">
+        <nav class="flex items-center gap-2 overflow-x-auto whitespace-nowrap px-2 py-1 bg-surface-container rounded-full border border-outline-variant w-full md:w-fit mx-auto md:mx-0 no-scrollbar select-none">
+            <button id="calculators-sub-tab" class="sub-tab active min-h-[44px] py-2 px-4 rounded-full transition-all">Calculators</button>
+            <button id="labels-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Labels</button>
+            <button id="water-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Water</button>
+            <button id="troubleshoot-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Mead Medic</button>
+            <button id="social-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Social</button>
+            <button id="library-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Library</button>
         </nav>
     </div>
     
@@ -1649,20 +1649,18 @@
     </div>
 </div>
 
-     <div id="settings-main-view" class="hidden">
-    
-    <div class="flex items-center justify-between mb-4 no-print">
+     <div class="flex items-center justify-between mb-4 no-print">
         <button class="back-to-dashboard-btn flex items-center gap-2 text-primary font-bold hover:bg-surface-variant/20 px-4 py-2 rounded-full transition-colors text-sm uppercase tracking-wide">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             Back to Dashboard
         </button>
     </div>
     
-    <div class="mb-6 overflow-x-auto no-scrollbar py-1">
-        <nav class="flex space-x-2 min-w-max p-1 bg-surface-container rounded-full border border-outline-variant w-fit mx-auto md:mx-0">
-            <button id="settings-general-sub-tab" class="sub-tab active" onclick="window.switchSubView('settings-general', 'settings-main-view')">General & AI</button>
-            <button id="settings-assets-sub-tab" class="sub-tab" onclick="window.switchSubView('settings-assets', 'settings-main-view')">Label Assets</button>
-            <button id="settings-data-sub-tab" class="sub-tab" onclick="window.switchSubView('settings-data', 'settings-main-view')">Data Zone</button>
+    <div class="mb-6 py-1 no-print">
+        <nav class="flex items-center gap-2 overflow-x-auto whitespace-nowrap px-2 py-1 bg-surface-container rounded-full border border-outline-variant w-full md:w-fit mx-auto md:mx-0 no-scrollbar select-none">
+            <button id="settings-general-sub-tab" class="sub-tab active min-h-[44px] py-2 px-4 rounded-full transition-all" onclick="window.switchSubView('settings-general', 'settings-main-view')">General & AI</button>
+            <button id="settings-assets-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all" onclick="window.switchSubView('settings-assets', 'settings-main-view')">Label Assets</button>
+            <button id="settings-data-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all" onclick="window.switchSubView('settings-data', 'settings-main-view')">Data Zone</button>
         </nav>
     </div>
 

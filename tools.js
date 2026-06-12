@@ -1457,6 +1457,7 @@ window.calculateBlend = function() {
         }
 
         if (finalSg >= 1.775) {
+            window.logSystemError(new Error("Blending density threshold exceeded Hall limit"), 'Blending Matrix Evaluation', 'WARNING');
             window.showToast("Critical error: Calculated Specific Gravity exceeds the Hall limit (1.775).", "error");
             if (resultDiv) resultDiv.innerHTML = `<span class="text-error font-bold">LIMIT ERR</span>`;
             return;
@@ -1580,7 +1581,6 @@ window.calculateDilution = function() {
 // --- PROACTIEVE BUFFER CALCULATOR (v2.6)  ---
 window.calculateBuffer = function() {
     try {
-        // 1. Inputs ophalen & Comma-to-Dot sanitisatie
         const volInput = document.getElementById('buffer_vol')?.value.replace(/,/g, '.') || "";
         const taCurrentInput = document.getElementById('buffer_ta_current')?.value.replace(/,/g, '.') || "";
         const taTargetInput = document.getElementById('buffer_ta_target')?.value.replace(/,/g, '.') || "";
@@ -1598,18 +1598,24 @@ window.calculateBuffer = function() {
         }
 
         let htmlContent = "";
+        let warningHtml = "";
 
-        // 2. MODUS DETECTIE: Proactief vs Correctief
+        // Gecentraliseerde biologische veiligheidscontrole (Botulisme preventie-interlock)
+        if (currentPh > 4.2) {
+            warningHtml = `
+                <div class="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded text-[10px] text-red-600 font-bold uppercase animate-pulse">
+                    ⚠️ SYSTEM DANGER: pH > 4.2 detected. Further acid attenuation threats to push equilibrium past pH > 4.6. 
+                    Critical risk of botulism outbreak conditions at pH > 4.6 if left uncorrected!
+                </div>`;
+        }
+
         if (isNaN(taCurrent) || isNaN(taTarget)) {
             // --- PROACTIEVE MODUS (v2.6 Standaard) ---
             const proactiveGrams = 0.4 * vol;
             const dosePerLiter = proactiveGrams / vol;
-            
-            // Berekening Kalium-verhoging (v2.6 Cosmetische Update)
             const potassiumPpm = dosePerLiter * 523.07;
             
-            // Kalium-check: minimaal 0.26 g/L K2CO3 voor ~300ppm
-            let potassiumNote = dosePerLiter < 0.26 
+            let potassiumNote = potassiumPpm < 300 
                 ? `<p class="mt-2 text-[9px] text-amber-600 font-bold uppercase">⚠️ Notice: Potassium concentration potentially under the 300 ppm threshold.</p>` 
                 : `<p class="mt-2 text-[9px] text-green-600 font-bold uppercase">✓ Potassium increase: +${Math.round(potassiumPpm)} ppm K⁺</p>`;
             
@@ -1619,6 +1625,7 @@ window.calculateBuffer = function() {
                     <span class="text-3xl font-bold text-app-brand font-header">${proactiveGrams.toFixed(2)}g</span>
                     <p class="mt-2 text-[10px] opacity-80 uppercase leading-tight">Prevents structural pH crashes < 3.2 in raw honey musts.</p>
                     ${potassiumNote}
+                    ${warningHtml}
                 </div>`;
         } else {
             // --- CORRECTIEVE MODUS (Delta TA) ---
@@ -1629,22 +1636,12 @@ window.calculateBuffer = function() {
             const k2co3DosePerLiter = k2co3Grams / vol;
             const khco3DosePerLiter = khco3Grams / vol;
 
-            // Berekening Kalium-verhoging (v2.6 Cosmetische Update)
             const ppmK2CO3 = k2co3DosePerLiter * 523.07;
             const ppmKHCO3 = khco3DosePerLiter * 361.20;
+            const totalPotassiumPpm = ppmK2CO3 + ppmKHCO3;
 
-            // Veiligheidscheck: pH-Gevaar & Botulisme
-            let warningHtml = "";
-            if (currentPh > 4.2 && deltaTA > 0) {
-                warningHtml = `
-                    <div class="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded text-[10px] text-red-600 font-bold uppercase animate-pulse">
-                        ⚠️ SYSTEM DANGER: pH > 4.2 detected. Further acid attenuation threats to push equilibrium past pH > 4.6. 
-                        Critical risk of botulism outbreak conditions at pH > 4.6 if left uncorrected!
-                    </div>`;
-            }
-
-            let potassiumNote = k2co3DosePerLiter < 0.26 
-                ? `<p class="mt-2 text-[9px] text-amber-600 font-bold uppercase">⚠️ Notice: Potassium concentration (K₂CO₃) potentially under the 300 ppm threshold.</p>` 
+            let potassiumNote = totalPotassiumPpm < 300 
+                ? `<p class="mt-2 text-[9px] text-amber-600 font-bold uppercase">⚠️ Notice: Potassium concentration (K₂CO₃/KHCO₃) potentially under the 300 ppm threshold.</p>` 
                 : `<p class="mt-2 text-[9px] text-green-600 font-bold uppercase">✓ Est. K⁺: +${Math.round(ppmK2CO3)} ppm (Carbonate) / +${Math.round(ppmKHCO3)} ppm (Bicarbonate)</p>`;
 
             htmlContent = `
@@ -1798,6 +1795,14 @@ window.calculateStabilization = function() {
 
         if (fg >= 1.775) {
             window.showToast("Hall Boundary Conflict: Final Gravity configuration exceeds maximum system threshold (1.774).", "error");
+            if (resultDiv) {
+                resultDiv.innerHTML = `
+                    <div class="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center">
+                        <span class="text-error font-bold text-sm block">⚠️ LIMIT ERR</span>
+                        <span class="text-xs opacity-80 block mt-1">Final Gravity equals or transcends structural parameters (max 1.774).</span>
+                    </div>`;
+                resultDiv.classList.remove('hidden');
+            }
             return;
         }
 
@@ -2119,80 +2124,90 @@ window.updateLogCount = async function() {
 
 window.calculateBraggot = function() {
     try {
-        // 1. DOM Elementen ophalen
-        const honeyWeightInput = document.getElementById('braggot_honey_weight')?.value || "";
-        const maltWeightInput = document.getElementById('braggot_malt_weight')?.value || "";
-        const targetVolInput = document.getElementById('braggot_target_volume')?.value || "";
+        const targetAbvInput = document.getElementById('braggot_target_abv')?.value || "0";
+        const targetVolInput = document.getElementById('braggot_target_volume')?.value || "0";
+        const maltFractionInput = document.getElementById('braggot_malt_fraction')?.value || "0";
         const extractType = document.getElementById('braggot_extract_type')?.value || "DME";
+        const baseIbuInput = document.getElementById('braggot_base_ibu')?.value || "0";
         const resultDiv = document.getElementById('braggotResult');
 
-        // 2. Comma-to-Dot Sanitisatie protocol (v2.6)
-        const honeyWeight = parseFloat(honeyWeightInput.replace(/,/g, '.')) || 0;
-        const maltWeight = parseFloat(maltWeightInput.replace(/,/g, '.')) || 0;
+        const targetAbv = parseFloat(targetAbvInput.replace(/,/g, '.')) || 0;
         const targetVolume = parseFloat(targetVolInput.replace(/,/g, '.')) || 0;
+        let maltFraction = parseFloat(maltFractionInput.replace(/,/g, '.')) || 0;
 
         if (targetVolume <= 0) {
             window.showToast("Invalid baseline: Targeted system volume metrics must be greater than zero liters.", "error");
             return;
         }
 
-        // 3. Suikerbijdrage (Gravity Points) berekenen op basis van v2.6 constanten
-        const gpHoney = honeyWeight * 290;
-        
-        let maltConstant = 375; // Default DME
-        if (extractType === "LME") {
-            maltConstant = 290;
-        } else if (extractType === "Candy") {
-            maltConstant = 300;
-        } else if (extractType === "DME") {
-            maltConstant = 375;
+        if (maltFraction < 0.30) {
+            maltFraction = 0.30;
         }
-        const gpMalt = maltWeight * maltConstant;
-        
-        const totalGP = gpHoney + gpMalt;
-
-        // 4. Handhaaf Braggot-Grenzen: Valideer of het molaandeel X_malt tussen 30% en 50% ligt
-        if (totalGP > 0) {
-            const xMalt = gpMalt / totalGP;
-            if (xMalt < 0.30 || xMalt > 0.50) {
-                window.showToast(`Zymological constraints breach: The grist mole fraction contribution (${(xMalt * 100).toFixed(1)}%) drifts outside strict Braggot parameter configurations (Limit: 30% - 50%).`, "error");
-                if (resultDiv) resultDiv.innerHTML = `<span class="text-error font-bold">BRAG_BOUNDS_ERR</span>`;
-                return;
-            }
+        if (maltFraction > 0.50) {
+            maltFraction = 0.50;
         }
 
-        const calculatedPoints = totalGP / targetVolume;
-        const ogTheoretisch = 1.000 + (calculatedPoints / 1000);
+        const abw = targetAbv * 0.794;
+        const ogTheoretisch = (1.775 * abw + 57.06) / (57.06 + abw);
 
         if (ogTheoretisch >= 1.775) {
             window.showToast("Critical baseline failure: Calculated theoretical OG equals or transcends the system Hall Limit (1.775).", "error");
-            if (resultDiv) resultDiv.innerHTML = `<span class="text-error font-bold">LIMIT ERR</span>`;
+            if (resultDiv) {
+                resultDiv.innerHTML = `
+                    <div class="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center">
+                        <span class="text-error font-bold text-sm block">⚠️ LIMIT ERR</span>
+                    </div>`;
+                resultDiv.classList.remove('hidden');
+            }
             return;
         }
 
-        // 6. Procentuele verhoudingen berekenen op basis van reële totalGP suikerbijdrage matrix
-        let percentHoney = 0;
-        let percentMalt = 0;
-        if (totalGP > 0) {
-            percentHoney = (gpHoney / totalGP) * 100;
-            percentMalt = (gpMalt / totalGP) * 100;
+        const totalGP = (ogTheoretisch - 1.000) * 1000 * targetVolume;
+        const gpMalt = totalGP * maltFraction;
+        const gpHoney = totalGP - gpMalt;
+
+        const honeyKg = gpHoney / 290;
+        
+        let maltConstant = 375;
+        if (extractType === "LME") {
+            maltConstant = 300;
+        } else if (extractType === "Candy") {
+            maltConstant = 300;
         }
 
-        // 7. Real-time UI-update via MD3-conforme structuur
+        const maltKg = gpMalt / maltConstant;
+        const finalFG = ogTheoretisch - (0.75 * (ogTheoretisch - 1.000));
+
+        const ogMalt = 1.000 + (gpMalt / (targetVolume * 1000));
+        const phiBraggot = 1.0 + 0.45 * (1.0 - (ogMalt / ogTheoretisch));
+
+        const baseIbu = parseFloat(baseIbuInput.replace(/,/g, '.')) || 0;
+        const correctedIbu = baseIbu * phiBraggot;
+
         if (resultDiv) {
             resultDiv.innerHTML = `
                 <div class="p-4 bg-primary-container rounded-xl border border-primary/20 shadow-sm animate-fade-in">
                     <div class="text-[10px] uppercase font-bold tracking-widest text-primary mb-2">Predicted Braggot Profile (v2.6)</div>
                     <div class="space-y-1 text-sm text-on-surface">
                         <div class="flex justify-between border-b border-outline-variant/30 pb-1">
-                            <span>Predicted OG:</span> <span class="font-mono font-bold text-primary">${ogTheoretisch.toFixed(3)}</span>
+                            <span>Targeted OG:</span> <span class="font-mono font-bold text-primary">${ogTheoretisch.toFixed(3)}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-outline-variant/30 pb-1">
+                            <span>Predicted FG (75% Att.):</span> <span class="font-mono font-bold text-secondary">${finalFG.toFixed(3)}</span>
                         </div>
                         <div class="flex justify-between text-xs pt-1">
-                            <span>Sugar from Honey:</span> <span class="font-mono font-bold">${percentHoney.toFixed(1)}%</span>
+                            <span>Required Honey:</span> <span class="font-mono font-bold">${honeyKg.toFixed(2)} kg</span>
                         </div>
                         <div class="flex justify-between text-xs">
-                            <span>Sugar from Malt (${extractType}):</span> <span class="font-mono font-bold">${percentMalt.toFixed(1)}%</span>
+                            <span>Required Malt (${extractType}):</span> <span class="font-mono font-bold">${maltKg.toFixed(2)} kg</span>
                         </div>
+                        <div class="flex justify-between text-xs border-t border-outline-variant/30 pt-1 mt-1">
+                            <span>Hop Correction (φ_braggot):</span> <span class="font-mono font-bold text-primary">${phiBraggot.toFixed(2)}x</span>
+                        </div>
+                        ${baseIbu > 0 ? `
+                        <div class="flex justify-between text-xs">
+                            <span>Corrected Bitter Intensity:</span> <span class="font-mono font-bold text-primary">${correctedIbu.toFixed(1)} IBU</span>
+                        </div>` : ''}
                     </div>
                 </div>
             `;
@@ -2579,3 +2594,7 @@ window.calculateSplitBatch = calculateSplitBatch;
 window.calculateTastingAssessment = calculateTastingAssessment;
 window.calculateWaterMatching = calculateWaterMatching;
 window.toggleApiKeyVisibility = toggleApiKeyVisibility;
+window.importData = importData;
+window.exportHistory = exportHistory;
+window.exportInventory = exportInventory;
+window.clearCollection = clearCollection;

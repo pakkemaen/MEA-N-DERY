@@ -473,7 +473,7 @@ async function generateRecipe() {
     }
 }
 
-// --- HELPER: Flavor Prediction (AI) ---
+/// --- HELPER: Flavor Prediction (AI) ---
 async function getPredictedFlavorProfile(markdown) {
     const prompt = `You are a professional mead sommelier. Analyze this recipe and PREDICT its final flavor profile. Assign score 0-5 for: Sweetness, Acidity, Fruity/Floral, Spiciness, Earthy/Woody, Body/Mouthfeel. Output ONLY JSON. Recipe: "${markdown}"`;
     
@@ -495,7 +495,7 @@ async function getPredictedFlavorProfile(markdown) {
         const jsonResponse = await performApiCall(prompt, schema);
         return JSON.parse(jsonResponse);
     } catch (error) {
-        console.error("Could not generate flavor profile:", error);
+        window.logSystemError(error, "brewing.js: getPredictedFlavorProfile Anomaly", "ERROR");
         return null; // Geen ramp, we tonen gewoon geen grafiek
     }
 }
@@ -1247,12 +1247,21 @@ window.renderBrewDay = async function(activeId) {
             return; // EXPLICIT PIPELINE TERMINATION TO PREVENT FALSE DATABASE MISMATCH WARNINGS
         }
 
-        // Fetch Brew & Validate State
-        const brewDoc = await getDoc(doc(db, `users/${state.userId}/brews`, resolvedId))
-        if (!brew) {
+        // 3. Gecentraliseerd en Gecorrigeerd Root-Pad conform v2.6 Architectuurmandaat
+        const docRef = doc(db, "artifacts", "meandery-aa05e", "users", state.userId, "brews", resolvedId);
+        const brewSnapshot = await getDoc(docRef);
+        
+        // 4. Data-Extractie en Validatie-Interlock via deserialisatiemethodiek
+        if (!brewSnapshot.exists()) {
             window.showToast("Database mismatch: Target brew profile could not be extracted.", "error");
             return;
         }
+
+        // Lokale scope variabele declareren en vullen met data inclusief specifieke identifier
+        const brew = {
+            id: brewSnapshot.id,
+            ...brewSnapshot.data()
+        };
 
         const brewDayView = document.getElementById('brewDayView');
         const brewingView = document.getElementById('brewingView');
@@ -1269,7 +1278,7 @@ window.renderBrewDay = async function(activeId) {
 
         // Directe, asynchrone cloudupdate via Firestore SDK zonder tussenkomst van saveUserSettings()
         if (state.userId) {
-            const settingsDocRef = doc(db, "artifacts/meandery-aa05e/users", state.userId, "settings", "main");
+            const settingsDocRef = doc(db, "artifacts/meandery-aa05e", "users", state.userId, "settings", "main");
             await updateDoc(settingsDocRef, {
                 currentBrewDay: { brewId: resolvedId }
             });
@@ -1324,7 +1333,7 @@ window.renderBrewDay = async function(activeId) {
         const headline = document.getElementById('brewDayHeadline');
         if (headline) headline.textContent = `Brouwdag: ${brew.recipeName || 'Active Batch'}`;
 
-        // Laad het logboek onderaan de actieve brouwdag card
+        // Laad het logboek onderaan the actieve brouwdag card
         const logContainer = document.getElementById('brew-day-log-container');
         if (logContainer) {
             logContainer.innerHTML = getBrewLogHtml(brew, resolvedId);
@@ -2021,12 +2030,14 @@ window.toggleSecondaryStep = async function(brewId, stepKey) {
 
         // 2. Toggle status
         brew.checklist[stepKey] = !brew.checklist[stepKey];
-        renderBrewDay2();
 
-        // 3. Opslaan
+        // 3. Opslaan via gecentraliseerde init
         await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), {
             checklist: brew.checklist
         });
+
+        // 4. UI-Refresh (Mandaat: Alleen na Firestore-bevestiging)
+        renderBrewDay2();
     } catch (error) {
         window.logSystemError(error, 'brewing.js: toggleSecondaryStep', 'ERROR');
         showToast("Clouddatabase commit execution failure.", "error");
@@ -2072,7 +2083,7 @@ async function markPrimaryAsComplete(brewId) {
         
         const idx = state.brews.findIndex(b => b.id === brewId);
         if (idx > -1) {
-            state.brews[idx].primaryComplete = true;
+            state.brews.at(idx).primaryComplete = true;
         }
     } catch (error) { 
         window.logSystemError(error, 'brewing.js -> markPrimaryAsComplete', 'CRITICAL');
@@ -2357,11 +2368,18 @@ window.syncLogToFinal = function(idSuffix) {
         if (fermentationLog.length > 0) {
             const lastEntry = fermentationLog.at(fermentationLog.length - 1);
             const fgField = document.getElementById(`actualFG-${idSuffix}`);
+            const abvField = document.getElementById(`finalABV-${idSuffix}`);
+            
             if (fgField) {
                 fgField.value = lastEntry.sg;
-                window.autoCalculateABV(null, idSuffix);
-                    }
+                
+                // RECURSIE OPTIMALISATIE: Sla de herberekening volledig over bij een actieve foutstatus
+                const hasLimitError = abvField && abvField.value === "LIMIT ERR";
+                if (!tempState.isCalculatingABV && !hasLimitError) {
+                    window.autoCalculateABV(null, idSuffix);
                 }
+            }
+        }
 
         if (brew) {
             if (!brew.logData) brew.logData = {};
@@ -2537,28 +2555,26 @@ function getLogDataFromDOM(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return {};
     
-    // Probeer suffix te vinden (bv. brewId)
     const section = container.querySelector('.brew-log-section');
     const suffix = section ? section.dataset.id : '';
 
-    // Actual Ingredients Scrapen
-    // Let op: We zoeken in de tabel die we in getActualIngredientsHtml hebben gemaakt
-    // De ID van die tabel is 'actualsTable-' + brewId. 
-    // Als containerId 'brew-day-content' is, moeten we de tabel zoeken die erin zit.
     const actualsTable = container.querySelector('table[id^="actualsTable-"]');
     let actualIngredients = [];
     
     if (actualsTable) {
         const rows = Array.from(actualsTable.querySelectorAll('tbody tr'));
-        actualIngredients = rows.map(r => ({
-            name: r.dataset.name,
-            actualQty: r.querySelector('input').value
-        }));
+        actualIngredients = rows.map(r => {
+            const inputElement = r.querySelector('input');
+            const sanitizedValue = inputElement ? inputElement.value.replace(',', '.') : '0';
+            return {
+                name: r.dataset.name,
+                actualQty: sanitizedValue
+            };
+        });
     }
 
     return {
         actualIngredients: actualIngredients
-        // Je kunt hier meer velden toevoegen indien nodig voor andere functies
     };
 }
 
@@ -2961,6 +2977,7 @@ function renderFermentationGraph(brewId) {
         });
     } catch (error) {
         window.logSystemError(error, 'Graph: renderFermentation', 'ERROR');
+        window.showToast("Het initialiseren van de fermentatie-grafiek is gestagneerd.", "error");
     }
 }
 
@@ -3123,6 +3140,9 @@ window.printEmptyLog = function() {
 
 window.autoCalculateABV = function(event, idSuffix) {
     try {
+        // LOCK-OUT MATRIX STAGE: Activeer binaire interlock vlag ter voorkoming van stack-overflow
+        tempState.isCalculatingABV = true;
+
         const cleanId = idSuffix.replace('-sec', ''); 
         const logEntryRow = event ? event.target.closest('.log-entry') : null;
         
@@ -3160,24 +3180,36 @@ window.autoCalculateABV = function(event, idSuffix) {
                 finalFG = 1.0 - (0.002349 * RI_i) + (0.006276 * RI_f);
             }
 
-            // Interlock 1: Asymptotische Singulariteit & Ondergrens
+            // Interlock 1: Asymptotische Singulariteit & Ondergrens (Behoud statusvlag)
             if (finalOG >= 1.775 || finalOG <= 1.000) {
                 window.showToast("Critical system conflict: Transmuted Original Gravity value breaches the density thresholds.", "error");
                 abvField.value = "LIMIT ERR";
+                if (event) {
+                    window.syncLogToFinal(idSuffix);
+                }
+                tempState.isCalculatingABV = false;
                 return;
             }
 
-            // Interlock 2: Thermodynamische Attenuatie Check
+            // Interlock 2: Thermodynamische Attenuatie Check (Behoud statusvlag)
             if (finalFG > finalOG) {
                 window.showToast("Critical system conflict: Negative attenuation detected. Data alignment is inconsistent.", "error");
                 abvField.value = "LIMIT ERR";
+                if (event) {
+                    window.syncLogToFinal(idSuffix);
+                }
+                tempState.isCalculatingABV = false;
                 return;
             }
 
-            // Interlock 3: Fysische Dichtheidsvloer (Pure Ethanol Limit)
+            // Interlock 3: Fysische Dichtheidsvloer / Pure Ethanol Limit (Behoud statusvlag)
             if (finalFG < 0.794) {
                 window.showToast("Critical system conflict: Final Gravity falls below physical limits of ethanol.", "error");
                 abvField.value = "LIMIT ERR";
+                if (event) {
+                    window.syncLogToFinal(idSuffix);
+                }
+                tempState.isCalculatingABV = false;
                 return;
             }
             
@@ -3220,8 +3252,15 @@ window.autoCalculateABV = function(event, idSuffix) {
             }
         }
 
-        window.syncLogToFinal(idSuffix);
+        // De-escalatie van de lock-out status: Geef de synchronisatiepijplijn veilig vrij
+        tempState.isCalculatingABV = false;
+        
+        // Alleen de synchronisatie forceren als het een fysieke gebruikersmutatie (DOM-event) betreft
+        if (event) {
+            window.syncLogToFinal(idSuffix);
+        }
     } catch (error) {
+        tempState.isCalculatingABV = false;
         window.logSystemError(error, 'Automated Fermentation Metrics Extrapolation', 'ERROR');
     }
 };
@@ -3414,7 +3453,8 @@ window.recalcTotalABV = function(idSuffix) {
         }
         
     } catch (error) {
-        window.logSystemError(error, 'brewing.js: recalcTotalABV', 'ERROR');
+        window.logSystemError(error, 'brewing.js: window.recalcTotalABV Anomaly', 'ERROR');
+        window.showToast("De blending volumetrische ABV extrapolatie is mislukt.", "error");
     }
 };
 
@@ -3736,7 +3776,7 @@ window.evaluateBatchSafety = function(brewId, currentLogEntry) {
         else if (recipeText.includes("qa23")) yeastStrain = "qa23";
 
         const currentTemp = parseFloat(String(currentLogEntry.temp).replace(',', '.'));
-        if (yeastStrain === "d47" && currentTemp > 20) {
+        if (!isNaN(currentTemp) && yeastStrain === "d47" && currentTemp > 20) {
             warnings.push("Lalvin D47 above 20°C: Risk of fusel alcohols formation.");
         }
 
@@ -3745,35 +3785,41 @@ window.evaluateBatchSafety = function(brewId, currentLogEntry) {
             let yanActual = 0;
             actuals.forEach(ing => {
                 const qty = parseFloat(String(ing.actualQty).replace(',', '.'));
-                if (ing.name.toLowerCase().includes("fermaid o")) yanActual += (qty / batchSize) * 160;
-                if (ing.name.toLowerCase().includes("dap")) yanActual += (qty / batchSize) * 210;
+                if (!isNaN(qty)) {
+                    if (ing.name.toLowerCase().includes("fermaid o")) yanActual += (qty / batchSize) * 160;
+                    if (ing.name.toLowerCase().includes("dap")) yanActual += (qty / batchSize) * 210;
+                }
             });
             const og = parseFloat(String(logData.actualOG || 1.000).replace(',', '.'));
-            const brix = ((182.9622 * Math.pow(og, 3)) - (777.3009 * Math.pow(og, 2)) + (1264.5170 * og) - 670.1831);
-            const yanTarget = 10 * brix * og * 1.25; 
-            if (yanActual < yanTarget && yanActual > 0) {
-                warnings.push("SafAle US-05 nitrogen deficiency: Risk of H2S (rotten sulfur) off-flavors.");
+            if (!isNaN(og) && !isNaN(batchSize) && batchSize > 0) {
+                const brix = ((182.9622 * Math.pow(og, 3)) - (777.3009 * Math.pow(og, 2)) + (1264.5170 * og) - 670.1831);
+                const yanTarget = 10 * brix * og * 1.25; 
+                if (yanActual < yanTarget && yanActual > 0) {
+                    warnings.push("SafAle US-05 nitrogen deficiency: Risk of H2S (rotten sulfur) off-flavors.");
+                }
             }
         }
 
         const ogVal = parseFloat(String(logData.actualOG || 1.000).replace(',', '.'));
-        if (!isNaN(ogVal) && ogVal < 1.775) {
+        if (!isNaN(ogVal) && ogVal < 1.775 && ogVal > 1.000) {
             const fgDry = 1.000;
             const abwPot = (76.08 * (ogVal - fgDry)) / (1.775 - ogVal);
             const abvPot = abwPot / 0.794;
-            if (yeastStrain === "71b" && abvPot > 14) warnings.push("ABV exceeds the 14% tolerance limit of Lalvin 71B.");
-            if ((yeastStrain === "ec-1118" || yeastStrain === "m05") && abvPot > 18) {
-                warnings.push(`ABV exceeds the 18% tolerance limit of ${yeastStrain.toUpperCase()}.`);
+            if (!isNaN(abvPot)) {
+                if (yeastStrain === "71b" && abvPot > 14) warnings.push("ABV exceeds the 14% tolerance limit of Lalvin 71B.");
+                if ((yeastStrain === "ec-1118" || yeastStrain === "m05") && abvPot > 18) {
+                    warnings.push(`ABV exceeds the 18% tolerance limit of ${yeastStrain.toUpperCase()}.`);
+                }
             }
         }
 
         const currentPh = parseFloat(String(currentLogEntry.ph).replace(',', '.'));
-        if (currentPh < 3.2 && currentPh > 0) {
+        if (!isNaN(currentPh) && currentPh < 3.2 && currentPh > 0) {
             const brewDateRaw = logData.brewDate ? new Date(logData.brewDate) : null;
-            if (brewDateRaw) {
+            if (brewDateRaw && !isNaN(brewDateRaw.getTime())) {
                 const currentLogDate = currentLogEntry.date ? new Date(currentLogEntry.date) : new Date();
                 const diffDays = (currentLogDate.getTime() - brewDateRaw.getTime()) / (1000 * 3600 * 24);
-                if (diffDays <= 3) warnings.push("PH-CRASH (First 72h): Add 0.4 g/L K2CO3 buffer matrix.");
+                if (!isNaN(diffDays) && diffDays <= 3) warnings.push("PH-CRASH (First 72h): Add 0.4 g/L K2CO3 buffer matrix.");
             } else {
                 warnings.push("CRITICAL LOW pH: Add 0.4 g/L K2CO3 buffer matrix.");
             }
@@ -3793,7 +3839,7 @@ window.evaluateBatchSafety = function(brewId, currentLogEntry) {
             detectedContactHours = parseInt(hourMatch.at(1));
         }
         
-        if (detectedContactHours >= 168 || collectiveNotes.includes("dryhop 7 dagen") || collectiveNotes.includes("dryhop 8 dagen") || collectiveNotes.includes("dry-hop 7 days") || collectiveNotes.includes("dry-hop 8 days")) {
+        if (!isNaN(detectedContactHours) && (detectedContactHours >= 168 || collectiveNotes.includes("dryhop 7 dagen") || collectiveNotes.includes("dryhop 8 dagen") || collectiveNotes.includes("dry-hop 7 days") || collectiveNotes.includes("dry-hop 8 days"))) {
             const overExtractionWarning = "Kritieke overextractie van polyphenolen en chlorofyl gedetecteerd (Grasachtige off-flavor / Hop-burn risico).";
             warnings.push(overExtractionWarning);
             window.logSystemError(`Hop Over-Extraction Event on Batch ${brew.recipeName || 'Unknown'}: ${detectedContactHours} hours calculated.`, 'Zymology: Hop Safeguard', 'WARNING');

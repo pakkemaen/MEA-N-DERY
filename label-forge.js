@@ -711,30 +711,42 @@ window.deleteCustomLabelFormat = async function() {
 // 6. AI CONTENT & ART GENERATORS
 
 function handleLogoUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            // SLA OP IN HET GEHEUGEN (VEILIG)
-            tempState.currentLabelImageSrc = e.target.result;
-            
-            // Update het scherm direct
-            const imgDisplay = document.getElementById('label-img-display');
-            if (imgDisplay) {
-                imgDisplay.src = e.target.result;
-                imgDisplay.classList.remove('hidden');
-            }
-            const placeholder = document.getElementById('label-img-placeholder');
-            if(placeholder) placeholder.classList.add('hidden');
-            
-            // Ververs het thema meteen
-            const activeThemeBtn = document.querySelector('.label-theme-btn.active');
-            const theme = activeThemeBtn ? activeThemeBtn.dataset.theme : 'standard';
-            setLabelTheme(theme);
+    try {
+        if (!event || !event.target || !event.target.files) return;
+        
+        // CHAT PARSING BUG PREVENTIE: .item(0) in plaats van vierkante haken voor FileList objecten
+        const file = event.target.files.item(0);
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (!e || !e.target) return;
+                
+                // SLA OP IN HET GEHEUGEN (VEILIG)
+                tempState.currentLabelImageSrc = e.target.result;
+                
+                // Update het scherm direct
+                const imgDisplay = document.getElementById('label-img-display');
+                if (imgDisplay) {
+                    imgDisplay.src = e.target.result;
+                    imgDisplay.classList.remove('hidden');
+                }
+                const placeholder = document.getElementById('label-img-placeholder');
+                if(placeholder) placeholder.classList.add('hidden');
+                
+                // Ververs het thema meteen
+                const activeThemeBtn = document.querySelector('.label-theme-btn.active');
+                const theme = activeThemeBtn ? activeThemeBtn.dataset.theme : 'standard';
+                setLabelTheme(theme);
 
-            window.updateArtButtons();
+                if (typeof window.updateArtButtons === 'function') {
+                    window.updateArtButtons();
+                }
+            };
+            reader.readAsDataURL(file);
         }
-        reader.readAsDataURL(file);
+    } catch (error) {
+        window.logSystemError(error, 'label-forge.js: handleLogoUpload', 'ERROR');
+        window.showToast("Fout bij het uploaden van het logo.", "error");
     }
 }
 
@@ -1353,11 +1365,13 @@ async function addLabelStyle() {
     const promptInput = document.getElementById('newStylePrompt');
     const btn = document.getElementById('addStyleBtn');
 
+    if (!nameInput || !promptInput || !btn) return;
+
     const name = nameInput.value.trim();
     const prompt = promptInput.value.trim();
 
     if (!name || !prompt) {
-        showToast("Vul eerst een Naam én een Prompt in.", "error");
+        window.showToast("Vul eerst een Naam én een Prompt in.", "error");
         return;
     }
 
@@ -1378,17 +1392,20 @@ async function addLabelStyle() {
 
         await saveLabelAssets();
 
-        renderLabelAssetsSettings();
-        if(typeof populateLabelStylesDropdown === 'function') {
+        if (typeof renderLabelAssetsSettings === 'function') {
+            renderLabelAssetsSettings();
+        }
+        if (typeof populateLabelStylesDropdown === 'function') {
             populateLabelStylesDropdown();
         }
 
         nameInput.value = '';
         promptInput.value = '';
-        showToast(`Stijl "${name}" toegevoegd!`, "success");
+        window.showToast(`Stijl "${name}" toegevoegd!`, "success");
 
     } catch (error) {
-        window.logSystemError(error, 'LabelForge: Add Style Asset', 'ERROR');
+        // ERROR HANDLING RESTORATION: Foutmelding correct gesaniteerd en doorgegeven met formele context-omschrijving
+        window.logSystemError(error, 'label-forge.js: addLabelStyle', 'ERROR');
         window.showToast("Fout bij het toevoegen van de art style.", "error");
     } finally {
         btn.innerText = originalText;

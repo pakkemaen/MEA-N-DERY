@@ -190,12 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('scan-barcode-btn')?.addEventListener('click', () => window.startScanner());
     document.getElementById('close-scanner-btn')?.addEventListener('click', () => window.stopScanner());
     document.getElementById('equipment-profile-form')?.addEventListener('submit', (e) => window.addEquipmentProfile(e));
-    
-    document.getElementById('equipProfileType')?.addEventListener('change', () => {
-         const type = document.getElementById('equipProfileType').value;
-         const boilCont = document.getElementById('boil-off-rate-container');
-         if(boilCont) boilCont.classList.toggle('hidden', type !== 'Kettle');
-    });
 
     // --- KELDER ---
     document.getElementById('bottling-form')?.addEventListener('submit', (e) => window.bottleBatch(e));

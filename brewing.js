@@ -611,55 +611,69 @@ function parseRecipeData(markdown) {
         const abvMatchGlobal = markdown.match(new RegExp(`(?:Target ABV|ABV|Alcoholpercentage)[\\s\\*:]*~?([\\d.,]+)\\s*%?`, 'i'));
         if (abvMatchGlobal && abvMatchGlobal.at(1)) { data.targetABV = abvMatchGlobal.at(1); }
 
-    } catch (e) {
-        console.error("Error parsing recipe data:", e);
+    } catch (error) {
+        window.logSystemError(error, 'Recipe Parser: Vital Stats Extraction Analysis', 'ERROR');
+        window.showToast("Fout bij het deconstrueren van de recept-metagegevens.", "error");
     }
     return data;
 }
 
 // --- HELPER: Maak van ruwe JSON een mooie tabel ---
 function formatRecipeMarkdown(markdown) {
-    if (!markdown) return "";
-    let finalMarkdown = markdown;
+    try {
+        if (!markdown) return "<p class='opacity-50 italic'>Geen receptuur data beschikbaar.</p>";
+        
+        let html = markdown
+            .replace(/^#\s+(.*)$/gm, '<h1 class="text-xl font-black font-header text-app-header tracking-tight border-b border-app-brand/10 pb-2 mb-4 mt-2">$1</h1>')
+            .replace(/^##\s+(.*)$/gm, '<h2 class="text-md font-bold text-app-brand font-header mt-4 mb-2">$1</h2>')
+            .replace(/^###\s+(.*)$/gm, '<h3 class="text-sm font-bold text-on-surface-variant font-sans mt-3 mb-1">$1</h3>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-app-header">$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em class="italic opacity-90">$1</em>');
 
-    // Zoek naar het JSON blok
-    const jsonRegex = /(?:```json\s*([\s\S]*?)\s*```|(\[\s*\{[\s\S]*?\}\s*\]))/;
-    const jsonMatch = finalMarkdown.match(jsonRegex); 
+        // Transmutatie van Markdown tabellen naar MD3-compliant structuren
+        const lines = html.split('\n');
+        let inTable = false;
+        let tableHtml = "";
 
-    if (jsonMatch && (jsonMatch.at(1) || jsonMatch.at(2))) {
-        const jsonString = jsonMatch.at(1) || jsonMatch.at(2);
-        try {
-            // Maak JSON veilig
-            let safeJsonString = jsonString.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']'); 
-            const ingredientsArray = JSON.parse(safeJsonString);
-            
-            // Bouw de Markdown Tabel
-            let tableMarkdown = '\n| Ingredient | Quantity | Unit |\n|---|---|---|\n';
-            ingredientsArray.forEach(item => {
-                let displayQty = parseFloat(item.quantity);
-                let displayUnit = item.unit;
-                
-                // Slimme eenheden (g -> kg als > 1000)
-                if ((displayUnit || '').toLowerCase() === 'g' && displayQty >= 1000) { 
-                    displayQty /= 1000; displayUnit = 'kg'; 
-                } 
-                else if ((displayUnit || '').toLowerCase() === 'ml' && displayQty >= 1000) { 
-                    displayQty /= 1000; displayUnit = 'L'; 
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines.at(i).trim();
+            if (line.startsWith('|')) {
+                if (!inTable) {
+                    inTable = true;
+                    tableHtml = '<div class="overflow-x-auto my-4 rounded-xl border border-app-brand/10 bg-surface/50"><table class="w-full text-left border-collapse text-xs">';
                 }
                 
-                // Rond af
-                if (displayQty % 1 !== 0) { displayQty = parseFloat(displayQty.toFixed(2)); }
+                const cells = line.split('|').map(c => c.trim()).filter(c => c);
+                if (line.includes('---')) continue;
+
+                const isHeader = !line.includes('---') && !html.includes('border-b') && i === lines.findIndex(l => l.trim().startsWith('|'));
                 
-                tableMarkdown += `| ${item.ingredient} | ${displayQty} | ${displayUnit} |\n`;
-            });
-            
-            // Vervang de code door de tabel
-            finalMarkdown = finalMarkdown.replace(jsonRegex, tableMarkdown); 
-        } catch (e) {
-            console.error("Table format error:", e);
+                tableHtml += `<tr class="${isHeader ? 'bg-app-primary/10 font-bold text-app-brand border-b border-app-brand/10 text-[10px] uppercase tracking-wider' : 'border-b border-app-brand/5 hover:bg-app-primary/5 transition-colors'}">`;
+                cells.forEach(cell => {
+                    tableHtml += isHeader ? `<th class="p-3 font-semibold">${cell}</th>` : `<td class="p-3 text-on-surface-variant font-medium">${cell}</td>`;
+                });
+                tableHtml += '</tr>';
+            } else {
+                if (inTable) {
+                    inTable = false;
+                    tableHtml += '</table></div>';
+                    lines.splice(i - 1, 0, tableHtml);
+                    tableHtml = "";
+                }
+            }
         }
+        if (inTable) {
+            tableHtml += '</table></div>';
+            lines.push(tableHtml);
+        }
+
+        html = lines.filter(l => !l.trim().startsWith('|')).join('\n');
+        return html.replace(/\n/g, '<br>');
+
+    } catch (error) {
+        window.logSystemError(error, 'Recipe Table Markdown Serialization Analysis', 'ERROR');
+        return `<pre class="p-4 bg-error/10 text-error rounded-xl text-xs font-mono whitespace-pre-wrap">${markdown}</pre>`;
     }
-    return finalMarkdown;
 }
 
 // --- MAIN RENDER FUNCTION ---
@@ -745,8 +759,13 @@ async function renderRecipeOutput(markdown, isTweak = false) {
     const saveBtn = document.getElementById('saveBtn');
     if(saveBtn) {
         saveBtn.addEventListener('click', () => {
-            if(window.saveBrewToHistory) window.saveBrewToHistory(currentRecipeMarkdown, currentPredictedProfile);
-            else { console.error("saveBrewToHistory function missing!"); showToast("Error: Save function missing", "error"); }
+            if (window.saveBrewToHistory) {
+                window.saveBrewToHistory(currentRecipeMarkdown, currentPredictedProfile);
+            } else {
+                const missingFuncError = new Error("The reference target saveBrewToHistory function is missing from memory window scope.");
+                window.logSystemError(missingFuncError, 'Recipe Pipeline: History Preservation Interface', 'ERROR');
+                window.showToast("Preservation linkage failure: Save functionality is currently unlinked.", "error");
+            }
         });
     }
     

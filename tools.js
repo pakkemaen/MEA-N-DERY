@@ -250,6 +250,10 @@ async function loadUserWaterProfiles() {
         userWaterProfiles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         populateWaterDropdown();
         renderUserWaterProfilesList();
+    }, (error) => {
+        // Snapshot Interlock: Fout-callback stuurt database-fouten direct door naar de Black Box
+        window.logSystemError(error, 'Zymology: Water Profile Snapshot Sync', 'ERROR');
+        window.showToast("Fout bij synchroniseren waterprofielen.", "error");
     });
 }
 
@@ -321,11 +325,19 @@ window.editWaterProfile = function(id) {
     document.getElementById('manual_cl').value = p.cl; document.getElementById('manual_hco3').value = p.hco3;
 }
 
-window.deleteWaterProfile = async function(id) {
-    if (!state.userId || !confirm("Delete profile?")) return;
-    try { await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'waterProfiles', id)); showToast("Deleted.", "success"); }
-    catch (e) { showToast("Error deleting.", "error"); }
-}
+window.deleteWaterProfile = async function(profileId) {
+    if (!confirm("Weet je zeker dat je dit waterprofiel wilt verwijderen?")) return;
+    try {
+        if (!state.userId) return;
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'waterProfiles', profileId);
+        await deleteDoc(docRef);
+        window.showToast("Waterprofiel succesvol verwijderd.", "success");
+    } catch (error) {
+        // Gecentraliseerde v2.6 fouthandling naar de Black Box
+        window.logSystemError(error, 'Zymology: Water Profile Deletion', 'ERROR');
+        window.showToast("Fout bij verwijderen waterprofiel.", "error");
+    }
+};
 
 window.showLastPrompt = function() {
     // In tools.js refereren we naar de variabele uit brewing.js indien beschikbaar
@@ -391,7 +403,9 @@ function setupPromptEngineer() {
         });
         console.log("✅ Generate knop listener gekoppeld.");
     } else {
-        console.error("❌ Kan knop 'btn-analyze-prompt' niet vinden in de HTML.");
+        const domError = new Error("Prompt Engineer interface elements are missing from the active DOM context.");
+        window.logSystemError(domError, 'Prompt Engineer Configuration Verification', 'ERROR');
+        window.showToast("Interface context failure: Prompt Engineer controls are not accessible.", "error");
     }
 }
 
@@ -485,9 +499,9 @@ async function runPromptEngineer() {
             }
         }
 
-    } catch (e) {
-        console.error("Prompt Engineer Error:", e);
-        showToast("Analysis failed: " + e.message, "error");
+    } catch (error) {
+        window.logSystemError(error, 'Prompt Engineer: Style DNA Analysis', 'ERROR');
+        window.showToast("Analysis failed or API quota exceeded.", "error");
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -548,14 +562,16 @@ async function importData(event, collectionName) {
                 if (collectionName === 'brews' && window.loadHistory) window.loadHistory();
                 if (collectionName === 'inventory' && window.loadInventory) window.loadInventory();
 
-            } catch (err) {
-                window.logSystemError(err, 'Data Import Serialization Analysis', 'ERROR');
-                showToast("Import failed: " + err.message, "error");
+            } catch (error) {
+                // Parameter-standaardisatie van het binnenste catch-blok naar 'error'
+                window.logSystemError(error, 'Data Import Serialization Analysis', 'ERROR');
+                showToast("Import failed: " + error.message, "error");
             }
         };
         reader.readAsText(file);
-    } catch (globalErr) {
-        window.logSystemError(globalErr, 'Data Import Infrastructure Initialization', 'ERROR');
+    } catch (error) {
+        // Parameter-standaardisatie van het buitenste catch-blok naar 'error'
+        window.logSystemError(error, 'Data Import Infrastructure Initialization', 'ERROR');
         showToast("Import initialization failed.", "error");
     }
 }
@@ -657,8 +673,9 @@ window.toggleMedicHistory = async function() {
 
         listDiv.innerHTML = html;
 
-    } catch (e) {
-        console.error(e);
+    } catch (error) {
+        window.logSystemError(error, 'Mead Medic: Chat History Loading', 'ERROR');
+        window.showToast("Error loading diagnostic records history.", "error");
         listDiv.innerHTML = `<p class="p-4 text-red-500">Error loading history.</p>`;
     }
 }
@@ -710,9 +727,9 @@ window.loadMedicChat = async function(chatId) {
         chatBox.scrollTop = chatBox.scrollHeight;
         showToast("History loaded.", "success");
 
-    } catch(e) {
-        console.error(e);
-        showToast("Failed to load chat.", "error");
+    } catch (error) {
+        window.logSystemError(error, 'Mead Medic: Diagnostic Record Retrieval', 'ERROR');
+        window.showToast("Failed to load specified chat session.", "error");
     }
 }
 
@@ -723,8 +740,11 @@ window.deleteMedicChat = async function(chatId) {
         await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'medicChats', chatId));
         window.toggleMedicHistory(); // Ververs lijst
         if(currentChatId === chatId) window.resetTroubleshootChat(); // Reset scherm als deze open stond
-    } catch(e) { console.error(e); }
-}
+    } catch (error) {
+        window.logSystemError(error, 'Mead Medic: Diagnostic Record Purge', 'ERROR');
+        window.showToast("Failed to delete selected diagnostic history.", "error");
+    }
+};
 
 // 5. Foto Selectie Handling (Ongewijzigd)
 window.handleChatImageSelect = function(input) {
@@ -750,89 +770,116 @@ window.clearChatImage = function() {
 
 // 6. Bericht Versturen (MET AUTO-SAVE)
 window.sendTroubleshootMessage = async function() {
-    const input = document.getElementById('chat-input');
-    const text = input.value.trim();
-    const chatBox = document.getElementById('chat-history');
-    const sendBtn = document.getElementById('chat-send-btn');
-
-    if (!text && !currentChatImageBase64) return;
-
-    // A. Render USER bericht
-    let userHtml = `<div class="flex items-start gap-3 justify-end animate-fade-in mb-4">
-        <div class="bg-blue-600 text-white p-3 rounded-lg rounded-tr-none shadow-sm text-sm max-w-[85%]">
-            ${currentChatImageBase64 ? '<div class="mb-2"><span class="text-[10px] uppercase bg-white/20 px-1 rounded">📷 Image attached</span></div>' : ''}
-            ${text}
-        </div>
-        <img src="logo.png" onerror="this.src='favicon.png'" alt="Me" class="w-8 h-8 rounded-full bg-app-tertiary flex-shrink-0 object-contain border border-app-brand/20 p-0.5">
-    </div>`;
-    chatBox.insertAdjacentHTML('beforeend', userHtml);
-    
-    // Voeg toe aan tijdelijke geschiedenis
-    chatHistory.push({ role: "user", text: text, hasImage: !!currentChatImageBase64 });
-
-    // UI Updates
-    input.value = '';
-    const imageToSend = currentChatImageBase64; 
-    window.clearChatImage();
-    chatBox.scrollTop = chatBox.scrollHeight;
-    sendBtn.disabled = true;
-
-    // B. Render AI 'Typing...'
-    const loadingId = 'loading-' + Date.now();
-    chatBox.insertAdjacentHTML('beforeend', `
-        <div id="${loadingId}" class="flex items-start gap-3 animate-pulse mb-4">
-            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">DOC</div>
-            <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg rounded-tl-none text-xs text-gray-500">Thinking...</div>
-        </div>
-    `);
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    // C. API Call
     try {
-        const response = await performChatApiCall(chatHistory, imageToSend);
-        
-        document.getElementById(loadingId).remove();
+        if (!state.userId) {
+            window.showToast("Authenticatie vereist om de Mead Medic te raadplegen.", "error");
+            return;
+        }
 
-        const aiHtml = `<div class="flex items-start gap-3 animate-fade-in mb-4">
-            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs flex-shrink-0">DOC</div>
-            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg rounded-tl-none shadow-sm text-sm text-app-header border border-gray-100 dark:border-gray-700 max-w-[90%] prose prose-sm max-w-none dark:prose-invert">
-                ${marked.parse(response)}
-            </div>
-        </div>`;
-        
-        chatBox.insertAdjacentHTML('beforeend', aiHtml);
-        chatHistory.push({ role: "model", text: response }); 
+        const inputEl = document.getElementById('medic-input');
+        const messageText = inputEl?.value.trim();
+        if (!messageText) return;
 
-        // --- D. AUTO-SAVE LOGIC ---
-        if (state.userId) {
-            const chatData = {
-                updatedAt: new Date().toISOString(),
-                messages: chatHistory
-            };
+        // Maak het invoerveld direct leeg voor een vloeiende UX
+        inputEl.value = "";
 
-            // Als dit een nieuw gesprek is, verzin een titel
-            if (!currentChatId) {
-                // HOTFIX: Array-indexering gecorrigeerd van bracket-notatie naar de veilige .at(0) methodiek
-                const baseText = chatHistory.at(0) ? chatHistory.at(0).text : '';
-                const title = baseText.split(' ').slice(0, 6).join(' ') + '...';
-                chatData.title = title;
-                chatData.createdAt = new Date().toISOString();
-                
-                const docRef = await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'medicChats'), chatData);
-                currentChatId = docRef.id;
-            } else {
-                // Update bestaand gesprek
-                await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'medicChats', currentChatId), chatData);
+        // Haal de actuele chat-context op uit tempState of genereer een nieuwe identifier
+        let chatId = window.tempState?.activeMedicChatId;
+        if (!chatId) {
+            chatId = 'chat_' + Date.now();
+            if (!window.tempState) window.tempState = {};
+            window.tempState.activeMedicChatId = chatId;
+        }
+
+        // Voeg het bericht van de gebruiker direct toe aan de Firestore subcollectie via de veilige init-hub
+        await appendMedicMessage(chatId, messageText, 'user');
+
+        // Verzamel de oenologische context van de actuele brews om de Gemini-analyse te voeden
+        let brewContextString = "Geen actieve brouwgegevens beschikbaar.";
+        if (state.brews && state.brews.length > 0) {
+            // Veilig extraheren van de meest recente batch met de .at() methodiek wegens chat-parser bug
+            const activeBrew = state.brews.at(0);
+            if (activeBrew) {
+                brewContextString = `Actieve Batch: ${activeBrew.name || 'Naamloos'}, ` +
+                                    `Stijl: ${activeBrew.style || 'Onbekend'}, ` +
+                                    `Giststam: ${activeBrew.yeastStrain || 'Onbekend'}, ` +
+                                    `OG: ${activeBrew.logData?.initialSG || 'Onbekend'}, ` +
+                                    `Actuele FG: ${activeBrew.logData?.actualFG || 'Onbekend'}, ` +
+                                    `pH: ${activeBrew.logData?.actualPh || 'Onbekend'}.`;
             }
         }
 
+        // Bouw de Fort Knox-compliant systeemprompt op voor de Mead Medic troubleshooting-omgeving
+        const systemInstruction = `Je bent de 'Mead Medic', een AI-expert gecertificeerd in oenologie en de zymologie van mede. 
+Je helpt thuisbrouwers met het diagnosticeren van vastgelopen vergistingen (stalls), infecties en off-flavors.
+Gebruik bij berekeningen ALTIJD de Hall-vergelijking voor alcoholbepalingen en hanteer de TOSNA 3.0-standaarden voor stikstofcorrecties.
+Geef korte, direct toepasbare antwoorden met duidelijke actiepunten in platte tekst of Markdown (geen codeblokken).
+Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
+
+        // Initialiseer het Gemini-model via de gecentraliseerde API-sleutel in de main settings
+        const apiKey = state.userSettings?.apiKeys?.gemini || "";
+        if (!apiKey) {
+            await appendMedicMessage(chatId, "Medic Systeemfout: Geen Gemini API-sleutel geconfigureerd in de gebruikersinstellingen. Voeg deze toe via de 'User Settings' rekenmachine.", 'medic');
+            return;
+        }
+
+        // Dynamische API-call opbouw conform de sequentiële HTTP-richtlijnen
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        
+        // Haal de historische chatberichten op om de conversatie-historie te bewaren
+        const chatHistory = await fetchMedicChatHistory(chatId);
+        let contentsPayload = [];
+
+        // Bouw de payload op met de .at() of forEach methodieken (vrij van vierkante haken)
+        chatHistory.forEach(msg => {
+            contentsPayload.push({
+                role: msg.sender === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.text }]
+            });
+        });
+
+        // Voeg het meest recente gebruikersbericht toe aan de payload
+        contentsPayload.push({
+            role: 'user',
+            parts: [{ text: messageText }]
+        });
+
+        const responseFetch = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: contentsPayload,
+                systemInstruction: {
+                    parts: [{ text: systemInstruction }]
+                }
+            })
+        });
+
+        if (!responseFetch.ok) {
+            if (responseFetch.status === 429) {
+                throw new Error("HTTP 429: API Rate-limit block triggered during concurrent rendering.");
+            }
+            throw new Error(`Gemini Gateway Network error with status code: ${responseFetch.status}`);
+        }
+
+        const data = await responseFetch.json();
+        
+        // Extractie van de respons-tekst met de parser-veilige .at() methodiek op candidates en parts
+        let replyText = "De Mead Medic kon geen stabiele respons genereren. Controleer de netwerkverbinding.";
+        if (data.candidates && data.candidates.length > 0) {
+            const candidate = data.candidates.at(0);
+            if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+                replyText = candidate.content.parts.at(0).text;
+            }
+        }
+
+        // Schrijf het AI-antwoord weg naar de Firestore subcollectie van de gebruiker
+        await appendMedicMessage(chatId, replyText, 'medic');
+        
     } catch (error) {
-        document.getElementById(loadingId)?.remove();
-        chatBox.insertAdjacentHTML('beforeend', `<div class="text-center text-red-500 text-xs my-2">Error: ${error.message}</div>`);
-    } finally {
-        sendBtn.disabled = false;
-        chatBox.scrollTop = chatBox.scrollHeight;
-        input.focus(); 
+        // Gecentraliseerde v2.6 fouthandling naar de Black Box
+        window.logSystemError(error, 'Zymology Assistant API Pipeline', 'ERROR');
+        window.showToast("Er is een fout opgetreden bij het verzenden van het bericht.", "error");
     }
 };
 
@@ -1038,8 +1085,9 @@ window.loadSocialStyles = async function() {
             });
             select.appendChild(group);
         }
-    } catch (e) {
-        console.warn("Could not load styles for social:", e);
+    } catch (error) {
+        window.logSystemError(error, 'Social Studio: Label Assets Retrieval', 'ERROR');
+        window.showToast("Fout bij het inladen van de opgeslagen kunststijlen.", "error");
     }
 }
 
@@ -1191,9 +1239,10 @@ window.generateSocialImage = async function(finalPrompt) {
         } else { 
             throw new Error("No image data received."); 
         }
-    } catch (e) {
-        console.error(e);
-        if (container) container.innerHTML = `<p class="text-red-500 text-xs p-4">${e.message}</p>`;
+    } catch (error) {
+        window.logSystemError(error, 'Social Studio: Artwork Generation Pipeline', 'ERROR');
+        window.showToast("Artwork generation pipeline exception mapped.", "error");
+        if (container) container.innerHTML = `<p class="text-red-500 text-xs p-4">${error.message}</p>`;
         if (btn) {
             btn.innerHTML = `<span>🎨 Generate Image</span>`;
             btn.classList.remove('hidden'); 
@@ -1232,9 +1281,9 @@ window.saveSocialPost = async function() {
             })
         });
         showToast("Post saved to recipe history!", "success");
-    } catch(e) {
-        console.error(e);
-        showToast("Save failed.", "error");
+    } catch (error) {
+        window.logSystemError(error, 'Social Studio: Post Synchronization Commit', 'ERROR');
+        window.showToast("Save operation failed to reach server registries.", "error");
     }
 }
 
@@ -1981,8 +2030,9 @@ async function clearCollection(collectionName) {
         });
         await batch.commit();
         return true;
-    } catch(e) {
-        console.error("Clear error:", e);
+    } catch (error) {
+        window.logSystemError(error, `Tools: Clear Collection Operations [${collectionName}]`, 'ERROR');
+        window.showToast("Fout bij het opschonen van de database-collectie.", "error");
         return false;
     }
 }
@@ -2115,8 +2165,9 @@ window.updateLogCount = async function() {
         } else {
             badge.classList.add('hidden');
         }
-    } catch (e) {
-        console.warn("Log count check failed:", e);
+    } catch (error) {
+        window.logSystemError(error, 'System Logs: Real-time Badge Count Sync', 'ERROR');
+        window.showToast("Failed to synchronize active error logs badge count.", "error");
     }
 }
 

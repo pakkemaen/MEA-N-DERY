@@ -2269,23 +2269,53 @@ window.calculateSplitBatch = function() {
 };
 
 // ============================================================================
-// --- SOMMELIER TASTING ASSESSMENT & RATINGS PROTOCOL (v2.6) ---
+// --- SOMMELIER TASTING ASSESSMENT & RATINGS PROTOCOL (v2.6 REFACTORED) ---
 // ============================================================================
 
-window.calculateTastingAssessment = async function(brewId, sensoryScores, activeOffFlavors) {
+window.calculateTastingAssessment = async function() {
     try {
+        // Defensieve DOM-Validatie: Controleer of de Tasting Room-elementen aanwezig zijn
+        const requiredElements = [
+            'aromaSlider', 'flavorSlider', 'mouthfeelSlider', 'tanninSlider',
+            'offflavor_reduction', 'offflavor_fusels', 'offflavor_geranium'
+        ];
+        
+        let domGapsIdentified = false;
+        requiredElements.forEach(id => {
+            if (!document.getElementById(id)) {
+                domGapsIdentified = true;
+            }
+        });
+
+        if (domGapsIdentified) {
+            const domError = new Error("Tasting Room interface elements are missing from the active DOM context.");
+            window.logSystemError(domError, 'Tasting Assessment Engine Validation', 'WARNING');
+            window.showToast("Interface context failure: Sensory input controls are not accessible.", "error");
+            return;
+        }
+
+        // 1. Context- en State-Extractie uit Single Source of Truth
+        let brewId = null;
+        if (window.tempState && window.tempState.activeBrewId) {
+            brewId = window.tempState.activeBrewId;
+        } else if (state.userSettings && state.userSettings.currentBrewDay && state.userSettings.currentBrewDay.brewId) {
+            brewId = state.userSettings.currentBrewDay.brewId;
+        }
+
         if (!brewId) {
             window.showToast("Context conflict: No active brew record selected for evaluation.", "error");
             return;
         }
 
-        const brew = state.brews.find(b => b.id === brewId);
-        if (!brew) {
+        // Extractie van het specifieke receptrecord via de veilige .at() methodiek
+        const localBrewIndex = state.brews.findIndex(b => b.id === brewId);
+        if (localBrewIndex === -1) {
             window.showToast("Database mismatch: Target profile record could not be extracted.", "error");
             return;
         }
+        const brew = state.brews.at(localBrewIndex);
 
-        // Analytische parameters uit de DOM extraheren en saniteren via Comma-to-Dot
+        // 2. Directe DOM-Scraping & Comma-to-Dot Sanitisatie
         const fgRaw = String(document.getElementById('tasting_fg')?.value || brew.logData?.actualFG || brew.logData?.targetFG || '1.000');
         const taRaw = String(document.getElementById('tasting_ta')?.value || '6.0');
         const phRaw = String(document.getElementById('tasting_ph')?.value || '3.6');
@@ -2294,6 +2324,18 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
         const titratableAcidity = parseFloat(taRaw.replace(/,/g, '.')) || 0;
         const measuredPh = parseFloat(phRaw.replace(/,/g, '.')) || 3.6;
 
+        // Uitlezen van de organoleptische schuifregelaars (sliders)
+        const aroma = parseFloat(document.getElementById('aromaSlider').value) || 3.0;
+        const flavor = parseFloat(document.getElementById('flavorSlider').value) || 3.0;
+        const mouthfeel = parseFloat(document.getElementById('mouthfeelSlider').value) || 3.0;
+        const tanninValue = parseFloat(document.getElementById('tanninSlider').value) || 1.0;
+
+        // Binaire statusuitlezing van de checkboxes (off-flavors)
+        const hasReduction = document.getElementById('offflavor_reduction').checked || false;
+        const hasFusels = document.getElementById('offflavor_fusels').checked || false;
+        const hasGeranium = document.getElementById('offflavor_geranium').checked || false;
+
+        // 3. Validatie Systeemgrenzen
         if (titratableAcidity <= 0) {
             window.showToast("Mathematical violation: Titratable Acidity (TA) must exceed 0 g/L to prevent calculation crash.", "error");
             return;
@@ -2304,22 +2346,22 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
             return;
         }
 
-        // 1. Derdegraads Bates-polynoom: SG naar Finale Brix
+        if (measuredPh > 3.8) {
+            window.showToast("pH-waarde kritiek hoog (>3.8). Benodigde sulfietoverschrijding tast organoleptische profiel aan (brandende lucifer). Titreer eerst met wijnsteenzuur of appelzuur naar pH ≤ 3.5 alvorens te stabiliseren.", "warning");
+        }
+
+        // 4. Derdegraads Bates-polynoom: SG naar Restsuikerconcentratie (C_s in g/L)
         const brixFinal = (182.9622 * Math.pow(finalGravity, 3)) - (777.3009 * Math.pow(finalGravity, 2)) + (1264.5170 * finalGravity) - 670.1831;
-        
-        // 2. Actuele restsuikerconcentratie (C_s in g/L)
         const sugarConcentration = brixFinal * finalGravity * 10;
 
-        // 3. Logaritmische Mede-Harmonie Index (M_HI) met Tannin-slider modulatie
-        const tanninValue = parseFloat(sensoryScores?.tanninSlider) || 1.0;
+        // 5. Logaritmische Mede-Harmonie Index (M_HI)
         const logDenominator = titratableAcidity * (4.5 - measuredPh) * (1 + (tanninValue / 10));
-        
         let meadHarmonyIndex = 0;
         if (logDenominator !== 0) {
             meadHarmonyIndex = sugarConcentration / logDenominator;
         }
 
-        // Algoritmische feedback-matrix op basis van de vernieuwde M_HI
+        // Algoritmische oenologische feedback
         let oenologicalFeedback = "";
         if (meadHarmonyIndex < 25) {
             oenologicalFeedback = "🚨 **Profile: Imbalanced / Acid-Dominant.** The mead exhibits an analytical deficit in sweetness, causing acids or wood-derived tannins to overpower the sensory balance. Recommendation: Formulate a backsweetening dose using the Bates-v2.6 tracking module.";
@@ -2329,21 +2371,21 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
             oenologicalFeedback = "🍯 **Profile: Excessively Sweet / Flaccid.** Residual sugar volumes exceed organoleptic boundaries due to insufficient supporting acidity. Recommendation: Fine-tune structural crispness by making calculated adjustments with Tartaric or Malic acid solutions.";
         }
 
-        // Off-flavor logica en binaire interlocks
+        // 6. Kinetische Fout- en Risicoanalyse (Off-flavors)
         let offFlavorNotes = [];
-        if (activeOffFlavors?.reduction && brew.logData?.yanDelta > 0) {
+        if (hasReduction && brew.logData?.yanDelta > 0) {
             const extraFermaidO = brew.logData.yanDelta / 40;
             offFlavorNotes.push(`• **Reduction Detected:** Volatile sulfur characteristics correlate directly to a nutritional gap of ${Math.round(brew.logData.yanDelta)} ppm YAN during early logistics. Proactively inject ${extraFermaidO.toFixed(2)} g/L of organic Fermaid O in the next iteration batch.`);
         }
 
         const yeastStrain = brew.yeastStrain || "";
         const maxTemp = parseFloat(brew.logData?.maxFermentationTemp) || 0;
-        if (activeOffFlavors?.fusels && yeastStrain.includes("D47") && maxTemp > 20) {
+        if (hasFusels && yeastStrain.includes("D47") && maxTemp > 20) {
             const deltaTStress = maxTemp - 20;
             offFlavorNotes.push(`• **Thermal Kinetics Stress (Lalvin D47):** Fusel higher alcohol synthesis triggered by temperature ceilings overriding threshold levels during log growth. The culture underwent a heat stress factor of +${deltaTStress.toFixed(1)}°C above the maximum 20°C standard.`);
         }
 
-        if (activeOffFlavors?.geranium) {
+        if (hasGeranium) {
             const hasSorbaat = brew.stabilizationData?.sorbateAdded || false;
             const freeSO2 = parseFloat(brew.stabilizationData?.measuredFreeSO2) || 0;
             const mSO2 = freeSO2 / (1 + Math.pow(10, (measuredPh - 1.81)));
@@ -2357,18 +2399,17 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
             ? offFlavorNotes.join("\n") 
             : "• No severe kinetic off-flavor deviations mapped from available fermentation logs.";
 
-        // Rating berekening met strikte array-uitlezingsprotectie via .at()
-        const aroma = parseFloat(sensoryScores?.aromaSlider) || 3.0;
-        const flavor = parseFloat(sensoryScores?.flavorSlider) || 3.0;
-        const mouthfeel = parseFloat(sensoryScores?.mouthfeelSlider) || 3.0;
-        
+        // 7. Ratingberekening met aftrekkunsten voor actieve off-flavors
         const unweightedAverage = (aroma + flavor + mouthfeel) / 3.0;
-        const activeOffFlavorCount = Object.values(activeOffFlavors || {}).filter(Boolean).length;
+        let activeOffFlavorCount = 0;
+        if (hasReduction) activeOffFlavorCount++;
+        if (hasFusels) activeOffFlavorCount++;
+        if (hasGeranium) activeOffFlavorCount++;
         
         let calculatedStars = unweightedAverage - (1.00 * activeOffFlavorCount);
         calculatedStars = Math.max(0.25, Math.min(5.00, calculatedStars));
 
-        // Firestore Synchronisatie & Lokale State Cache Mutatie
+        // 8. Server-side Synchronisatie & Lokale Cache Mutatie
         if (!state.userId) {
             window.showToast("Local caching only: Authenticate user profile to allow server-side synchronization.", "warning");
             renderTastingResultsUI(sugarConcentration, meadHarmonyIndex, calculatedStars, oenologicalFeedback, combinedNotesString);
@@ -2387,13 +2428,14 @@ window.calculateTastingAssessment = async function(brewId, sensoryScores, active
         };
 
         const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId);
+        
+        // Uitvoering asynchrone cloudupdate via de Firestore write pipeline
         await updateDoc(brewDocRef, tastingPayload);
 
-        const localBrewIndex = state.brews.findIndex(b => b.id === brewId);
-        if (localBrewIndex !== -1) {
-            state.brews.at(localBrewIndex).tastingAssessment = tastingPayload.tastingAssessment;
-        }
+        // State muteren via de veilige .at() methodiek
+        state.brews.at(localBrewIndex).tastingAssessment = tastingPayload.tastingAssessment;
 
+        // UI-Feedback loop: Wordt pas getriggerd na een succesvolle cloudupdate-bevestiging
         renderTastingResultsUI(sugarConcentration, meadHarmonyIndex, calculatedStars, oenologicalFeedback, combinedNotesString);
         window.showToast("Organoleptic profiles synchronized with server database.", "success");
 

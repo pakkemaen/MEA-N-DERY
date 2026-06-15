@@ -1078,8 +1078,9 @@ function extractStepsFromMarkdown(markdown) {
     const blackList = ['abv:', 'batch size:', 'style:', 'sweetness:', 'og:', 'fg:', 'buy ', 'target '];
 
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        let cleanLine = line.trim();
+        // Chat-Parser Bug Preventie: Gebruik onverbiddelijk de .at(index) methodiek
+        const line = lines.at(i);
+        let cleanLine = line ? line.trim() : '';
         
         if (!cleanLine) continue;
 
@@ -1270,10 +1271,46 @@ window.renderBrewDay = async function(activeId) {
         const docRef = doc(db, "artifacts", "meandery-aa05e", "users", state.userId, "brews", resolvedId);
         const brewSnapshot = await getDoc(docRef);
         
-        // 4. Data-Extractie en Validatie-Interlock via deserialisatiemethodiek
+        // 4. Data-Extractie en Validatie-Interlock met Zelfreinigende Ghost Reference-interlock (v2.6)
         if (!brewSnapshot.exists()) {
-            window.showToast("Database mismatch: Target brew profile could not be extracted.", "error");
-            return;
+            window.showToast("Database mismatch: Active batch profile missing. Auto-cleaning pipeline.", "warning");
+            
+            // Lokale Single Source of Truth direct opschonen conform v2.6 architectuurregels
+            if (state.userSettings) {
+                state.userSettings.currentBrewDay = { brewId: null };
+            }
+            
+            // Asynchrone cloud-opschoning via Firestore SDK om spookreferentie permanent te wissen
+            if (state.userId) {
+                const settingsDocRef = doc(db, "artifacts/meandery-aa05e/users", state.userId, "settings", "main");
+                await updateDoc(settingsDocRef, {
+                    currentBrewDay: { brewId: null }
+                });
+            }
+            
+            // Direct doorschakelen naar de MD3 Empty State fallback-renderer binnen het dynamic container element
+            const container = document.getElementById('brew-day-dynamic-container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-16 px-4 text-center max-w-sm mx-auto">
+                        <div class="w-16 h-16 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant mb-4 animate-pulse">
+                            🍺
+                        </div>
+                        <h3 class="text-xl font-header font-bold text-on-surface mb-2">No Active Brew Day</h3>
+                        <p class="text-xs text-on-surface-variant leading-relaxed">
+                            There is currently no brew active in your production pipeline. Head over to the Recipe Creator or select a batch from your history to kick off your brew day.
+                        </p>
+                    </div>
+                `;
+            }
+            
+            // Schakel de tekstinhoud van de hoofdheadline over naar de inactieve status
+            const headline = document.getElementById('active-brew-headline');
+            if (headline) {
+                headline.textContent = "Production Pipeline - Inactive";
+            }
+            
+            return; // EXPLICIT PIPELINE TERMINATION AFTER STATE RECOVERY AND UI RESET
         }
 
         // Lokale scope variabele declareren en vullen met data inclusief specifieke identifier
@@ -2219,7 +2256,7 @@ export function parseIngredientsFromMarkdown(markdown) {
                 unit: (i.unit || '').trim() 
             }));
         } catch (e) { 
-            console.warn("JSON block parsing failed, falling back to markdown table analysis...", e); 
+            window.logSystemError(e, 'Recipe Parser: JSON Structural Extraction', 'WARNING');
         }
     }
 

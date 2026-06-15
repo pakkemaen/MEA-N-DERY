@@ -224,7 +224,7 @@ async function findWaterProfileWithAI() {
 
         if (profile.ca === 0 && profile.mg === 0) {
             showToast(`Could not find a profile for "${brandName}".`, 'info');
-            window.logSystemError(`AI Water Search: No results found for ${brandName}`, 'Water Profile AI Synthesis', 'INFO');
+            window.logSystemError(new Error(`AI Water Search: No results found for ${brandName}`), 'Water Profile AI Synthesis', 'INFO');
         } else {
             document.getElementById('water-profile-name').value = brandName;
             document.getElementById('manual_ca').value = profile.ca;

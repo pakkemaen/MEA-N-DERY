@@ -91,7 +91,7 @@ export function switchSubView(viewName, parentViewId) {
 
         const renderDelay = 50; 
 
-        if (viewName === 'brew-day-1' && window.renderBrewDay) window.renderBrewDay();
+        // v2.6 Lifecycle-de-duplicatie: window.renderBrewDay wordt uitsluitend door de gecentraliseerde listener in app.js aangeroepen
         if (viewName === 'brew-day-2' && window.renderBrewDay2) window.renderBrewDay2();
         
         if (viewName === 'history' && window.renderHistoryList) {

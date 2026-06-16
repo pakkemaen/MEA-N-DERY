@@ -590,6 +590,13 @@ window.calculatePipelineCollapse = function() {
     }
 };
 
+
+
+
+
+
+
+
 // --- SHOPPING LIST GENERATOR ---
 window.generateShoppingList = function(brewId = null, renderToScreen = true) {
     const listDiv = document.getElementById('shopping-list-items');
@@ -1528,6 +1535,87 @@ window.deleteCellarItem = async function(id, name) {
     }
 }
 
+window.tapKegDispense = async function(cellarId, sizeSelectId) {
+    try {
+        if (!state.userId) {
+            window.showToast("Log in om fustmutaties door te voeren.", "error");
+            return;
+        }
+
+        const kegItemIndex = state.cellar.findIndex(c => c.id === cellarId);
+        if (kegItemIndex === -1) {
+            window.showToast("Fust niet gevonden in de kelder-database.", "error");
+            return;
+        }
+        const kegItem = state.cellar.at(kegItemIndex);
+
+        // Pakket 3: Uitlezen van de geselecteerde glasgrootte via de .item(0) of directe ID methodiek
+        const sizeSelectEl = document.getElementById(sizeSelectId);
+        const glassVolumeRaw = sizeSelectEl ? sizeSelectEl.value : "0.33";
+        const vGlass = parseFloat(String(glassVolumeRaw).replace(/,/g, '.')) || 0.33;
+
+        // Extractie van live fustparameters uit state.cellar met fallback-viteraties
+        const vCo2 = parseFloat(String(kegItem.carbonationVolume || "2.4").replace(/,/g, '.')) || 2.4;
+        const tCelsius = parseFloat(String(kegItem.storageTemperature || state.userSettings.cellarTemp || "12").replace(/,/g, '.')) || 12;
+        const vCurrent = parseFloat(String(kegItem.remainingVolume || kegItem.totalVolume || "19.0").replace(/,/g, '.')) || 19.0;
+
+        if (vCurrent <= 0) {
+            window.showToast("Dit fust is al volledig leeg.", "error");
+            return;
+        }
+
+        // Dynamische Verliesberekening
+        const epsilonFoam = 0.02 + (0.01 * (vCo2 - 2.0)) + (0.002 * tCelsius);
+
+        // Volumedepletie inclusief schuimverlies-coëfficiënt
+        let vResterend = vCurrent - (vGlass * (1 + epsilonFoam));
+
+        // Dead-Space Guard
+        const vOndergrens = 0.20;
+        let isLeeg = false;
+
+        if (vResterend <= vOndergrens) {
+            vResterend = 0.00;
+            isLeeg = true;
+        }
+
+        // State updaten (Single Source of Truth)
+        state.cellar.at(kegItemIndex).remainingVolume = vResterend;
+        if (isLeeg) {
+            state.cellar.at(kegItemIndex).status = "Leeg";
+        }
+
+        // Firestore Synchronisatie via atomaire updateDoc pijplijn
+        const cellarDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar', cellarId);
+        await updateDoc(cellarDocRef, {
+            remainingVolume: vResterend,
+            status: isLeeg ? "Leeg" : (kegItem.status || "Actief")
+        });
+
+        // UI trigger en effectieve feedback loop
+        if (typeof window.renderCellar === 'function') {
+            window.renderCellar();
+        }
+
+        if (isLeeg) {
+            window.showToast("Fust is leeg! Bodemsediment bereikt.", "warning");
+            
+            // Deactiveer de "Tap"-knop visueel in de DOM
+            const tapBtn = document.getElementById(`tap-btn-${cellarId}`);
+            if (tapBtn) {
+                tapBtn.disabled = true;
+                tapBtn.classList.add('opacity-40', 'cursor-not-allowed');
+            }
+        } else {
+            window.showToast(`Tap succesvol! Resterend volume: ${vResterend.toFixed(2)}L (Schuimverlies: ${(epsilonFoam * 100).toFixed(1)}%)`, "success");
+        }
+
+    } catch (error) {
+        window.logSystemError(error, 'Inventory: Volumetric Tap Dispense Pipeline', 'ERROR');
+        window.showToast("Fout opgetreden tijdens de tapprocedure.", "error");
+    }
+};
+
 // --- FINANCIALS & STATS ---
 
 window.updateCostAnalysis = function() {
@@ -1671,3 +1759,4 @@ window.renderCustomBottlesList = renderCustomBottlesList;
 window.startScanner = startScanner;
 window.evaluatePredictiveRestocking = evaluatePredictiveRestocking;
 window.calculatePipelineCollapse = calculatePipelineCollapse;
+window.tapKegDispense = tapKegDispense;

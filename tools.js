@@ -2651,6 +2651,75 @@ function renderTastingResultsUI(sugar, harmony, stars, feedback, notes) {
     outputDiv.classList.remove('hidden');
 }
 
+window.calculateCarbonationEngine = function() {
+    try {
+        const vCo2Input = document.getElementById('carb_engine_volume')?.value || "0";
+        const tCelsiusInput = document.getElementById('carb_engine_temp')?.value || "0";
+        const resultDiv = document.getElementById('carbonationEngineResult');
+
+        // Sanitisatie & Comma-to-Dot Protocol
+        const vCo2 = parseFloat(vCo2Input.replace(/,/g, '.')) || 0;
+        const tCelsius = parseFloat(tCelsiusInput.replace(/,/g, '.')) || 0;
+
+        if (vCo2 <= 0) {
+            window.showToast("Vul een geldig koolzuurvolume in.", "error");
+            return;
+        }
+
+        // Thermodynamische Conversie naar Fahrenheit
+        const tFahrenheit = (tCelsius * 1.8) + 32;
+
+        // Theoretische Basisdruk via de brouwerspolynoom
+        const pBasis = -16.699 - (0.010103 * tFahrenheit) + (0.0011651 * Math.pow(tFahrenheit, 2)) + (0.173354 * tFahrenheit * vCo2) + (4.24267 * vCo2) - (0.0684226 * Math.pow(vCo2, 2));
+
+        // Matrix-Correctie (gamma_mede): Live data uit state.js
+        let activeAbv = 0;
+        let activeBrix = 0;
+
+        if (window.tempState && window.tempState.activeBrewId) {
+            const activeBrew = state.brews.find(b => b.id === window.tempState.activeBrewId);
+            if (activeBrew && activeBrew.logData) {
+                activeAbv = parseFloat(String(activeBrew.logData.finalABV || activeBrew.logData.actualABV || "0").replace(/,/g, '.')) || 0;
+                const fg = parseFloat(String(activeBrew.logData.finalGravity || activeBrew.logData.actualFG || "1.000").replace(/,/g, '.')) || 1.000;
+                if (fg < 1.775) {
+                    activeBrix = (182.9622 * Math.pow(fg, 3)) - (777.3009 * Math.pow(fg, 2)) + (1264.5170 * fg) - 670.1831;
+                }
+            }
+        }
+
+        const gammaMede = 1 + (0.012 * activeAbv) + (0.005 * activeBrix);
+
+        // Definitieve Drukoutputs
+        const pPsi = pBasis * gammaMede;
+        const pBar = pPsi * 0.0689476;
+
+        // UI-Rendering afgerond op exact 2 decimalen
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="p-4 bg-primary-container rounded-xl border border-primary/20 shadow-sm animate-fade-in">
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-primary mb-2">Geforceerde Carbonisatie Output</div>
+                    <div class="space-y-1 text-sm text-on-surface">
+                        <div class="flex justify-between border-b border-outline-variant/30 pb-1">
+                            <span>Vereiste Druk (PSI):</span> <span class="font-mono font-bold text-primary">${pPsi.toFixed(2)} PSI</span>
+                        </div>
+                        <div class="flex justify-between pt-1">
+                            <span>Vereiste Druk (Bar):</span> <span class="font-mono font-bold text-secondary">${pBar.toFixed(2)} Bar</span>
+                        </div>
+                        <div class="text-[9px] opacity-60 mt-2">
+                            Matrix gecorrigeerd op live batch-vibe (ABV: ${activeAbv.toFixed(1)}%, Brix: ${activeBrix.toFixed(1)}°).
+                        </div>
+                    </div>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+        }
+
+    } catch (error) {
+        window.logSystemError(error, 'Tools: Carbonation Engine Matrix Evaluation', 'ERROR');
+        window.showToast("Fout tijdens de carbonisatieberekening.", "error");
+    }
+};
+
 window.calculateWaterMatching = function() {
     try {
         // Stoichiometrische Constanten uit de wetenschappelijke blauwdruk v2.6
@@ -2812,3 +2881,4 @@ window.importData = importData;
 window.exportHistory = exportHistory;
 window.exportInventory = exportInventory;
 window.clearCollection = clearCollection;
+window.calculateCarbonationEngine = calculateCarbonationEngine;

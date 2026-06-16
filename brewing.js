@@ -1204,39 +1204,107 @@ function extractStepsFromMarkdown(markdown) {
 
 // --- SMART START: CHECK STOCK FIRST ---
 window.startBrewDay = async function(brewId) {
-    const brew = state.brews.find(b => b.id === brewId);
-    if (!brew) return;
-
-    // 1. Check de voorraad (zonder het scherm te tekenen, vandaar 'false')
-    let isStockComplete = false;
-    
-    // We checken of de inventory module geladen is
-    if (window.generateShoppingList) {
-        isStockComplete = window.generateShoppingList(brewId, false);
-    } else {
-        // Als inventory niet bestaat, gaan we voor de zekerheid door
-        isStockComplete = true; 
-    }
-
-    // 2. De Beslissing
-    if (isStockComplete) {
-        // A. Alles is er? -> Direct Brouwen! 🍺
-        console.log("Stock complete. Skipping shopping list.");
-        window.startActualBrewDay(brewId);
-        showToast("Inventory complete! Starting Brew Day.", "success");
-    } else {
-        // B. Iets mist? -> Naar de Shopping List 🛒
-        console.log("Items missing. Redirecting to shopping list.");
-        switchMainView('brewing');
-        switchSubView('shopping-list', 'brewing-main-view');
-        
-        // Nu renderen we de lijst wél, zodat je ziet wat je moet kopen
-        if (window.generateShoppingList) {
-            window.generateShoppingList(brewId, true);
+    try {
+        if (!brewId) {
+            window.showToast("Fout: Geen brouw-ID gespecificeerd.", "error");
+            return;
         }
-        showToast("Some items are missing. Check list.", "warning");
+
+        const brew = state.brews.find(b => b.id === brewId);
+        if (!brew) {
+            window.showToast("Fout: Batchsessie niet gevonden.", "error");
+            return;
+        }
+
+        // DEFENSIEVE STOCK-CHECK TELEMETRIE: Geïsoleerd block voor materiaalbalans-verificatie
+        let vTarget, ogTarget, brixTarget, mHoning, mNutrient;
+        try {
+            // Comma-to-Dot Protocol handhaving op numerieke volume-input
+            const targetVolumeRaw = String(brew.batchSize || "5").replace(',', '.');
+            vTarget = parseFloat(targetVolumeRaw) || 5;
+
+            const parsedStats = parseRecipeData(brew.recipeMarkdown);
+            const ogTargetRaw = String(parsedStats.targetOG || "1.000").replace(',', '.');
+            ogTarget = parseFloat(ogTargetRaw) || 1.000;
+
+            // Pre-check op Hall Equation inputs om runtime vastlopers te voorkomen
+            if (ogTarget >= 1.775) {
+                window.showToast("Fysische limietoverschrijding: OG target buiten bereik.", "error");
+                return;
+            }
+
+            // Deconstructie via Bates-derdegraadspolynoom
+            brixTarget = (182.9622 * Math.pow(ogTarget, 3)) - (777.3009 * Math.pow(ogTarget, 2)) + (1264.5170 * ogTarget) - 670.1831;
+
+            const mTotalMust = vTarget * ogTarget;
+            const mSuiker = mTotalMust * (brixTarget / 100);
+            mHoning = mSuiker / 0.82; 
+
+            const recipeText = (brew.recipeMarkdown || "").toLowerCase();
+            let fGist = 1.0; 
+            if (recipeText.includes("71b") || recipeText.includes("ec-1118") || recipeText.includes("d47") || recipeText.includes("qa23")) {
+                fGist = 0.75; 
+            }
+
+            const yanTarget = 10 * brixTarget * ogTarget * fGist;
+            const mNTotal = yanTarget * vTarget;
+
+            const nutrientDatabase = {
+                'fermaid_o': { rawYan: 40.0, muNutrient: 4.0 },
+                'fermaid_k': { rawYan: 100.0, muNutrient: 1.0 },
+                'nutrisal': { rawYan: 210.0, muNutrient: 1.0 },
+                'cellvit': { rawYan: 25.0, muNutrient: 2.0 },
+                'nutrimix': { rawYan: 117.5, muNutrient: 2.0 },
+                'wyeast_wine': { rawYan: 129.2, muNutrient: 2.0 },
+                'wyeast_beer': { rawYan: 103.6, muNutrient: 2.0 },
+                'engevita': { rawYan: 25.0, muNutrient: 1.5 },
+                'bby': { rawYan: 14.7, muNutrient: 2.0 }
+            };
+
+            const userNutrientSelection = document.getElementById('recipeNutrientSelect')?.value || 'fermaid_o';
+            const activeNutrient = nutrientDatabase.hasOwnProperty(userNutrientSelection) 
+                ? nutrientDatabase[userNutrientSelection] 
+                : nutrientDatabase.fermaid_o;
+
+            mNutrient = mNTotal / (activeNutrient.rawYan * activeNutrient.muNutrient);
+
+        } catch (parsingError) {
+            // Vang parsing-afwijkingen onmiddellijk op in de Black Box en blokkeer de start veilig
+            window.logSystemError(parsingError, 'brewing.js: startBrewDay Material Balance Verification', 'CRITICAL');
+            window.showToast("Materiaalevaluatie mislukt wegens corrupte of incomplete receptuur-metadata.", "error");
+            return;
+        }
+
+        // Binaire Validatie-interlock tegen de live-voorraad
+        const currentInventory = state.inventory || [];
+        
+        const honeyStockItem = currentInventory.find(i => i.category === 'Honey');
+        const honeyStockQty = honeyStockItem ? parseFloat(String(honeyStockItem.qty).replace(',', '.')) || 0 : 0;
+
+        const userNutrientSelection = document.getElementById('recipeNutrientSelect')?.value || 'fermaid_o';
+        const nutrientStockItem = currentInventory.find(i => i.name.toLowerCase().includes(userNutrientSelection.replace('_', ' ')));
+        const nutrientStockQty = nutrientStockItem ? parseFloat(String(nutrientStockItem.qty).replace(',', '.')) || 0 : 0;
+
+        if (honeyStockQty < mHoning || nutrientStockQty < mNutrient) {
+            window.showToast("Brouwdag geblokkeerd: Toereikende stoichiometrische grondstoffen ontbreken in de voorraad.", "error");
+            
+            switchMainView('brewing');
+            switchSubView('shopping-list', 'brewing-main-view');
+            
+            if (window.generateShoppingList) {
+                window.generateShoppingList(brewId, true);
+            }
+            return;
+        }
+
+        window.startActualBrewDay(brewId);
+        window.showToast("Voorraad gecontroleerd en sluitend. Brouwdag sessie geïnitieerd.", "success");
+
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: window.startBrewDay Algorithmic Orchestration Root', 'ERROR');
+        window.showToast("Systeemfout tijdens materiaalbalans-evaluatie.", "error");
     }
-}
+};
 
 window.startActualBrewDay = async function() {
     try {
@@ -1272,10 +1340,10 @@ window.startActualBrewDay = async function() {
 // --- RENDER: Brew Day 1 (Dashboard / Detail Split) ---
 window.renderBrewDay = async function(activeId) {
     try {
-        // 1. Hiërarchische Fallback-Matrix voor ID-Resolutie (v2.6 Architectuur)
-        const resolvedId = activeId || tempState.activeBrewId || state.userSettings?.currentBrewDay?.brewId;
+        // 1. Hiërarchische Fallback-Matrix voor ID-Resolutie (v2.6)
+        const resolvedId = activeId || tempState.activeBrewId || (state.userSettings && state.userSettings.currentBrewDay ? state.userSettings.currentBrewDay.brewId : null);
 
-        // 2. MD3 Empty State Interlock (Voorkomen van Spookmeldingen bij Lege Status)
+        // 2. MD3 Empty State Interlock (Voorkomen van spookschermen bij inactieve status)
         if (!resolvedId || resolvedId === 'none') {
             const container = document.getElementById('brew-day-dynamic-container');
             if (container) {
@@ -1293,23 +1361,22 @@ window.renderBrewDay = async function(activeId) {
             }
             const headline = document.getElementById('active-brew-headline');
             if (headline) headline.textContent = "Production Pipeline - Inactive";
-            return; // EXPLICIT PIPELINE TERMINATION TO PREVENT FALSE DATABASE MISMATCH WARNINGS
+            return; 
         }
 
-        // 3. Gecentraliseerd en Gecorrigeerd Root-Pad conform v2.6 Architectuurmandaat
-        const docRef = doc(db, "artifacts", "meandery-aa05e", "users", state.userId, "brews", resolvedId);
+        // 3. Gecentraliseerd Root-Pad conform v2.6 Richtlijnen
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', resolvedId);
         const brewSnapshot = await getDoc(docRef);
         
-        // 4. Data-Extractie en Validatie-Interlock met Zelfreinigende Ghost Reference-interlock (v2.6)
+        // 4. Ghost Reference-interlock (Automatische opschoning bij corrupte/verwijderde ID's)
         if (!brewSnapshot.exists()) {
             window.showToast("Database mismatch: Active batch profile missing. Auto-cleaning pipeline.", "warning");
             
-            // Lokale Single Source of Truth direct opschonen conform v2.6 architectuurregels
             if (state.userSettings) {
                 state.userSettings.currentBrewDay = { brewId: null };
             }
             
-            // Asynchrone cloud-opschoning via Firestore SDK om spookreferentie permanent te wissen
+            // ATOMAIRE PAD-SPLITSING: Parameters strikt gescheiden door komma's
             if (state.userId) {
                 const settingsDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
                 await updateDoc(settingsDocRef, {
@@ -1317,7 +1384,7 @@ window.renderBrewDay = async function(activeId) {
                 });
             }
             
-            // Direct doorschakelen naar de MD3 Empty State fallback-renderer binnen het dynamic container element
+            // Render direct de empty state
             const container = document.getElementById('brew-day-dynamic-container');
             if (container) {
                 container.innerHTML = `
@@ -1332,17 +1399,11 @@ window.renderBrewDay = async function(activeId) {
                     </div>
                 `;
             }
-            
-            // Schakel de tekstinhoud van de hoofdheadline over naar de inactieve status
             const headline = document.getElementById('active-brew-headline');
-            if (headline) {
-                headline.textContent = "Production Pipeline - Inactive";
-            }
-            
-            return; // EXPLICIT PIPELINE TERMINATION AFTER STATE RECOVERY AND UI RESET
+            if (headline) headline.textContent = "Production Pipeline - Inactive";
+            return; 
         }
 
-        // Lokale scope variabele declareren en vullen met data inclusief specifieke identifier
         const brew = {
             id: brewSnapshot.id,
             ...brewSnapshot.data()
@@ -1357,26 +1418,27 @@ window.renderBrewDay = async function(activeId) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // Lokale state.userSettings synchroniseren
         if (!state.userSettings) state.userSettings = {};
-        state.userSettings.currentBrewDay = { brewId: resolvedId };
+        if (!state.userSettings.currentBrewDay) state.userSettings.currentBrewDay = {};
+        state.userSettings.currentBrewDay.brewId = resolvedId;
 
-        // Directe, asynchrone cloudupdate via Firestore SDK zonder tussenkomst van saveUserSettings()
+        // ATOMAIRE PAD-SPLITSING: Synchronisatie van actieve status naar main settings
         if (state.userId) {
-            const settingsDocRef = doc(db, "artifacts/meandery-aa05e", "users", state.userId, "settings", "main");
+            const settingsDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
             await updateDoc(settingsDocRef, {
                 currentBrewDay: { brewId: resolvedId }
             });
         }
 
-        // Dynamische HTML-generatie voor de stappen
+        // 5. CHAT-PARSER INTERLOCK: Render stappen zonder vierkante haken voor indexering
         const stepsContainer = document.getElementById('brewDayStepsContainer');
         if (stepsContainer) {
             if (!brew.steps || brew.steps.length === 0) {
-                // Genereren van stappen on-the-fly als deze ontbreken in het model (v2.6 fallback)
                 if (brew.recipeMarkdown) {
                     const extracted = extractStepsFromMarkdown(brew.recipeMarkdown);
-                    brew.steps = extracted.day1.map(s => ({ name: s.title, description: s.description, duration: s.duration, completed: false }));
+                    if (extracted && extracted.day1) {
+                        brew.steps = extracted.day1.map(s => ({ name: s.title, description: s.description, duration: s.duration, completed: false }));
+                    }
                 }
             }
 
@@ -1389,6 +1451,7 @@ window.renderBrewDay = async function(activeId) {
             }
 
             let stepsHtml = "";
+            // Iteratie over stappen via defensieve array-mapping zonder haken
             brew.steps.forEach((step, idx) => {
                 const isChecked = step.completed ? "checked disabled" : "";
                 const opacityClass = step.completed ? "opacity-40 bg-app-primary/5" : "border-app-brand";
@@ -1414,11 +1477,9 @@ window.renderBrewDay = async function(activeId) {
             stepsContainer.innerHTML = stepsHtml;
         }
 
-        // Receptnaam en logboekgegevens binden aan UI
         const headline = document.getElementById('brewDayHeadline');
         if (headline) headline.textContent = `Brouwdag: ${brew.recipeName || 'Active Batch'}`;
 
-        // Laad het logboek onderaan the actieve brouwdag card
         const logContainer = document.getElementById('brew-day-log-container');
         if (logContainer) {
             logContainer.innerHTML = getBrewLogHtml(brew, resolvedId);
@@ -1903,14 +1964,14 @@ window.closePrimaryDetail = async function() {
         if (detailView) detailView.classList.add('hidden');
         if (listView) listView.classList.remove('hidden');
 
-        // Lokale state.userSettings resetten naar null
         if (state.userSettings) {
-            state.userSettings.currentBrewDay = { brewId: null };
+            if (!state.userSettings.currentBrewDay) state.userSettings.currentBrewDay = {};
+            state.userSettings.currentBrewDay.brewId = null;
         }
 
-        // Directe, geruisloze cloudupdate om currentBrewDay te resetten in Firestore
+        // ATOMAIRE PAD-SPLITSING: Reset active brew reference in cloud settings
         if (state.userId) {
-            const settingsDocRef = doc(db, "artifacts/meandery-aa05e/users", state.userId, "settings", "main");
+            const settingsDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
             await updateDoc(settingsDocRef, {
                 currentBrewDay: { brewId: null }
             });
@@ -3929,3 +3990,8 @@ window.evaluateBatchSafety = function(brewId, currentLogEntry) {
         return [];
     }
 };
+
+window.startBrewDay = startBrewDay;
+window.startActualBrewDay = startActualBrewDay;
+window.renderBrewDay = renderBrewDay;
+window.closePrimaryDetail = closePrimaryDetail;

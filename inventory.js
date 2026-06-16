@@ -426,6 +426,170 @@ window.bottleBatch = async function(e) {
 
 // --- INVENTORY MANAGEMENT FUNCTIONS ---
 
+window.evaluatePredictiveRestocking = function() {
+    try {
+        // 1. KRITIEKE VEILIGHEIDSMARGES AS CONSTANTEN
+        const S_CRIT_HONEY = 7.5;      // kg
+        const S_CRIT_KMETA = 3.5;      // g
+        const S_CRIT_KSORB = 38.0;     // g
+        const S_CRIT_YEAST = 12.5;     // g
+
+        const currentInventory = state.inventory || [];
+        const itemsToUpdate = [];
+
+        // Geautomatiseerde status-evaluatie via functionele loops
+        currentInventory.forEach(item => {
+            const currentQty = parseFloat(String(item.qty).replace(',', '.')) || 0;
+            const cat = item.category || '';
+            const name = (item.name || '').toLowerCase();
+            let isCritical = false;
+
+            // PARENTHESES INTERLOCK: Expliciete precedentie-fix rond tekstuele naamcontroles
+            if (cat === 'Honey' && currentQty < S_CRIT_HONEY) {
+                isCritical = true;
+            } else if ((name.includes('campden') || name.includes('metabisulfiet')) && currentQty < S_CRIT_KMETA) {
+                isCritical = true;
+            } else if (name.includes('sorbaat') && currentQty < S_CRIT_KSORB) {
+                isCritical = true;
+            } else if (cat === 'Yeast' && currentQty < S_CRIT_YEAST) {
+                isCritical = true;
+            }
+
+            if (isCritical && item.status !== 'Kritiek laag') {
+                item.status = 'Kritiek laag';
+                itemsToUpdate.push(item);
+            }
+        });
+
+        // Batch cloud synchronization interface if mutations required
+        if (itemsToUpdate.length > 0) {
+            itemsToUpdate.forEach(async (updatedItem) => {
+                const itemRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'inventory', updatedItem.id);
+                await updateDoc(itemRef, { status: 'Kritiek laag' });
+            });
+            window.showToast("Kritieke voorraaddrempels doorbroken. Statustags aangepast.", "warning");
+        }
+
+        // Uitvoeren van de depletie- en cumulatieberekeningen
+        window.calculatePipelineCollapse();
+
+    } catch (error) {
+        window.logSystemError(error, 'inventory.js: evaluatePredictiveRestocking Critical Margin Boundary Matrix', 'ERROR');
+    }
+};
+
+window.calculatePipelineCollapse = function() {
+    try {
+        const brewsPipeline = state.brews || [];
+        const currentInventory = state.inventory || [];
+        
+        // 2. PIJPLIJN-CUMULATIE MATRIX (Inclusief nutriënt depletie-integratie)
+        const cumulativeRequirements = {
+            honey: 0,
+            yeast: 0,
+            nutrient: 0
+        };
+
+        const userNutrientSelection = document.getElementById('recipeNutrientSelect')?.value || 'fermaid_o';
+
+        // Aggregatie-algoritme over alle niet-voltooide ingeplande batches
+        brewsPipeline.forEach(brew => {
+            if (!brew.primaryComplete && !brew.isBottled && brew.status !== 'split') {
+                const vTarget = parseFloat(String(brew.batchSize || "5").replace(',', '.')) || 5;
+                const parsedStats = parseRecipeData(brew.recipeMarkdown);
+                const ogTarget = parseFloat(String(parsedStats.targetOG || "1.080").replace(',', '.')) || 1.080;
+                
+                const brix = (182.9622 * Math.pow(ogTarget, 3)) - (777.3009 * Math.pow(ogTarget, 2)) + (1264.5170 * ogTarget) - 670.1831;
+                const mHoney = ((vTarget * ogTarget) * (brix / 100)) / 0.82;
+                
+                // NUTRIËNT DEPLETIE-INTEGRATIE PIJPLIJN
+                let fGist = 1.0;
+                const recipeText = (brew.recipeMarkdown || "").toLowerCase();
+                if (recipeText.includes("71b") || recipeText.includes("ec-1118") || recipeText.includes("d47") || recipeText.includes("qa23")) {
+                    fGist = 0.75;
+                }
+                const yanTarget = 10 * brix * ogTarget * fGist;
+                const mNTotal = yanTarget * vTarget;
+
+                const nutrientDatabase = {
+                    'fermaid_o': { rawYan: 40.0, muNutrient: 4.0 },
+                    'fermaid_k': { rawYan: 100.0, muNutrient: 1.0 },
+                    'nutrisal': { rawYan: 210.0, muNutrient: 1.0 },
+                    'cellvit': { rawYan: 25.0, muNutrient: 2.0 },
+                    'nutrimix': { rawYan: 117.5, muNutrient: 2.0 },
+                    'wyeast_wine': { rawYan: 129.2, muNutrient: 2.0 },
+                    'wyeast_beer': { rawYan: 103.6, muNutrient: 2.0 },
+                    'engevita': { rawYan: 25.0, muNutrient: 1.5 },
+                    'bby': { rawYan: 14.7, muNutrient: 2.0 }
+                };
+                const activeNutrient = nutrientDatabase.hasOwnProperty(userNutrientSelection) ? nutrientDatabase[userNutrientSelection] : nutrientDatabase.fermaid_o;
+                const mNutrient = mNTotal / (activeNutrient.rawYan * activeNutrient.muNutrient);
+
+                cumulativeRequirements.honey += mHoney;
+                cumulativeRequirements.nutrient += mNutrient;
+                
+                // GALLON-NAAR-LITER SCHALING: vTarget delen door de constante 3.78541
+                cumulativeRequirements.yeast += ((vTarget / 3.78541) * 1.0);
+            }
+        });
+
+        // 3. DEPLETIE-PROGNOSE & CONSUMPTIESNELHEID (R_i)
+        const honeyStockItem = currentInventory.find(i => i.category === 'Honey');
+        const honeyStock = honeyStockItem ? parseFloat(String(honeyStockItem.qty).replace(',', '.')) || 0 : 0;
+        
+        const yeastStockItem = currentInventory.find(i => i.category === 'Yeast');
+        const yeastStock = yeastStockItem ? parseFloat(String(yeastStockItem.qty).replace(',', '.')) || 0 : 0;
+
+        const nutrientStockItem = currentInventory.find(i => i.name.toLowerCase().includes(userNutrientSelection.replace('_', ' ')));
+        const nutrientStock = nutrientStockItem ? parseFloat(String(nutrientStockItem.qty).replace(',', '.')) || 0 : 0;
+
+        const mAvailableHoney = honeyStock - cumulativeRequirements.honey;
+        const mAvailableYeast = yeastStock - cumulativeRequirements.yeast;
+        const mAvailableNutrient = nutrientStock - cumulativeRequirements.nutrient;
+
+        // Comma-to-Dot sanitisatie op alle consumption rates uit user settings of defaults
+        const rHoney = parseFloat(String(state.userSettings?.avgHoneyConsumptionPerDay || "0.25").replace(',', '.')) || 0.25;
+        const rYeast = parseFloat(String(state.userSettings?.avgYeastConsumptionPerDay || "0.5").replace(',', '.')) || 0.5;
+        const rNutrient = parseFloat(String(state.userSettings?.avgNutrientConsumptionPerDay || "1.0").replace(',', '.')) || 1.0;
+
+        const tRunOutHoney = rHoney > 0 ? mAvailableHoney / rHoney : Infinity;
+        const tRunOutYeast = rYeast > 0 ? mAvailableYeast / rYeast : Infinity;
+        const tRunOutNutrient = rNutrient > 0 ? mAvailableNutrient / rNutrient : Infinity;
+
+        // 4. SYSTEEM-COLLAPSE RESOLUTIE (Inclusief de specifieke nutriënt run-out datum)
+        const minDaysToCollapse = Math.min(tRunOutHoney, tRunOutYeast, tRunOutNutrient);
+        
+        let tCollapseTimestamp = "Stabiel";
+        if (minDaysToCollapse !== Infinity && !isNaN(minDaysToCollapse)) {
+            const collapseDate = new Date();
+            collapseDate.setDate(collapseDate.getDate() + Math.ceil(minDaysToCollapse));
+            tCollapseTimestamp = collapseDate.toLocaleDateString();
+            
+            if (minDaysToCollapse < 7) {
+                window.showToast(`Logistiek alarm: Systeem-collapse dreigt op ${tCollapseTimestamp} wegens materiaal-depletie.`, "warning");
+            }
+        }
+
+        // Export naar het dashboard via state binding en DOM injectie
+        tempState.systemCollapseTimestamp = tCollapseTimestamp;
+        const dashboardWidget = document.getElementById('stat-spent');
+        if (dashboardWidget && minDaysToCollapse < 14) {
+            const oldAlert = document.getElementById('logistics-collapse-alert');
+            if (oldAlert) oldAlert.remove();
+            
+            dashboardWidget.insertAdjacentHTML('afterend', `
+                <div id="logistics-collapse-alert" class="card p-3 bg-error-container/20 border border-error/40 rounded-xl text-center mt-3 animate-pulse">
+                    <p class="text-[10px] font-bold text-error uppercase tracking-wider">Run-Out Prognose (T_collapse)</p>
+                    <p class="text-lg font-mono font-black text-error">${tCollapseTimestamp}</p>
+                </div>
+            `);
+        }
+
+    } catch (error) {
+        window.logSystemError(error, 'inventory.js: calculatePipelineCollapse Predictive Depletion Pipeline', 'ERROR');
+    }
+};
+
 // --- SHOPPING LIST GENERATOR ---
 window.generateShoppingList = function(brewId = null, renderToScreen = true) {
     const listDiv = document.getElementById('shopping-list-items');
@@ -774,15 +938,16 @@ async function addPackagingStock(e) {
 }
 
 async function loadPackagingCosts() {
-    if (!state.userId) return;
     try {
-        const docSnap = await getDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'packaging'));
-        state.packagingCosts = docSnap.exists() ? docSnap.data() : {};
-        renderPackagingUI();
-        populatePackagingDropdown();
-    } catch (error) { 
-        window.logSystemError(error, 'inventory.js -> loadPackagingCosts', 'ERROR');
-        console.error("Error loading packaging costs:", error); 
+        if (!state.userId) return;
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'inventory', 'packagingCosts');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            state.inventory.packagingCosts = docSnap.data();
+        }
+    } catch (error) {
+        window.logSystemError(error, 'Inventory: Packaging Costs Retrieval', 'ERROR');
+        window.showToast("Fout bij laden verpakkingskosten.", "error");
     }
 }
 
@@ -1504,3 +1669,5 @@ window.addCustomBottleToList = addCustomBottleToList;
 window.removeCustomBottleFromList = removeCustomBottleFromList;
 window.renderCustomBottlesList = renderCustomBottlesList;
 window.startScanner = startScanner;
+window.evaluatePredictiveRestocking = evaluatePredictiveRestocking;
+window.calculatePipelineCollapse = calculatePipelineCollapse;

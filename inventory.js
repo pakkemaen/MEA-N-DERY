@@ -947,13 +947,20 @@ async function addPackagingStock(e) {
 async function loadPackagingCosts() {
     try {
         if (!state.userId) return;
-        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'inventory', 'packagingCosts');
+        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'packaging');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-            state.inventory.packagingCosts = docSnap.data();
+            state.packagingCosts = docSnap.data() || {};
+        } else {
+            state.packagingCosts = {};
         }
+        
+        // Directe UI-koppeling en dropdown-populatie bij initialisatie
+        if (typeof populatePackagingDropdown === 'function') populatePackagingDropdown();
+        if (typeof renderPackagingUI === 'function') renderPackagingUI();
+        
     } catch (error) {
-        window.logSystemError(error, 'Inventory: Packaging Costs Retrieval', 'ERROR');
+        window.logSystemError(error, 'inventory.js -> loadPackagingCosts', 'ERROR');
         window.showToast("Fout bij laden verpakkingskosten.", "error");
     }
 }

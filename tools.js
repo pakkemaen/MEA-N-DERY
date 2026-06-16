@@ -770,37 +770,49 @@ window.clearChatImage = function() {
 
 // 6. Bericht Versturen (MET AUTO-SAVE)
 window.sendTroubleshootMessage = async function() {
+    // 1. UI elementen ophalen voor vergrendeling en interactie
+    const inputEl = document.getElementById('medic-input');
+    const sendBtn = document.getElementById('medic-send-btn') || document.querySelector("button[onclick*='sendTroubleshootMessage']");
+    const messageText = inputEl?.value.trim();
+    
+    if (!messageText) return;
+
     try {
         if (!state.userId) {
             window.showToast("Authenticatie vereist om de Mead Medic te raadplegen.", "error");
             return;
         }
 
-        const inputEl = document.getElementById('medic-input');
-        const messageText = inputEl?.value.trim();
-        if (!messageText) return;
-
-        // Maak het invoerveld direct leeg voor een vloeiende UX
-        inputEl.value = "";
-
-        // Haal de actuele chat-context op uit tempState of genereer een nieuwe identifier
-        let chatId = window.tempState?.activeMedicChatId;
-        if (!chatId) {
-            chatId = 'chat_' + Date.now();
-            if (!window.tempState) window.tempState = {};
-            window.tempState.activeMedicChatId = chatId;
+        // Medic UI-Lock activeeren om parallelle API requests te voorkomen
+        if (sendBtn) {
+            sendBtn.disabled = true;
+            sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
         }
 
-        // Voeg het bericht van de gebruiker direct toe aan de Firestore subcollectie via de veilige init-hub
-        await appendMedicMessage(chatId, messageText, 'user');
+        const chatBox = document.getElementById('chat-history');
+        
+        // Render het gebruikersbericht onmiddellijk in de lokale chatBox
+        if (chatBox) {
+            const userMsgHtml = `
+            <div class="flex items-start gap-3 justify-end mb-4">
+                <div class="bg-blue-600 text-white p-3 rounded-lg shadow-sm text-sm max-w-[85%] text-left">
+                    ${messageText}
+                </div>
+                <img src="logo.png" onerror="this.src='favicon.png'" class="w-8 h-8 rounded-full bg-app-tertiary p-0.5 flex-shrink-0">
+            </div>`;
+            chatBox.insertAdjacentHTML('beforeend', userMsgHtml);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Voeg toe aan lokale geschiedenis-array
+        chatHistory.push({ role: 'user', text: messageText, hasImage: !!currentChatImageBase64 });
 
         // Verzamel de oenologische context van de actuele brews om de Gemini-analyse te voeden
         let brewContextString = "Geen actieve brouwgegevens beschikbaar.";
         if (state.brews && state.brews.length > 0) {
-            // Veilig extraheren van de meest recente batch met de .at() methodiek wegens chat-parser bug
             const activeBrew = state.brews.at(0);
             if (activeBrew) {
-                brewContextString = `Actieve Batch: ${activeBrew.name || 'Naamloos'}, ` +
+                brewContextString = `Actieve Batch: ${activeBrew.recipeName || 'Naamloos'}, ` +
                                     `Stijl: ${activeBrew.style || 'Onbekend'}, ` +
                                     `Giststam: ${activeBrew.yeastStrain || 'Onbekend'}, ` +
                                     `OG: ${activeBrew.logData?.initialSG || 'Onbekend'}, ` +
@@ -809,40 +821,46 @@ window.sendTroubleshootMessage = async function() {
             }
         }
 
-        // Bouw de Fort Knox-compliant systeemprompt op voor de Mead Medic troubleshooting-omgeving
+        // Bouw de sytemprompt op voor de troubleshooting-omgeving
         const systemInstruction = `Je bent de 'Mead Medic', een AI-expert gecertificeerd in oenologie en de zymologie van mede. 
 Je helpt thuisbrouwers met het diagnosticeren van vastgelopen vergistingen (stalls), infecties en off-flavors.
 Gebruik bij berekeningen ALTIJD de Hall-vergelijking voor alcoholbepalingen en hanteer de TOSNA 3.0-standaarden voor stikstofcorrecties.
-Geef korte, direct toepasbare antwoorden met duidelijke actiepunten in platte tekst of Markdown (geen codeblokken).
+Geef korte, direct toepasbare antwoorden met duidelijke actiepunten.
 Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
 
-        // Initialiseer het Gemini-model via de gecentraliseerde API-sleutel in de main settings
-        const apiKey = state.userSettings?.apiKeys?.gemini || "";
+        // Haal de API-sleutel en het actieve model op uit de Single Source of Truth
+        let apiKey = state.userSettings?.apiKey;
+        if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.firebase) apiKey = CONFIG.firebase.apiKey;
+        
         if (!apiKey) {
-            await appendMedicMessage(chatId, "Medic Systeemfout: Geen Gemini API-sleutel geconfigureerd in de gebruikersinstellingen. Voeg deze toe via de 'User Settings' rekenmachine.", 'medic');
+            window.showToast("Medic Systeemfout: Geen Gemini API-sleutel geconfigureerd in de gebruikersinstellingen.", "error");
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
             return;
         }
 
-        // Dynamische API-call opbouw conform de sequentiële HTTP-richtlijnen
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        const model = state.userSettings?.chatModel || state.userSettings?.aiModel || "gemini-1.5-flash";
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         
-        // Haal de historische chatberichten op om de conversatie-historie te bewaren
-        const chatHistory = await fetchMedicChatHistory(chatId);
         let contentsPayload = [];
 
-        // Bouw de payload op met de .at() of forEach methodieken (vrij van vierkante haken)
+        // Bouw de payload op met de historische chatberichten (parser-veilig)
         chatHistory.forEach(msg => {
             contentsPayload.push({
-                role: msg.sender === 'user' ? 'user' : 'model',
+                role: msg.role === 'user' ? 'user' : 'model',
                 parts: [{ text: msg.text }]
             });
         });
 
-        // Voeg het meest recente gebruikersbericht toe aan de payload
-        contentsPayload.push({
-            role: 'user',
-            parts: [{ text: messageText }]
-        });
+        // Voeg eventueel de base64 image toe indien aanwezig
+        if (currentChatImageBase64) {
+            contentsPayload.at(-1).parts.push({
+                inline_data: { mime_type: "image/jpeg", data: currentChatImageBase64 }
+            });
+            window.clearChatImage();
+        }
 
         const responseFetch = await fetch(url, {
             method: 'POST',
@@ -864,7 +882,6 @@ Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
 
         const data = await responseFetch.json();
         
-        // Extractie van de respons-tekst met de parser-veilige .at() methodiek op candidates en parts
         let replyText = "De Mead Medic kon geen stabiele respons genereren. Controleer de netwerkverbinding.";
         if (data.candidates && data.candidates.length > 0) {
             const candidate = data.candidates.at(0);
@@ -873,13 +890,52 @@ Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
             }
         }
 
-        // Schrijf het AI-antwoord weg naar de Firestore subcollectie van de gebruiker
-        await appendMedicMessage(chatId, replyText, 'medic');
+        // Voeg het AI-antwoord toe aan het lokale geheugen
+        chatHistory.push({ role: 'model', text: replyText });
+
+        if (chatBox) {
+            const medicMsgHtml = `
+            <div class="flex items-start gap-3 justify-start mb-4">
+                <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs flex-shrink-0">DOC</div>
+                <div class="bg-white dark:bg-gray-800 text-app-header border border-gray-100 dark:border-gray-700 p-3 rounded-lg shadow-sm text-sm max-w-[85%] text-left prose prose-sm dark:prose-invert max-w-none">
+                    ${marked.parse(replyText)}
+                </div>
+            </div>`;
+            chatBox.insertAdjacentHTML('beforeend', medicMsgHtml);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Indien dit een bestaand of nieuw opgeslagen gesprek betreft, synchroniseer naar Firestore
+        if (currentChatId) {
+            const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'medicChats', currentChatId);
+            await updateDoc(docRef, {
+                messages: chatHistory,
+                updatedAt: new Date().toISOString()
+            });
+        } else if (chatHistory.length === 2) {
+            // Maak automatisch een nieuw document aan bij het eerste vraag-antwoordpaar
+            const colRef = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'medicChats');
+            const newChatDoc = await addDoc(colRef, {
+                title: messageText.substring(0, 40) + "...",
+                messages: chatHistory,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            });
+            currentChatId = newChatDoc.id;
+        }
+
+        // Data Protection: Leegmaken van het invoerveld pas aan het einde van een geslaagde try-blok execution
+        if (inputEl) inputEl.value = "";
         
     } catch (error) {
-        // Gecentraliseerde v2.6 fouthandling naar de Black Box
-        window.logSystemError(error, 'Zymology Assistant API Pipeline', 'ERROR');
-        window.showToast("Er is een fout opgetreden bij het verzenden van het bericht.", "error");
+        window.logSystemError(error, 'tools.js -> sendTroubleshootMessage', 'ERROR');
+        window.showToast("Er is een fout opgetreden bij het verwerken van de chat-respons.", "error");
+    } finally {
+        // Medic UI-Lock opheffen
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
     }
 };
 
@@ -1725,50 +1781,42 @@ window.calculateBuffer = function() {
 // --- TOSNA 3.0 CALCULATOR (v2.6 COMPLIANT) ---
 window.calculateTOSNA = function() {
     try {
-        // --- PAKKET 2: COMMA-TO-DOT VALIDATIE & DOM INTEGRATIE ---
-        const getSanitizedVal = (id) => {
-            const el = document.getElementById(id);
-            if (!el) return NaN;
-            const val = el.value.replace(/,/g, '.');
-            return parseFloat(val);
-        };
-
-        const og = getSanitizedVal('tosna_og');
-        const vol = getSanitizedVal('tosna_vol');
+        // Input Sanitisatie via het Comma-to-Dot Protocol
+        const og = parseFloat(String(document.getElementById('tosna_og')?.value || '1.000').replace(/,/g, '.')) || 1.000;
+        const vol = parseFloat(String(document.getElementById('tosna_vol')?.value || '0').replace(/,/g, '.')) || 0;
         const yeastKey = document.getElementById('tosna_yeast')?.value || 'medium';
         const nutrientKey = document.getElementById('tosna_nutrient')?.value || 'fermaid_o';
-        const currentAbv = getSanitizedVal('tosna_current_abv') || 0;
-        const initialBrix = getSanitizedVal('tosna_initial_brix');
-        const currentBrix = getSanitizedVal('tosna_current_brix');
+        const currentAbv = parseFloat(String(document.getElementById('tosna_current_abv')?.value || '0').replace(/,/g, '.')) || 0;
+        const initialBrix = parseFloat(String(document.getElementById('tosna_initial_brix')?.value || '0').replace(/,/g, '.')) || 0;
+        const currentBrix = parseFloat(String(document.getElementById('tosna_current_brix')?.value || '0').replace(/,/g, '.')) || 0;
         const isBbyRehydrated = document.getElementById('tosna_bby_rehydrate')?.checked || false;
-        const bbyRehydrateMassa = getSanitizedVal('tosna_bby_rehydrate_massa') || 0;
-        const convertFermaidOMassa = getSanitizedVal('tosna_convert_fermaid_massa') || 0;
+        const bbyRehydrateMassa = parseFloat(String(document.getElementById('tosna_bby_rehydrate_massa')?.value || '0').replace(/,/g, '.')) || 0;
+        const convertFermaidOMassa = parseFloat(String(document.getElementById('tosna_convert_fermaid_massa')?.value || '0').replace(/,/g, '.')) || 0;
 
         const resultDiv = document.getElementById('tosnaResult');
         const bbyConvertDiv = document.getElementById('bbyConversionResult');
 
-        // --- PAKKET 1: BBY CONVERSIEFACTOR ---
-        if (bbyConvertDiv && !isNaN(convertFermaidOMassa) && convertFermaidOMassa > 0) {
+        // BBY Stoichiometrische Conversieberekening (F_conv = 5.44)
+        if (bbyConvertDiv && convertFermaidOMassa > 0) {
             const bbyRequiredGrams = convertFermaidOMassa * 5.44;
             bbyConvertDiv.innerHTML = `
                 <div class="p-2 mt-2 bg-secondary-container/30 border border-outline-variant/30 rounded-lg text-xs">
-                    <span>Equivalent BBY Massa:</span> <span class="font-mono font-bold">${bbyRequiredGrams.toFixed(2)} g</span>
+                    <span>Equivalent BBY Massa (F_conv 5.44):</span> <span class="font-mono font-bold">${bbyRequiredGrams.toFixed(2)} g</span>
                 </div>
             `;
         } else if (bbyConvertDiv) {
             bbyConvertDiv.innerHTML = '';
         }
 
-        // Basis validatie
-        if (isNaN(og) || isNaN(vol) || og < 1.000 || vol <= 0) {
-            window.showToast("Validation failed: Enter valid parameters for baseline Specific Gravity (1.xxx) and liquid volume.", "error");
+        if (isNaN(og) || vol <= 0) {
+            if (resultDiv) resultDiv.innerHTML = `<span class="text-xs text-on-surface-variant">Vul een geldige begin-SG (1.xxx) en volume in.</span>`;
             return;
         }
 
-        // --- PAKKET 1: NUTRIËNTENMATRIX CONSTANTEN ---
+        // Europese Nutriënten & Hybride Database
         const nutrientDatabase = {
             'fermaid_o': { name: 'Fermaid O', rawYan: 40.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 4.0 },
-            'fermaid_k': { name: 'Fermaid K', rawYan: 100.0, rAnorg: 0.6, rOrg: 0.4, muOrg: 1.0 }, // Hybride model
+            'fermaid_k': { name: 'Fermaid K', rawYan: 100.0, rAnorg: 0.6, rOrg: 0.4, muOrg: 1.0 },
             'nutrisal': { name: 'Vinoferm Nutrisal', rawYan: 210.0, rAnorg: 1.0, rOrg: 0.0, muOrg: 1.0 },
             'cellvit': { name: 'Vinoferm Cellvit', rawYan: 25.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 },
             'nutrimix': { name: 'Vinoferm Nutrimix', rawYan: 117.5, rAnorg: 0.5, rOrg: 0.5, muOrg: 2.0 },
@@ -1778,20 +1826,16 @@ window.calculateTOSNA = function() {
             'bby': { name: 'Boiled Bread Yeast (BBY)', rawYan: 14.7, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 }
         };
 
-        // Extraheer actieve nutriënt met de .at() of fallback methodiek (vrij van vierkante haken)
-        const selectedNutrient = nutrientDatabase.hasOwnProperty(nutrientKey) 
-            ? nutrientDatabase[nutrientKey] 
-            : nutrientDatabase.fermaid_o;
+        const selectedNutrient = nutrientDatabase.hasOwnProperty(nutrientKey) ? nutrientDatabase[nutrientKey] : nutrientDatabase.fermaid_o;
 
-        // Bereken initiële Brix via Bates-polynoom indien niet handmatig ingevoerd
+        // Derdegraads Bates-polynoom voor initiële Brix
         const brixInit = (182.9622 * Math.pow(og, 3)) - (777.3009 * Math.pow(og, 2)) + (1264.5170 * og) - 670.1831;
         const factors = { 'low': 0.75, 'medium': 0.90, 'high': 1.25 };
         const fGist = factors[yeastKey] || 0.90;
 
-        // Totale stikstofbehoefte berekening
         let yanNeed = 10 * brixInit * og * fGist;
 
-        // --- PAKKET 1: REHYDRATIE OFFSET-BEREKENING ---
+        // Rehydratie-BBY Stikstoffractie Correctie
         let rehydratieWarningHtml = "";
         if (isBbyRehydrated && bbyRehydrateMassa > 0) {
             const yanRehydratie = (bbyRehydrateMassa * 14.7 * 1.5) / vol;
@@ -1803,89 +1847,81 @@ window.calculateTOSNA = function() {
             `;
         }
 
-        // --- PAKKET 1: STAPSGEWIJZE SNA-FASEREGELING ---
+        // Binaire Conditiebepaling: Evalueer Permease-Inactivatie (9% ABV of 1/3 Suikerbreuk)
         let isFaseTwo = false;
         let faseReason = "";
 
-        // Controleer 9% ABV grens
         if (currentAbv >= 9.0) {
             isFaseTwo = true;
-            faseReason = "Alcohol boundary reached (≥ 9% ABV)";
+            faseReason = "9% ABV Toxiciteitsgrens bereikt";
         }
 
-        // Controleer 1/3 suikerbreuk grens indien brix metrieken aanwezig zijn
-        if (!isNaN(initialBrix) && !isNaN(currentBrix) && initialBrix > 0) {
+        if (initialBrix > 0 && currentBrix > 0) {
             const attenuatie = ((initialBrix - currentBrix) / initialBrix) * 100;
             if (attenuatie >= 33.33) {
                 isFaseTwo = true;
-                faseReason = `1/3 Sugar Break hit (Attenuatie: ${attenuatie.toFixed(1)}%)`;
+                faseReason = `1/3 Suikerbreuk overschreden (${attenuatie.toFixed(1)}% Attenuatie)`;
             }
         }
 
-        // Berekening effectieve YAN per gram product per liter
         let effectiveRAnorg = selectedNutrient.rAnorg;
-        let effectiveROrg = selectedNutrient.rOrg;
         let warningHtml = "";
 
         if (isFaseTwo) {
-            // Dwing anorganische component wiskundig naar exact 0 in Fase II
+            // Conditie II: Inactiveer de anorganische opnamefysiologie volledig (R_anorg = 0)
             effectiveRAnorg = 0.0;
-            
-            // --- PAKKET 2: VEILIGHEIDSWAARSCHUWING & LOGGING ---
             if (selectedNutrient.rAnorg > 0) {
                 warningHtml = `
                     <div class="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded text-[10px] text-amber-700 font-bold uppercase animate-pulse">
-                        ⚠️ CRITICAL WARNING: ${selectedNutrient.name} contains anorganic nitrogen. 
-                        In ${faseReason}, yeast ammonium permeases are inactivated. Unabsorbed ammonium poses severe microbiological spoilage risks and ethyl carbamate toxicity!
+                        ⚠️ INTERLOCK ALARM: ${selectedNutrient.name} bevat anorganische stikstof. 
+                        In deze fase (${faseReason}) zijn ammoniumpermeasen geïnactiveerd. 
+                        Niet-geassimileerd ammonium riskeert extreme microbiologische infecties en kankerverwekkende ethylcarbamaatvorming!
                     </div>
                 `;
-                window.showToast(`Warning: Anorganic nitrogen addition inside Fase II detected using ${selectedNutrient.name}.`, "warning");
+                window.showToast("Risico op rest-ammonium: anorganische stikstof gedetecteerd in Fase II!", "warning");
             }
         }
 
-        // Formule conform oenologische equivalentie-richtlijnen
+        // Berekening effectieve YAN-afgifte per g/L
         const yanEffPerGram = (selectedNutrient.rawYan * effectiveRAnorg * 1.0) + 
-                             (selectedNutrient.rawYan * effectiveROrg * selectedNutrient.muOrg);
+                             (selectedNutrient.rawYan * selectedNutrient.rOrg * selectedNutrient.muOrg);
 
-        // Voorkom deling door nul bij foute invoer/onbekend product
         let totalNutrientGrams = 0;
         if (yanEffPerGram > 0) {
             totalNutrientGrams = (yanNeed / yanEffPerGram) * vol;
         }
 
-        // Pitch Rate advies conform TOSNA 3.0 standaarden
         const pitchRateAdvice = og < 1.100 
-            ? "💡 Pitch Rate: Use exactly 1g yeast per gallon (TOSNA 3.0 Standard)."
-            : "💡 Pitch Rate: Standard high-gravity dosage (2g/gal) recommended.";
+            ? "💡 Pitch Rate: Doseer exact 1g gist per gallon conform de TOSNA 3.0-standaard."
+            : "💡 Pitch Rate: Hoge startdichtheid gedetecteerd. Verhoog dosering naar 2g/gal.";
 
-        // --- REAL-TIME REACTIVE UI SYNCHRONIZATION ---
         if (resultDiv) {
             resultDiv.innerHTML = `
                 <div class="p-4 bg-primary-container/20 border-l-4 border-primary rounded-r-xl animate-fade-in">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-[10px] uppercase font-bold opacity-60 tracking-widest">European YAN Engine (v2.6)</span>
+                        <span class="text-[10px] uppercase font-bold opacity-60 tracking-widest">Europese YAN Engine (v2.6)</span>
                         <span class="bg-primary text-on-primary text-[8px] px-2 py-0.5 rounded-full font-bold">F_gist: ${fGist}</span>
                     </div>
                     <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
                         <div>
-                            <p class="text-[9px] opacity-60 uppercase">Adjusted YAN Target</p>
+                            <p class="text-[9px] opacity-60 uppercase">Netto YAN Behoefte</p>
                             <p class="font-bold font-header text-lg">${Math.round(yanNeed)} ppm</p>
                         </div>
                         <div>
-                            <p class="text-[9px] opacity-60 uppercase">Total ${selectedNutrient.name}</p>
+                            <p class="text-[9px] opacity-60 uppercase">Totaal ${selectedNutrient.name}</p>
                             <p class="font-bold font-header text-lg text-primary">${totalNutrientGrams.toFixed(2)} g</p>
                         </div>
                     </div>
                     <div class="pt-2 border-t border-outline-variant/30 space-y-1 text-xs">
-                        <p class="text-[10px] font-medium italic opacity-80">Dosing Schedule & Phase Constraints:</p>
+                        <p class="text-[10px] font-medium italic opacity-80">SNA Toedieningsschema (Staggered Addition):</p>
                         <p class="font-mono text-[11px] font-bold text-primary border-b border-outline-variant/10 pb-1">
-                            ${(totalNutrientGrams / 4).toFixed(2)} g per dose at 24h, 48h, 72h, & 1/3 Sugar Break.
+                            Doseer telkens ${(totalNutrientGrams / 4).toFixed(2)} g op: 24u, 48u, 72u, en de 1/3 suikerbreuk.
                         </p>
                         <p class="text-[10px] text-on-surface-variant pt-1">
-                            Current Stage: <span class="font-bold">${isFaseTwo ? 'Fase II (Organic Only)' : 'Fase I (Full Assimilation)'}</span>
+                            Status: <span class="font-bold">${isFaseTwo ? 'Fase II (Strikte Organische Afkap actief)' : 'Fase I (Volledige assimilatie)'}</span>
                         </p>
                         ${rehydratieWarningHtml}
-                        ${pitchRateAdvice ? `<p class="text-[10px] font-bold text-secondary-onContainer pt-1">${pitchRateAdvice}</p>` : ''}
+                        <p class="text-[10px] font-bold text-secondary-onContainer pt-1">${pitchRateAdvice}</p>
                         ${warningHtml}
                     </div>
                 </div>
@@ -1893,9 +1929,8 @@ window.calculateTOSNA = function() {
             resultDiv.classList.remove('hidden');
         }
     } catch (error) {
-        // Gecentraliseerde Foutafhandeling naar de Black Box
-        window.logSystemError(error, 'TOSNA Metabolism Evaluation Matrix', 'ERROR');
-        window.showToast("Assimilable Nitrogen tracking calculation aborted.", "error");
+        window.logSystemError(error, 'tools.js -> calculateTOSNA', 'ERROR');
+        window.showToast("Fout bij stikstofberekening.", "error");
     }
 };
 
@@ -1937,56 +1972,35 @@ window.calculateTargetApparentBrix = function() {
 
 window.calculateStabilization = function() {
     try {
-        // 1. Inputs ophalen & direct saniteren via Comma-to-Dot protocol (v2.6)
-        const abvInput = document.getElementById('stab_abv')?.value.replace(/,/g, '.') || "";
-        const fgInput = document.getElementById('stab_fg')?.value.replace(/,/g, '.') || "";
-        const phInput = document.getElementById('stab_ph')?.value.replace(/,/g, '.') || "";
-        const volInput = document.getElementById('stab_vol')?.value.replace(/,/g, '.') || "";
-        // Optionele uitlezing voor actueel gemeten vrije SO2 (standaardiseert naar 0 indien leeg/niet aanwezig)
-        const currentSo2Input = document.getElementById('stab_current_so2')?.value.replace(/,/g, '.') || "0";
-
-        const abv = parseFloat(abvInput);
-        const fg = parseFloat(fgInput);
-        const ph = parseFloat(phInput);
-        const vol = parseFloat(volInput);
-        const currentSo2 = parseFloat(currentSo2Input);
+        // Directe Sanitisatie via het Comma-to-Dot Protocol
+        const abv = parseFloat(String(document.getElementById('stab_abv')?.value || '').replace(/,/g, '.')) || 0;
+        const fg = parseFloat(String(document.getElementById('stab_fg')?.value || '').replace(/,/g, '.')) || 1.000;
+        const ph = parseFloat(String(document.getElementById('stab_ph')?.value || '').replace(/,/g, '.')) || 3.6;
+        const vol = parseFloat(String(document.getElementById('stab_vol')?.value || '').replace(/,/g, '.')) || 0;
+        const currentSo2 = parseFloat(String(document.getElementById('stab_current_so2')?.value || '0').replace(/,/g, '.')) || 0;
         const resultDiv = document.getElementById('stabilizationResult');
 
-        // 2. Input-Validatie & Systeemlimiet pre-checks
-        if (isNaN(abv) || isNaN(fg) || isNaN(ph) || isNaN(vol) || isNaN(currentSo2)) {
-            window.showToast("Verification failed: Operational datasets must be fully populated.", "error");
-            return;
-        }
-
         if (vol <= 0) {
-            window.showToast("Validation failure: System liquid volume parameters must exceed zero liters.", "error");
+            window.showToast("Vul een geldig volume in (Liters).", "error");
             return;
         }
 
         if (fg >= 1.775) {
-            window.showToast("Hall Boundary Conflict: Final Gravity configuration exceeds maximum system threshold (1.774).", "error");
-            if (resultDiv) {
-                resultDiv.innerHTML = `
-                    <div class="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center">
-                        <span class="text-error font-bold text-sm block">⚠️ LIMIT ERR</span>
-                        <span class="text-xs opacity-80 block mt-1">Final Gravity equals or transcends structural parameters (max 1.774).</span>
-                    </div>`;
-                resultDiv.classList.remove('hidden');
-            }
+            window.showToast("Hall Systeemgrens Overschreden: FG invoer is incompleet of te hoog.", "error");
             return;
         }
 
-        // 3. Biochemische Risico-Interlock (Roadmap-Punt 1.3 / v2.6 Systeemgrens)
+        // Biochemische Veiligheids-Interlock (pH > 3.8)
         if (ph > 3.8) {
-            window.showToast("pH-waarde kritiek hoog (>3.8). Benodigde sulfietoverschrijding tast organoleptische profiel aan (brandende lucifer). Titreer eerst met wijnsteenzuur of appelzuur naar pH ≤ 3.5 alvorens te stabiliseren.", "warning");
+            window.showToast("pH kritiek hoog (>3.8). Titreer eerst met zuren naar pH ≤ 3.5 om brandende lucifer-off-flavors te voorkomen.", "warning");
         }
 
-        // 4. Delle-eenheden & Basis Stabiliteit
+        // Berekening Delle-Stabiliteit en Restsuikers via Bates-polynoom
         const residualBrix = (182.9622 * Math.pow(fg, 3)) - (777.3009 * Math.pow(fg, 2)) + (1264.5170 * fg) - 670.1831;
         const delleUnits = (4.5 * abv) + residualBrix;
         const isStable = delleUnits >= 78.0 || abv >= 15.0;
 
-        // 5. Piecewise Sorbate Scale (Auditor Model)
+        // Piecewise Sorbate Sliding Scale (Auditor Model)
         let sorbateMgL = 200;
         if (abv < 10) sorbateMgL = 200;
         else if (abv >= 10 && abv < 11) sorbateMgL = 200 - (abv - 10) * 35;
@@ -1998,56 +2012,116 @@ window.calculateStabilization = function() {
 
         const totalSorbateGrams = (sorbateMgL * vol) / 1000;
 
-        // 6. Henderson-Hasselbalch Matrix (Roadmap-Punt 1.3)
-        // Formule: Target Vrije SO2 = 0.8 * (1 + 10^(pH - 1.81))
+        // Henderson-Hasselbalch Regressie voor 0.8 ppm Moleculair SO2 Target
         const targetFreeSo2 = 0.8 * (1 + Math.pow(10, (ph - 1.81)));
         
-        // 7. Stoichiometrische K-meta Massabalans (Gassubstraat-efficiëntiecoëfficiënt van 57.6%)
+        // Stoichiometrische K-meta Balans (Exogene opbrengst = 57.6%)
         const deltaSo2 = Math.max(0, targetFreeSo2 - currentSo2);
         const volInGallons = vol / 3.78541;
         const totalKMetaGrams = (deltaSo2 * 3.785 * volInGallons) / 570;
 
-        // 8. Real-time Reactive UI Synchronization (Material Design 3)
         if (resultDiv) {
             resultDiv.innerHTML = `
                 <div class="p-5 rounded-2xl border ${isStable ? 'bg-green-500/10 border-green-500/30 text-green-800 dark:text-green-200' : 'bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-200'} animate-fade-in space-y-4">
-                    <p class="text-center font-bold text-sm uppercase tracking-wider">${isStable ? '✅ Molecular Stable (Delle Verified)' : '⚠️ Stabilization Required'}</p>
+                    <p class="text-center font-bold text-sm uppercase tracking-wider">${isStable ? '✅ Delle Stabiel (Geen refermentatie mogelijk)' : '⚠️ Exogene Suppletie Vereist'}</p>
                     
                     <div class="grid grid-cols-2 gap-4 text-center">
                         <div class="p-3 card rounded-xl bg-app-primary/5 border border-app-brand/10">
-                            <p class="text-[9px] uppercase opacity-60 font-bold tracking-widest">Delle Units</p>
+                            <p class="text-[9px] uppercase opacity-60 font-bold tracking-widest">Delle Eenheden</p>
                             <p class="text-xl font-black font-header">${delleUnits.toFixed(1)}</p>
                         </div>
                         <div class="p-3 card rounded-xl bg-app-primary/5 border border-app-brand/10">
-                            <p class="text-[9px] uppercase opacity-60 font-bold tracking-widest">Residual Brix</p>
+                            <p class="text-[9px] uppercase opacity-60 font-bold tracking-widest">Restsuikers</p>
                             <p class="text-xl font-black font-header">${residualBrix.toFixed(1)}°Bx</p>
                         </div>
                     </div>
 
                     <div class="pt-3 border-t border-black/5 dark:border-white/5 space-y-2 text-xs">
                         <div class="flex justify-between items-center bg-white/40 dark:bg-black/20 p-2 rounded-lg border border-outline-variant/20">
-                            <span class="font-medium">Target Vrije SO₂:</span>
+                            <span class="font-medium">Target Vrije SO₂ (HH-Model):</span>
                             <span class="font-mono font-bold px-2 py-0.5 bg-primary text-on-primary rounded text-[11px]">${targetFreeSo2.toFixed(1)} ppm</span>
                         </div>
                         
                         <div class="flex justify-between items-center bg-white/40 dark:bg-black/20 p-2 rounded-lg border border-outline-variant/20">
-                            <span class="font-medium">Required K-Metabisulfiet (K-Meta):</span>
+                            <span class="font-medium">Vereist Kaliummetabisulfiet (57.6% yield):</span>
                             <span class="font-mono font-bold px-2 py-0.5 bg-secondary-onContainer text-secondary rounded text-[11px]">${totalKMetaGrams.toFixed(3)} g</span>
                         </div>
 
                         <div class="flex justify-between items-center bg-white/40 dark:bg-black/20 p-2 rounded-lg border border-outline-variant/20">
-                            <span class="font-medium">Required Kaliumsorbaat:</span>
+                            <span class="font-medium">Vereist Kaliumsorbaat (Sliding):</span>
                             <span class="font-mono font-bold text-app-brand">${totalSorbateGrams.toFixed(2)} g</span>
                         </div>
                         
-                        <p class="text-[8px] italic opacity-70 text-center pt-1">*Target parameters: 0.8 ppm Molecular SO₂ threshold & Piecewise Auditor Fungistatic alignment.</p>
+                        <p class="text-[8px] italic opacity-70 text-center pt-1">*Sliding Target Scale: 0.8 ppm Moleculair SO₂ & Piecewise Matrix suppressie.</p>
                     </div>
                 </div>`;
             resultDiv.classList.remove('hidden');
         }
     } catch (error) {
-        window.logSystemError(error, 'Fungistatic Stabilization Evaluation Matrix', 'ERROR');
-        window.showToast("Synergistic equilibrium stabilization calculation failed.", "error");
+        window.logSystemError(error, 'tools.js -> calculateStabilization', 'ERROR');
+        window.showToast("Fout bij stabilisatieberekening.", "error");
+    }
+};
+
+window.calculateDryHopExtraction = function() {
+    try {
+        const contactTimeInput = document.getElementById('dryhop_time')?.value || "";
+        const resultDiv = document.getElementById('dryhopExtractionResult');
+        
+        // Comma-to-Dot Sanitisatie
+        const t = parseFloat(contactTimeInput.replace(/,/g, '.')) || 0;
+
+        if (t <= 0) {
+            if (resultDiv) resultDiv.innerHTML = `<p class="text-xs text-on-surface-variant">Voer een contacttijd in uren in.</p>`;
+            return;
+        }
+
+        // Dissolutievergelijking: C(t) = C_max * (1 - e^(-k * t)) met k = 0.1946
+        const k = 0.1946;
+        const extractionPercentage = 100 * (1 - Math.exp(-k * t));
+
+        let statusText = "";
+        let colorClass = "";
+        let recommendation = "";
+
+        // Kinetische statusbewaking op basis van de tijdsgrenzen
+        if (t < 72) {
+            statusText = "Juveniele Extractiefase";
+            colorClass = "bg-blue-500/10 border-blue-500/30 text-blue-800 dark:text-blue-200";
+            recommendation = "De hydrofobe monoterpenen (zoals linalool en myrceen) zijn in actieve extractie. Contacttijd is korter dan het optimale venster. Laat de hoppen langer rusten.";
+        } else if (t >= 72 && t <= 120) {
+            statusText = "Optimaal Extractie-Venster";
+            colorClass = "bg-green-500/10 border-green-500/30 text-green-800 dark:text-green-200";
+            recommendation = "Apex-status bereikt! Maximale verzadiging van florale en citrusaroma's zonder noemenswaardige extractie van ongewenste zware polyphenolen. Ideaal racking-tijdstip.";
+        } else if (t > 120 && t <= 168) {
+            statusText = "Polyphenol Aberratie Waarschuwing";
+            colorClass = "bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200";
+            recommendation = "Waarschuwing: Diffusie-gecontroleerde extractie van cellulose en zware tannines start. Risico op hop-burn (astringentie) en vegetale tonen neemt lineair toe.";
+        } else {
+            statusText = "Harde Systeemgrens Overschreden (Grasachtige Off-Flavors)";
+            colorClass = "bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-200 animate-pulse";
+            recommendation = "Kritiek: Onomkeerbare extractie van chlorofyl-gerelateerde verbindingen en ethylsorbaat-precursors (Geranium Taint risico). Het verouderingspotentieel is negatief gecorrigeerd.";
+        }
+
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="p-4 rounded-xl border ${colorClass} shadow-sm space-y-2 animate-fade-in">
+                    <div class="flex justify-between items-center text-[10px] uppercase font-bold tracking-wider">
+                        <span>Dry-Hopping Kinetiek Matrix</span>
+                        <span class="font-mono">${t.toFixed(1)} uren</span>
+                    </div>
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-sm font-bold">${statusText}</span>
+                        <span class="text-lg font-mono font-black">${extractionPercentage.toFixed(1)}%</span>
+                    </div>
+                    <p class="text-xs pt-1 border-t border-current/10 opacity-90 leading-relaxed">${recommendation}</p>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        window.logSystemError(error, 'tools.js -> calculateDryHopExtraction', 'ERROR');
+        window.showToast("Fout bij het berekenen van de hop-extractiekinetiek.", "error");
     }
 };
 
@@ -2440,10 +2514,6 @@ window.calculateSplitBatch = function() {
     }
 };
 
-// ============================================================================
-// --- SOMMELIER TASTING ASSESSMENT & RATINGS PROTOCOL (v2.6 REFACTORED) ---
-// ============================================================================
-
 window.calculateTastingAssessment = async function() {
     try {
         // Defensieve DOM-Validatie: Controleer of de Tasting Room-elementen aanwezig zijn
@@ -2487,13 +2557,13 @@ window.calculateTastingAssessment = async function() {
         }
         const brew = state.brews.at(localBrewIndex);
 
-        // 2. Directe DOM-Scraping & Comma-to-Dot Sanitisatie
+        // 2. Directe DOM-Scraping & Rigoureuze Comma-to-Dot Sanitisatie naar vlotterwaarden
         const fgRaw = String(document.getElementById('tasting_fg')?.value || brew.logData?.actualFG || brew.logData?.targetFG || '1.000');
         const taRaw = String(document.getElementById('tasting_ta')?.value || '6.0');
         const phRaw = String(document.getElementById('tasting_ph')?.value || '3.6');
 
         const finalGravity = parseFloat(fgRaw.replace(/,/g, '.')) || 1.000;
-        const titratableAcidity = parseFloat(taRaw.replace(/,/g, '.')) || 0;
+        const titratableAcidity = parseFloat(taRaw.replace(/,/g, '.')) || 0.1;
         const measuredPh = parseFloat(phRaw.replace(/,/g, '.')) || 3.6;
 
         // Uitlezen van de organoleptische schuifregelaars (sliders)
@@ -2518,7 +2588,7 @@ window.calculateTastingAssessment = async function() {
             return;
         }
 
-        if (measuredPh > 3.8) {
+        if (measuredPh > 3.8 && measuredPh < 4.25) {
             window.showToast("pH-waarde kritiek hoog (>3.8). Benodigde sulfietoverschrijding tast organoleptische profiel aan (brandende lucifer). Titreer eerst met wijnsteenzuur of appelzuur naar pH ≤ 3.5 alvorens te stabiliseren.", "warning");
         }
 
@@ -2526,16 +2596,24 @@ window.calculateTastingAssessment = async function() {
         const brixFinal = (182.9622 * Math.pow(finalGravity, 3)) - (777.3009 * Math.pow(finalGravity, 2)) + (1264.5170 * finalGravity) - 670.1831;
         const sugarConcentration = brixFinal * finalGravity * 10;
 
-        // 5. Logaritmische Mede-Harmonie Index (M_HI)
-        const logDenominator = titratableAcidity * (4.5 - measuredPh) * (1 + (tanninValue / 10));
+        // 5. Mathematische Herstructurering: Soft-Plus noemer en Sigmoïdale Flabbiness-onderdrukking (v2.6)
+        const dSoft = Math.log(1.0 + Math.exp(4.0 * (4.5 - measuredPh))) + 0.0001;
+        const psiPh = 1.0 / (1.0 + Math.exp(5.0 * (measuredPh - 4.25)));
+
+        // Berekening van de index conform het v2.6-model: (Cs * Ψ(pH)) / (Dsoft * (1 + 0.01 * |Cs - 10.0 * TA|))
+        const rawNumerator = sugarConcentration * psiPh;
+        const totalDenominator = dSoft * (1.0 + 0.01 * Math.abs(sugarConcentration - 10.0 * titratableAcidity));
+        
         let meadHarmonyIndex = 0;
-        if (logDenominator !== 0) {
-            meadHarmonyIndex = sugarConcentration / logDenominator;
+        if (totalDenominator > 0) {
+            meadHarmonyIndex = rawNumerator / totalDenominator;
         }
 
-        // Algoritmische oenologische feedback
+        // Conditionele Feedback Interlock & Oenologische evaluatielogica
         let oenologicalFeedback = "";
-        if (meadHarmonyIndex < 25) {
+        if (measuredPh >= 4.25) {
+            oenologicalFeedback = "🚨 **Profile: Slap / Ongebalanceerd.** The mead exhibits severe metabolic flabbiness due to a critically high pH level overriding electrochemical balance. Immediate corrective deacidification titration using Tartaric or Malic acid solutions is strictly required to restore crispness and reduce the pH to a safe, stable range (≤ 3.5).";
+        } else if (meadHarmonyIndex < 25) {
             oenologicalFeedback = "🚨 **Profile: Imbalanced / Acid-Dominant.** The mead exhibits an analytical deficit in sweetness, causing acids or wood-derived tannins to overpower the sensory balance. Recommendation: Formulate a backsweetening dose using the Bates-v2.6 tracking module.";
         } else if (meadHarmonyIndex >= 25 && meadHarmonyIndex <= 65) {
             oenologicalFeedback = "✨ **Profile: Perfect Mead Harmony.** Taste components exist in exceptional structural equilibrium. The balancing index between residual sugars, titratable acidity, and astringency factors represents superior zymological design.";
@@ -2612,7 +2690,7 @@ window.calculateTastingAssessment = async function() {
         window.showToast("Organoleptic profiles synchronized with server database.", "success");
 
     } catch (error) {
-        window.logSystemError(error, 'Tasting Assessment Engine Evaluation', 'ERROR');
+        window.logSystemError(error, 'tools.js -> calculateTastingAssessment', 'ERROR');
         window.showToast("Critical exception within sensoric analysis rendering.", "error");
     }
 };
@@ -2882,3 +2960,4 @@ window.exportHistory = exportHistory;
 window.exportInventory = exportInventory;
 window.clearCollection = clearCollection;
 window.calculateCarbonationEngine = calculateCarbonationEngine;
+window.calculateDryHopExtraction = calculateDryHopExtraction;

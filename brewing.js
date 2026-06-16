@@ -179,7 +179,7 @@ function buildPrompt() {
                - Dry Malt Extract (DME) Yield Potential: 375 points/kg/L
                - Liquid Malt Extract (LME) Yield Potential: 300 points/kg/L
             6. Predict an increased Estimated Final Gravity (FG_est) by applying a 75% apparent attenuation limit solely onto the malt fraction, leaving residual unfermentable dextrins. Perform a backward adjustment on the final required OG to compensate for this density floor and guarantee the requested net ABV target.
-            7. **HONEY MUST IBU-RETENTION MATRIX:** Correct the calculated International Bitterness Units (IBU) based on the absence of protein-adsorptive losses in honey components.
+            7. **HONEY MUST IBU-RETENTION MATRIX:** Correct the calculated International Bittering Units (IBU) based on the absence of protein-adsorptive losses in honey components.
                - IF the mixture is a pure honey must (malt fraction is 0), scale the theoretical Tinseth bitterness utility by the mechanistical constant φ_mead = 1.45.
                - IF the mixture is a hybrid braggot, calculate the dynamic adjustment factor using: φ_braggot = 1.0 + 0.45 * (1.0 - (ρ_malt / ρ_total)), where ρ_malt is the specific gravity points contribution from the malt extract, and ρ_total is the total starting gravity points of the must (OG - 1.000). Ensure total calculated bittering additions are adjusted to prevent overwhelming astringency.`;
             
@@ -190,7 +190,6 @@ function buildPrompt() {
             mathContext += `\n- **JUICE WARNING:** If replacing water with Fruit Juice, reduce honey to prevent overshooting ABV.`;
         }
 
-        // De-repressie architectuur variabele expliciet initialiseren ter voorkoming van conditionele scope referentiefouten
         let ncrContext = "";
         if (inputString.includes("qa23") || inputString.includes("us-05") || inputString.includes("71b") || inputString.includes("ec-1118") || inputString.includes("d47") || inputString.includes("m05")) {
             ncrContext = `
@@ -223,26 +222,9 @@ function buildPrompt() {
         }
 
         const invLower = inventoryString.toLowerCase();
-        
-        const hasSafeOrganic = invLower.includes('fermaid o') || invLower.includes('ferm o') || invLower.includes('cellvit') || invLower.includes('yeast hulls');
-        const hasDAP = invLower.includes('dap') || invLower.includes('diammonium') || invLower.includes('nutrisal');
-        const hasHybrid = invLower.includes('nutrivit') || invLower.includes('fermaid k') || invLower.includes('combi') || invLower.includes('ultra') || invLower.includes('tronozym');
-        
-        let baseNutrientRule = "";
-        if (inventoryToggles.Nutrient) { 
-             if (!hasSafeOrganic && (hasHybrid || hasDAP)) {
-                baseNutrientRule = `1. **Nutrients (INORGANIC):** Detected inorganic stock. **WARNING:** Stop addition after 9% ABV. Use 1.0x YAN scaling.`;
-             } else if (hasSafeOrganic) {
-                baseNutrientRule = `1. **Nutrients (ORGANIC):** Use Fermaid O (Bio-equivalentie 4.0x). Calculate based on 160ppm equivalent per 1g/L. Follow TOSNA 3.0 (1g/gal pitch rate if <1.100 SG).`;
-             } else {
-                 baseNutrientRule = `1. **Nutrients:** Prescribe TOSNA 3.0 with organic nutrients (Bio-Eq 4.0 factor).`;
-             }
-        }
-
-        let stabiliserRule = "";
-        if (invLower.includes('campden')) {
-            stabiliserRule = `3. **NAMING CONVENTION:** The user has "Campden" in stock. Always write "**Campden Powder/Tablets**" instead of "Potassium Metabisulphite" in the ingredients list and instructions.`;
-        }
+        const stabiliserRule = invLower.includes('campden') 
+            ? `3. **NAMING CONVENTION:** The user has "Campden" in stock. Always write "**Campden Powder/Tablets**" instead of "Potassium Metabisulphite" in the ingredients list and instructions.` 
+            : "";
 
         const inventoryLogic = `
         ${inventoryInstruction} 
@@ -256,6 +238,43 @@ function buildPrompt() {
            - IF (Stock == 0): Write "Buy [Full Amount] of [Item]".
         ${stabiliserRule}
         `;
+
+        // --- PAKKET 1: DYNAMISCHE NUTRIËNTEN-UITLEZING & DNA INJECTIE ---
+        const userNutrientSelection = document.getElementById('recipeNutrientSelect')?.value || 'fermaid_o';
+        
+        const nutrientDatabase = {
+            'fermaid_o': { name: 'Fermaid O', rawYan: 40.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 4.0 },
+            'fermaid_k': { name: 'Fermaid K', rawYan: 100.0, rAnorg: 0.6, rOrg: 0.4, muOrg: 1.0 },
+            'nutrisal': { name: 'Vinoferm Nutrisal', rawYan: 210.0, rAnorg: 1.0, rOrg: 0.0, muOrg: 1.0 },
+            'cellvit': { name: 'Vinoferm Cellvit', rawYan: 25.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 },
+            'nutrimix': { name: 'Vinoferm Nutrimix', rawYan: 117.5, rAnorg: 0.5, rOrg: 0.5, muOrg: 2.0 },
+            'wyeast_wine': { name: 'Wyeast Wine Nutrient', rawYan: 129.2, rAnorg: 0.6, rOrg: 0.4, muOrg: 2.0 },
+            'wyeast_beer': { name: 'Wyeast Beer Nutrient', rawYan: 103.6, rAnorg: 0.7, rOrg: 0.3, muOrg: 2.0 },
+            'engevita': { name: 'Lallemand Engevita', rawYan: 25.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 1.5 },
+            'bby': { name: 'Boiled Bread Yeast (BBY)', rawYan: 14.7, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 }
+        };
+
+        const activeNutrient = nutrientDatabase.hasOwnProperty(userNutrientSelection) 
+            ? nutrientDatabase[userNutrientSelection] 
+            : nutrientDatabase.fermaid_o;
+
+        // --- PAKKET 1: FYSIOLOGISCHE PROMPT-RESTRICTIES ---
+        let baseNutrientRule = ``;
+        if (activeNutrient.rAnorg > 0) {
+            baseNutrientRule = `
+            - **STRICT NUTRIENT PROTOCOL (ANORGANIC/HYBRID):** The user has selected **${activeNutrient.name}**. 
+            - **PERMEASE INACTIVATION LAW:** Because this nutrient contains anorganic fractions (DAP/ammonium salts), you MUST structure the staggered additions (SNA) so that ALL nutritional additions strictly cease and cut off before the fermentation reaches 9% ABV or crosses the 1/3 sugar break (33.33% attenuation). 
+            - **FORBIDDEN:** Do NOT plan or recommend any additions of ${activeNutrient.name} during the secondary phase or inside Fase II, to prevent toxic residual ammonium and ethyl carbamate formatting.`;
+        } else if (userNutrientSelection === 'bby') {
+            baseNutrientRule = `
+            - **STRICT NUTRIENT PROTOCOL (BOILED BREAD YEAST):** The user has selected **Boiled Bread Yeast (BBY)** as their organic alternative. 
+            - **STOICHIOMETRIC CONVERSION:** Calculate the required dosage of BBY using the hard conversion multiplier of 5.44x compared to standard Fermaid O rules, accounting for the lower absolute 14.7 mg N/g YAN profile and 2.0x biological efficiency factor.
+            - **REHYDRATION LIPID MATRIX:** Include precise instructions for a BBY-assisted rehydration protocol (boiling 1.25g BBY per 1g of active yeast for 10 minutes at 100°C) to serve as a lipid and sterol cell-membrane protector.`;
+        } else {
+            baseNutrientRule = `
+            - **STRICT NUTRIENT PROTOCOL (ORGANIC):** The user has selected **${activeNutrient.name}**.
+            - **TOSNA 3.0 EQUIVALENCE:** Prescribe a 4-step staggered schedule using a 4.0x biological efficiency factor (160ppm equivalent per 1g/L). Structure additions at 24h, 48h, 72h, and the 1/3 sugar break zone.`;
+        }
 
         const sourKeywords = ['sour', 'wild', 'gueuze', 'lambic', 'brett', 'funky', 'farmhouse', 'lacto', 'pedio', 'geuze'];
         const isQuickSour = inputString.includes('philly') || inputString.includes('kettle');
@@ -276,15 +295,10 @@ function buildPrompt() {
             let timeRule = isQuickSour 
                 ? `**Time:** Philly Sour acts fast. Treat like ale.` 
                 : `**Time:** Genuine Wild/Brett needs **6-24 months** aging.`;
-            
-            let wildNutrientRule = baseNutrientRule;
-            if (hasDAP || hasHybrid) {
-                wildNutrientRule = `1. **Nutrients (WILD CAUTION):** User has Inorganic nutrients. **REDUCE DOSAGE by 50%** and front-load.`;
-            }
 
             specificLaws = `
             **WILD LAWS:**
-            ${wildNutrientRule}
+            ${baseNutrientRule}
             2.  **Yeast:** Recommend Philly Sour, Lambic Blend, or Brett. Warn about plastic.
             3.  **Acidity:** NO Carbonate buffers.
             4.  ${timeRule}
@@ -332,19 +346,34 @@ function buildPrompt() {
         3. **REFERENCE:** Mention a suitable **Belgian brand** ONLY as an example (e.g. "Use a soft water like Spa Reine" or "A mineral water like Chaudfontaine").
         `;
 
+        // --- PAKKET 1 & 2: METHEGLIN POINTER FIX & CHAT-PARSER INTERLOCK ---
         let creativeBrief = ""; 
         if (customDescription.trim() !== '') {
              creativeBrief = `User Vision: "${customDescription}". Override stats only if specified. Base: ${batchSize}L, ${targetABV}%.`;
         } else {
              creativeBrief = `Structure: ${style}, Batch: ${batchSize}L, Target: ${targetABV}%, Sweetness: ${sweetness}.`;
              if (style.includes('Melomel')) {
-                const fruits = Array.from(document.querySelectorAll('#fruit-section input[type=checkbox]:checked')).map(el => (el.labels && el.labels.length > 0) ? el.labels.item(0).innerText : "");
+                const fruitCheckboxes = document.querySelectorAll('#fruit-section input[type=checkbox]:checked');
+                const fruits = [];
+                for (let f = 0; f < fruitCheckboxes.length; f++) {
+                    const cb = fruitCheckboxes.item(f);
+                    if (cb && cb.labels && cb.labels.length > 0) {
+                        fruits.push(cb.labels.item(0).innerText);
+                    }
+                }
                 const otherFruits = document.getElementById('fruitOther').value;
                 const fStr = [...fruits, otherFruits].filter(Boolean).join(', ');
                 if(fStr) creativeBrief += `\n- Fruits: ${fStr}`;
              }
              if (style.includes('Metheglin')) {
-                const spices = Array.from(document.querySelectorAll('#spice-section input[type=checkbox]:checked')).map(el => (el.labels && el.labels.length > 0) ? el.labels.item(0).innerText : "");
+                const spiceCheckboxes = document.querySelectorAll('#spice-section input[type=checkbox]:checked');
+                const spices = [];
+                for (let s = 0; s < spiceCheckboxes.length; s++) {
+                    const cb = spiceCheckboxes.item(s);
+                    if (cb && cb.labels && cb.labels.length > 0) {
+                        spices.push(cb.labels.item(0).innerText);
+                    }
+                }
                 const otherSpices = document.getElementById('spiceOther').value;
                 const sStr = [...spices, otherSpices].filter(Boolean).join(', ');
                 if(sStr) creativeBrief += `\n- Spices: ${sStr}`;
@@ -388,7 +417,8 @@ ${creativeBrief}
 ---`;
 
     } catch (error) {
-        window.logSystemError(error, "brewing.js: buildPrompt", "ERROR");
+        // --- PAKKET 2: BLACK BOX TELEMETRIE ---
+        window.logSystemError(error, 'brewing.js: buildPrompt Processing Chain', 'ERROR');
         throw new Error(`Failed to build prompt: ${error.message}`);
     }
 }
@@ -1208,7 +1238,6 @@ window.startBrewDay = async function(brewId) {
     }
 }
 
-// --- START ACTUAL BREW DAY ---
 window.startActualBrewDay = async function() {
     try {
         const brewIdInput = document.getElementById('brew_recipeId');
@@ -1223,9 +1252,9 @@ window.startActualBrewDay = async function() {
         if (!state.userSettings) state.userSettings = {};
         state.userSettings.currentBrewDay = { brewId: brewId };
 
-        // Directe, geruisloze Firestore cloudupdate via geïmporteerde SDK-functies
+        // --- PAKKET 1: DATABASE-PAD STANDAARDISATIE ---
         if (state.userId) {
-            const settingsDocRef = doc(db, "artifacts/meandery-aa05e/users", state.userId, "settings", "main");
+            const settingsDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
             await updateDoc(settingsDocRef, {
                 currentBrewDay: { brewId: brewId }
             });
@@ -1282,7 +1311,7 @@ window.renderBrewDay = async function(activeId) {
             
             // Asynchrone cloud-opschoning via Firestore SDK om spookreferentie permanent te wissen
             if (state.userId) {
-                const settingsDocRef = doc(db, "artifacts/meandery-aa05e/users", state.userId, "settings", "main");
+                const settingsDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
                 await updateDoc(settingsDocRef, {
                     currentBrewDay: { brewId: null }
                 });
@@ -3413,13 +3442,6 @@ async function getYeastAdvice() {
     } catch (error) {
         adviceOutput.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
     }
-}
-
-// --- LEGACY BRIDGE ---
-// app.js roept dit aan bij opstarten. Wij gebruiken nu inline onclicks, 
-// maar we laten deze lege functie staan om errors in app.js te voorkomen.
-function setupBrewDayEventListeners() {
-    console.log("Brew Day listeners handled via inline logic.");
 }
 
 // --- BLENDING TOOL ---

@@ -1725,56 +1725,177 @@ window.calculateBuffer = function() {
 // --- TOSNA 3.0 CALCULATOR (v2.6 COMPLIANT) ---
 window.calculateTOSNA = function() {
     try {
-        const getVal = (id) => {
+        // --- PAKKET 2: COMMA-TO-DOT VALIDATIE & DOM INTEGRATIE ---
+        const getSanitizedVal = (id) => {
             const el = document.getElementById(id);
-            return el ? parseFloat(el.value.replace(/,/g, '.')) : NaN;
+            if (!el) return NaN;
+            const val = el.value.replace(/,/g, '.');
+            return parseFloat(val);
         };
-        
-        const og = getVal('tosna_og');
-        const vol = getVal('tosna_vol');
-        const yeastKey = document.getElementById('tosna_yeast')?.value || 'medium';
-        const resultDiv = document.getElementById('tosnaResult');
 
+        const og = getSanitizedVal('tosna_og');
+        const vol = getSanitizedVal('tosna_vol');
+        const yeastKey = document.getElementById('tosna_yeast')?.value || 'medium';
+        const nutrientKey = document.getElementById('tosna_nutrient')?.value || 'fermaid_o';
+        const currentAbv = getSanitizedVal('tosna_current_abv') || 0;
+        const initialBrix = getSanitizedVal('tosna_initial_brix');
+        const currentBrix = getSanitizedVal('tosna_current_brix');
+        const isBbyRehydrated = document.getElementById('tosna_bby_rehydrate')?.checked || false;
+        const bbyRehydrateMassa = getSanitizedVal('tosna_bby_rehydrate_massa') || 0;
+        const convertFermaidOMassa = getSanitizedVal('tosna_convert_fermaid_massa') || 0;
+
+        const resultDiv = document.getElementById('tosnaResult');
+        const bbyConvertDiv = document.getElementById('bbyConversionResult');
+
+        // --- PAKKET 1: BBY CONVERSIEFACTOR ---
+        if (bbyConvertDiv && !isNaN(convertFermaidOMassa) && convertFermaidOMassa > 0) {
+            const bbyRequiredGrams = convertFermaidOMassa * 5.44;
+            bbyConvertDiv.innerHTML = `
+                <div class="p-2 mt-2 bg-secondary-container/30 border border-outline-variant/30 rounded-lg text-xs">
+                    <span>Equivalent BBY Massa:</span> <span class="font-mono font-bold">${bbyRequiredGrams.toFixed(2)} g</span>
+                </div>
+            `;
+        } else if (bbyConvertDiv) {
+            bbyConvertDiv.innerHTML = '';
+        }
+
+        // Basis validatie
         if (isNaN(og) || isNaN(vol) || og < 1.000 || vol <= 0) {
             window.showToast("Validation failed: Enter valid parameters for baseline Specific Gravity (1.xxx) and liquid volume.", "error");
             return;
         }
 
+        // --- PAKKET 1: NUTRIËNTENMATRIX CONSTANTEN ---
+        const nutrientDatabase = {
+            'fermaid_o': { name: 'Fermaid O', rawYan: 40.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 4.0 },
+            'fermaid_k': { name: 'Fermaid K', rawYan: 100.0, rAnorg: 0.6, rOrg: 0.4, muOrg: 1.0 }, // Hybride model
+            'nutrisal': { name: 'Vinoferm Nutrisal', rawYan: 210.0, rAnorg: 1.0, rOrg: 0.0, muOrg: 1.0 },
+            'cellvit': { name: 'Vinoferm Cellvit', rawYan: 25.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 },
+            'nutrimix': { name: 'Vinoferm Nutrimix', rawYan: 117.5, rAnorg: 0.5, rOrg: 0.5, muOrg: 2.0 },
+            'wyeast_wine': { name: 'Wyeast Wine Nutrient', rawYan: 129.2, rAnorg: 0.6, rOrg: 0.4, muOrg: 2.0 },
+            'wyeast_beer': { name: 'Wyeast Beer Nutrient', rawYan: 103.6, rAnorg: 0.7, rOrg: 0.3, muOrg: 2.0 },
+            'engevita': { name: 'Lallemand Engevita', rawYan: 25.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 1.5 },
+            'bby': { name: 'Boiled Bread Yeast (BBY)', rawYan: 14.7, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 }
+        };
+
+        // Extraheer actieve nutriënt met de .at() of fallback methodiek (vrij van vierkante haken)
+        const selectedNutrient = nutrientDatabase.hasOwnProperty(nutrientKey) 
+            ? nutrientDatabase[nutrientKey] 
+            : nutrientDatabase.fermaid_o;
+
+        // Bereken initiële Brix via Bates-polynoom indien niet handmatig ingevoerd
         const brixInit = (182.9622 * Math.pow(og, 3)) - (777.3009 * Math.pow(og, 2)) + (1264.5170 * og) - 670.1831;
         const factors = { 'low': 0.75, 'medium': 0.90, 'high': 1.25 };
         const fGist = factors[yeastKey] || 0.90;
 
-        const yanNeed = 10 * brixInit * og * fGist;
-        const totalFermaidO = (yanNeed / 160) * vol;
+        // Totale stikstofbehoefte berekening
+        let yanNeed = 10 * brixInit * og * fGist;
 
-        // TOSNA 3.0 Pitch Rate Logic
+        // --- PAKKET 1: REHYDRATIE OFFSET-BEREKENING ---
+        let rehydratieWarningHtml = "";
+        if (isBbyRehydrated && bbyRehydrateMassa > 0) {
+            const yanRehydratie = (bbyRehydrateMassa * 14.7 * 1.5) / vol;
+            yanNeed = Math.max(0, yanNeed - yanRehydratie);
+            rehydratieWarningHtml = `
+                <div class="text-[10px] text-green-600 font-medium border-l-2 border-green-500 pl-2 my-1">
+                    ✓ BBY Rehydration Offset Applied: -${yanRehydratie.toFixed(1)} ppm YAN from total target.
+                </div>
+            `;
+        }
+
+        // --- PAKKET 1: STAPSGEWIJZE SNA-FASEREGELING ---
+        let isFaseTwo = false;
+        let faseReason = "";
+
+        // Controleer 9% ABV grens
+        if (currentAbv >= 9.0) {
+            isFaseTwo = true;
+            faseReason = "Alcohol boundary reached (≥ 9% ABV)";
+        }
+
+        // Controleer 1/3 suikerbreuk grens indien brix metrieken aanwezig zijn
+        if (!isNaN(initialBrix) && !isNaN(currentBrix) && initialBrix > 0) {
+            const attenuatie = ((initialBrix - currentBrix) / initialBrix) * 100;
+            if (attenuatie >= 33.33) {
+                isFaseTwo = true;
+                faseReason = `1/3 Sugar Break hit (Attenuatie: ${attenuatie.toFixed(1)}%)`;
+            }
+        }
+
+        // Berekening effectieve YAN per gram product per liter
+        let effectiveRAnorg = selectedNutrient.rAnorg;
+        let effectiveROrg = selectedNutrient.rOrg;
+        let warningHtml = "";
+
+        if (isFaseTwo) {
+            // Dwing anorganische component wiskundig naar exact 0 in Fase II
+            effectiveRAnorg = 0.0;
+            
+            // --- PAKKET 2: VEILIGHEIDSWAARSCHUWING & LOGGING ---
+            if (selectedNutrient.rAnorg > 0) {
+                warningHtml = `
+                    <div class="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded text-[10px] text-amber-700 font-bold uppercase animate-pulse">
+                        ⚠️ CRITICAL WARNING: ${selectedNutrient.name} contains anorganic nitrogen. 
+                        In ${faseReason}, yeast ammonium permeases are inactivated. Unabsorbed ammonium poses severe microbiological spoilage risks and ethyl carbamate toxicity!
+                    </div>
+                `;
+                window.showToast(`Warning: Anorganic nitrogen addition inside Fase II detected using ${selectedNutrient.name}.`, "warning");
+            }
+        }
+
+        // Formule conform oenologische equivalentie-richtlijnen
+        const yanEffPerGram = (selectedNutrient.rawYan * effectiveRAnorg * 1.0) + 
+                             (selectedNutrient.rawYan * effectiveROrg * selectedNutrient.muOrg);
+
+        // Voorkom deling door nul bij foute invoer/onbekend product
+        let totalNutrientGrams = 0;
+        if (yanEffPerGram > 0) {
+            totalNutrientGrams = (yanNeed / yanEffPerGram) * vol;
+        }
+
+        // Pitch Rate advies conform TOSNA 3.0 standaarden
         const pitchRateAdvice = og < 1.100 
-            ? "💡 Pitch Rate: Use exactly 1g yeast per gallon (TOSNA 3.0)."
-            : "💡 Pitch Rate: Standard dosage (2g/gal) recommended.";
+            ? "💡 Pitch Rate: Use exactly 1g yeast per gallon (TOSNA 3.0 Standard)."
+            : "💡 Pitch Rate: Standard high-gravity dosage (2g/gal) recommended.";
 
+        // --- REAL-TIME REACTIVE UI SYNCHRONIZATION ---
         if (resultDiv) {
             resultDiv.innerHTML = `
-                <div class="p-4 bg-primary/5 border-l-4 border-primary rounded-r-xl animate-fade-in">
+                <div class="p-4 bg-primary-container/20 border-l-4 border-primary rounded-r-xl animate-fade-in">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-[10px] uppercase font-bold opacity-60 tracking-widest">TOSNA 3.0 Analysis</span>
+                        <span class="text-[10px] uppercase font-bold opacity-60 tracking-widest">European YAN Engine (v2.6)</span>
                         <span class="bg-primary text-on-primary text-[8px] px-2 py-0.5 rounded-full font-bold">F_gist: ${fGist}</span>
                     </div>
-                    <div class="grid grid-cols-2 gap-4 mb-3">
-                        <div><p class="text-[9px] opacity-60 uppercase">YAN Target</p><p class="font-bold font-header text-lg">${Math.round(yanNeed)} ppm</p></div>
-                        <div><p class="text-[9px] opacity-60 uppercase">Total Fermaid O</p><p class="font-bold font-header text-lg text-primary">${totalFermaidO.toFixed(2)}g</p></div>
+                    <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
+                        <div>
+                            <p class="text-[9px] opacity-60 uppercase">Adjusted YAN Target</p>
+                            <p class="font-bold font-header text-lg">${Math.round(yanNeed)} ppm</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] opacity-60 uppercase">Total ${selectedNutrient.name}</p>
+                            <p class="font-bold font-header text-lg text-primary">${totalNutrientGrams.toFixed(2)} g</p>
+                        </div>
                     </div>
-                    <div class="pt-2 border-t border-primary/10 space-y-1">
-                        <p class="text-[10px] font-medium italic text-on-surface/70">Dosing Schedule (4 steps):</p>
-                        <p class="font-mono text-xs font-bold text-primary border-b border-primary/5 pb-1">${(totalFermaidO / 4).toFixed(2)}g at 24h, 48h, 72h, & 1/3 Sugar Break.</p>
-                        <p class="text-[10px] font-bold text-secondary-onContainer pt-1">${pitchRateAdvice}</p>
+                    <div class="pt-2 border-t border-outline-variant/30 space-y-1 text-xs">
+                        <p class="text-[10px] font-medium italic opacity-80">Dosing Schedule & Phase Constraints:</p>
+                        <p class="font-mono text-[11px] font-bold text-primary border-b border-outline-variant/10 pb-1">
+                            ${(totalNutrientGrams / 4).toFixed(2)} g per dose at 24h, 48h, 72h, & 1/3 Sugar Break.
+                        </p>
+                        <p class="text-[10px] text-on-surface-variant pt-1">
+                            Current Stage: <span class="font-bold">${isFaseTwo ? 'Fase II (Organic Only)' : 'Fase I (Full Assimilation)'}</span>
+                        </p>
+                        ${rehydratieWarningHtml}
+                        ${pitchRateAdvice ? `<p class="text-[10px] font-bold text-secondary-onContainer pt-1">${pitchRateAdvice}</p>` : ''}
+                        ${warningHtml}
                     </div>
                 </div>
             `;
             resultDiv.classList.remove('hidden');
         }
     } catch (error) {
-        window.logSystemError(error, 'TOSNA Metabolism Evaluation', 'ERROR');
-        showToast("Assimilable Nitrogen tracking calculation aborted.", "error");
+        // Gecentraliseerde Foutafhandeling naar de Black Box
+        window.logSystemError(error, 'TOSNA Metabolism Evaluation Matrix', 'ERROR');
+        window.showToast("Assimilable Nitrogen tracking calculation aborted.", "error");
     }
 };
 

@@ -1404,36 +1404,60 @@ function handleWaterSourceChange() {
     }
 
 // --- CALCULATORS ---
-window.calculateABV = function() {
+function calculateTOSNA() {
     try {
-        const ogVal = document.getElementById('og')?.value.replace(/,/g, '.');
-        const fgVal = document.getElementById('fg')?.value.replace(/,/g, '.');
-        const og = parseFloat(ogVal);
-        const fg = parseFloat(fgVal);
-        const resultDiv = document.getElementById('abvResult');
+        const brixInput = document.getElementById('tosna-brix').value;
+        const sgInput = document.getElementById('tosna-sg').value;
+        const yeastFactorInput = document.getElementById('tosna-yeast-factor').value;
+        const bbyMassInput = document.getElementById('tosna-bby-mass').value;
+        const volumeInput = document.getElementById('tosna-volume').value;
 
-        if (isNaN(og) || isNaN(fg)) {
-            window.showToast("Metrics required: Please enter valid parameters for both OG and FG.", "error");
+        const brixStr = brixInput.replace(',', '.');
+        const sgStr = sgInput.replace(',', '.');
+        const yfStr = yeastFactorInput.replace(',', '.');
+        const bbyStr = bbyMassInput.replace(',', '.');
+        const volStr = volumeInput.replace(',', '.');
+
+        const brix = parseFloat(brixStr);
+        const sg = parseFloat(sgStr);
+        const yeastFactor = parseFloat(yfStr); 
+        const mBBY = parseFloat(bbyStr) || 0;
+        const volume = parseFloat(volStr);
+
+        if (isNaN(brix) || isNaN(sg) || isNaN(yeastFactor) || isNaN(volume) || volume <= 0) {
+            window.showToast('Vul alle verplichte velden correct in met numerieke waarden.', 'error');
             return;
         }
 
-        if (og >= 1.775) {
-            window.showToast("Hall Limit Breach: Gravity baseline input equals or exceeds structural limits (max 1.774).", "error");
-            return;
+        // 1. Totale bruto YAN behoefte (TOSNA 3.0 basismodel)
+        const totalYanRequired = brix * sg * yeastFactor * 10; 
+
+        // 2. Wiskundige Sluiting van de YAN-Overhead (BBY Rehydratie aftrek conform v2.6 protocol)
+        const yanBBY = 13.3; // Absolute YAN-gehalte van BBY (13.3 mg N / g)
+        const muBBY = 1.5;   // Conservatieve biologische equivalentie-multiplier vroege fase
+        const yanRehydrationOverhead = (mBBY * yanBBY * muBBY) / volume;
+
+        // Netto resterende YAN-behoefte
+        const netYanRequired = Math.max(0, totalYanRequired - yanRehydrationOverhead);
+
+        // 3. Omrekening naar organische nutriënt-dosering (Fermaid O / Organisch equivalent factor 4.0)
+        // Formule: (Netto YAN / 4.0) * Volume geeft de totale benodigde grammen voor de gehele batch
+        const totalNutrientGrams = (netYanRequired / 4.0) * volume / 1000;
+
+        const resultYanElement = document.getElementById('tosna-result-yan');
+        const resultNutrientElement = document.getElementById('tosna-result-nutrient');
+
+        if (resultYanElement) {
+            resultYanElement.innerText = netYanRequired.toFixed(1) + ' mg/L';
         }
-
-        const abw = (76.08 * (og - fg)) / (1.775 - og);
-        const abv = abw / 0.794;
-
-        if (resultDiv) {
-            resultDiv.innerHTML = `<span class="text-2xl font-bold">${abv.toFixed(2)}%</span> <span class="text-[10px] opacity-60">ABV</span>`;
-            resultDiv.classList.remove('hidden');
+        if (resultNutrientElement) {
+            resultNutrientElement.innerText = totalNutrientGrams.toFixed(2) + ' g';
         }
     } catch (error) {
-        window.logSystemError(error, 'Tools: ABV Equation Calculation', 'ERROR');
-        window.showToast("Algorithmic calculation error. Verify input value formats.", "error");
+        window.logSystemError(error, 'tools.js', 'calculateTOSNA');
+        window.showToast('Er is een fout opgetreden bij de TOSNA-berekening.', 'error');
     }
-};
+}
 
 window.correctHydrometer = function() {
     try {
@@ -1829,6 +1853,13 @@ window.calculateTOSNA = function() {
             bbyConvertDiv.innerHTML = '';
         }
 
+        // Strikte guard clause voor invoer-integriteit
+        if (og >= 1.775) {
+            window.showToast("Fout: Begin-SG (OG) moet strikt kleiner zijn dan 1.775.", "error");
+            if (resultDiv) resultDiv.innerHTML = `<span class="text-xs text-error font-bold">OG Error (< 1.775)</span>`;
+            return;
+        }
+
         if (isNaN(og) || vol <= 0) {
             if (resultDiv) resultDiv.innerHTML = `<span class="text-xs text-on-surface-variant">Vul een geldige begin-SG (1.xxx) en volume in.</span>`;
             return;
@@ -1861,12 +1892,13 @@ window.calculateTOSNA = function() {
         const factors = { 'low': 0.75, 'medium': 0.90, 'high': 1.25 };
         const fGist = factors[yeastKey] || 0.90;
 
+        // Initiële YAN-behoefte conform wiskundig model
         let yanNeed = 10 * brixInit * og * fGist;
 
-        // Rehydratie-BBY Stikstoffractie Correctie
+        // Wiskundige Sluiting van de YAN-Overhead (m_BBY-rehy * 13.3 * 1.75) / V_most
         let rehydratieWarningHtml = "";
         if (isBbyRehydrated && bbyRehydrateMassa > 0) {
-            const yanRehydratie = (bbyRehydrateMassa * 14.7 * 1.5) / vol;
+            const yanRehydratie = (bbyRehydrateMassa * 13.3 * 1.75) / vol;
             yanNeed = Math.max(0, yanNeed - yanRehydratie);
             rehydratieWarningHtml = `
                 <div class="text-[10px] text-green-600 font-medium border-l-2 border-green-500 pl-2 my-1">

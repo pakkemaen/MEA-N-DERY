@@ -8,9 +8,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="new-logo.png">
-    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-
     tailwind.config = {
         darkMode: 'class',
         theme: {
@@ -723,7 +721,7 @@
         </nav>
     </div>
     
-    <div id="calculators-view" class="hidden bg-surface-container card p-6 md:p-8 shadow-elevation-1 overflow-y-auto animate-fade-in max-h-calculator-panel">
+<div id="calculators-view" class="hidden bg-surface-container card p-6 md:p-8 shadow-elevation-1 overflow-y-auto animate-fade-in max-h-calculator-panel">
         <h2 class="text-3xl font-header font-normal mb-6 text-center text-primary">Calculators</h2>
         
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -733,6 +731,17 @@
                     <span class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">AVG</span>
                     <h3 class="text-lg font-bold text-on-surface m-0">ABV Calculator</h3>
                 </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Deze rekenmodule maakt gebruik van de non-lineaire Hall Equation om het alcoholpercentage (ABV) te berekenen uit de begin- en einddichtheid. Door een correctiefactor van 1.775 toe te passen, compenseert het model accuraat voor de complexe dichtheidsverschuivingen die optreden bij zware, suikerrijke mosten. Dit voorkomt de systematische meetafwijkingen die ontstaan bij traditionele lineaire berekeningen.</p>
+                    </div>
+                </details>
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -744,16 +753,27 @@
                             <input type="number" id="fg" step="0.001" placeholder="1.000">
                         </div>
                     </div>
-                    <button id="calcAbvBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-full hover:brightness-110 transition-all">Calculate ABV</button>
+                    <button id="calcAbvBtn" onclick="window.calculateABV()" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-full hover:brightness-110 transition-all">Calculate ABV</button>
                     <div id="abvResult" class="text-center font-bold text-xl text-blue-700 mt-2 h-10 flex items-center justify-center bg-blue-50 rounded-xl"></div>
                 </div>
             </div>
 
             <div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow">
                 <div class="flex items-center gap-3 mb-4">
-                    <span class="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold">TMP</span>
+                    <span class="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs">TMP</span>
                     <h3 class="text-lg font-bold text-on-surface m-0">Hydro Correction</h3>
                 </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>De dichtheid van vloeistoffen verandert op basis van temperatuur doordat de vloeistof uitzet of krimpt. Deze calculator corrigeert de gemeten specifieke dichtheid (SG) mathematisch terug naar de ijkingstemperatuur van uw hydrometer (meestal 20°C). Dit zorgt voor een betrouwbare vergelijking van metingen die bij verschillende temperaturen in de brouwruimte zijn genomen.</p>
+                    </div>
+                </details>
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Measured SG</label>
@@ -769,8 +789,8 @@
                             <input type="number" id="calTemp" value="20">
                         </div>
                     </div>
-                    <button id="correctSgBtn" class="w-full bg-amber-600 text-white font-bold py-3 px-4 rounded-full hover:brightness-110 transition-all">Correct SG</button>
-                    <div id="sgResult" class="text-center font-bold text-xl text-amber-700 mt-2 h-10 flex items-center justify-center bg-amber-50 rounded-xl"></div>
+                    <button id="correctSgBtn" onclick="window.correctHydrometer()" class="w-full bg-amber-600 text-white font-bold py-3 px-4 rounded-full hover:brightness-110 transition-all">Correct SG</button>
+                    <div id="sgResult" class="text-center font-bold text-xs text-amber-700 mt-2 h-10 flex items-center justify-center bg-amber-50 rounded-xl"></div>
                 </div>
             </div>
 
@@ -779,6 +799,17 @@
                     <span class="w-10 h-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold">BRIX</span>
                     <h3 class="text-lg font-bold text-on-surface m-0">Refractometer</h3>
                 </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Zodra de vergisting start, verstoort de aanwezige ethanol de lichtbreking van uw refractometer aanzienlijk. Dit model corrigeert voor deze brekingsindex-aberratie (RI) veroorzaakt door de ethanol molfractie met behulp van het Novotny-correctiemodel en een instelbare Wort Correction Factor (WCF). Hierdoor kunt u ook tijdens de actieve vergisting de werkelijke restsuikers en schijnbare dichtheid betrouwbaar optisch monitoren.</p>
+                    </div>
+                </details>
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Original Brix</label>
@@ -792,7 +823,7 @@
                         <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Wort Correction (WCF)</label>
                         <input type="number" id="refract_wcf" placeholder="1.04" step="0.01" value="1.04">
                     </div>
-                    <button id="calcRefractBtn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-full hover:brightness-110 transition-all">Calculate Gravity</button>
+                    <button id="calcRefractBtn" onclick="window.calculateRefractometerCorrection()" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-full hover:brightness-110 transition-all">Calculate Gravity</button>
                     <div id="refractResult" class="hidden mt-2 p-3 bg-purple-50 rounded-xl text-center text-purple-700 font-medium border border-purple-100"></div>
                 </div>
             </div>
@@ -802,41 +833,116 @@
                     <span class="w-10 h-10 rounded-full bg-app-primary-container text-app-brand flex items-center justify-center font-bold">BX</span>
                     <h3 class="text-lg font-bold text-on-surface m-0">Target Apparent Brix</h3>
                 </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Als u een vergisting op een specifiek restzoetgehalte wilt stoppen via koude of filtering, berekent deze module de exacte optische Brix-waarde die uw refractometer op dat moment zal weergeven. Door rekening te houden met de WCF en de geproduceerde alcohol, weet u exact bij welke schijnbare Brix-meting u de batch moet muteren. Dit elimineert giswerk bij het handhaven van uw doeldichtheid.</p>
+                    </div>
+                </details>
                 <div class="space-y-4">
                     <div class="grid grid-cols-1 gap-2">
                         <input type="number" id="target_brix_og" placeholder="OG (1.xxx)" step="0.001" class="text-xs p-2 rounded-xl border border-outline-variant">
                         <input type="number" id="target_brix_sg" placeholder="Target SG (1.xxx)" step="0.001" class="text-xs p-2 rounded-xl border border-outline-variant">
                     </div>
-                    <button id="calcTargetBrixBtn" class="w-full bg-app-brand text-on-primary font-bold py-3 rounded-full text-xs uppercase tracking-widest hover:brightness-110">Calculate Stop Point</button>
+                    <button id="calcTargetBrixBtn" onclick="window.calculateTargetApparentBrix()" class="w-full bg-app-brand text-on-primary font-bold py-3 rounded-full text-xs uppercase tracking-widest hover:brightness-110">Calculate Stop Point</button>
                     <div id="targetBrixResult" class="hidden mt-2 animate-fade-in"></div>
                 </div>
             </div>
 
             <div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow md:col-span-2 xl:col-span-3">
                 <div class="flex items-center gap-3 mb-4">
-                    <span class="w-10 h-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">NUT</span>
-                    <h3 class="text-lg font-bold text-on-surface m-0">TOSNA 2.0 (Nutrients)</h3>
+                    <span class="w-10 h-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-xs">NUT</span>
+                    <h3 class="text-lg font-bold text-on-surface m-0">European YAN Engine (TOSNA 3.0)</h3>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">OG</label>
-                        <input type="number" id="tosna_og" step="0.001" placeholder="1.100">
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Mede-most bevat van nature vrijwel geen stikstof, wat leidt tot giststress en ongewenste zwavelverbindingen. Dit model evalueert de exponentiële relatie tussen de initiële osmotische stress (OG) en de totale stikstofbehoefte (YAN), verdeeld over een gespreid toedieningsschema (SNA). Bij gebruik van organische nutriënten zoals Fermaid O past het systeem een 4.0 bio-equivalentie multiplier toe om een gecontroleerde, schone metabolisatie te garanderen.</p>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Batch Vol (L)</label>
-                        <input type="number" id="tosna_vol" placeholder="5">
+                </details>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">OG (Start)</label>
+                            <input type="number" id="tosna_og" step="0.001" placeholder="1.100" oninput="window.calculateTOSNA()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Batch Vol (L)</label>
+                            <input type="number" id="tosna_vol" placeholder="5" oninput="window.calculateTOSNA()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Yeast Type</label>
+                            <select id="tosna_yeast" onchange="window.calculateTOSNA()">
+                                <option value="low">Low (e.g. 71B)</option>
+                                <option value="medium" selected>Medium (e.g. D47)</option>
+                                <option value="high">High (e.g. RC-212)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Nutrient Product</label>
+                            <select id="tosna_nutrient" onchange="window.calculateTOSNA()">
+                                <option value="fermaid_o">Fermaid O (Pure Organic)</option>
+                                <option value="fermaid_k">Fermaid K (Hybride)</option>
+                                <option value="nutrisal">Vinoferm Nutrisal (Pure DAP)</option>
+                                <option value="cellvit">Vinoferm Cellvit (Organic)</option>
+                                <option value="nutrimix">Vinoferm Nutrimix (Hybride)</option>
+                                <option value="wyeast_wine">Wyeast Wine Nutrient</option>
+                                <option value="wyeast_beer">Wyeast Beer Nutrient</option>
+                                <option value="engevita">Lallemand Engevita</option>
+                                <option value="bby">Boiled Bread Yeast (BBY)</option>
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Yeast Type</label>
-                        <select id="tosna_yeast">
-                            <option value="low">Low (e.g. 71B)</option>
-                            <option value="medium" selected>Medium (e.g. D47)</option>
-                            <option value="high">High (e.g. RC-212)</option>
-                        </select>
+                    
+                    <div class="p-3 bg-surface-variant/10 rounded-2xl border border-outline-variant/30 space-y-3">
+                        <p class="text-[10px] font-bold uppercase opacity-60 tracking-wider">Live Fermentation & Rehydration Parameters (Advanced Tracking)</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[9px] text-on-surface-variant mb-0.5 ml-1">Current ABV (%)</label>
+                                <input type="number" id="tosna_current_abv" step="0.1" placeholder="0.0" oninput="window.calculateTOSNA()" class="text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] text-on-surface-variant mb-0.5 ml-1">Initial Brix</label>
+                                <input type="number" id="tosna_initial_brix" step="0.1" placeholder="0.0" oninput="window.calculateTOSNA()" class="text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] text-on-surface-variant mb-0.5 ml-1">Current Brix</label>
+                                <input type="number" id="tosna_current_brix" step="0.1" placeholder="0.0" oninput="window.calculateTOSNA()" class="text-xs">
+                            </div>
+                        </div>
+                        
+                        <div class="pt-2 border-t border-outline-variant/20 flex flex-col md:flex-row gap-4 items-center justify-between">
+                            <label class="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                                <input type="checkbox" id="tosna_bby_rehydrate" onchange="window.calculateTOSNA()" class="rounded text-primary w-4 h-4">
+                                Use BBY Rehydration Offset Protocol
+                            </label>
+                            <div class="w-full md:w-1/3">
+                                <input type="number" id="tosna_bby_rehydrate_massa" step="0.1" placeholder="BBY Massa (g)" oninput="window.calculateTOSNA()" class="text-xs p-1">
+                            </div>
+                        </div>
                     </div>
+
+                    <div class="p-3 bg-surface-variant/5 rounded-2xl border border-outline-variant/20 space-y-2">
+                        <p class="text-[10px] font-bold uppercase opacity-60 tracking-wider">Stoichiometric BBY Conversion Interface</p>
+                        <div class="flex gap-2 items-center">
+                            <input type="number" id="tosna_convert_fermaid_massa" step="0.1" placeholder="Massa Fermaid O (g) te converteren" oninput="window.calculateTOSNA()" class="text-xs flex-grow">
+                        </div>
+                        <div id="bbyConversionResult"></div>
+                    </div>
+
+                    <button id="calcTosnaBtn" onclick="window.calculateTOSNA()" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-full hover:brightness-110 transition-all">Calculate Nitrogen Balance</button>
+                    <div id="tosnaResult" class="mt-4 bg-green-50 p-4 rounded-xl hidden empty:hidden text-green-900 border border-green-200"></div>
                 </div>
-                <button id="calcTosnaBtn" class="w-full mt-6 bg-green-600 text-white font-bold py-3 px-4 rounded-full hover:brightness-110 transition-all">Calculate Schedule</button>
-                <div id="tosnaResult" class="mt-4 bg-green-50 p-4 rounded-xl hidden empty:hidden text-green-900 border border-green-200"></div>
             </div>
             
             <div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow">
@@ -844,26 +950,37 @@
                     <span class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">MIX</span>
                     <h3 class="text-lg font-bold text-on-surface m-0">Ternary Blending</h3>
                 </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Bij het samenvoegen van differentiatie-vaten berekent deze module de gewogen massabalansen voor volume, alcoholpercentage en specifieke dichtheid. Daarnaast voert het model een logaritmische waterstofionen-menging uit om de resulterende pH van de blend nauwkeurig te voorspellen. Dit stelt de brouwer in staat om smaakprofielen en zuurgraden gecontroleerd te corrigeren alvorens fysieke menging plaatsvindt.</p>
+                    </div>
+                </details>
                 <div class="space-y-4">
                     <div class="p-3 bg-surface-variant/10 rounded-2xl space-y-2 border border-outline-variant/20">
                         <p class="text-[10px] font-bold uppercase opacity-60 tracking-wider">Liquid A (Base)</p>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="number" id="vol1" placeholder="Vol (L)" class="text-xs">
-                            <input type="number" id="abv1" placeholder="ABV %" class="text-xs">
-                            <input type="number" id="sg1" placeholder="SG (1.xxx)" step="0.001" class="text-xs">
-                            <input type="number" id="ph1" placeholder="pH" step="0.01" class="text-xs">
+                            <input type="number" id="blend_v1" placeholder="Vol (L)" class="text-xs" oninput="window.calculateBlend()">
+                            <input type="number" id="blend_abv1" placeholder="ABV %" class="text-xs" oninput="window.calculateBlend()">
+                            <input type="number" id="blend_sg1" placeholder="SG (1.xxx)" step="0.001" class="text-xs" oninput="window.calculateBlend()">
+                            <input type="number" id="blend_ph1" placeholder="pH" step="0.01" class="text-xs" oninput="window.calculateBlend()">
                         </div>
                     </div>
                     <div class="p-3 bg-surface-variant/10 rounded-2xl space-y-2 border border-outline-variant/20">
                         <p class="text-[10px] font-bold uppercase opacity-60 tracking-wider">Liquid B (Additive)</p>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="number" id="vol2" placeholder="Vol (L)" class="text-xs">
-                            <input type="number" id="abv2" placeholder="ABV %" class="text-xs">
-                            <input type="number" id="sg2" placeholder="SG (1.xxx)" step="0.001" class="text-xs">
-                            <input type="number" id="ph2" placeholder="pH" step="0.01" class="text-xs">
+                            <input type="number" id="blend_v2" placeholder="Vol (L)" class="text-xs" oninput="window.calculateBlend()">
+                            <input type="number" id="blend_abv2" placeholder="ABV %" class="text-xs" oninput="window.calculateBlend()">
+                            <input type="number" id="blend_sg2" placeholder="SG (1.xxx)" step="0.001" class="text-xs" oninput="window.calculateBlend()">
+                            <input type="number" id="blend_ph2" placeholder="pH" step="0.01" class="text-xs" oninput="window.calculateBlend()">
                         </div>
                     </div>
-                    <button id="calcBlendBtn" class="w-full bg-primary text-on-primary font-bold py-3 px-4 rounded-full shadow-sm hover:brightness-110 transition-all text-xs uppercase tracking-widest">
+                    <button id="calcBlendBtn" onclick="window.calculateBlend()" class="w-full bg-primary text-on-primary font-bold py-3 px-4 rounded-full shadow-sm hover:brightness-110 transition-all text-xs uppercase tracking-widest">
                         Calculate Full Blend Profile
                     </button>
                     <div id="blendResult" class="hidden mt-2 p-4 bg-primary-container/20 rounded-2xl border border-primary/20 animate-fade-in"></div>
@@ -875,13 +992,24 @@
                     <span class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">CO2</span>
                     <h3 class="text-lg font-bold text-on-surface m-0">Priming Sugar</h3>
                 </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Flescarbonisatie is gebaseerd op het gecontroleerd hergisten van een exacte hoeveelheid suiker in een afgesloten fles. De calculator stelt eerst vast hoeveel rest-CO₂ er al in de mede is opgelost op basis van de maximale vergistingstemperatuur. Vervolgens berekent het model de aanvullende saccharosemassa die nodig is om uw doelkoolzuurvolume veilig te bereiken zonder flesbommen te riskeren.</p>
+                    </div>
+                </details>
                 <div class="space-y-4">
                     <div class="grid grid-cols-1 gap-2">
                         <input type="number" id="carbVol" placeholder="Target CO2 Volumes" step="0.1" class="text-xs p-2 rounded-xl border border-outline-variant">
                         <input type="number" id="carbTemp" placeholder="Max Temp (°C)" class="text-xs p-2 rounded-xl border border-outline-variant">
                         <input type="number" id="carbBatchSize" placeholder="Batch Size (L)" class="text-xs p-2 rounded-xl border border-outline-variant">
                     </div>
-                    <button id="calcPrimingSugarBtn" class="w-full bg-primary text-on-primary font-bold py-3 rounded-full text-xs uppercase tracking-widest hover:brightness-110">Calculate Sugar</button>
+                    <button id="calcPrimingSugarBtn" onclick="window.calculatePrimingSugar()" class="w-full bg-primary text-on-primary font-bold py-3 rounded-full text-xs uppercase tracking-widest hover:brightness-110">Calculate Sugar</button>
                     <div id="sugarResult" class="hidden mt-2 p-3 bg-primary-container/20 rounded-2xl text-center font-mono font-bold text-sm"></div>
                 </div>
             </div>
@@ -891,6 +1019,17 @@
                     <span class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs">pH+</span>
                     <h3 class="text-lg font-bold text-on-surface m-0">Buffer / TA Adjust</h3>
                 </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Tijdens de vroege lagfase van de vergisting kunnen biologische zuren de pH van de most destructief naar beneden drukken. Deze calculator modelleert het carbonaat-bicarbonaat evenwicht met Kaliumcarbonaat ($K_2CO_3$) om de gistcelwand te beschermen tegen een toxische protonen-gradiënt onder pH 3.2. De ingebouwde interlocks waken daarnaast streng tegen biologische risico's zoals botulisme-ontwikkeling boven pH 4.6.</p>
+                    </div>
+                </details>
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-2">
                         <input type="number" id="buffer_vol" placeholder="Vol (L)" class="text-xs p-2 rounded-xl border border-outline-variant">
@@ -898,7 +1037,7 @@
                         <input type="number" id="buffer_ta_target" placeholder="Tar. TA (g/L)" class="text-xs p-2 rounded-xl border border-outline-variant">
                         <input type="number" id="buffer_ph_current" placeholder="Cur. pH" class="text-xs p-2 rounded-xl border border-outline-variant">
                     </div>
-                    <button id="calcBufferBtn" class="w-full bg-secondary text-on-secondary font-bold py-3 rounded-full text-xs uppercase tracking-widest hover:brightness-110">Calculate Buffer</button>
+                    <button id="calcBufferBtn" onclick="window.calculateBuffer()" class="w-full bg-secondary text-on-secondary font-bold py-3 rounded-full text-xs uppercase tracking-widest hover:brightness-110">Calculate Buffer</button>
                     <div id="bufferResult" class="hidden mt-2 p-3 bg-secondary-container/20 rounded-2xl text-xs space-y-1"></div>
                 </div>
             </div>
@@ -908,6 +1047,17 @@
                     <span class="w-10 h-10 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center font-bold text-xs">SAFE</span>
                     <h3 class="text-lg font-bold text-on-surface m-0">Stabilization</h3>
                 </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Chemische stabilisatie berust op de synergie tussen fungistatisch Kaliumsorbaat gecombineerd met antiseptisch Kaliummetabisulfiet (K-Meta). De vereiste dosis sorbaat schaalt piecewise op basis van het aanwezige alcoholpercentage (ABV), terwijl K-Meta via Henderson-Hasselbalch-regressie strikt afhankelijk is van de pH om exact 0.8 ppm antiseptisch moleculair $SO_2$ te garanderen. Dit voorkomt dat overgebleven cellen uw restsuikers na het bottelen opnieuw gaan vergisten.</p>
+                    </div>
+                </details>
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-2">
                         <input type="number" id="stab_vol" placeholder="Vol (L)" class="text-xs p-2 rounded-xl border border-outline-variant">
@@ -915,7 +1065,11 @@
                         <input type="number" id="stab_fg" placeholder="FG (1.xxx)" step="0.001" class="text-xs p-2 rounded-xl border border-outline-variant">
                         <input type="number" id="stab_ph" placeholder="pH" step="0.01" class="text-xs p-2 rounded-xl border border-outline-variant">
                     </div>
-                    <button id="calcStabilizationBtn" class="w-full bg-tertiary text-on-tertiary font-bold py-3 rounded-full text-xs uppercase tracking-widest hover:brightness-110">Check Delle/Sorbate</button>
+                    <div>
+                        <label class="block text-[9px] font-bold text-on-surface-variant mb-0.5 ml-1">Current Free SO2 (ppm)</label>
+                        <input type="number" id="stab_current_so2" placeholder="0" value="0" class="text-xs p-2 rounded-xl border border-outline-variant">
+                    </div>
+                    <button id="calcStabilizationBtn" onclick="window.calculateStabilization()" class="w-full bg-tertiary text-on-tertiary font-bold py-3 rounded-full text-xs uppercase tracking-widest hover:brightness-110 transition-all">Check Delle/Sorbate</button>
                     <div id="stabilizationResult" class="hidden mt-2 p-3 bg-tertiary-container/20 rounded-2xl text-xs space-y-1"></div>
                 </div>
             </div>
@@ -925,14 +1079,25 @@
                     <span class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">SWT</span>
                     <h3 class="text-lg font-bold text-on-surface m-0">Backsweetening</h3>
                 </div>
-                <div class="space-y-3">
-                    <input type="number" id="bs_current_vol" placeholder="Vol (L)">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="number" id="bs_current_sg" placeholder="Cur SG">
-                        <input type="number" id="bs_target_sg" placeholder="Target SG">
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Wanneer een mede volledig droog is uitgegist, kan er honing worden toegevoegd om het restzoetgehalte te verhogen naar het gewenste smaakprofiel. Deze calculator maakt gebruik van de derdegraads Bates-polynoom om dichtheid (SG) om te zetten naar effectieve suikermassa. Het model berekent vervolgens exact hoeveel gram honing er vereist is op basis van het totale vloeistofvolume en de gewenste doeldichtheid.</p>
                     </div>
-                    <button id="calcBacksweetenBtn" class="w-full bg-primary text-on-primary font-bold py-2 px-4 rounded-full mt-2">Calculate Honey</button>
-                    <div id="backsweetenResult" class="text-center font-bold text-sm text-primary mt-2 h-8 flex items-center justify-center"></div>
+                </details>
+                <div class="space-y-3">
+                    <input type="number" id="bs_current_vol" placeholder="Vol (L)" oninput="window.calculateBacksweetening()">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" id="bs_current_sg" placeholder="Cur SG" oninput="window.calculateBacksweetening()">
+                        <input type="number" id="bs_target_sg" placeholder="Target SG" oninput="window.calculateBacksweetening()">
+                    </div>
+                    <button id="calcBacksweetenBtn" onclick="window.calculateBacksweetening()" class="w-full bg-primary text-on-primary font-bold py-2 px-4 rounded-full mt-2">Calculate Honey</button>
+                    <div id="backsweetenResult" class="mt-2 animate-fade-in"></div>
                 </div>
             </div>
 
@@ -941,13 +1106,24 @@
                     <span class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">DIL</span>
                     <h3 class="text-lg font-bold text-on-surface m-0">Dilution</h3>
                 </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Als een most of mede een te hoge suikerkristal-concentratie of dichtheid bezit, kan er water worden toegevoegd om het volume te verdunnen. Deze calculator evalueert de zogeheten brouwers-dichtheidspunten van de vloeistof om de lineaire volumemutatie te bepalen. Het model berekent exact hoeveel liter water er aan de batch moet worden toegevoegd om gecontroleerd terug te zakken naar uw streef-SG.</p>
+                    </div>
+                </details>
                 <div class="space-y-3">
                     <input type="number" id="dil_start_vol" placeholder="Vol (L)">
                     <div class="grid grid-cols-2 gap-2">
                         <input type="number" id="dil_start_sg" placeholder="Start SG">
                         <input type="number" id="dil_target_sg" placeholder="Target SG">
                     </div>
-                    <button id="calcDilutionBtn" class="w-full bg-primary text-on-primary font-bold py-2 px-4 rounded-full mt-2">Calculate Water</button>
+                    <button id="calcDilutionBtn" onclick="window.calculateDilution()" class="w-full bg-primary text-on-primary font-bold py-2 px-4 rounded-full mt-2">Calculate Water</button>
                     <div id="dilutionResult" class="text-center font-bold text-sm text-primary mt-2 h-8 flex items-center justify-center"></div>
                 </div>
             </div>
@@ -957,32 +1133,47 @@
                     <span class="w-10 h-10 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">BRG</span>
                     <h3 class="text-lg font-bold text-on-surface m-0">Braggot Grist Balance</h3>
                 </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Een Braggot combineert de fermenteerbare suikers uit mout en honing in een afgewogen verhouding, meestal gecentreerd rond een moutfractie tussen de 30% en 50%. Deze module berekent de theoretische begin- en einddichtheden op basis van de specifieke extractopbrengst van DME, LME of suikers. Daarnaast past het model een hop-correctiecoëfficiënt toe om de bitterheidsperceptie (IBU) aan te passen aan de aanwezige honingmatrix.</p>
+                    </div>
+                </details>
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="block text-[10px] font-bold uppercase text-on-surface-variant mb-1 ml-1">Honey (kg)</label>
-                            <input type="number" id="braggot_honey_weight" step="0.01" placeholder="1.50" class="text-xs">
+                            <label class="block text-[10px] font-bold uppercase text-on-surface-variant mb-1 ml-1">Target ABV (%)</label>
+                            <input type="number" id="braggot_target_abv" step="0.1" placeholder="8.0" class="text-xs" oninput="window.calculateBraggot()">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold uppercase text-on-surface-variant mb-1 ml-1">Malt (kg)</label>
-                            <input type="number" id="braggot_malt_weight" step="0.01" placeholder="1.00" class="text-xs">
+                            <label class="block text-[10px] font-bold uppercase text-on-surface-variant mb-1 ml-1">Malt Fraction (0.3-0.5)</label>
+                            <input type="number" id="braggot_malt_fraction" step="0.01" placeholder="0.40" value="0.40" class="text-xs" oninput="window.calculateBraggot()">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="block text-[10px] font-bold uppercase text-on-surface-variant mb-1 ml-1">Volume (L)</label>
-                            <input type="number" id="braggot_target_volume" step="0.1" placeholder="10.0" class="text-xs">
+                            <input type="number" id="braggot_target_volume" step="0.1" placeholder="10.0" class="text-xs" oninput="window.calculateBraggot()">
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold uppercase text-on-surface-variant mb-1 ml-1">Extract</label>
-                            <select id="braggot_extract_type" class="text-xs p-2 border border-outline-variant rounded-xl w-full">
-                                <option value="DME">DME (Dry)</option>
-                                <option value="LME">LME (Liquid)</option>
+                            <select id="braggot_extract_type" onchange="window.calculateBraggot()" class="text-xs p-2 border border-outline-variant rounded-xl w-full">
+                                <option value="DME">DME (Dry Malts)</option>
+                                <option value="LME">LME (Liquid Malts)</option>
                                 <option value="Candy">Sugar Candy</option>
                             </select>
                         </div>
                     </div>
-                    <button id="calcBraggotBtn" class="w-full bg-amber-700 text-white font-bold py-3 px-4 rounded-full text-xs uppercase tracking-widest hover:brightness-110 transition-all">Calculate Braggot</button>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-on-surface-variant mb-1 ml-1">Base Hop Bitter Intensity (IBU)</label>
+                        <input type="number" id="braggot_base_ibu" step="1" placeholder="20" class="text-xs" oninput="window.calculateBraggot()">
+                    </div>
+                    <button id="calcBraggotBtn" onclick="window.calculateBraggot()" class="w-full bg-amber-700 text-white font-bold py-3 px-4 rounded-full text-xs uppercase tracking-widest hover:brightness-110 transition-all">Calculate Braggot</button>
                     <div id="braggotResult" class="hidden mt-2 animate-fade-in"></div>
                 </div>
             </div>
@@ -992,68 +1183,148 @@
                     <span class="w-10 h-10 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs">SPL</span>
                     <h3 class="text-lg font-bold text-on-surface m-0">Split Batch Density</h3>
                 </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Bij het opsplitsen of recombineren van parallelle vaten veranderen de vloeistofvolumes en suikerdichtheden. Deze module modelleert de totale massa- en volumebalans om de resulterende dichtheid (SG) van uw opgesplitste of samengevoegde batches direct te consolideren. Dit garandeert dat uw brouwstatistieken en Single Source of Truth kloppend blijven bij complexe kelder-mutaties.</p>
+                    </div>
+                </details>
                 <div class="space-y-4">
                     <div class="p-3 bg-surface-variant/10 rounded-2xl space-y-2 border border-outline-variant/20">
                         <p class="text-[10px] font-bold uppercase opacity-60 tracking-wider">Base Volume</p>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="number" id="split_v_sub" placeholder="Vol (L)" class="text-xs">
-                            <input type="number" id="split_sg_init" placeholder="SG (1.xxx)" step="0.001" class="text-xs">
+                            <input type="number" id="split_v_sub" placeholder="Vol (L)" class="text-xs" oninput="window.calculateSplitBatch()">
+                            <input type="number" id="split_sg_init" placeholder="SG (1.xxx)" step="0.001" class="text-xs" oninput="window.calculateSplitBatch()">
                         </div>
                     </div>
                     <div class="p-3 bg-surface-variant/10 rounded-2xl space-y-2 border border-outline-variant/20">
                         <p class="text-[10px] font-bold uppercase opacity-60 tracking-wider">Additive / Blending</p>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="number" id="split_v_add" placeholder="Vol (L)" class="text-xs">
-                            <input type="number" id="split_sg_add" placeholder="SG (1.xxx)" step="0.001" class="text-xs">
+                            <input type="number" id="split_v_add" placeholder="Vol (L)" class="text-xs" oninput="window.calculateSplitBatch()">
+                            <input type="number" id="split_sg_add" placeholder="SG (1.xxx)" step="0.001" class="text-xs" oninput="window.calculateSplitBatch()">
                         </div>
                     </div>
-                    <button id="calcSplitBatchBtn" class="w-full bg-teal-700 text-white font-bold py-3 px-4 rounded-full text-xs uppercase tracking-widest hover:brightness-110 transition-all">Align Split Gravity</button>
+                    <button id="calcSplitBatchBtn" onclick="window.calculateSplitBatch()" class="w-full bg-teal-700 text-white font-bold py-3 px-4 rounded-full text-xs uppercase tracking-widest hover:brightness-110 transition-all">Align Split Gravity</button>
                     <div id="splitBatchResult" class="hidden mt-2 animate-fade-in"></div>
+                </div>
+            </div>
+
+            <div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">PSI</span>
+                    <h3 class="text-lg font-bold text-on-surface m-0">Forced Carbonation</h3>
+                </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Geforceerde fustcarbonisatie injecteert onder gecontroleerde druk gasvormig koolzuur direct in de koude mede. Deze engine evalueert de brouwerspolynoom op basis van het beoogde koolzuurvolume en de opslagtemperatuur. Vervolgens past het model een matrix-correctiefactor ($\gamma_{mede}$) toe op basis van het alcoholpercentage en de restsuikers uit de actieve batch-vibe om de vereiste druk in Bar en PSI exact te extraheren.</p>
+                    </div>
+                </details>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Target CO2 Vol</label>
+                            <input type="number" id="carb_engine_volume" step="0.1" placeholder="2.4" oninput="window.calculateCarbonationEngine()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Temp (°C)</label>
+                            <input type="number" id="carb_engine_temp" placeholder="12" oninput="window.calculateCarbonationEngine()">
+                        </div>
+                    </div>
+                    <button id="calcCarbonationEngineBtn" onclick="window.calculateCarbonationEngine()" class="w-full bg-primary text-on-primary font-bold py-3 px-4 rounded-full text-xs uppercase tracking-widest hover:brightness-110 transition-all">Calculate Keg Pressure</button>
+                    <div id="carbonationEngineResult" class="hidden mt-2 animate-fade-in"></div>
+                </div>
+            </div>
+
+            <div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="w-10 h-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-xs">HOP</span>
+                    <h3 class="text-lg font-bold text-on-surface m-0">Dry-Hop Kinetiek</h3>
+                </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>Koude hop-extractie in een secundair hydro-alcoholisch milieu verloopt non-lineair via een eerste-orde dissolutievergelijking. Terwijl essentiële aromatische terpenen (zoals linalool en myrceen) binnen 72 tot 120 uur hun apex-verzadiging bereiken, extraheren wrange planten-polyphenolen veel trager. Dit model bewaakt deze contacttijden rigoureus om hop-burn verkleuringen en grasachtige aberraties (Geranium Taint) proactief uit te sluiten.</p>
+                    </div>
+                </details>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-on-surface-variant mb-1 ml-1">Contact Time (Hours)</label>
+                        <input type="number" id="dryhop_time" placeholder="96" oninput="window.calculateDryHopExtraction()">
+                    </div>
+                    <button id="calcDryHopKineticsBtn" onclick="window.calculateDryHopExtraction()" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-full text-xs uppercase tracking-widest hover:brightness-110 transition-all">Analyze Extraction Curve</button>
+                    <div id="dryhopExtractionResult" class="hidden mt-2 animate-fade-in"></div>
                 </div>
             </div>
 
             <div class="p-6 rounded-3xl bg-surface border border-outline-variant/50 hover:shadow-elevation-2 transition-shadow md:col-span-1 xl:col-span-2">
                 <div class="flex items-center gap-3 mb-4">
                     <span class="w-10 h-10 rounded-full bg-rose-100 text-rose-800 flex items-center justify-center font-bold text-xs">TST</span>
-                    <h3 class="text-lg font-bold text-on-surface m-0">Sommelier Tasting & Rating</h3>
+                    <h3 class="text-lg font-bold text-on-surface m-0">Sommelier Tasting Room</h3>
                 </div>
+                <details class="group bg-surface-variant/20 rounded-xl border border-outline-variant/30 overflow-hidden mb-4 transition-all">
+                    <summary class="p-3 cursor-pointer list-none flex justify-between items-center text-[10px] font-bold uppercase text-on-surface-variant tracking-wider select-none min-h-[44px] hover:bg-surface-variant/40 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span class="text-sm">💡</span> Hoe werkt dit?
+                        </span>
+                        <svg class="w-4 h-4 text-outline transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-3 pt-0 text-xs text-on-surface leading-relaxed border-t border-transparent group-open:border-outline-variant/30 group-open:mt-2">
+                        <p>De Mede-Harmonie Index ($M_{HI}$) modelleert de organoleptische balans door de restsuikers ($C_s$) en de titreetbare zuurgraad (TA) af te wegen tegen een soft-plus gestuurde pH-noemer. Een sigmoïdale onderdrukkingscoëfficiënt compenseert bovendien specifiek voor biochemische flabbiness bij hoge pH-waarden ($\ge 4.25$). Het systeem integreert tevens uw logs om de risico's op reductie-aroma's en *Geranium Taint* sensorisch te valideren.</p>
+                    </div>
+                </details>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-3">
                         <p class="text-[10px] font-bold uppercase text-primary tracking-wider mb-1">1. Analytical Chemistry</p>
                         <div class="grid grid-cols-1 gap-2">
                             <div>
                                 <label class="block text-[9px] font-bold text-on-surface-variant mb-0.5 ml-1">Final Gravity (FG)</label>
-                                <input type="number" id="tasting_fg" step="0.001" placeholder="1.012" class="text-xs">
+                                <input type="number" id="tasting_fg" step="0.001" placeholder="1.012" class="text-xs" oninput="window.calculateTastingAssessment()">
                             </div>
                             <div>
                                 <label class="block text-[9px] font-bold text-on-surface-variant mb-0.5 ml-1">Titratable Acidity (g/L)</label>
-                                <input type="number" id="tasting_ta" step="0.1" placeholder="6.2" class="text-xs">
+                                <input type="number" id="tasting_ta" step="0.1" placeholder="6.2" class="text-xs" oninput="window.calculateTastingAssessment()">
                             </div>
                             <div>
                                 <label class="block text-[9px] font-bold text-on-surface-variant mb-0.5 ml-1">Measured pH</label>
-                                <input type="number" id="tasting_ph" step="0.01" placeholder="3.42" class="text-xs">
+                                <input type="number" id="tasting_ph" step="0.01" placeholder="3.42" class="text-xs" oninput="window.calculateTastingAssessment()">
                             </div>
                         </div>
                     </div>
                     <div class="space-y-2">
                         <p class="text-[10px] font-bold uppercase text-secondary tracking-wider mb-1">2. Organoleptic Attributes</p>
                         <div class="space-y-1 text-xs">
-                            <div class="flex justify-between"><span>Aroma (1-5)</span><input type="number" id="aromaSlider" min="1" max="5" step="0.25" placeholder="4.0" class="w-16 p-1 text-right"></div>
-                            <div class="flex justify-between"><span>Flavor (1-5)</span><input type="number" id="flavorSlider" min="1" max="5" step="0.25" placeholder="4.25" class="w-16 p-1 text-right"></div>
-                            <div class="flex justify-between"><span>Mouthfeel (1-5)</span><input type="number" id="mouthfeelSlider" min="1" max="5" step="0.25" placeholder="3.75" class="w-16 p-1 text-right"></div>
-                            <div class="flex justify-between"><span>Tannin Intensity (1-5)</span><input type="number" id="tanninSlider" min="1" max="5" step="0.1" placeholder="1.5" class="w-16 p-1 text-right"></div>
+                            <div class="flex justify-between"><span>Aroma (1-5)</span><input type="number" id="aromaSlider" min="1" max="5" step="0.25" placeholder="4.0" class="w-16 p-1 text-right" oninput="window.calculateTastingAssessment()"></div>
+                            <div class="flex justify-between"><span>Flavor (1-5)</span><input type="number" id="flavorSlider" min="1" max="5" step="0.25" placeholder="4.25" class="w-16 p-1 text-right" oninput="window.calculateTastingAssessment()"></div>
+                            <div class="flex justify-between"><span>Mouthfeel (1-5)</span><input type="number" id="mouthfeelSlider" min="1" max="5" step="0.25" placeholder="3.75" class="w-16 p-1 text-right" oninput="window.calculateTastingAssessment()"></div>
+                            <div class="flex justify-between"><span>Tannin Intensity (1-5)</span><input type="number" id="tanninSlider" min="1" max="5" step="0.1" placeholder="1.5" class="w-16 p-1 text-right" oninput="window.calculateTastingAssessment()"></div>
                         </div>
                         <div class="pt-2 border-t border-outline-variant/30 text-[10px]">
                             <p class="font-bold text-error uppercase mb-1">Detected Kinetic Off-Flavors</p>
                             <div class="grid grid-cols-2 gap-x-2">
-                                <label class="flex items-center gap-1"><input type="checkbox" id="offflavor_reduction" class="rounded text-error w-3 h-3"> Reduction</label>
-                                <label class="flex items-center gap-1"><input type="checkbox" id="offflavor_fusels" class="rounded text-error w-3 h-3"> Fusel Stress</label>
-                                <label class="flex items-center gap-1"><input type="checkbox" id="offflavor_geranium" class="rounded text-error w-3 h-3"> Geranium</label>
+                                <label class="flex items-center gap-1"><input type="checkbox" id="offflavor_reduction" onchange="window.calculateTastingAssessment()" class="rounded text-error w-3 h-3"> Reduction</label>
+                                <label class="flex items-center gap-1"><input type="checkbox" id="offflavor_fusels" onchange="window.calculateTastingAssessment()" class="rounded text-error w-3 h-3"> Fusel Stress</label>
+                                <label class="flex items-center gap-1"><input type="checkbox" id="offflavor_geranium" onchange="window.calculateTastingAssessment()" class="rounded text-error w-3 h-3"> Geranium</label>
                             </div>
                         </div>
                     </div>
                 </div>
-                <button id="calcTastingAssessmentBtn" class="w-full mt-4 bg-rose-700 text-white font-bold py-3 px-4 rounded-full text-xs uppercase tracking-widest hover:brightness-110 transition-all">Evaluate Profile & Sync</button>
+                <button id="calcTastingAssessmentBtn" onclick="window.calculateTastingAssessment()" class="w-full mt-4 bg-rose-700 text-white font-bold py-3 px-4 rounded-full text-xs uppercase tracking-widest hover:brightness-110 transition-all">Evaluate Profile & Sync</button>
                 <div id="tasting-assessment-output" class="hidden mt-3"></div>
             </div>
 
@@ -1065,32 +1336,32 @@
                 <div class="space-y-3">
                     <div>
                         <label class="block text-[9px] font-bold uppercase text-on-surface-variant mb-0.5 ml-1">Volume (L)</label>
-                        <input type="number" id="match_water_vol" placeholder="20.0" class="text-xs p-1">
+                        <input type="number" id="match_water_vol" placeholder="20.0" class="text-xs p-1" oninput="window.calculateWaterMatching()">
                     </div>
                     <div class="grid grid-cols-2 gap-2 bg-surface-variant/10 p-2 rounded-xl border border-outline-variant/20">
                         <div class="space-y-1">
                             <p class="text-[8px] font-bold uppercase text-center opacity-60">Source (ppm)</p>
-                            <input type="number" id="match_source_ca" placeholder="Ca" class="text-[10px] p-1">
-                            <input type="number" id="match_source_mg" placeholder="Mg" class="text-[10px] p-1">
-                            <input type="number" id="match_source_so4" placeholder="SO4" class="text-[10px] p-1">
-                            <input type="number" id="match_source_cl" placeholder="Cl" class="text-[10px] p-1">
+                            <input type="number" id="match_source_ca" placeholder="Ca" class="text-[10px] p-1" oninput="window.calculateWaterMatching()">
+                            <input type="number" id="match_source_mg" placeholder="Mg" class="text-[10px] p-1" oninput="window.calculateWaterMatching()">
+                            <input type="number" id="match_source_so4" placeholder="SO4" class="text-[10px] p-1" oninput="window.calculateWaterMatching()">
+                            <input type="number" id="match_source_cl" placeholder="Cl" class="text-[10px] p-1" oninput="window.calculateWaterMatching()">
                         </div>
                         <div class="space-y-1">
                             <p class="text-[8px] font-bold uppercase text-center opacity-60">Target (ppm)</p>
-                            <input type="number" id="match_target_ca" placeholder="Ca" class="text-[10px] p-1">
-                            <input type="number" id="match_target_mg" placeholder="Mg" class="text-[10px] p-1">
-                            <input type="number" id="match_target_so4" placeholder="SO4" class="text-[10px] p-1">
-                            <input type="number" id="match_target_cl" placeholder="Cl" class="text-[10px] p-1">
+                            <input type="number" id="match_target_ca" placeholder="Ca" class="text-[10px] p-1" oninput="window.calculateWaterMatching()">
+                            <input type="number" id="match_target_mg" placeholder="Mg" class="text-[10px] p-1" oninput="window.calculateWaterMatching()">
+                            <input type="number" id="match_target_so4" placeholder="SO4" class="text-[10px] p-1" oninput="window.calculateWaterMatching()">
+                            <input type="number" id="match_target_cl" placeholder="Cl" class="text-[10px] p-1" oninput="window.calculateWaterMatching()">
                         </div>
                     </div>
-                    <button id="calcWaterMatchingBtn" class="w-full bg-cyan-700 text-white font-bold py-2.5 px-4 rounded-full text-xs uppercase tracking-widest hover:brightness-110 transition-all">Match Water Salts</button>
+                    <button id="calcWaterMatchingBtn" onclick="window.calculateWaterMatching()" class="w-full bg-cyan-700 text-white font-bold py-2.5 px-4 rounded-full text-xs uppercase tracking-widest hover:brightness-110 transition-all">Match Water Salts</button>
                     <div id="waterMatchingResult" class="hidden mt-2 animate-fade-in"></div>
                 </div>
             </div>
 
         </div>
     </div>
- 
+         
     <div id="labels-view" class="hidden mt-6 animate-fade-in">
         <span id="displayLabelYeast" class="hidden"></span>
         <span id="displayLabelHoney" class="hidden"></span>

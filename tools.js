@@ -25,39 +25,6 @@ const BUILT_IN_WATER_PROFILES = {
 
 let userWaterProfiles = [];
 
-// --- SETTINGS MANAGEMENT ---
-async function saveUserSettings() {
-    if (!state.userId) return;
-    
-    try {
-        const untappdClientIdInput = document.getElementById('untappd-client-id');
-        const untappdClientSecretInput = document.getElementById('untappd-client-secret');
-        
-        let untappdClientId = untappdClientIdInput ? untappdClientIdInput.value.trim() : '';
-        let untappdClientSecret = untappdClientSecretInput ? untappdClientSecretInput.value.trim() : '';
-        
-        // Comma-to-Dot protocol sanitisatie (indien numerieke tokens/ids abusievelijk komma's bevatten)
-        untappdClientId = untappdClientId.replace(/,/g, '.');
-        untappdClientSecret = untappdClientSecret.replace(/,/g, '.');
-
-        state.settings = state.settings || {};
-        state.settings.untappdClientId = untappdClientId;
-        state.settings.untappdClientSecret = untappdClientSecret;
-
-        const userDocRef = doc(db, 'users', state.userId);
-        await updateDoc(userDocRef, {
-            'settings.untappdClientId': untappdClientId,
-            'settings.untappdClientSecret': untappdClientSecret,
-            'settings.updatedAt': serverTimestamp ? serverTimestamp() : new Date().toISOString()
-        });
-
-        window.showToast('Untappd instellingen succesvol opgeslagen!', 'success');
-    } catch (error) {
-        window.logSystemError(error, 'tools.js: saveUserSettings (Untappd Extension)', 'ERROR');
-        window.showToast('Fout bij het opslaan van Untappd instellingen.', 'error');
-    }
-}
-
 function toggleUntappdSecretVisibility() {
     try {
         const secretInput = document.getElementById('untappd-client-secret');
@@ -143,10 +110,30 @@ async function saveUserSettings() {
     if (!state.userId) return;
     
     try {
-        const apiKeyVal = document.getElementById('apiKeyInput').value.trim();
-        const batchSizeInput = document.getElementById('defaultBatchSizeInput').value.replace(/,/g, '.');
-        const wcfInput = parseFloat(document.getElementById('wcfInput')?.value.replace(/,/g, '.')) || 1.00;
+        // --- 1. DOM EXTRACTIE & NULL-SAFE PROTOCOL (v2.6) ---
+        const apiKeyInputEl = document.getElementById('apiKeyInput');
+        const defaultBatchSizeInputEl = document.getElementById('defaultBatchSizeInput');
+        const wcfInputEl = document.getElementById('wcfInput');
+        const defaultCurrencyInputEl = document.getElementById('defaultCurrencyInput');
+        const defaultCarbonationInputEl = document.getElementById('defaultCarbonationInput');
+        const themeToggleCheckboxEl = document.getElementById('theme-toggle-checkbox');
+        const aiModelInputEl = document.getElementById('aiModelInput');
+        const chatModelInputEl = document.getElementById('chatModelInput');
+        const imageModelInputEl = document.getElementById('imageModelInput');
+        const untappdClientIdInputEl = document.getElementById('untappd-client-id');
+        const untappdClientSecretInputEl = document.getElementById('untappd-client-secret');
 
+        // --- 2. COMMA-TO-DOT & DATA SANITISATIE ---
+        const apiKeyVal = apiKeyInputEl ? apiKeyInputEl.value.trim() : '';
+        const batchSizeInput = defaultBatchSizeInputEl ? defaultBatchSizeInputEl.value.replace(/,/g, '.') : '5';
+        const wcfInput = wcfInputEl ? parseFloat(wcfInputEl.value.replace(/,/g, '.')) : 1.00;
+
+        let untappdClientId = untappdClientIdInputEl ? untappdClientIdInputEl.value.trim() : '';
+        let untappdClientSecret = untappdClientSecretInputEl ? untappdClientSecretInputEl.value.trim() : '';
+        untappdClientId = untappdClientId.replace(/,/g, '.');
+        untappdClientSecret = untappdClientSecret.replace(/,/g, '.');
+
+        // --- 3. HARD VALIDATION CONSTRAINTS ---
         if (wcfInput < 1.00 || wcfInput > 1.04) {
             showToast("WCF allocation must be calibrated between 1.00 and 1.04.", "error");
             return;
@@ -156,30 +143,51 @@ async function saveUserSettings() {
             showToast("Warning: AI integration engines (recipes, diagnosis chat) require a valid API Key configuration.", "warning");
         }
         
+        // --- 4. DATA STRUCTUUR CONSTRUCTIE ---
         const newSettings = {
             apiKey: apiKeyVal,
             defaultBatchSize: parseFloat(batchSizeInput) || 5, 
-            currencySymbol: document.getElementById('defaultCurrencyInput').value || '€',
-            carbonationMethod: document.getElementById('defaultCarbonationInput').value,
+            currencySymbol: defaultCurrencyInputEl ? defaultCurrencyInputEl.value : '€',
+            carbonationMethod: defaultCarbonationInputEl ? defaultCarbonationInputEl.value : 'bottle',
             wcf: wcfInput,
-            theme: document.getElementById('theme-toggle-checkbox').checked ? 'dark' : 'light',
-            // Defensieve extractie van actieve AI-modellen via optionele chaining en fallback strings (v2.6)
-            aiModel: document.getElementById('aiModelInput')?.value || '',
-            chatModel: document.getElementById('chatModelInput')?.value || '',
-            imageModel: document.getElementById('imageModelInput')?.value || ''
+            theme: (themeToggleCheckboxEl && themeToggleCheckboxEl.checked) ? 'dark' : 'light',
+            aiModel: aiModelInputEl ? aiModelInputEl.value : '',
+            chatModel: chatModelInputEl ? chatModelInputEl.value : '',
+            imageModel: imageModelInputEl ? imageModelInputEl.value : ''
         };
         
-        await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main'), newSettings, { merge: true });
+        // --- 5. FIRESTORE PIPELINE COMMITS & PATH STANDARDIZATION ---
+        // Opslag van hoofdinstellingen (Main Configuration Path)
+        const mainSettingsRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
+        await setDoc(mainSettingsRef, newSettings, { merge: true });
         
+        // Opslag van Untappd Extensie parameters (User Document Extension Path)
+        const userDocRef = doc(db, 'users', state.userId);
+        await updateDoc(userDocRef, {
+            'settings.untappdClientId': untappdClientId,
+            'settings.untappdClientSecret': untappdClientSecret,
+            'settings.updatedAt': (typeof serverTimestamp === 'function') ? serverTimestamp() : new Date().toISOString()
+        });
+
+        // --- 6. SINGLE SOURCE OF TRUTH (STATE) SYNCHRONISATIE ---
         state.userSettings = { ...state.userSettings, ...newSettings }; 
-        applySettings();
-        showToast("Settings saved!", "success");
+        
+        state.settings = state.settings || {};
+        state.settings.untappdClientId = untappdClientId;
+        state.settings.untappdClientSecret = untappdClientSecret;
+
+        // --- 7. ECOSYSTEEM TRIGGERS & TOASTS ---
+        if (typeof applySettings === 'function') {
+            applySettings();
+        }
+        
+        showToast("Settings saved successfully!", "success");
         
         if (window.tempState?.activeBrewId && typeof window.renderFermentationGraph === 'function') {
             window.renderFermentationGraph(window.tempState.activeBrewId);
         }
     } catch (error) {
-        window.logSystemError(error, 'User Settings Modification Certification', 'ERROR');
+        window.logSystemError(error, 'User Settings Modulation & Untappd Certification Chain', 'ERROR');
         showToast("System error: Unable to commit user configuration parameters.", "error");
     }
 }

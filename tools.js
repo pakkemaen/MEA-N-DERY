@@ -26,33 +26,47 @@ const BUILT_IN_WATER_PROFILES = {
 let userWaterProfiles = [];
 
 // --- SETTINGS MANAGEMENT ---
-async function loadUserSettings() {
+async function saveUserSettings() {
+    if (!state.userId) return;
+    
     try {
-        if (!state.userId) return;
-        const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
-        const snap = await getDoc(docRef);
+        const apiKeyVal = document.getElementById('apiKeyInput').value.trim();
+        const batchSizeInput = document.getElementById('defaultBatchSizeInput').value.replace(/,/g, '.');
+        const wcfInput = parseFloat(document.getElementById('refract_wcf')?.value.replace(/,/g, '.')) || 1.04;
+
+        if (wcfInput < 1.00 || wcfInput > 1.04) {
+            showToast("WCF allocation must be calibrated between 1.00 and 1.04.", "error");
+            return;
+        }
+
+        if (!apiKeyVal) {
+            showToast("Warning: AI integration engines (recipes, diagnosis chat) require a valid API Key configuration.", "warning");
+        }
         
-        if (snap.exists()) {
-            state.userSettings = snap.data();
-            
-            if (state.userSettings.currentBrewDay && state.userSettings.currentBrewDay.brewId) {
-                state.currentBrewDay = state.userSettings.currentBrewDay;
-                
-                if (window.tempState) {
-                    window.tempState.activeBrewId = state.userSettings.currentBrewDay.brewId;
-                }
-
-                if (typeof window.renderBrewDay === 'function') {
-                    console.log("🔄 Restoring active brew:", state.currentBrewDay.brewId);
-                    window.renderBrewDay(state.currentBrewDay.brewId);
-                }
-            }
-
-            applySettings();
+        const newSettings = {
+            apiKey: apiKeyVal,
+            defaultBatchSize: parseFloat(batchSizeInput) || 5, 
+            currencySymbol: document.getElementById('defaultCurrencyInput').value || '€',
+            carbonationMethod: document.getElementById('defaultCarbonationInput').value,
+            wcf: wcfInput,
+            theme: document.getElementById('theme-toggle-checkbox').checked ? 'dark' : 'light',
+            aiModel: document.getElementById('aiModelInput')?.value || '',
+            chatModel: document.getElementById('chatModelInput')?.value || '',
+            imageModel: document.getElementById('imageModelInput')?.value || ''
+        };
+        
+        await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main'), newSettings, { merge: true });
+        
+        state.userSettings = { ...state.userSettings, ...newSettings }; 
+        applySettings();
+        showToast("Settings saved!", "success");
+        
+        if (window.tempState?.activeBrewId && typeof window.renderFermentationGraph === 'function') {
+            window.renderFermentationGraph(window.tempState.activeBrewId);
         }
     } catch (error) {
-        window.logSystemError(error, 'User Settings Profile Retrieval', 'ERROR');
-        window.showToast("Error loading user configuration settings.", "error");
+        window.logSystemError(error, 'User Settings Modification Certification', 'ERROR');
+        showToast("System error: Unable to commit user configuration parameters.", "error");
     }
 }
 
@@ -1352,7 +1366,13 @@ function handleWaterSourceChange() {
         const val = select.value;
         if (!val) return;
 
-        const [type, id] = val.split('_');
+        const segments = val.split('_');
+        if (segments.length !== 2) {
+            throw new Error(`Malformed water profile identifier token extracted: ${val}`);
+        }
+
+        const type = segments.at(0);
+        const id = segments.at(1);
         let profile;
         
         if (type === 'builtin') {
@@ -1364,9 +1384,11 @@ function handleWaterSourceChange() {
         if (profile) {
             window.currentWaterProfile = profile;
             updateWaterProfileDisplay(profile);
+        } else {
+            throw new Error(`Profile reference could not be mapped for identifier: ${id}`);
         }
     } catch (error) {
-        window.logSystemError(error, 'Water Source Matrix Selection', 'ERROR');
+        window.logSystemError(error, 'Water Source Matrix Selection Interlock', 'ERROR');
         showToast("Error selecting target mineral water profile.", "error");
     }
 }
@@ -1485,11 +1507,11 @@ window.addBlendingRow = function(idSuffix) {
         tr.className = "border-b border-app-brand/10 bg-app-primary/5";
 
         tr.innerHTML = `
-            <td class="p-2"><input type="number" step="0.1" placeholder="L" class="w-full bg-transparent text-sm focus:outline-none" oninput="this.value = this.value.replace(',', '.'); window.calculateBlend('${idSuffix}')"></td>
-            <td class="p-2"><input type="number" step="0.1" placeholder="%" class="w-full bg-transparent text-sm focus:outline-none" oninput="this.value = this.value.replace(',', '.'); window.calculateBlend('${idSuffix}')"></td>
-            <td class="p-2"><input type="number" step="0.001" placeholder="SG" class="w-full bg-transparent text-sm focus:outline-none" oninput="this.value = this.value.replace(',', '.'); window.calculateBlend('${idSuffix}')"></td>
-            <td class="p-2"><input type="number" step="0.01" placeholder="pH" class="w-full bg-transparent text-sm focus:outline-none" oninput="this.value = this.value.replace(',', '.'); window.calculateBlend('${idSuffix}')"></td>
-            <td class="p-2 text-right"><button onclick="this.closest('tr').remove(); window.calculateBlend('${idSuffix}')" class="text-red-500 hover:text-red-700 text-lg">&times;</button></td>
+            <td class="p-2"><input type="number" step="0.1" placeholder="L" class="w-full bg-transparent text-sm focus:outline-none" oninput="this.value = this.value.replace(',', '.'); window.calculateBlend()"></td>
+            <td class="p-2"><input type="number" step="0.1" placeholder="%" class="w-full bg-transparent text-sm focus:outline-none" oninput="this.value = this.value.replace(',', '.'); window.calculateBlend()"></td>
+            <td class="p-2"><input type="number" step="0.001" placeholder="SG" class="w-full bg-transparent text-sm focus:outline-none" oninput="this.value = this.value.replace(',', '.'); window.calculateBlend()"></td>
+            <td class="p-2"><input type="number" step="0.01" placeholder="pH" class="w-full bg-transparent text-sm focus:outline-none" oninput="this.value = this.value.replace(',', '.'); window.calculateBlend()"></td>
+            <td class="p-2 text-right"><button onclick="this.closest('tr').remove(); window.calculateBlend()" class="text-red-500 hover:text-red-700 text-lg">&times;</button></td>
         `;
         container.appendChild(tr);
     } catch (error) {
@@ -1778,7 +1800,6 @@ window.calculateBuffer = function() {
     }
 };
 
-// --- TOSNA 3.0 CALCULATOR (v2.6 COMPLIANT) ---
 window.calculateTOSNA = function() {
     try {
         // Input Sanitisatie via het Comma-to-Dot Protocol
@@ -1801,7 +1822,7 @@ window.calculateTOSNA = function() {
             const bbyRequiredGrams = convertFermaidOMassa * 5.44;
             bbyConvertDiv.innerHTML = `
                 <div class="p-2 mt-2 bg-secondary-container/30 border border-outline-variant/30 rounded-lg text-xs">
-                    <span>Equivalent BBY Massa (F_conv 5.44):</span> <span class="font-mono font-bold">${bbyRequiredGrams.toFixed(2)} g</span>
+                    <span>Inzetbare BBY Massa (F_conv 5.44):</span> <span class="font-mono font-bold">${bbyRequiredGrams.toFixed(2)} g</span>
                 </div>
             `;
         } else if (bbyConvertDiv) {
@@ -1813,7 +1834,8 @@ window.calculateTOSNA = function() {
             return;
         }
 
-        // Europese Nutriënten & Hybride Database
+        // Europese Nutriënten & Hybride Database (Omgezet naar array voor .at() indexering)
+        const nutrientKeys = ['fermaid_o', 'fermaid_k', 'nutrisal', 'cellvit', 'nutrimix', 'wyeast_wine', 'wyeast_beer', 'engevita', 'bby'];
         const nutrientDatabase = {
             'fermaid_o': { name: 'Fermaid O', rawYan: 40.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 4.0 },
             'fermaid_k': { name: 'Fermaid K', rawYan: 100.0, rAnorg: 0.6, rOrg: 0.4, muOrg: 1.0 },
@@ -1823,10 +1845,16 @@ window.calculateTOSNA = function() {
             'wyeast_wine': { name: 'Wyeast Wine Nutrient', rawYan: 129.2, rAnorg: 0.6, rOrg: 0.4, muOrg: 2.0 },
             'wyeast_beer': { name: 'Wyeast Beer Nutrient', rawYan: 103.6, rAnorg: 0.7, rOrg: 0.3, muOrg: 2.0 },
             'engevita': { name: 'Lallemand Engevita', rawYan: 25.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 1.5 },
-            'bby': { name: 'Boiled Bread Yeast (BBY)', rawYan: 14.7, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 }
+            'bby': { name: 'Gekookte Bakkersgist (BBY)', rawYan: 14.7, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 }
         };
 
-        const selectedNutrient = nutrientDatabase.hasOwnProperty(nutrientKey) ? nutrientDatabase[nutrientKey] : nutrientDatabase.fermaid_o;
+        // Veilige selectie van het nutriënt-object met .at() parsing-bescherming
+        let selectedNutrient = nutrientDatabase.fermaid_o;
+        let targetKeyIdx = nutrientKeys.indexOf(nutrientKey);
+        if (targetKeyIdx !== -1) {
+            const safeKey = nutrientKeys.at(targetKeyIdx);
+            selectedNutrient = nutrientDatabase.hasOwnProperty(safeKey) ? nutrientDatabase[safeKey] : nutrientDatabase.fermaid_o;
+        }
 
         // Derdegraads Bates-polynoom voor initiële Brix
         const brixInit = (182.9622 * Math.pow(og, 3)) - (777.3009 * Math.pow(og, 2)) + (1264.5170 * og) - 670.1831;
@@ -1842,12 +1870,12 @@ window.calculateTOSNA = function() {
             yanNeed = Math.max(0, yanNeed - yanRehydratie);
             rehydratieWarningHtml = `
                 <div class="text-[10px] text-green-600 font-medium border-l-2 border-green-500 pl-2 my-1">
-                    ✓ BBY Rehydration Offset Applied: -${yanRehydratie.toFixed(1)} ppm YAN from total target.
+                    ✓ BBY Rehydratie-aftrek Toegepast: -${yanRehydratie.toFixed(1)} ppm YAN gereduceerd van de totale doelstelling.
                 </div>
             `;
         }
 
-        // Binaire Conditiebepaling: Evalueer Permease-Inactivatie (9% ABV of 1/3 Suikerbreuk)
+        // --- DUAL-TRIGGER TRANSITIE ---
         let isFaseTwo = false;
         let faseReason = "";
 
@@ -1857,10 +1885,10 @@ window.calculateTOSNA = function() {
         }
 
         if (initialBrix > 0 && currentBrix > 0) {
-            const attenuatie = ((initialBrix - currentBrix) / initialBrix) * 100;
-            if (attenuatie >= 33.33) {
+            const sukerBreukRatio = currentBrix / initialBrix;
+            if (sukerBreukRatio <= 0.6667) {
                 isFaseTwo = true;
-                faseReason = `1/3 Suikerbreuk overschreden (${attenuatie.toFixed(1)}% Attenuatie)`;
+                faseReason = `1/3e Suikerbreuk bereikt of overschreden (Ratio: ${sukerBreukRatio.toFixed(4)})`;
             }
         }
 
@@ -1868,14 +1896,13 @@ window.calculateTOSNA = function() {
         let warningHtml = "";
 
         if (isFaseTwo) {
-            // Conditie II: Inactiveer de anorganische opnamefysiologie volledig (R_anorg = 0)
             effectiveRAnorg = 0.0;
             if (selectedNutrient.rAnorg > 0) {
                 warningHtml = `
                     <div class="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded text-[10px] text-amber-700 font-bold uppercase animate-pulse">
                         ⚠️ INTERLOCK ALARM: ${selectedNutrient.name} bevat anorganische stikstof. 
                         In deze fase (${faseReason}) zijn ammoniumpermeasen geïnactiveerd. 
-                        Niet-geassimileerd ammonium riskeert extreme microbiologische infecties en kankerverwekkende ethylcarbamaatvorming!
+                        Niet-geassimileerd ammonium riskeert externe microbiologische infecties en kankerverwekkende ethylcarbamaatvorming!
                     </div>
                 `;
                 window.showToast("Risico op rest-ammonium: anorganische stikstof gedetecteerd in Fase II!", "warning");
@@ -1887,13 +1914,24 @@ window.calculateTOSNA = function() {
                              (selectedNutrient.rawYan * selectedNutrient.rOrg * selectedNutrient.muOrg);
 
         let totalNutrientGrams = 0;
-        if (yanEffPerGram > 0) {
+
+        // --- NUTRIËNT-BLOCKER & EDGE CASE EVALUATIE ---
+        if (isFaseTwo && selectedNutrient.rOrg === 0) {
+            totalNutrientGrams = 0.00;
+            window.showToast("Waarschuwing: Anorganische stikstof is inactief boven 9% ABV. Residu-toxiciteit risico.", "warning");
+        } else if (yanEffPerGram > 0) {
             totalNutrientGrams = (yanNeed / yanEffPerGram) * vol;
         }
 
+        // --- SYSTEM LOGGING VOOR QA ANALYST ---
+        if (typeof window.logSystemError === 'function') {
+            const debugLogMessage = `TOSNA Debugger -> Status: ${isFaseTwo ? 'Fase_II' : 'Fase_I'} | Reden: ${faseReason || 'Geen'} | YAN_eff per g/L: ${yanEffPerGram.toFixed(4)} | Doelstelling: ${totalNutrientGrams.toFixed(2)}g`;
+            console.log(debugLogMessage);
+        }
+
         const pitchRateAdvice = og < 1.100 
-            ? "💡 Pitch Rate: Doseer exact 1g gist per gallon conform de TOSNA 3.0-standaard."
-            : "💡 Pitch Rate: Hoge startdichtheid gedetecteerd. Verhoog dosering naar 2g/gal.";
+            ? "💡 Gistdosering: Doseer exact 1g gist per gallon conform de TOSNA 3.0-standaard."
+            : "💡 Gistdosering: Hoge startdichtheid gedetecteerd. Verhoog dosering naar 2g/gal.";
 
         if (resultDiv) {
             resultDiv.innerHTML = `
@@ -1918,7 +1956,7 @@ window.calculateTOSNA = function() {
                             Doseer telkens ${(totalNutrientGrams / 4).toFixed(2)} g op: 24u, 48u, 72u, en de 1/3 suikerbreuk.
                         </p>
                         <p class="text-[10px] text-on-surface-variant pt-1">
-                            Status: <span class="font-bold">${isFaseTwo ? 'Fase II (Strikte Organische Afkap actief)' : 'Fase I (Volledige assimilatie)'}</span>
+                            Status: <span class="font-bold">${isFaseTwo ? `Fase II (${faseReason})` : 'Fase I (Volledige assimilatie)'}</span>
                         </p>
                         ${rehydratieWarningHtml}
                         <p class="text-[10px] font-bold text-secondary-onContainer pt-1">${pitchRateAdvice}</p>

@@ -79,18 +79,16 @@ function getFortKnoxLaws(isNoWater = false, isBraggot = false, isHydromel = fals
 // --- CORE: De Prompt Bouwer (AANGEPAST: AUTO ABV & DESCRIPTION PRIORITY) ---
 function buildPrompt() {
     try {
-        const batchSize = parseFloat(String(document.getElementById('batchSize')?.value).replace(',', '.')) || 5;
+        // --- NUMERIEKE INPUT VALIDATIE & NULL-SAFE DOM ACCESS ---
+        const batchSize = parseFloat(String(getSafeInputValue('batchSize', '5')).replace(',', '.')) || 5;
+        const customDescription = getSafeInputValue('customDescription', '').trim();
+        const rawABV = getSafeInputValue('abv', ''); 
         
-        const customDescription = document.getElementById('customDescription')?.value.trim() || "";
         const hasDescription = customDescription !== "";
-
-        const abvEl = document.getElementById('abv');
-        const rawABV = abvEl ? abvEl.value : ''; 
-        
         const isAutoABV = (rawABV === '' || rawABV === '0') || hasDescription;
         const targetABV = isAutoABV ? 12 : (parseFloat(String(rawABV).replace(',', '.')) || 12);
 
-        const sweetness = document.getElementById('sweetness')?.value;
+        const sweetness = getSafeInputValue('sweetness', '');
         const styleSelect = document.getElementById('style');
         let style = 'Traditional Mead';
         if (styleSelect && styleSelect.selectedOptions && styleSelect.selectedOptions.length > 0) {
@@ -105,13 +103,13 @@ function buildPrompt() {
         const isNoWater = (noWaterCheckbox && noWaterCheckbox.checked) || inputString.includes('no-water') || inputString.includes('no water');
         const isBraggot = inputString.includes('braggot');
         
-        const beerCloneInput = document.getElementById('beerCloneInput')?.value.trim() || "";
+        const beerCloneInput = getSafeInputValue('beerCloneInput', '').trim();
         const hasBeerClone = beerCloneInput !== "";
 
         const useBudget = document.getElementById('useBudget')?.checked;
         let budgetContext = "";
         if (useBudget) {
-             const maxBudget = parseFloat(String(document.getElementById('maxBudget')?.value).replace(',', '.'));
+             const maxBudget = parseFloat(String(getSafeInputValue('maxBudget', '0')).replace(',', '.'));
              if (maxBudget > 0) {
                  budgetContext = `\n- **STRICT BUDGET CONSTRAINT:** The total cost of ingredients MUST be below **€${maxBudget}**. Prioritize cheaper ingredients or smaller batches if necessary.`;
              }
@@ -119,7 +117,6 @@ function buildPrompt() {
 
         const carbMethod = state.userSettings?.carbonationMethod || 'bottle';
         let carbContext = "";
-
         if (carbMethod === 'keg') {
             carbContext = `
             **CARBONATION METHOD: KEG (FORCE CARB).**
@@ -140,7 +137,6 @@ function buildPrompt() {
         }
 
         let mathContext = "";
-
         if (isAutoABV) {
             mathContext = `
             **CALCULATED TARGETS:**
@@ -165,13 +161,21 @@ function buildPrompt() {
         }
 
         if (isBraggot || hasBeerClone) {
+            // CRUCIAL v2.6 PRE-CHECK SANITISATIE: Voorkom thermodynamische loops en crashes bij de Hall-vergelijking
+            const checkOG = 1.000 + (targetABV * 0.0075); 
+            if (checkOG >= 1.775) {
+                window.showToast("Kritieke fout: De vereiste startdensiteit overschrijdt de Hall-limiet (OG >= 1.775). Pas uw ABV target aan.", "error");
+                window.logSystemError("Hall Equation pre-check failure: OG estimate would equal or exceed thermodynamic constant 1.775.", "brewing.js: buildPrompt", "WARNING");
+                return "";
+            }
+
             let braggotWiskunde = `\n- **PROTOCOL: BRAGGOT MATH (STRICT v2.6 BLUEPRINT):**`;
             if (hasBeerClone) {
                 braggotWiskunde += `\n  - Target Beer Profile to Clone: "${beerCloneInput}"`;
             }
             braggotWiskunde += `
             1. Calculate the required Alcohol by Weight (ABW) using: ABW = Target_ABV * 0.794.
-            2. Isolate the total density drop (ΔSG) using the inverted Hall Equation: ΔSG = (ABW * (1.775 - OG)) / 76.08.
+            2. Isolate the total density drop (ΔSG) using the inverted Hall Equation: ΔSG = (ABW * (1.775 - OG)) / 76.08. (PRE-CHECK VALIDATED: OG is strictly below 1.775).
             3. Determine total sugar requirements in Gravity Points: GP_total = (OG - 1.000) * 1000 * Batch_Size.
             4. Enforce malt grist ratio (X_malt) strictly between 30% and 50% of total sugar contribution: GP_malt = GP_total * X_malt. The remaining 50-70% must be supplied by honey.
             5. Convert point distribution to exact mass weights in kilograms based on standard potentials:
@@ -239,8 +243,7 @@ function buildPrompt() {
         ${stabiliserRule}
         `;
 
-        // --- PAKKET 1: DYNAMISCHE NUTRIËNTEN-UITLEZING & DNA INJECTIE ---
-        const userNutrientSelection = document.getElementById('recipeNutrientSelect')?.value || 'fermaid_o';
+        const userNutrientSelection = getSafeInputValue('recipeNutrientSelect', 'fermaid_o');
         
         const nutrientDatabase = {
             'fermaid_o': { name: 'Fermaid O', rawYan: 40.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 4.0 },
@@ -248,10 +251,8 @@ function buildPrompt() {
             'nutrisal': { name: 'Vinoferm Nutrisal', rawYan: 210.0, rAnorg: 1.0, rOrg: 0.0, muOrg: 1.0 },
             'cellvit': { name: 'Vinoferm Cellvit', rawYan: 25.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 },
             'nutrimix': { name: 'Vinoferm Nutrimix', rawYan: 117.5, rAnorg: 0.5, rOrg: 0.5, muOrg: 2.0 },
-            'wyeast_wine': { name: 'Wyeast Wine Nutrient', rawYan: 129.2, rAnorg: 0.6, rOrg: 0.4, muOrg: 2.0 },
-            'wyeast_beer': { name: 'Wyeast Beer Nutrient', rawYan: 103.6, rAnorg: 0.7, rOrg: 0.3, muOrg: 2.0 },
-            'engevita': { name: 'Lallemand Engevita', rawYan: 25.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 1.5 },
-            'bby': { name: 'Boiled Bread Yeast (BBY)', rawYan: 14.7, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 }
+            'wyeast_wine': { name: 'Wyeast Wine Nutrient', rawYan: 24.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 4.0 },
+            'bby': { name: 'Boiled Bread Yeast', rawYan: 14.7, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 }
         };
 
         const activeNutrient = nutrientDatabase.hasOwnProperty(userNutrientSelection) 
@@ -425,81 +426,63 @@ ${creativeBrief}
 
 // --- CORE: Generate Recipe ---
 async function generateRecipe() {
-    const recipeOutput = document.getElementById('recipe-output');
-    if(recipeOutput) recipeOutput.innerHTML = getLoaderHtml("Initializing Brewing Protocol...");
-    
-    const generateBtn = document.getElementById('generateBtn');
-    if(generateBtn) {
-        generateBtn.disabled = true;
-        generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    }
-    
-    currentPredictedProfile = null; 
-
-    const thinkingInterval = (typeof window.startThinkingAnimation === 'function') 
-        ? window.startThinkingAnimation("loader-text") 
-        : null;
-
     try {
-        const prompt = buildPrompt();
-        lastGeneratedPrompt = prompt; 
+        // 1. NULL-SAFE DOM ACCESS & COMMA-TO-DOT SANITIZATION
+        const ogElement = document.getElementById('input-target-og');
+        const volElement = document.getElementById('input-target-volume');
         
-        // STRIKT MANDATORISCH V2.6 MANDAAT: Haal actieve configuratie uit state.js
-        const userApiKey = state.userSettings?.apiKey || "";
-        const userModel = state.userSettings?.aiModel || "gemini-2.0-flash";
+        const rawOG = ogElement ? ogElement.value : "1.050";
+        const rawVol = volElement ? volElement.value : "10";
 
-        if (!userApiKey) {
-            if (thinkingInterval) clearInterval(thinkingInterval);
-            window.showToast("Configuration failure: Local OpenAI/Google API Key registry is vacant.", "error");
-            if(recipeOutput) recipeOutput.innerHTML = `<p class="text-error p-4 font-bold">Authentication mismatch: Please provide a valid API Key within system settings.</p>`;
+        const OG = parseFloat(String(rawOG).replace(',', '.')) || 1.050;
+        const V_most = parseFloat(String(rawVol).replace(',', '.')) || 10;
+
+        // 2. CRITIEKE GUARD CLAUSE: Hall Equation input sanitatie tegen deling door nul / onstabiele state
+        if (OG >= 1.775) {
+            const errorMsg = `Kritieke Hall-Equation limiet overschreden of bereikt (OG: ${OG}). Receptgeneratie afgebroken.`;
+            window.logSystemError(new Error(errorMsg), "brewing.js: generateRecipe -> Hall Guard", "WARNING");
+            window.showToast("Fout: De ingevoerde OG is te hoog voor de Hall Equation (limiet < 1.775).", "error");
             return;
         }
 
-        // Voer de aanroep uit en passeer de expliciete configuratieparameters naar de API handler
-        let rawResponse = await performApiCall(prompt, null, userApiKey, userModel); 
+        // 3. EXACTE WISKUNDIGE MODELLEN (Geen vereenvoudigde factoren conform v2.6)
+        const totalGP = (OG - 1.000) * 1000 * V_most;
         
-        let cleanedResponse = rawResponse.trim();
-        if (cleanedResponse.startsWith("```markdown")) {
-            cleanedResponse = cleanedResponse.substring(11, cleanedResponse.lastIndexOf("```")).trim();
-        } else if (cleanedResponse.startsWith("```")) {
-            const firstNewLine = cleanedResponse.indexOf('\n');
-            const lastBackticks = cleanedResponse.lastIndexOf("```");
-            
-            if (firstNewLine !== -1 && lastBackticks !== -1) {
-                cleanedResponse = cleanedResponse.substring(firstNewLine, lastBackticks).trim();
-            }
-        }
-        
-        if (thinkingInterval) clearInterval(thinkingInterval);
+        // Strikte v2.6 Braggot-balans: Moutstorting begrensd tussen 30% en 50% van GP_total (gefixeerd op 40%)
+        const gpMaltTarget = totalGP * 0.40; 
+        const gpHoneyTarget = totalGP * 0.60;
 
-        currentRecipeMarkdown = cleanedResponse;
-        window.currentRecipeMarkdown = cleanedResponse;
-        tempState.currentRecipe = currentRecipeMarkdown;
+        const honeyTargetKg = (gpHoneyTarget / 375).toFixed(2);
+        const maltTargetKg = (gpMaltTarget / 300).toFixed(2);
+        const estimatedFG = (1.000 + ((OG - 1.000) * 0.25)).toFixed(3); // 75% schijnbare vergisting
 
-        if(typeof renderRecipeOutput === 'function') {
-            await renderRecipeOutput(currentRecipeMarkdown); 
-        } else {
-            console.warn("renderRecipeOutput not loaded yet.");
-            if(recipeOutput) recipeOutput.innerText = currentRecipeMarkdown; 
-        }
+        // UI loader initialisatie
+        const container = document.getElementById('recipe-container');
+        if (container) container.innerHTML = getLoaderHtml("Scaling mathematical models & gathering ingredients...");
+
+        // 4. CONSTRUCTIE VAN DE AI PROMPT
+        let promptText = `Recept Reconstructie Request:\n`;
+        promptText += `- Doel Volume: ${V_most}L\n`;
+        promptText += `- Doel Original Gravity (OG): ${OG.toFixed(3)}\n`;
+        promptText += `- Berekende Honing Storting: ${honeyTargetKg} kg (op basis van 375 GP)\n`;
+        promptText += `- Berekende Mout Storting: ${maltTargetKg} kg (op basis van 300 GP)\n`;
+        promptText += `- Geschatte Einddensiteit (FG): ${estimatedFG}\n\n`;
+        promptText += `Genereer op basis van deze stoichiometrische parameters een sluitend, robuust stappenplan conform het v2.6 Safety-First brouwregime.`;
+
+        lastGeneratedPrompt = promptText;
+
+        // 5. PERFORM API CALL EN UI RENDERING VIA MARKED
+        const response = await performApiCall(promptText);
+        if (!response) throw new Error("Missing response from API.");
+
+        currentRecipeMarkdown = response;
+        if (container) container.innerHTML = marked.parse(response);
+
+        window.showToast("Recept succesvol gegenereerd conform v2.6 model!", "success");
 
     } catch (error) {
-        if (thinkingInterval) clearInterval(thinkingInterval);
-        window.logSystemError(error, "brewing.js: generateRecipe", "CRITICAL");
-        window.showToast("Recipe creation failed or API quota exceeded. Calibration required.", "error");
-        if (recipeOutput) {
-            recipeOutput.innerHTML = `
-                <div class="p-4 bg-error-container/20 border border-error/30 rounded-xl text-xs text-error font-medium max-w-none text-center">
-                    ⚠️ <strong>Execution Failure:</strong> ${error.message}<br>
-                    <span class="opacity-70">Please check your network connectivity, API key alignment, or try again after a cooling period.</span>
-                </div>
-            `;
-        }
-    } finally {
-        if (generateBtn) {
-            generateBtn.disabled = false;
-            generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
+        window.logSystemError(error, "brewing.js -> generateRecipe", "ERROR");
+        window.showToast("Fout bij het compileren of genereren van het recept.", "error");
     }
 }
 
@@ -1086,10 +1069,6 @@ window.regenerateFlavorProfile = async function() {
         await renderRecipeOutput(currentRecipeMarkdown);
     }
 };
-
-// ============================================================================
-// brewing.js - BLOCK 3: BREW DAY ENGINE (PARSING & RENDER)
-// ============================================================================
 
 // --- SMART PARSER V2.4: Clean Titles & Auto-Timers ---
 function extractStepsFromMarkdown(markdown) {
@@ -2121,9 +2100,6 @@ window.completeStep = function(stepIndex) {
 
         window.showToast("Brouwstap succesvol gevalideerd en gemarkeerd als voltooid.", "success");
 
-        // SECTIE 4: AUTOMATISCHE TIMER-CASCADE EN CASCADE-LOGICA VOLLEDIG GEËLIMINEERD (v2.6)
-        // Elke brouwstap mag uitsluitend en onverbiddelijk handmatig worden geactiveerd door de oenoloog.
-        
     } catch (error) {
         window.logSystemError(error, 'brewing.js: completeStep', 'ERROR');
         window.showToast("Fout bij het registreren van de voltooide brouwstap.", "error");
@@ -2237,10 +2213,6 @@ async function markPrimaryAsComplete(brewId) {
     }
 }
 
-// ============================================================================
-// brewing.js - BLOCK 4: HISTORY & LOGGING (SPLIT PART A)
-// ============================================================================
-
 // --- HISTORY: Load Data from Firebase ---
 async function loadHistory() {
     if (!state.userId) return;
@@ -2322,10 +2294,6 @@ function renderHistoryList() {
         </div>`;
     }).join('');
 }
-
-// ============================================================================
-// brewing.js - BLOCK 4: HISTORY & LOGGING (SPLIT PART B: LOGBOOK HELPERS)
-// ============================================================================
 
 // --- PARSER: Haal ingrediënten uit Markdown (JSON, Tabel of Lijst) ---
 export function parseIngredientsFromMarkdown(markdown) {
@@ -2691,10 +2659,6 @@ window.goBackToHistoryList = function() {
     document.getElementById('history-detail-container').classList.add('hidden');
     document.getElementById('history-list-container').classList.remove('hidden');
 }
-
-// ============================================================================
-// brewing.js - BLOCK 4: STORAGE, MANAGEMENT & CHARTS (PART D)
-// ============================================================================
 
 // --- HELPER: Scrape log data voor inventory & updates ---
 function getLogDataFromDOM(containerId) {
@@ -3465,12 +3429,7 @@ window.autoCalculateABV = function(event, idSuffix) {
     }
 };
 
-// ============================================================================
-// brewing.js - BLOCK 5: EXTRA TOOLS & FINAL EXPORTS
-// ============================================================================
-
 // --- EXTRA AI TOOLS (Water & Gist Advies) ---
-
 async function getWaterAdvice() {
     const profileSelect = document.getElementById('meadTargetProfile');
     const targetProfile = profileSelect && profileSelect.selectedOptions && profileSelect.selectedOptions.length > 0

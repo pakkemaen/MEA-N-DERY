@@ -257,7 +257,6 @@ window.analyzeAgingPotential = async function() {
     }
 }
 
-// --- BOTTLE BATCH (SMARTER CLOSURE LOGIC V2 - FIX POTASSIUM CARBONATE BUG) ---
 window.bottleBatch = async function(e) {
     e.preventDefault();
     if (!currentBrewToBottleId) return;
@@ -271,22 +270,28 @@ window.bottleBatch = async function(e) {
         const originalBrew = state.brews.find(b => b.id === currentBrewToBottleId);
         if (!originalBrew) throw new Error("Could not find the original recipe.");
 
+        // Strikte numerieke sanitisatie via sanitizeInput / parseInt op DOM elementen met de safe wrapper
+        const qty750Clean = parseInt(String(getSafeInputValue('qty750', '0')).replace(',', '.')) || 0;
+        const qty500Clean = parseInt(String(getSafeInputValue('qty500', '0')).replace(',', '.')) || 0;
+        const qty330Clean = parseInt(String(getSafeInputValue('qty330', '0')).replace(',', '.')) || 0;
+        const qty250Clean = parseInt(String(getSafeInputValue('qty250', '0')).replace(',', '.')) || 0;
+
         const bottlesData = [
-            { size: 750, quantity: parseInt(document.getElementById('qty750').value) || 0, price: null },
-            { size: 500, quantity: parseInt(document.getElementById('qty500').value) || 0, price: null },
-            { size: 330, quantity: parseInt(document.getElementById('qty330').value) || 0, price: null },
-            { size: 250, quantity: parseInt(document.getElementById('qty250').value) || 0, price: null },
+            { size: 750, quantity: qty750Clean, price: null },
+            { size: 500, quantity: qty500Clean, price: null },
+            { size: 330, quantity: qty330Clean, price: null },
+            { size: 250, quantity: qty250Clean, price: null },
             ...customBottles
         ].filter(b => b.quantity > 0 && b.size > 0);
 
         if (bottlesData.length === 0) throw new Error("Enter quantity for at least one bottle.");
 
         let totalLitersBottled = 0;
-        bottlesData.forEach(b => totalLitersBottled += (b.size * b.quantity) / 1000);
+        bottlesData.forEach(b => totalLitersBottled += (sanitizeInput(b.size) * sanitizeInput(b.quantity)) / 1000);
 
         const currentLogVol = (originalBrew.logData && originalBrew.logData.currentVolume && parseFloat(originalBrew.logData.currentVolume) > 0) 
-                              ? parseFloat(originalBrew.logData.currentVolume) 
-                              : originalBrew.batchSize;
+                              ? sanitizeInput(originalBrew.logData.currentVolume) 
+                              : sanitizeInput(originalBrew.batchSize);
 
         let volumeUpdatePayload = {}; 
         
@@ -298,7 +303,7 @@ window.bottleBatch = async function(e) {
             }
         }
 
-        const closureType = document.getElementById('closureTypeSelect').value;
+        const closureType = document.getElementById('closureTypeSelect')?.value || 'auto';
         const outOfStockItems = [];
         let totalBottles = 0;
 
@@ -308,121 +313,117 @@ window.bottleBatch = async function(e) {
                 const stockId = `bottle_${bottle.size}`;
                 const currentStock = state.packagingCosts[stockId]?.qty || 0;
                 if (bottle.quantity > currentStock) {
-                    outOfStockItems.push(`${bottle.quantity} x ${bottle.size}ml bottle(s)`);
+                    outOfStockItems.push(`${bottle.quantity}x ${bottle.size}ml Bottle (Stock: ${currentStock})`);
                 }
             }
         });
 
-        if (closureType === 'auto') {
-            const closuresNeeded = { cork: 0, crown_cap_26: 0, crown_cap_29: 0 };
-            const recipeText = (originalBrew.recipeMarkdown || "").toLowerCase();
-            const isSparkling = recipeText.includes('sparkling') || recipeText.includes('pet-nat') || recipeText.includes('bottle carbonat') || recipeText.includes('priming sugar') || recipeText.includes('force carbonat');
-
-            bottlesData.forEach(b => {
-                if (b.size >= 750) {
-                    if (isSparkling) closuresNeeded.crown_cap_29 += b.quantity;
-                    else closuresNeeded.cork += b.quantity;
-                } else if (b.size === 500) {
-                    if (isSparkling) closuresNeeded.crown_cap_26 += b.quantity;
-                    else closuresNeeded.cork += b.quantity;
-                } else {
-                    closuresNeeded.crown_cap_26 += b.quantity;
-                }
-            });
-
-            if (closuresNeeded.cork > (state.packagingCosts['cork']?.qty || 0)) outOfStockItems.push(`Not enough Corks`);
-            if (closuresNeeded.crown_cap_26 > (state.packagingCosts['crown_cap_26']?.qty || 0)) outOfStockItems.push(`Not enough 26mm Caps`);
-            if (closuresNeeded.crown_cap_29 > (state.packagingCosts['crown_cap_29']?.qty || 0)) outOfStockItems.push(`Not enough 29mm Caps`);
-            
-        } else {
-            if (totalBottles > (state.packagingCosts[closureType]?.qty || 0)) outOfStockItems.push(`Not enough ${closureType}`);
+        if (closureType !== 'none') {
+            const closureStockId = closureType === 'cork' ? 'cork' : (closureType === 'crown_29' ? 'crown_cap_29' : 'crown_cap_26');
+            const closureStock = state.packagingCosts[closureStockId]?.qty || 0;
+            if (totalBottles > closureStock) {
+                outOfStockItems.push(`${totalBottles}x ${closureType} (Stock: ${closureStock})`);
+            }
         }
 
-        if (totalBottles > (state.packagingCosts['label']?.qty || 0)) outOfStockItems.push(`Not enough Labels`);
-        if (outOfStockItems.length > 0) throw new Error(`Stock missing:\n- ${outOfStockItems.join('\n- ')}`);
+        if (outOfStockItems.length > 0) {
+            if (!confirm(`⚠️ PACKAGING STOCK DEFICIT:\n${outOfStockItems.join('\n')}\n\nProceed and allow negative stock values?`)) {
+                throw new Error("Bottling halted due to insufficient stock configuration.");
+            }
+        }
 
-        const packCosts = (typeof getPackagingCosts === 'function') ? getPackagingCosts() : {};
         let totalPackagingCost = 0;
-        
-        bottlesData.forEach(b => {
-             const bCost = b.price !== null ? b.price : (packCosts[b.size] || 0);
-             let closureCost = closureType === 'auto' ? (packCosts.cork || 0.10) : (packCosts[closureType] || 0);
-             totalPackagingCost += b.quantity * (bCost + closureCost + (packCosts.label || 0));
+        const processedBottlesArray = [];
+
+        bottlesData.forEach(bottle => {
+            let itemPrice = 0;
+            if (bottle.price !== null) {
+                itemPrice = sanitizeInput(bottle.price);
+            } else {
+                const stockId = `bottle_${bottle.size}`;
+                itemPrice = sanitizeInput(state.packagingCosts[stockId]?.price || 0);
+            }
+            totalPackagingCost += itemPrice * sanitizeInput(bottle.quantity);
+            
+            processedBottlesArray.push({
+                size: sanitizeInput(bottle.size),
+                quantity: sanitizeInput(bottle.quantity),
+                price: itemPrice
+            });
         });
-        
-        const finalTotalCost = (originalBrew.totalCost || 0) + totalPackagingCost;
+
+        if (closureType !== 'none') {
+            const closureStockId = closureType === 'cork' ? 'cork' : (closureType === 'crown_29' ? 'crown_cap_29' : 'crown_cap_26');
+            const closurePrice = sanitizeInput(state.packagingCosts[closureStockId]?.price || 0);
+            totalPackagingCost += closurePrice * totalBottles;
+        }
+
+        const baseIngredientsCost = sanitizeInput(originalBrew.estimatedCost || 0);
+        const finalTotalCost = baseIngredientsCost + totalPackagingCost;
 
         if (confirm(`Total Cost (with packaging): €${finalTotalCost.toFixed(2)}. Proceed?`)) {
             const deduct = (id, qty) => {
-                if (state.packagingCosts[id]) state.packagingCosts[id].qty = Math.max(0, state.packagingCosts[id].qty - qty);
+                if (state.packagingCosts[id]) {
+                    state.packagingCosts[id].qty = Math.max(0, sanitizeInput(state.packagingCosts[id].qty) - sanitizeInput(qty));
+                }
             };
-            
-            bottlesData.forEach(b => { if(b.price === null) deduct(`bottle_${b.size}`, b.quantity); });
-            
-            if (closureType === 'auto') {
-                const isSparkling = (originalBrew.recipeMarkdown || "").toLowerCase().includes('sparkling') || (originalBrew.recipeMarkdown || "").toLowerCase().includes('bottle carbonat');
-                bottlesData.forEach(b => {
-                    if (b.size >= 750) {
-                        if (isSparkling) deduct('crown_cap_29', b.quantity);
-                        else deduct('cork', b.quantity);
-                    } else if (b.size === 500) {
-                        if (isSparkling) deduct('crown_cap_26', b.quantity);
-                        else deduct('cork', b.quantity);
-                    } else {
-                        deduct('crown_cap_26', b.quantity);
-                    }
-                });
-            } else {
-                deduct(closureType, totalBottles);
+
+            bottlesData.forEach(b => { if (b.price === null) deduct(`bottle_${b.size}`, b.quantity); });
+            if (closureType !== 'none') {
+                const closureStockId = closureType === 'cork' ? 'cork' : (closureType === 'crown_29' ? 'crown_cap_29' : 'crown_cap_26');
+                deduct(closureStockId, totalBottles);
             }
-            deduct('label', totalBottles);
+
+            if (typeof window.savePackagingCosts === 'function') {
+                await window.savePackagingCosts();
+            }
+
+            const peakDateVal = getSafeInputValue('peakFlavorDate', '');
+            const peakReasonVal = getSafeInputValue('peakFlavorReason', '');
+
+            const cellarCol = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar');
             
-            await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'packaging'), state.packagingCosts);
-
-            const bottlingDate = new Date(document.getElementById('bottlingDate').value);
-            const peakDate = document.getElementById('peakFlavorDate').value || null;
-            const peakReason = document.getElementById('peakFlavorReason').value || '';
-
-            const cellarData = {
-                userId: state.userId, brewId: currentBrewToBottleId,
-                recipeName: originalBrew.recipeName,
-                bottlingDate,
-                bottles: bottlesData.map(({price, ...rest}) => rest),
-                totalBatchCost: finalTotalCost,
-                ingredientCost: originalBrew.totalCost || 0,
-                peakFlavorDate: peakDate,
-                peakFlavorJustification: peakReason
-            };
-
-            await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'cellar'), cellarData);
-
-            await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', currentBrewToBottleId), {
-                isBottled: true,
-                peakFlavorDate: peakDate,
-                ...volumeUpdatePayload
+            // Gevalideerde en gesaneerde addDoc payload
+            await addDoc(cellarCol, {
+                brewId: currentBrewToBottleId,
+                recipeName: originalBrew.recipeName || 'Onbekende Mede',
+                bottlingDate: getSafeInputValue('bottlingDate', new Date().toISOString().split('T').at(0)),
+                bottles: processedBottlesArray,
+                peakFlavorDate: peakDateVal,
+                peakFlavorReason: peakReasonVal,
+                totalPackagingCost: sanitizeInput(totalPackagingCost),
+                finalTotalCost: sanitizeInput(finalTotalCost),
+                abv: originalBrew.logData?.finalABV ? sanitizeInput(originalBrew.logData.finalABV) : 12,
+                fg: originalBrew.logData?.finalGravity ? sanitizeInput(originalBrew.logData.finalGravity) : 1.000,
+                status: "Rijpend",
+                notes: `Gebotteld met sluitingstype: ${closureType}.`,
+                createdAt: new Date()
             });
 
-            if (state.currentBrewDay.brewId === currentBrewToBottleId) {
-                state.currentBrewDay = { brewId: null };
-                if(window.saveUserSettings) await window.saveUserSettings();
-            }
+            const brewDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', currentBrewToBottleId);
+            const updatedPayload = {
+                status: "Gebotteld",
+                ...volumeUpdatePayload
+            };
+            await updateDoc(brewDocRef, updatedPayload);
 
-            hideBottlingModal();
-            showToast("Batch bottled successfully!", "success");
+            window.hideBottlingModal();
+            window.showToast("Batch succesvol overgedragen naar de rijpingskelder!", "success");
             
-            if(typeof renderBrewDay === 'function') renderBrewDay('none');
-            switchMainView('management');
-            switchSubView('state.cellar', 'management-main-view');
+            if (typeof window.switchMainView === 'function') {
+                window.switchMainView('cellar');
+            }
         }
-
     } catch (error) {
         window.logSystemError(error, 'inventory.js -> bottleBatch', 'ERROR');
-        showToast(error.message, "error");
+        window.showToast(error.message || "Fout bij het bottelen.", "error");
     } finally {
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalButtonText;
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
+        }
     }
-}
+};
 
 // --- INVENTORY MANAGEMENT FUNCTIONS ---
 

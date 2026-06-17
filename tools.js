@@ -30,43 +30,50 @@ async function saveUserSettings() {
     if (!state.userId) return;
     
     try {
-        const apiKeyVal = document.getElementById('apiKeyInput').value.trim();
-        const batchSizeInput = document.getElementById('defaultBatchSizeInput').value.replace(/,/g, '.');
-        const wcfInput = parseFloat(document.getElementById('refract_wcf')?.value.replace(/,/g, '.')) || 1.04;
+        const untappdClientIdInput = document.getElementById('untappd-client-id');
+        const untappdClientSecretInput = document.getElementById('untappd-client-secret');
+        
+        let untappdClientId = untappdClientIdInput ? untappdClientIdInput.value.trim() : '';
+        let untappdClientSecret = untappdClientSecretInput ? untappdClientSecretInput.value.trim() : '';
+        
+        // Comma-to-Dot protocol sanitisatie (indien numerieke tokens/ids abusievelijk komma's bevatten)
+        untappdClientId = untappdClientId.replace(/,/g, '.');
+        untappdClientSecret = untappdClientSecret.replace(/,/g, '.');
 
-        if (wcfInput < 1.00 || wcfInput > 1.04) {
-            showToast("WCF allocation must be calibrated between 1.00 and 1.04.", "error");
-            return;
-        }
+        state.settings = state.settings || {};
+        state.settings.untappdClientId = untappdClientId;
+        state.settings.untappdClientSecret = untappdClientSecret;
 
-        if (!apiKeyVal) {
-            showToast("Warning: AI integration engines (recipes, diagnosis chat) require a valid API Key configuration.", "warning");
-        }
+        const userDocRef = doc(db, 'users', state.userId);
+        await updateDoc(userDocRef, {
+            'settings.untappdClientId': untappdClientId,
+            'settings.untappdClientSecret': untappdClientSecret,
+            'settings.updatedAt': serverTimestamp ? serverTimestamp() : new Date().toISOString()
+        });
+
+        window.showToast('Untappd instellingen succesvol opgeslagen!', 'success');
+    } catch (error) {
+        window.logSystemError(error, 'tools.js: saveUserSettings (Untappd Extension)', 'ERROR');
+        window.showToast('Fout bij het opslaan van Untappd instellingen.', 'error');
+    }
+}
+
+function toggleUntappdSecretVisibility() {
+    try {
+        const secretInput = document.getElementById('untappd-client-secret');
+        const toggleIcon = document.getElementById('untappd-secret-toggle-icon');
         
-        const newSettings = {
-            apiKey: apiKeyVal,
-            defaultBatchSize: parseFloat(batchSizeInput) || 5, 
-            currencySymbol: document.getElementById('defaultCurrencyInput').value || '€',
-            carbonationMethod: document.getElementById('defaultCarbonationInput').value,
-            wcf: wcfInput,
-            theme: document.getElementById('theme-toggle-checkbox').checked ? 'dark' : 'light',
-            aiModel: document.getElementById('aiModelInput')?.value || '',
-            chatModel: document.getElementById('chatModelInput')?.value || '',
-            imageModel: document.getElementById('imageModelInput')?.value || ''
-        };
+        if (!secretInput) return;
         
-        await setDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main'), newSettings, { merge: true });
-        
-        state.userSettings = { ...state.userSettings, ...newSettings }; 
-        applySettings();
-        showToast("Settings saved!", "success");
-        
-        if (window.tempState?.activeBrewId && typeof window.renderFermentationGraph === 'function') {
-            window.renderFermentationGraph(window.tempState.activeBrewId);
+        if (secretInput.type === 'password') {
+            secretInput.type = 'text';
+            if (toggleIcon) toggleIcon.textContent = 'visibility_off';
+        } else {
+            secretInput.type = 'password';
+            if (toggleIcon) toggleIcon.textContent = 'visibility';
         }
     } catch (error) {
-        window.logSystemError(error, 'User Settings Modification Certification', 'ERROR');
-        showToast("System error: Unable to commit user configuration parameters.", "error");
+        window.logSystemError(error, 'tools.js: toggleUntappdSecretVisibility', 'ERROR');
     }
 }
 
@@ -3031,3 +3038,5 @@ window.exportInventory = exportInventory;
 window.clearCollection = clearCollection;
 window.calculateCarbonationEngine = calculateCarbonationEngine;
 window.calculateDryHopExtraction = calculateDryHopExtraction;
+window.saveUserSettings = saveUserSettings;
+window.toggleUntappdSecretVisibility = toggleUntappdSecretVisibility;

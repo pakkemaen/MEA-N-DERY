@@ -2951,6 +2951,60 @@ window.deleteBrew = async function(brewId) {
     }
 };
 
+async function cloneTopUntappdBeer(event) {
+    try {
+        const button = event ? event.currentTarget : null;
+        const targetRecipeId = button ? button.getAttribute('data-id') : null;
+
+        const clientId = state.settings?.untappdClientId;
+        const clientSecret = state.settings?.untappdClientSecret;
+
+        if (!clientId || !clientSecret) {
+            window.showToast('Untappd API-credentials ontbreken in de instellingen!', 'error');
+            return;
+        }
+
+        // Aanroep via gecentraliseerde performApiCall wrapper naar Untappd endpoint
+        const endpoint = `https://api.untappd.com/v4/user/beers?client_id=${clientId}&client_secret=${clientSecret}&sort=highest_rated&limit=1`;
+        
+        window.showToast('Topbier ophalen uit Untappd...', 'info');
+        const response = await performApiCall(endpoint, { method: 'GET' });
+
+        if (!response || !response.response || !response.response.beers || response.response.beers.items.length === 0) {
+            window.showToast('Geen bieren gevonden of ongeldige API response.', 'error');
+            return;
+        }
+
+        // Data-extractie met de verplichte .at() methode i.p.v. vierkante haken
+        const topBeerContainer = response.response.beers.items.at(0);
+        const beerData = topBeerContainer.beer;
+
+        // Sanitisatie volgens het Comma-to-Dot protocol
+        let abvString = String(beerData.beer_abv || '0').replace(/,/g, '.');
+        let abvValue = parseFloat(abvString);
+
+        // State update (Single Source of Truth) en UI synchronisatie
+        state.tempState = state.tempState || {};
+        state.tempState.clonedUntappdBeer = {
+            name: beerData.beer_name,
+            style: beerData.beer_style,
+            abv: abvValue,
+            description: beerData.beer_description || ''
+        };
+
+        const recipeNameInput = document.getElementById('recipe-name-input');
+        const recipeAbvInput = document.getElementById('recipe-abv-input');
+
+        if (recipeNameInput) recipeNameInput.value = beerData.beer_name;
+        if (recipeAbvInput) recipeAbvInput.value = abvValue;
+
+        window.showToast(`Succesvol gekloond: ${beerData.beer_name}!`, 'success');
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: cloneTopUntappdBeer', 'ERROR');
+        window.showToast('API-fout bij het ophalen van Untappd data. Controleer je credentials.', 'error');
+    }
+}
+
 window.cloneBrew = async function(brewId) {
     const original = state.brews.find(b => b.id === brewId);
     if (!original) return;
@@ -3995,3 +4049,4 @@ window.startBrewDay = startBrewDay;
 window.startActualBrewDay = startActualBrewDay;
 window.renderBrewDay = renderBrewDay;
 window.closePrimaryDetail = closePrimaryDetail;
+window.cloneTopUntappdBeer = cloneTopUntappdBeer;

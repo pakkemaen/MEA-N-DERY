@@ -80,6 +80,9 @@ onAuthStateChanged(auth, async (user) => {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🚀 Meandery V2.6 Modular System Active");
 
+    // Initialiseer universele sleep- en muiswiel-interactie op alle sub-navigatiebalken
+    if (window.initScrollableTabs) window.initScrollableTabs();
+
     // --- GLOBAL AUTH FUNCTION (Nodig voor de HTML onclick) ---
     window.signInWithGoogle = async function() {
         console.log("🔐 Starting Google Sign-In...");

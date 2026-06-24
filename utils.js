@@ -451,6 +451,58 @@ export function buildTastingFeedbackPrompt(brewData, assessmentData) {
     }
 }
 
+// --- UNIVERSELE DRAG-TO-SCROLL & HORIZONTALE MUISWIEL-CONVERSIE (v2.6) ---
+export function initScrollableTabs() {
+    try {
+        const scrollContainers = document.querySelectorAll('nav, .touch-pan-x');
+        
+        scrollContainers.forEach(container => {
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            // 1. Muiswiel Conversie (Verticaal scrollen -> Horizontaal verschuiven)
+            container.addEventListener('wheel', (e) => {
+                if (e.deltaY !== 0) {
+                    e.preventDefault();
+                    container.scrollLeft += e.deltaY;
+                }
+            }, { passive: false });
+
+            // 2. Muisklik-en-sleep (Drag-to-scroll)
+            container.addEventListener('mousedown', (e) => {
+                isDown = true;
+                container.classList.add('cursor-grabbing');
+                startX = e.pageX - container.offsetLeft;
+                scrollLeft = container.scrollLeft;
+            });
+
+            container.addEventListener('mouseleave', () => {
+                isDown = false;
+                container.classList.remove('cursor-grabbing');
+            });
+
+            container.addEventListener('mouseup', () => {
+                isDown = false;
+                container.classList.remove('cursor-grabbing');
+            });
+
+            container.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - container.offsetLeft;
+                const walk = (x - startX) * 1.5; // Scroll-snelheidsvermenigvuldiger
+                container.scrollLeft = scrollLeft - walk;
+            });
+        });
+    } catch (error) {
+        console.error("Fout bij initialiseren van tab-scrollfunctionaliteit:", error);
+    }
+}
+
+// Voeg de nieuwe functie toe aan de bestaande window-bindings onderaan utils.js
+window.initScrollableTabs = initScrollableTabs;
+
 // --- EXPORTS TO WINDOW ---
 window.showToast = showToast;
 window.getLoaderHtml = getLoaderHtml;

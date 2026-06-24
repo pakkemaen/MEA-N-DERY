@@ -106,7 +106,8 @@ function applySettings() {
     }
 }
 
-async function saveUserSettings() {
+async function saveUserSettings(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (!state.userId) return;
     
     try {
@@ -135,12 +136,12 @@ async function saveUserSettings() {
 
         // --- 3. HARD VALIDATION CONSTRAINTS ---
         if (wcfInput < 1.00 || wcfInput > 1.04) {
-            showToast("WCF allocation must be calibrated between 1.00 and 1.04.", "error");
+            window.showToast("WCF allocation must be calibrated between 1.00 and 1.04.", "error");
             return;
         }
 
         if (!apiKeyVal) {
-            showToast("Warning: AI integration engines (recipes, diagnosis chat) require a valid API Key configuration.", "warning");
+            window.showToast("Warning: AI integration engines (recipes, diagnosis chat) require a valid API Key configuration.", "warning");
         }
         
         // --- 4. DATA STRUCTUUR CONSTRUCTIE ---
@@ -157,8 +158,8 @@ async function saveUserSettings() {
         };
         
         // --- 5. FIRESTORE PIPELINE COMMITS & PATH STANDARDIZATION ---
-        // Opslag van hoofdinstellingen (Main Configuration Path)
-        const mainSettingsRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
+        // Opslag van hoofdinstellingen via het genormaliseerde v2.6-gebruikerspad
+        const mainSettingsRef = doc(db, 'users', state.userId, 'settings', 'main');
         await setDoc(mainSettingsRef, newSettings, { merge: true });
         
         // Opslag van Untappd Extensie parameters (User Document Extension Path)
@@ -166,7 +167,7 @@ async function saveUserSettings() {
         await updateDoc(userDocRef, {
             'settings.untappdClientId': untappdClientId,
             'settings.untappdClientSecret': untappdClientSecret,
-            'settings.updatedAt': (typeof serverTimestamp === 'function') ? serverTimestamp() : new Date().toISOString()
+            'settings.updatedAt': new Date().toISOString()
         });
 
         // --- 6. SINGLE SOURCE OF TRUTH (STATE) SYNCHRONISATIE ---
@@ -181,14 +182,14 @@ async function saveUserSettings() {
             applySettings();
         }
         
-        showToast("Settings saved successfully!", "success");
+        window.showToast("Settings saved successfully!", "success");
         
         if (window.tempState?.activeBrewId && typeof window.renderFermentationGraph === 'function') {
             window.renderFermentationGraph(window.tempState.activeBrewId);
         }
     } catch (error) {
         window.logSystemError(error, 'User Settings Modulation & Untappd Certification Chain', 'ERROR');
-        showToast("System error: Unable to commit user configuration parameters.", "error");
+        window.showToast("System error: Unable to commit user configuration parameters.", "error");
     }
 }
 
@@ -2985,7 +2986,7 @@ window.calculateWaterMatching = function() {
 async function loadUserSettings() {
     if (!state.userId) return;
     try {
-        const mainSettingsRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
+        const mainSettingsRef = doc(db, 'users', state.userId, 'settings', 'main');
         const docSnap = await getDoc(mainSettingsRef);
         if (docSnap.exists()) {
             state.userSettings = { ...state.userSettings, ...docSnap.data() };
@@ -3054,3 +3055,4 @@ window.calculateCarbonationEngine = calculateCarbonationEngine;
 window.calculateDryHopExtraction = calculateDryHopExtraction;
 window.saveUserSettings = saveUserSettings;
 window.toggleUntappdSecretVisibility = toggleUntappdSecretVisibility;
+window.saveUserSettings = saveUserSettings;

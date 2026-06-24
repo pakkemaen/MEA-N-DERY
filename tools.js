@@ -1419,60 +1419,212 @@ function handleWaterSourceChange() {
     }
 
 // --- CALCULATORS ---
-function calculateTOSNA() {
+window.calculateABV = function() {
     try {
-        const brixInput = document.getElementById('tosna-brix').value;
-        const sgInput = document.getElementById('tosna-sg').value;
-        const yeastFactorInput = document.getElementById('tosna-yeast-factor').value;
-        const bbyMassInput = document.getElementById('tosna-bby-mass').value;
-        const volumeInput = document.getElementById('tosna-volume').value;
+        const ogInput = document.getElementById('og')?.value.replace(/,/g, '.') || "";
+        const fgInput = document.getElementById('fg')?.value.replace(/,/g, '.') || "";
 
-        const brixStr = brixInput.replace(',', '.');
-        const sgStr = sgInput.replace(',', '.');
-        const yfStr = yeastFactorInput.replace(',', '.');
-        const bbyStr = bbyMassInput.replace(',', '.');
-        const volStr = volumeInput.replace(',', '.');
+        const og = parseFloat(ogInput);
+        const fg = parseFloat(fgInput);
+        const resultDiv = document.getElementById('abvResult');
 
-        const brix = parseFloat(brixStr);
-        const sg = parseFloat(sgStr);
-        const yeastFactor = parseFloat(yfStr); 
-        const mBBY = parseFloat(bbyStr) || 0;
-        const volume = parseFloat(volStr);
-
-        if (isNaN(brix) || isNaN(sg) || isNaN(yeastFactor) || isNaN(volume) || volume <= 0) {
-            window.showToast('Vul alle verplichte velden correct in met numerieke waarden.', 'error');
+        if (isNaN(og) || isNaN(fg)) {
+            window.showToast("Vul zowel de begin- (OG) als einddichtheid (FG) in.", "error");
             return;
         }
 
-        // 1. Totale bruto YAN behoefte (TOSNA 3.0 basismodel)
-        const totalYanRequired = brix * sg * yeastFactor * 10; 
-
-        // 2. Wiskundige Sluiting van de YAN-Overhead (BBY Rehydratie aftrek conform v2.6 protocol)
-        const yanBBY = 13.3; // Absolute YAN-gehalte van BBY (13.3 mg N / g)
-        const muBBY = 1.5;   // Conservatieve biologische equivalentie-multiplier vroege fase
-        const yanRehydrationOverhead = (mBBY * yanBBY * muBBY) / volume;
-
-        // Netto resterende YAN-behoefte
-        const netYanRequired = Math.max(0, totalYanRequired - yanRehydrationOverhead);
-
-        // 3. Omrekening naar organische nutriënt-dosering (Fermaid O / Organisch equivalent factor 4.0)
-        // Formule: (Netto YAN / 4.0) * Volume geeft de totale benodigde grammen voor de gehele batch
-        const totalNutrientGrams = (netYanRequired / 4.0) * volume / 1000;
-
-        const resultYanElement = document.getElementById('tosna-result-yan');
-        const resultNutrientElement = document.getElementById('tosna-result-nutrient');
-
-        if (resultYanElement) {
-            resultYanElement.innerText = netYanRequired.toFixed(1) + ' mg/L';
+        // Strikte wetenschappelijke pre-check op de Hall-limiet (voorkomt deling door nul)
+        if (og >= 1.775) {
+            const limitError = new Error(`Fysische grens overschreden: OG (${og}) mag de Hall-limiet (1.775) niet evenaren of overschrijden.`);
+            window.logSystemError(limitError, 'Tools: Standalone ABV Hall Equation Check', 'CRITICAL');
+            window.showToast("Kritieke fout: Begin-SG overschrijdt de theoretische Hall-limiet.", "error");
+            if (resultDiv) resultDiv.innerHTML = `<span class="text-error font-bold">LIMIT ERR</span>`;
+            return;
         }
-        if (resultNutrientElement) {
-            resultNutrientElement.innerText = totalNutrientGrams.toFixed(2) + ' g';
+
+        // Hall Equation v2.6 Standaard
+        const abw = (76.08 * (og - fg)) / (1.775 - og);
+        const abv = abw / 0.794;
+
+        if (resultDiv) {
+            resultDiv.textContent = `ABV: ${Math.max(0, abv).toFixed(2)}%`;
         }
     } catch (error) {
-        window.logSystemError(error, 'tools.js', 'calculateTOSNA');
-        window.showToast('Er is een fout opgetreden bij de TOSNA-berekening.', 'error');
+        window.logSystemError(error, 'Tools: Standalone Alcohol Equation Execution', 'ERROR');
+        window.showToast("Fout bij het berekenen van het alcoholpercentage.", "error");
     }
-}
+};
+
+window.calculateTOSNA = function() {
+    try {
+        // Invoer-sanitisatie via het v2.6 Comma-to-Dot Protocol
+        const og = parseFloat(String(document.getElementById('tosna_og')?.value || '1.000').replace(/,/g, '.')) || 1.000;
+        const vol = parseFloat(String(document.getElementById('tosna_vol')?.value || '0').replace(/,/g, '.')) || 0;
+        const yeastKey = document.getElementById('tosna_yeast')?.value || 'medium';
+        const nutrientKey = document.getElementById('tosna_nutrient')?.value || 'fermaid_o';
+        const currentAbv = parseFloat(String(document.getElementById('tosna_current_abv')?.value || '0').replace(/,/g, '.')) || 0;
+        const initialBrix = parseFloat(String(document.getElementById('tosna_initial_brix')?.value || '0').replace(/,/g, '.')) || 0;
+        const currentBrix = parseFloat(String(document.getElementById('tosna_current_brix')?.value || '0').replace(/,/g, '.')) || 0;
+        const isBbyRehydrated = document.getElementById('tosna_bby_rehydrate')?.checked || false;
+        const bbyRehydrateMassa = parseFloat(String(document.getElementById('tosna_bby_rehydrate_massa')?.value || '0').replace(/,/g, '.')) || 0;
+        const convertFermaidOMassa = parseFloat(String(document.getElementById('tosna_convert_fermaid_massa')?.value || '0').replace(/,/g, '.')) || 0;
+
+        const resultDiv = document.getElementById('tosnaResult');
+        const bbyConvertDiv = document.getElementById('bbyConversionResult');
+
+        // BBY Stoichiometrische Conversieberekening (F_conv = 5.44)
+        if (bbyConvertDiv && convertFermaidOMassa > 0) {
+            const bbyRequiredGrams = convertFermaidOMassa * 5.44;
+            bbyConvertDiv.innerHTML = `
+                <div class="p-2 mt-2 bg-secondary-container/30 border border-outline-variant/30 rounded-lg text-xs">
+                    <span>Inzetbare BBY Massa (F_conv 5.44):</span> <span class="font-mono font-bold">${bbyRequiredGrams.toFixed(2)} g</span>
+                </div>
+            `;
+        } else if (bbyConvertDiv) {
+            bbyConvertDiv.innerHTML = '';
+        }
+
+        // Strikte guard clause voor invoer-integriteit
+        if (og >= 1.775) {
+            window.showToast("Fout: Begin-SG (OG) moet strikt kleiner zijn dan 1.775.", "error");
+            if (resultDiv) resultDiv.innerHTML = `<span class="text-xs text-error font-bold">OG Error (< 1.775)</span>`;
+            return;
+        }
+
+        if (isNaN(og) || vol <= 0) {
+            if (resultDiv) resultDiv.innerHTML = `<span class="text-xs text-on-surface-variant">Vul een geldige begin-SG (1.xxx) en volume in.</span>`;
+            return;
+        }
+
+        // Europese Nutriënten & Hybride Database
+        const nutrientKeys = ['fermaid_o', 'fermaid_k', 'nutrisal', 'cellvit', 'nutrimix', 'wyeast_wine', 'wyeast_beer', 'engevita', 'bby'];
+        const nutrientDatabase = {
+            'fermaid_o': { name: 'Fermaid O', rawYan: 40.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 4.0 },
+            'fermaid_k': { name: 'Fermaid K', rawYan: 100.0, rAnorg: 0.6, rOrg: 0.4, muOrg: 1.0 },
+            'nutrisal': { name: 'Vinoferm Nutrisal', rawYan: 210.0, rAnorg: 1.0, rOrg: 0.0, muOrg: 1.0 },
+            'cellvit': { name: 'Vinoferm Cellvit', rawYan: 25.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 },
+            'nutrimix': { name: 'Vinoferm Nutrimix', rawYan: 117.5, rAnorg: 0.5, rOrg: 0.5, muOrg: 2.0 },
+            'wyeast_wine': { name: 'Wyeast Wine Nutrient', rawYan: 129.2, rAnorg: 0.6, rOrg: 0.4, muOrg: 2.0 },
+            'wyeast_beer': { name: 'Wyeast Beer Nutrient', rawYan: 103.6, rAnorg: 0.7, rOrg: 0.3, muOrg: 2.0 },
+            'engevita': { name: 'Lallemand Engevita', rawYan: 25.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 1.5 },
+            'bby': { name: 'Gekookte Bakkersgist (BBY)', rawYan: 14.7, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 }
+        };
+
+        let selectedNutrient = nutrientDatabase.fermaid_o;
+        let targetKeyIdx = nutrientKeys.indexOf(nutrientKey);
+        if (targetKeyIdx !== -1) {
+            const safeKey = nutrientKeys.at(targetKeyIdx);
+            selectedNutrient = nutrientDatabase.hasOwnProperty(safeKey) ? nutrientDatabase[safeKey] : nutrientDatabase.fermaid_o;
+        }
+
+        // Derdegraads Bates-polynoom voor initiële Brix
+        const brixInit = (182.9622 * Math.pow(og, 3)) - (777.3009 * Math.pow(og, 2)) + (1264.5170 * og) - 670.1831;
+        const factors = { 'low': 0.75, 'medium': 0.90, 'high': 1.25 };
+        const fGist = factors[yeastKey] || 0.90;
+
+        // Initiële YAN-behoefte conform wiskundig model
+        let yanNeed = 10 * brixInit * og * fGist;
+
+        // Wiskundige Sluiting van de YAN-Overhead (m_BBY-rehy * 13.3 * 1.75) / V_most
+        let rehydratieWarningHtml = "";
+        if (isBbyRehydrated && bbyRehydrateMassa > 0) {
+            const yanRehydratie = (bbyRehydrateMassa * 13.3 * 1.75) / vol;
+            yanNeed = Math.max(0, yanNeed - yanRehydratie);
+            rehydratieWarningHtml = `
+                <div class="text-[10px] text-green-600 font-medium border-l-2 border-green-500 pl-2 my-1">
+                    ✓ BBY Rehydratie-aftrek Toegepast: -${yanRehydratie.toFixed(1)} ppm YAN gereduceerd van de totale doelstelling.
+                </div>
+            `;
+        }
+
+        // 9% ABV Toxiciteitsgrens & Permease-Inactivatie Interlock
+        let isFaseTwo = false;
+        let faseReason = "";
+
+        if (currentAbv >= 9.0) {
+            isFaseTwo = true;
+            faseReason = "9% ABV Toxiciteitsgrens bereikt";
+        }
+
+        if (initialBrix > 0 && currentBrix > 0) {
+            const sukerBreukRatio = currentBrix / initialBrix;
+            if (sukerBreukRatio <= 0.6667) {
+                isFaseTwo = true;
+                faseReason = `1/3e Suikerbreuk bereikt of overschreden (Ratio: ${sukerBreukRatio.toFixed(4)})`;
+            }
+        }
+
+        let effectiveRAnorg = selectedNutrient.rAnorg;
+        let warningHtml = "";
+
+        if (isFaseTwo) {
+            effectiveRAnorg = 0.0;
+            if (selectedNutrient.rAnorg > 0) {
+                warningHtml = `
+                    <div class="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded text-[10px] text-amber-700 font-bold uppercase animate-pulse">
+                        ⚠️ INTERLOCK ALARM: ${selectedNutrient.name} bevat anorganische stikstof. 
+                        In deze fase (${faseReason}) zijn ammoniumpermeasen geïnactiveerd. 
+                        Niet-geassimileerd ammonium riskeert externe microbiologische infecties en kankerverwekkende ethylcarbamaatvorming!
+                    </div>
+                `;
+                window.showToast("Risico op rest-ammonium: anorganische stikstof gedetecteerd in Fase II!", "warning");
+            }
+        }
+
+        // Berekening effectieve YAN-afgifte per g/L
+        const yanEffPerGram = (selectedNutrient.rawYan * effectiveRAnorg * 1.0) + 
+                             (selectedNutrient.rawYan * selectedNutrient.rOrg * selectedNutrient.muOrg);
+
+        let totalNutrientGrams = 0;
+
+        if (isFaseTwo && selectedNutrient.rOrg === 0) {
+            totalNutrientGrams = 0.00;
+        } else if (yanEffPerGram > 0) {
+            totalNutrientGrams = (yanNeed / yanEffPerGram) * vol;
+        }
+
+        const pitchRateAdvice = og < 1.100 
+            ? "💡 Gistdosering: Doseer exact 1g gist per gallon conform de TOSNA 3.0-standaard."
+            : "💡 Gistdosering: Hoge startdichtheid gedetecteerd. Verhoog dosering naar 2g/gal.";
+
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="p-4 bg-primary-container/20 border-l-4 border-primary rounded-r-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] uppercase font-bold opacity-60 tracking-widest">Europese YAN Engine (v2.6)</span>
+                        <span class="bg-primary text-on-primary text-[8px] px-2 py-0.5 rounded-full font-bold">F_gist: ${fGist}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
+                        <div>
+                            <p class="text-[9px] opacity-60 uppercase">Netto YAN Behoefte</p>
+                            <p class="font-bold font-header text-lg">${Math.round(yanNeed)} ppm</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] opacity-60 uppercase">Totaal ${selectedNutrient.name}</p>
+                            <p class="font-bold font-header text-lg text-primary">${totalNutrientGrams.toFixed(2)} g</p>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-outline-variant/30 space-y-1 text-xs">
+                        <p class="text-[10px] font-medium italic opacity-80">SNA Toedieningsschema (Staggered Addition):</p>
+                        <p class="font-mono text-[11px] font-bold text-primary border-b border-outline-variant/10 pb-1">
+                            Doseer telkens ${(totalNutrientGrams / 4).toFixed(2)} g op: 24u, 48u, 72u, en de 1/3 suikerbreuk.
+                        </p>
+                        <p class="text-[10px] text-on-surface-variant pt-1">
+                            Status: <span class="font-bold">${isFaseTwo ? `Fase II (${faseReason})` : 'Fase I (Volledige assimilatie)'}</span>
+                        </p>
+                        ${rehydratieWarningHtml}
+                        <p class="text-[10px] font-bold text-secondary-onContainer pt-1">${pitchRateAdvice}</p>
+                        ${warningHtml}
+                    </div>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        window.logSystemError(error, 'tools.js -> calculateTOSNA', 'ERROR');
+        window.showToast("Fout bij stikstofberekening.", "error");
+    }
+};
 
 window.correctHydrometer = function() {
     try {
@@ -1836,186 +1988,6 @@ window.calculateBuffer = function() {
     } catch (error) {
         window.logSystemError(error, 'Electrochemical Buffer Analysis', 'ERROR');
         window.showToast("Potassium matrix stabilization assessment crashed.", "error");
-    }
-};
-
-window.calculateTOSNA = function() {
-    try {
-        // Input Sanitisatie via het Comma-to-Dot Protocol
-        const og = parseFloat(String(document.getElementById('tosna_og')?.value || '1.000').replace(/,/g, '.')) || 1.000;
-        const vol = parseFloat(String(document.getElementById('tosna_vol')?.value || '0').replace(/,/g, '.')) || 0;
-        const yeastKey = document.getElementById('tosna_yeast')?.value || 'medium';
-        const nutrientKey = document.getElementById('tosna_nutrient')?.value || 'fermaid_o';
-        const currentAbv = parseFloat(String(document.getElementById('tosna_current_abv')?.value || '0').replace(/,/g, '.')) || 0;
-        const initialBrix = parseFloat(String(document.getElementById('tosna_initial_brix')?.value || '0').replace(/,/g, '.')) || 0;
-        const currentBrix = parseFloat(String(document.getElementById('tosna_current_brix')?.value || '0').replace(/,/g, '.')) || 0;
-        const isBbyRehydrated = document.getElementById('tosna_bby_rehydrate')?.checked || false;
-        const bbyRehydrateMassa = parseFloat(String(document.getElementById('tosna_bby_rehydrate_massa')?.value || '0').replace(/,/g, '.')) || 0;
-        const convertFermaidOMassa = parseFloat(String(document.getElementById('tosna_convert_fermaid_massa')?.value || '0').replace(/,/g, '.')) || 0;
-
-        const resultDiv = document.getElementById('tosnaResult');
-        const bbyConvertDiv = document.getElementById('bbyConversionResult');
-
-        // BBY Stoichiometrische Conversieberekening (F_conv = 5.44)
-        if (bbyConvertDiv && convertFermaidOMassa > 0) {
-            const bbyRequiredGrams = convertFermaidOMassa * 5.44;
-            bbyConvertDiv.innerHTML = `
-                <div class="p-2 mt-2 bg-secondary-container/30 border border-outline-variant/30 rounded-lg text-xs">
-                    <span>Inzetbare BBY Massa (F_conv 5.44):</span> <span class="font-mono font-bold">${bbyRequiredGrams.toFixed(2)} g</span>
-                </div>
-            `;
-        } else if (bbyConvertDiv) {
-            bbyConvertDiv.innerHTML = '';
-        }
-
-        // Strikte guard clause voor invoer-integriteit
-        if (og >= 1.775) {
-            window.showToast("Fout: Begin-SG (OG) moet strikt kleiner zijn dan 1.775.", "error");
-            if (resultDiv) resultDiv.innerHTML = `<span class="text-xs text-error font-bold">OG Error (< 1.775)</span>`;
-            return;
-        }
-
-        if (isNaN(og) || vol <= 0) {
-            if (resultDiv) resultDiv.innerHTML = `<span class="text-xs text-on-surface-variant">Vul een geldige begin-SG (1.xxx) en volume in.</span>`;
-            return;
-        }
-
-        // Europese Nutriënten & Hybride Database (Omgezet naar array voor .at() indexering)
-        const nutrientKeys = ['fermaid_o', 'fermaid_k', 'nutrisal', 'cellvit', 'nutrimix', 'wyeast_wine', 'wyeast_beer', 'engevita', 'bby'];
-        const nutrientDatabase = {
-            'fermaid_o': { name: 'Fermaid O', rawYan: 40.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 4.0 },
-            'fermaid_k': { name: 'Fermaid K', rawYan: 100.0, rAnorg: 0.6, rOrg: 0.4, muOrg: 1.0 },
-            'nutrisal': { name: 'Vinoferm Nutrisal', rawYan: 210.0, rAnorg: 1.0, rOrg: 0.0, muOrg: 1.0 },
-            'cellvit': { name: 'Vinoferm Cellvit', rawYan: 25.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 },
-            'nutrimix': { name: 'Vinoferm Nutrimix', rawYan: 117.5, rAnorg: 0.5, rOrg: 0.5, muOrg: 2.0 },
-            'wyeast_wine': { name: 'Wyeast Wine Nutrient', rawYan: 129.2, rAnorg: 0.6, rOrg: 0.4, muOrg: 2.0 },
-            'wyeast_beer': { name: 'Wyeast Beer Nutrient', rawYan: 103.6, rAnorg: 0.7, rOrg: 0.3, muOrg: 2.0 },
-            'engevita': { name: 'Lallemand Engevita', rawYan: 25.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 1.5 },
-            'bby': { name: 'Gekookte Bakkersgist (BBY)', rawYan: 14.7, rAnorg: 0.0, rOrg: 1.0, muOrg: 2.0 }
-        };
-
-        // Veilige selectie van het nutriënt-object met .at() parsing-bescherming
-        let selectedNutrient = nutrientDatabase.fermaid_o;
-        let targetKeyIdx = nutrientKeys.indexOf(nutrientKey);
-        if (targetKeyIdx !== -1) {
-            const safeKey = nutrientKeys.at(targetKeyIdx);
-            selectedNutrient = nutrientDatabase.hasOwnProperty(safeKey) ? nutrientDatabase[safeKey] : nutrientDatabase.fermaid_o;
-        }
-
-        // Derdegraads Bates-polynoom voor initiële Brix
-        const brixInit = (182.9622 * Math.pow(og, 3)) - (777.3009 * Math.pow(og, 2)) + (1264.5170 * og) - 670.1831;
-        const factors = { 'low': 0.75, 'medium': 0.90, 'high': 1.25 };
-        const fGist = factors[yeastKey] || 0.90;
-
-        // Initiële YAN-behoefte conform wiskundig model
-        let yanNeed = 10 * brixInit * og * fGist;
-
-        // Wiskundige Sluiting van de YAN-Overhead (m_BBY-rehy * 13.3 * 1.75) / V_most
-        let rehydratieWarningHtml = "";
-        if (isBbyRehydrated && bbyRehydrateMassa > 0) {
-            const yanRehydratie = (bbyRehydrateMassa * 13.3 * 1.75) / vol;
-            yanNeed = Math.max(0, yanNeed - yanRehydratie);
-            rehydratieWarningHtml = `
-                <div class="text-[10px] text-green-600 font-medium border-l-2 border-green-500 pl-2 my-1">
-                    ✓ BBY Rehydratie-aftrek Toegepast: -${yanRehydratie.toFixed(1)} ppm YAN gereduceerd van de totale doelstelling.
-                </div>
-            `;
-        }
-
-        // --- DUAL-TRIGGER TRANSITIE ---
-        let isFaseTwo = false;
-        let faseReason = "";
-
-        if (currentAbv >= 9.0) {
-            isFaseTwo = true;
-            faseReason = "9% ABV Toxiciteitsgrens bereikt";
-        }
-
-        if (initialBrix > 0 && currentBrix > 0) {
-            const sukerBreukRatio = currentBrix / initialBrix;
-            if (sukerBreukRatio <= 0.6667) {
-                isFaseTwo = true;
-                faseReason = `1/3e Suikerbreuk bereikt of overschreden (Ratio: ${sukerBreukRatio.toFixed(4)})`;
-            }
-        }
-
-        let effectiveRAnorg = selectedNutrient.rAnorg;
-        let warningHtml = "";
-
-        if (isFaseTwo) {
-            effectiveRAnorg = 0.0;
-            if (selectedNutrient.rAnorg > 0) {
-                warningHtml = `
-                    <div class="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded text-[10px] text-amber-700 font-bold uppercase animate-pulse">
-                        ⚠️ INTERLOCK ALARM: ${selectedNutrient.name} bevat anorganische stikstof. 
-                        In deze fase (${faseReason}) zijn ammoniumpermeasen geïnactiveerd. 
-                        Niet-geassimileerd ammonium riskeert externe microbiologische infecties en kankerverwekkende ethylcarbamaatvorming!
-                    </div>
-                `;
-                window.showToast("Risico op rest-ammonium: anorganische stikstof gedetecteerd in Fase II!", "warning");
-            }
-        }
-
-        // Berekening effectieve YAN-afgifte per g/L
-        const yanEffPerGram = (selectedNutrient.rawYan * effectiveRAnorg * 1.0) + 
-                             (selectedNutrient.rawYan * selectedNutrient.rOrg * selectedNutrient.muOrg);
-
-        let totalNutrientGrams = 0;
-
-        // --- NUTRIËNT-BLOCKER & EDGE CASE EVALUATIE ---
-        if (isFaseTwo && selectedNutrient.rOrg === 0) {
-            totalNutrientGrams = 0.00;
-            window.showToast("Waarschuwing: Anorganische stikstof is inactief boven 9% ABV. Residu-toxiciteit risico.", "warning");
-        } else if (yanEffPerGram > 0) {
-            totalNutrientGrams = (yanNeed / yanEffPerGram) * vol;
-        }
-
-        // --- SYSTEM LOGGING VOOR QA ANALYST ---
-        if (typeof window.logSystemError === 'function') {
-            const debugLogMessage = `TOSNA Debugger -> Status: ${isFaseTwo ? 'Fase_II' : 'Fase_I'} | Reden: ${faseReason || 'Geen'} | YAN_eff per g/L: ${yanEffPerGram.toFixed(4)} | Doelstelling: ${totalNutrientGrams.toFixed(2)}g`;
-            console.log(debugLogMessage);
-        }
-
-        const pitchRateAdvice = og < 1.100 
-            ? "💡 Gistdosering: Doseer exact 1g gist per gallon conform de TOSNA 3.0-standaard."
-            : "💡 Gistdosering: Hoge startdichtheid gedetecteerd. Verhoog dosering naar 2g/gal.";
-
-        if (resultDiv) {
-            resultDiv.innerHTML = `
-                <div class="p-4 bg-primary-container/20 border-l-4 border-primary rounded-r-xl animate-fade-in">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-[10px] uppercase font-bold opacity-60 tracking-widest">Europese YAN Engine (v2.6)</span>
-                        <span class="bg-primary text-on-primary text-[8px] px-2 py-0.5 rounded-full font-bold">F_gist: ${fGist}</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
-                        <div>
-                            <p class="text-[9px] opacity-60 uppercase">Netto YAN Behoefte</p>
-                            <p class="font-bold font-header text-lg">${Math.round(yanNeed)} ppm</p>
-                        </div>
-                        <div>
-                            <p class="text-[9px] opacity-60 uppercase">Totaal ${selectedNutrient.name}</p>
-                            <p class="font-bold font-header text-lg text-primary">${totalNutrientGrams.toFixed(2)} g</p>
-                        </div>
-                    </div>
-                    <div class="pt-2 border-t border-outline-variant/30 space-y-1 text-xs">
-                        <p class="text-[10px] font-medium italic opacity-80">SNA Toedieningsschema (Staggered Addition):</p>
-                        <p class="font-mono text-[11px] font-bold text-primary border-b border-outline-variant/10 pb-1">
-                            Doseer telkens ${(totalNutrientGrams / 4).toFixed(2)} g op: 24u, 48u, 72u, en de 1/3 suikerbreuk.
-                        </p>
-                        <p class="text-[10px] text-on-surface-variant pt-1">
-                            Status: <span class="font-bold">${isFaseTwo ? `Fase II (${faseReason})` : 'Fase I (Volledige assimilatie)'}</span>
-                        </p>
-                        ${rehydratieWarningHtml}
-                        <p class="text-[10px] font-bold text-secondary-onContainer pt-1">${pitchRateAdvice}</p>
-                        ${warningHtml}
-                    </div>
-                </div>
-            `;
-            resultDiv.classList.remove('hidden');
-        }
-    } catch (error) {
-        window.logSystemError(error, 'tools.js -> calculateTOSNA', 'ERROR');
-        window.showToast("Fout bij stikstofberekening.", "error");
     }
 };
 
@@ -3009,6 +2981,40 @@ window.calculateWaterMatching = function() {
         window.showToast("Error processing mineral configuration mapping matrix.", "error");
     }
 };
+
+async function loadUserSettings() {
+    if (!state.userId) return;
+    try {
+        const mainSettingsRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
+        const docSnap = await getDoc(mainSettingsRef);
+        if (docSnap.exists()) {
+            state.userSettings = { ...state.userSettings, ...docSnap.data() };
+            applySettings();
+        }
+        
+        const userDocRef = doc(db, 'users', state.userId);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists() && userSnap.data().settings) {
+            const extSettings = userSnap.data().settings;
+            state.settings = state.settings || {};
+            state.settings.untappdClientId = extSettings.untappdClientId || '';
+            state.settings.untappdClientSecret = extSettings.untappdClientSecret || '';
+            
+            const clientIdEl = document.getElementById('untappd-client-id');
+            const clientSecretEl = document.getElementById('untappd-client-secret');
+            
+            if (clientIdEl) {
+                clientIdEl.value = extSettings.untappdClientId || '';
+            }
+            if (clientSecretEl) {
+                clientSecretEl.value = extSettings.untappdClientSecret || '';
+            }
+        }
+    } catch (error) {
+        window.logSystemError(error, 'tools.js -> loadUserSettings', 'ERROR');
+        window.showToast("Failed to populate user environment data from database.", "error");
+    }
+}
 
 // --- HARDE WINDOW OBJECT BINDING (MODULE SCOPE ISOLATIE SANITISATIE) ---
 window.loadUserSettings = loadUserSettings;

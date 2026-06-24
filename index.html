@@ -712,13 +712,13 @@
     </div>
     
     <div class="mb-6 py-1 no-print">
-        <nav class="flex items-center gap-2 overflow-x-auto whitespace-nowrap px-2 py-1 bg-surface-container rounded-full border border-outline-variant w-full md:w-fit mx-auto md:mx-0 no-scrollbar select-none">
-            <button id="calculators-sub-tab" class="sub-tab active min-h-[44px] py-2 px-4 rounded-full transition-all">Calculators</button>
-            <button id="labels-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Labels</button>
-            <button id="water-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Water</button>
-            <button id="troubleshoot-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Mead Medic</button>
-            <button id="social-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Social</button>
-            <button id="library-sub-tab" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all">Library</button>
+        <nav class="flex items-center gap-2 overflow-x-auto whitespace-nowrap px-4 py-1.5 bg-surface-container rounded-full border border-outline-variant w-full md:w-fit mx-auto md:mx-0 no-scrollbar select-none scroll-smooth touch-pan-x">
+            <button id="calculators-sub-tab" onclick="window.switchSubView('calculators', 'tools-main-view')" class="sub-tab active min-h-[44px] py-2 px-4 rounded-full transition-all inline-flex items-center justify-center">Calculators</button>
+            <button id="labels-sub-tab" onclick="window.switchSubView('labels', 'tools-main-view')" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all inline-flex items-center justify-center">Labels</button>
+            <button id="water-sub-tab" onclick="window.switchSubView('water', 'tools-main-view')" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all inline-flex items-center justify-center">Water</button>
+            <button id="troubleshoot-sub-tab" onclick="window.switchSubView('troubleshoot', 'tools-main-view')" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all inline-flex items-center justify-center">Mead Medic</button>
+            <button id="social-sub-tab" onclick="window.switchSubView('social', 'tools-main-view')" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all inline-flex items-center justify-center">Social</button>
+            <button id="library-sub-tab" onclick="window.switchSubView('library', 'tools-main-view')" class="sub-tab min-h-[44px] py-2 px-4 rounded-full transition-all inline-flex items-center justify-center">Library</button>
         </nav>
     </div>
     
@@ -1309,11 +1309,23 @@
                     </div>
                     <div class="space-y-2">
                         <p class="text-[10px] font-bold uppercase text-secondary tracking-wider mb-1">2. Organoleptic Attributes</p>
-                        <div class="space-y-1 text-xs">
-                            <div class="flex justify-between"><span>Aroma (1-5)</span><input type="number" id="aromaSlider" min="1" max="5" step="0.25" placeholder="4.0" class="w-16 p-1 text-right" oninput="window.calculateTastingAssessment()"></div>
-                            <div class="flex justify-between"><span>Flavor (1-5)</span><input type="number" id="flavorSlider" min="1" max="5" step="0.25" placeholder="4.25" class="w-16 p-1 text-right" oninput="window.calculateTastingAssessment()"></div>
-                            <div class="flex justify-between"><span>Mouthfeel (1-5)</span><input type="number" id="mouthfeelSlider" min="1" max="5" step="0.25" placeholder="3.75" class="w-16 p-1 text-right" oninput="window.calculateTastingAssessment()"></div>
-                            <div class="flex justify-between"><span>Tannin Intensity (1-5)</span><input type="number" id="tanninSlider" min="1" max="5" step="0.1" placeholder="1.5" class="w-16 p-1 text-right" oninput="window.calculateTastingAssessment()"></div>
+                        <div class="space-y-3 text-xs">
+                            <div class="space-y-1">
+                                <div class="flex justify-between font-medium"><span>Aroma Selection</span><span id="aromaValue" class="font-mono font-bold text-primary">3.00</span></div>
+                                <input type="range" id="aromaSlider" min="1" max="5" step="0.25" value="3.0" class="w-full h-2 bg-outline-variant rounded-lg appearance-none cursor-pointer accent-primary" oninput="document.getElementById('aromaValue').textContent = parseFloat(this.value).toFixed(2); window.calculateTastingAssessment()">
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex justify-between font-medium"><span>Flavor Intensity</span><span id="flavorValue" class="font-mono font-bold text-primary">3.00</span></div>
+                                <input type="range" id="flavorSlider" min="1" max="5" step="0.25" value="3.0" class="w-full h-2 bg-outline-variant rounded-lg appearance-none cursor-pointer accent-primary" oninput="document.getElementById('flavorValue').textContent = parseFloat(this.value).toFixed(2); window.calculateTastingAssessment()">
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex justify-between font-medium"><span>Mouthfeel Structure</span><span id="mouthfeelValue" class="font-mono font-bold text-primary">3.00</span></div>
+                                <input type="range" id="mouthfeelSlider" min="1" max="5" step="0.25" value="3.0" class="w-full h-2 bg-outline-variant rounded-lg appearance-none cursor-pointer accent-primary" oninput="document.getElementById('mouthfeelValue').textContent = parseFloat(this.value).toFixed(2); window.calculateTastingAssessment()">
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex justify-between font-medium"><span>Tannin Astringency</span><span id="tanninValueDisplay" class="font-mono font-bold text-primary">1.00</span></div>
+                                <input type="range" id="tanninSlider" min="1" max="5" step="0.1" value="1.0" class="w-full h-2 bg-outline-variant rounded-lg appearance-none cursor-pointer accent-primary" oninput="document.getElementById('tanninValueDisplay').textContent = parseFloat(this.value).toFixed(2); window.calculateTastingAssessment()">
+                            </div>
                         </div>
                         <div class="pt-2 border-t border-outline-variant/30 text-[10px]">
                             <p class="font-bold text-error uppercase mb-1">Detected Kinetic Off-Flavors</p>
@@ -1324,7 +1336,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
                 <button id="calcTastingAssessmentBtn" onclick="window.calculateTastingAssessment()" class="w-full mt-4 bg-rose-700 text-white font-bold py-3 px-4 rounded-full text-xs uppercase tracking-widest hover:brightness-110 transition-all">Evaluate Profile & Sync</button>
                 <div id="tasting-assessment-output" class="hidden mt-3"></div>
             </div>

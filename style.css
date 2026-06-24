@@ -252,6 +252,11 @@ input:hover, select:hover, textarea:hover {
     transition: all 0.2s;
     background: transparent;
     font-size: 0.9rem;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
 }
 
 .sub-tab:hover {

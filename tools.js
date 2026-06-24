@@ -158,12 +158,12 @@ async function saveUserSettings(e) {
         };
         
         // --- 5. FIRESTORE PIPELINE COMMITS & PATH STANDARDIZATION ---
-        // Opslag van hoofdinstellingen via het genormaliseerde v2.6-gebruikerspad
-        const mainSettingsRef = doc(db, 'users', state.userId, 'settings', 'main');
+        // Opslag van hoofdinstellingen met ingevoegde root-collectie en project-id segmenten
+        const mainSettingsRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
         await setDoc(mainSettingsRef, newSettings, { merge: true });
         
-        // Opslag van Untappd Extensie parameters (User Document Extension Path)
-        const userDocRef = doc(db, 'users', state.userId);
+        // Opslag van Untappd Extensie parameters onder de uitgebreide gebruikersreferentie
+        const userDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId);
         await updateDoc(userDocRef, {
             'settings.untappdClientId': untappdClientId,
             'settings.untappdClientSecret': untappdClientSecret,
@@ -2986,14 +2986,14 @@ window.calculateWaterMatching = function() {
 async function loadUserSettings() {
     if (!state.userId) return;
     try {
-        const mainSettingsRef = doc(db, 'users', state.userId, 'settings', 'main');
+        const mainSettingsRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
         const docSnap = await getDoc(mainSettingsRef);
         if (docSnap.exists()) {
             state.userSettings = { ...state.userSettings, ...docSnap.data() };
             applySettings();
         }
         
-        const userDocRef = doc(db, 'users', state.userId);
+        const userDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId);
         const userSnap = await getDoc(userDocRef);
         if (userSnap.exists() && userSnap.data().settings) {
             const extSettings = userSnap.data().settings;

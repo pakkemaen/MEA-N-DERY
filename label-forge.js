@@ -178,26 +178,44 @@ function updateSliderDisplay(id, val) {
 
 // A. Receptenlijst vullen
 function populateLabelRecipeDropdown() {
-    const select = document.getElementById('labelRecipeSelect');
-    if (!select) return;
-    const currentValue = select.value;
-    select.innerHTML = '<option value="">-- Load from History --</option>';
-    
-    const sortedBrews = [...state.brews].sort((a, b) => {
-    const dateA = a.createdAt ? a.createdAt.toDate() : new Date(0);
-    const dateB = b.createdAt ? b.createdAt.toDate() : new Date(0);
-    return dateB - dateA;
-});
+    try {
+        // --- 1. DOM SELECTOR EXTREME PURIFICATION (camelCase fix) ---
+        const dropdown = document.getElementById('labelRecipeSelect');
+        if (!dropdown) return;
 
-    sortedBrews.forEach(brew => {
-        const option = document.createElement('option');
-        option.value = brew.id;
-        let displayName = brew.recipeName || 'Untitled Brew';
-        if (displayName.includes(':')) displayName = displayName.split(':')[0].trim();
-        option.textContent = displayName;
-        select.appendChild(option);
-    });
-    select.value = currentValue;
+        // Reset de dropdown naar de initiële stand
+        dropdown.innerHTML = '<option value="">-- Selecteer een brouwsel --</option>';
+
+        // Veilig kopiëren van de brouwgeschiedenis via het v2.6 kogelvrije fallback protocol
+        const brewsCopy = [...(state.brews || [])];
+
+        // Sorteer de brouwsels op basis van aanmaakdatum (nieuwste eerst)
+        brewsCopy.sort((a, b) => {
+            const dateA = a.createdAt ? (a.createdAt.seconds || new Date(a.createdAt).getTime()) : 0;
+            const dateB = b.createdAt ? (b.createdAt.seconds || new Date(b.createdAt).getTime()) : 0;
+            return dateB - dateA;
+        });
+
+        // Map de gesorteerde brouwsels naar HTML-opties
+        brewsCopy.forEach(brew => {
+            if (!brew || !brew.id) return;
+            const option = document.createElement('option');
+            option.value = brew.id;
+            
+            const brewName = brew.recipeName || brew.name || 'Naamloos brouwsel';
+            
+            // --- 2. OBJECT SUB-EIGENSCHAP VARIABELE CORRECTIE ---
+            // Herstel van de runtime crash door de niet-gedeclareerde variabele te binden aan het brew-object
+            const brewBatch = brew.batchNumber ? ` #${brew.batchNumber}` : '';
+            option.textContent = `${brewName}${brewBatch}`;
+            
+            dropdown.appendChild(option);
+        });
+
+    } catch (error) {
+        window.logSystemError(error, 'label-forge.js: populateLabelRecipeDropdown Pipeline Failure', 'ERROR');
+        window.showToast("Fout bij het laden van de brouwgeschiedenis in de label-keuzelijst.", "error");
+    }
 }
 
 // B. Label Formaten Laden (Firestore)
@@ -1672,14 +1690,12 @@ window.saveCustomLabelFormat = saveCustomLabelFormat;
 window.deleteCustomLabelFormat = deleteCustomLabelFormat;
 window.autoDetectLabelFormat = autoDetectLabelFormat;
 
-// 6. Helpers
+// 6. Helpers en Asset Managers (Gezuiverde unieke toewijzingen)
 window.populateLabelRecipeDropdown = populateLabelRecipeDropdown;
 window.updateLabelPreviewDimensions = updateLabelPreviewDimensions;
 window.autoFitLabelText = autoFitLabelText;
 window.updateArtButtons = updateArtButtons;
-
-// 7. Asset Managers (Correcte export van de lokale functies)
 window.addLabelStyle = addLabelStyle;
 window.addLabelFont = addLabelFont;
 window.deleteLabelAsset = deleteLabelAsset;
-window.loadLabelAssets = loadLabelAssets;
+window.resetLabelLayout = resetLabelLayout;

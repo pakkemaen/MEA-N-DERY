@@ -6,8 +6,8 @@
 import { 
     db, doc, getDoc, setDoc, updateDoc, collection, addDoc, 
     deleteDoc, query, onSnapshot, getDocs, writeBatch, arrayUnion, 
-    orderBy, limit, getCountFromServer 
-} from './firebase-init.js'; // Imports uitsluitend via firebase-init
+    orderBy, limit, getCountFromServer, serverTimestamp 
+} from './firebase-init.js';
 
 import { state } from './state.js';
 import { 
@@ -158,21 +158,21 @@ async function saveUserSettings(e) {
         };
         
         // --- 5. FIRESTORE PIPELINE COMMITS & PATH STANDARDIZATION ---
-        // Opslag van hoofdinstellingen met ingevoegde root-collectie en project-id segmenten
         const mainSettingsRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
         await setDoc(mainSettingsRef, newSettings, { merge: true });
         
-        // Opslag van Untappd Extensie parameters onder de uitgebreide gebruikersreferentie
         const userDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId);
         await updateDoc(userDocRef, {
             'settings.untappdClientId': untappdClientId,
             'settings.untappdClientSecret': untappdClientSecret,
-            'settings.updatedAt': new Date().toISOString()
+            'settings.updatedAt': serverTimestamp()
         });
 
         // --- 6. SINGLE SOURCE OF TRUTH (STATE) SYNCHRONISATIE ---
         state.userSettings = { ...state.userSettings, ...newSettings }; 
-        
+        state.userSettings.untappdClientId = untappdClientId;
+        state.userSettings.untappdClientSecret = untappdClientSecret;
+
         state.settings = state.settings || {};
         state.settings.untappdClientId = untappdClientId;
         state.settings.untappdClientSecret = untappdClientSecret;
@@ -187,6 +187,7 @@ async function saveUserSettings(e) {
         if (window.tempState?.activeBrewId && typeof window.renderFermentationGraph === 'function') {
             window.renderFermentationGraph(window.tempState.activeBrewId);
         }
+
     } catch (error) {
         window.logSystemError(error, 'User Settings Modulation & Untappd Certification Chain', 'ERROR');
         window.showToast("System error: Unable to commit user configuration parameters.", "error");
@@ -3055,4 +3056,3 @@ window.calculateCarbonationEngine = calculateCarbonationEngine;
 window.calculateDryHopExtraction = calculateDryHopExtraction;
 window.saveUserSettings = saveUserSettings;
 window.toggleUntappdSecretVisibility = toggleUntappdSecretVisibility;
-window.saveUserSettings = saveUserSettings;

@@ -79,16 +79,23 @@ function getFortKnoxLaws(isNoWater = false, isBraggot = false, isHydromel = fals
 // --- CORE: De Prompt Bouwer (AANGEPAST: AUTO ABV & DESCRIPTION PRIORITY) ---
 function buildPrompt() {
     try {
-        // --- NUMERIEKE INPUT VALIDATIE & NULL-SAFE DOM ACCESS ---
-        const batchSize = parseFloat(String(getSafeInputValue('batchSize', '5')).replace(',', '.')) || 5;
-        const customDescription = getSafeInputValue('customDescription', '').trim();
-        const rawABV = getSafeInputValue('abv', ''); 
+        // --- NUMERIEKE INPUT VALIDATIE & NULL-SAFE NATIVE DOM ACCESS ---
+        const batchSizeEl = document.getElementById('batchSize') || document.getElementById('batch-size');
+        const batchSize = parseFloat(String(batchSizeEl ? batchSizeEl.value : '5').replace(/,/g, '.')) || 5;
+
+        const customDescriptionEl = document.getElementById('customDescription') || document.getElementById('recipe-name-input');
+        const customDescription = customDescriptionEl ? String(customDescriptionEl.value).trim() : '';
+
+        const abvEl = document.getElementById('abv') || document.getElementById('target-abv');
+        const rawABV = abvEl ? String(abvEl.value).trim() : ''; 
         
         const hasDescription = customDescription !== "";
         const isAutoABV = (rawABV === '' || rawABV === '0') || hasDescription;
-        const targetABV = isAutoABV ? 12 : (parseFloat(String(rawABV).replace(',', '.')) || 12);
+        const targetABV = isAutoABV ? 12 : (parseFloat(String(rawABV).replace(/,/g, '.')) || 12);
 
-        const sweetness = getSafeInputValue('sweetness', '');
+        const sweetnessEl = document.getElementById('sweetness') || document.getElementById('target-sweetness');
+        const sweetness = sweetnessEl ? String(sweetnessEl.value).trim() : '';
+
         const styleSelect = document.getElementById('style');
         let style = 'Traditional Mead';
         if (styleSelect && styleSelect.selectedOptions && styleSelect.selectedOptions.length > 0) {
@@ -103,13 +110,15 @@ function buildPrompt() {
         const isNoWater = (noWaterCheckbox && noWaterCheckbox.checked) || inputString.includes('no-water') || inputString.includes('no water');
         const isBraggot = inputString.includes('braggot');
         
-        const beerCloneInput = getSafeInputValue('beerCloneInput', '').trim();
+        const beerCloneInputEl = document.getElementById('beerCloneInput') || document.getElementById('beer-clone');
+        const beerCloneInput = beerCloneInputEl ? String(beerCloneInputEl.value).trim() : '';
         const hasBeerClone = beerCloneInput !== "";
 
         const useBudget = document.getElementById('useBudget')?.checked;
         let budgetContext = "";
         if (useBudget) {
-             const maxBudget = parseFloat(String(getSafeInputValue('maxBudget', '0')).replace(',', '.'));
+             const maxBudgetEl = document.getElementById('maxBudget') || document.getElementById('budget-limit');
+             const maxBudget = maxBudgetEl ? (parseFloat(String(maxBudgetEl.value).replace(/,/g, '.')) || 0) : 0;
              if (maxBudget > 0) {
                  budgetContext = `\n- **STRICT BUDGET CONSTRAINT:** The total cost of ingredients MUST be below **€${maxBudget}**. Prioritize cheaper ingredients or smaller batches if necessary.`;
              }
@@ -233,7 +242,7 @@ function buildPrompt() {
         const inventoryLogic = `
         ${inventoryInstruction} 
         **FULL STOCK LIST:** [${inventoryString}]. 
-        
+         
         **CRITICAL INVENTORY RULES:**
         1. **JSON Block:** MUST contain the **TOTAL** ingredients required (ignore stock here).
         2. **SHOPPING LIST TEXT:** - Compare Required Amount vs Stock Amount.
@@ -243,7 +252,8 @@ function buildPrompt() {
         ${stabiliserRule}
         `;
 
-        const userNutrientSelection = getSafeInputValue('recipeNutrientSelect', 'fermaid_o');
+        const userNutrientSelectionEl = document.getElementById('recipeNutrientSelect') || document.getElementById('nutrientSchedule');
+        const userNutrientSelection = userNutrientSelectionEl ? String(userNutrientSelectionEl.value).trim() : 'fermaid_o';
         
         const nutrientDatabase = {
             'fermaid_o': { name: 'Fermaid O', rawYan: 40.0, rAnorg: 0.0, rOrg: 1.0, muOrg: 4.0 },
@@ -259,7 +269,6 @@ function buildPrompt() {
             ? nutrientDatabase[userNutrientSelection] 
             : nutrientDatabase.fermaid_o;
 
-        // --- PAKKET 1: FYSIOLOGISCHE PROMPT-RESTRICTIES ---
         let baseNutrientRule = ``;
         if (activeNutrient.rAnorg > 0) {
             baseNutrientRule = `
@@ -347,7 +356,6 @@ function buildPrompt() {
         3. **REFERENCE:** Mention a suitable **Belgian brand** ONLY as an example (e.g. "Use a soft water like Spa Reine" or "A mineral water like Chaudfontaine").
         `;
 
-        // --- PAKKET 1 & 2: METHEGLIN POINTER FIX & CHAT-PARSER INTERLOCK ---
         let creativeBrief = ""; 
         if (customDescription.trim() !== '') {
              creativeBrief = `User Vision: "${customDescription}". Override stats only if specified. Base: ${batchSize}L, ${targetABV}%.`;
@@ -362,7 +370,8 @@ function buildPrompt() {
                         fruits.push(cb.labels.item(0).innerText);
                     }
                 }
-                const otherFruits = document.getElementById('fruitOther').value;
+                const fruitOtherEl = document.getElementById('fruitOther');
+                const otherFruits = fruitOtherEl ? fruitOtherEl.value : '';
                 const fStr = [...fruits, otherFruits].filter(Boolean).join(', ');
                 if(fStr) creativeBrief += `\n- Fruits: ${fStr}`;
              }
@@ -375,50 +384,27 @@ function buildPrompt() {
                         spices.push(cb.labels.item(0).innerText);
                     }
                 }
-                const otherSpices = document.getElementById('spiceOther').value;
+                const spiceOtherEl = document.getElementById('spiceOther');
+                const otherSpices = spiceOtherEl ? spiceOtherEl.value : '';
                 const sStr = [...spices, otherSpices].filter(Boolean).join(', ');
                 if(sStr) creativeBrief += `\n- Spices: ${sStr}`;
              }
-             if (style.includes('Braggot')) {
-                 creativeBrief += `\n- Braggot Base: ${document.getElementById('braggotStyle').value}`;
+             const braggotStyleEl = document.getElementById('braggotStyle');
+             if (style.includes('Braggot') && braggotStyleEl) {
+                 creativeBrief += `\n- Braggot Base: ${braggotStyleEl.value}`;
              }
-             if (document.getElementById('addOak').checked) creativeBrief += '\n- Requirement: Include Oak Aging.';
-             if (document.getElementById('specialIngredients').value) creativeBrief += `\n- Special Ingredients: ${document.getElementById('specialIngredients').value}`;
+             const addOakEl = document.getElementById('addOak');
+             if (addOakEl && addOakEl.checked) creativeBrief += '\n- Requirement: Include Oak Aging.';
+             
+             const specialIngredientsEl = document.getElementById('specialIngredients');
+             if (specialIngredientsEl && specialIngredientsEl.value) {
+                 creativeBrief += `\n- Special Ingredients: ${specialIngredientsEl.value}`;
+             }
         }
 
-        return `You are "MEA(N)DERY", a master mazer. 
-
-${mathContext}
-${carbContext}
-${protocolContext}
-${specificLaws}
-${ncrContext}
-${inventoryLogic}
-${waterContext}
-
-**GLOBAL SAFETY OVERRIDE:**
-1. **Temp:** NEVER recommend a fermentation temp exceeding the yeast manufacturer's limit.
-2. **Sanity Check:** If the user requests impossible physics, correct them politely.
-
-**OUTPUT FORMAT (ABSOLUTE STRICTNESS):**
-- **ROLE:** Act as a headless database. DO NOT speak to the user. DO NOT say "Okay", "Sure", "Here is your recipe".
-- **START:** The output MUST start with the character "#" (The Title). nothing else before it.
-- **STRUCTURE:**
-  1. Title (# Name)
-  2. > Inspirational Quote
-  3. Vital Stats List (ABV, Size, Style, Sweetness, OG)
-  4. Ingredients JSON Block: \`\`\`json [{"ingredient": "Name", "quantity": 0, "unit": "kg"}] \`\`\`
-  5. Instructions (Numbered list)
-  6. Timers: \`[TIMER:HH:MM:SS]\` inside the steps.
-  7. Brewer's Notes (Start section with "## Brewer's Notes")
-
-Request:
----
-${creativeBrief}
----`;
+        return `You are "MEA(N)DERY", a master mazer. \n\n${mathContext}\n${carbContext}\n${protocolContext}\n${specificLaws}\n${ncrContext}\n${inventoryLogic}\n${waterContext}\n\n**GLOBAL SAFETY OVERRIDE:**\n1. **Temp:** NEVER recommend a fermentation temp exceeding the yeast manufacturer's limit.\n2. **Sanity Check:** If the user requests impossible physics, correct them politely.\n\n**OUTPUT FORMAT (ABSOLUTE STRICTNESS):**\n- **ROLE:** Act as a headless database. DO NOT speak to the user. DO NOT say "Okay", "Sure", "Here is your recipe".\n- **START:** The output MUST start with the character "#" (The Title). nothing else before it.\n- **STRUCTURE:**\n  1. Title (# Name)\n  2. > Inspirational Quote\n  3. Vital Stats List (ABV, Size, Style, Sweetness, OG)\n  4. Ingredients JSON Block: \`\`\`json\n[{"ingredient": "Name", "quantity": 0, "unit": "kg"}]\n\`\`\`\n  5. Instructions (Numbered list)\n  6. Timers: \`[TIMER:HH:MM:SS]\` inside the steps.\n  7. Brewer's Notes (Start section with "## Brewer's Notes")\n\nRequest:\n---\n${creativeBrief}\n---`;
 
     } catch (error) {
-        // --- PAKKET 2: BLACK BOX TELEMETRIE ---
         window.logSystemError(error, 'brewing.js: buildPrompt Processing Chain', 'ERROR');
         throw new Error(`Failed to build prompt: ${error.message}`);
     }
@@ -2915,87 +2901,143 @@ window.deleteBrew = async function(brewId) {
     }
 };
 
-async function cloneTopUntappdBeer(event) {
+async function cloneTopUntappdBeer() {
     try {
-        const button = event ? event.currentTarget : null;
-        const targetRecipeId = button ? button.getAttribute('data-id') : null;
+        if (typeof window.showLoader === 'function') window.showLoader(true);
 
-        const clientId = state.settings?.untappdClientId;
-        const clientSecret = state.settings?.untappdClientSecret;
+        const clientId = state.settings?.untappdClientId || state.userSettings?.untappdClientId;
+        const clientSecret = state.settings?.untappdClientSecret || state.userSettings?.untappdClientSecret;
 
         if (!clientId || !clientSecret) {
-            window.showToast('Untappd API-credentials ontbreken in de instellingen!', 'error');
-            return;
+            throw new Error('Untappd API-credentials ontbreken in de instellingen!');
         }
 
-        // Aanroep via gecentraliseerde performApiCall wrapper naar Untappd endpoint
-        const endpoint = `https://api.untappd.com/v4/user/beers?client_id=${clientId}&client_secret=${clientSecret}&sort=highest_rated&limit=1`;
+        const endpoint = `https://api.untappd.com/v4/user/beers?client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&sort=highest_rated&limit=1`;
         
         window.showToast('Topbier ophalen uit Untappd...', 'info');
-        const response = await performApiCall(endpoint, { method: 'GET' });
+        
+        const response = await fetch(endpoint, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
 
-        if (!response || !response.response || !response.response.beers || response.response.beers.items.length === 0) {
-            window.showToast('Geen bieren gevonden of ongeldige API response.', 'error');
-            return;
+        if (!response.ok) {
+            throw new Error(`Untappd API Netwerkfout: Ontving statuscode ${response.status}`);
         }
 
-        // Data-extractie met de verplichte .at() methode i.p.v. vierkante haken
-        const topBeerContainer = response.response.beers.items.at(0);
+        const data = await response.json();
+
+        if (!data || !data.response || !data.response.beers || data.response.beers.items.length === 0) {
+            throw new Error('Geen bieren gevonden of ongeldige API response.');
+        }
+
+        const topBeerContainer = data.response.beers.items.at(0);
         const beerData = topBeerContainer.beer;
 
-        // Sanitisatie volgens het Comma-to-Dot protocol
         let abvString = String(beerData.beer_abv || '0').replace(/,/g, '.');
-        let abvValue = parseFloat(abvString);
+        let abvValue = parseFloat(abvString) || 0;
+        
+        let ibuString = String(beerData.beer_ibu || '0').replace(/,/g, '.');
+        let sourceIbu = parseFloat(ibuString) || 0;
 
-        // State update (Single Source of Truth) en UI synchronisatie
+        const beerName = beerData.beer_name || 'Untitled Untappd Clone';
+        const beerStyle = (beerData.beer_style || '').toLowerCase();
+        const beerDescription = beerData.beer_description || '';
+
+        const batchInputEl = document.getElementById('batchSize');
+        const batchSize = batchInputEl ? (parseFloat(String(batchInputEl.value).replace(/,/g, '.')) || 5) : 5;
+
+        const estimatedOG = 1.000 + (abvValue * 0.0075);
+        if (estimatedOG >= 1.775) {
+            throw new Error("Kritieke fout: De vereiste startdensiteit overschrijdt de Hall-limiet (OG >= 1.775).");
+        }
+
+        let calculatedOG = estimatedOG;
+        let calculatedFG = 1.000;
+        let honeyKg = 0;
+        let maltExtractKg = 0;
+        let adjustedIbu = sourceIbu;
+        let recipeStyleMatrix = 'Traditional Mead';
+        let customBriefExtension = '';
+
+        const isBraggotDriven = beerStyle.includes('ipa') || beerStyle.includes('stout') || beerStyle.includes('porter') || beerStyle.includes('ale') || beerStyle.includes('belgian') || beerStyle.includes('blond') || beerStyle.includes('triple') || beerStyle.includes('dubbel') || beerStyle.includes('quad');
+        const isMelomelDriven = beerStyle.includes('sour') || beerStyle.includes('fruit') || beerStyle.includes('lambic') || beerStyle.includes('wild') || beerStyle.includes('gueuze') || beerStyle.includes('gose');
+
+        if (isBraggotDriven) {
+            recipeStyleMatrix = 'Braggot';
+            const abw = abvValue * 0.794;
+            const deltaSG = (abw * (1.775 - calculatedOG)) / 76.08;
+            calculatedFG = calculatedOG - deltaSG;
+            
+            const totalGP = (calculatedOG - 1.000) * 1000 * batchSize;
+            const gpMalt = totalGP * 0.40;
+            const gpHoney = totalGP * 0.60;
+            
+            honeyKg = gpHoney / 375;
+            maltExtractKg = gpMalt / 290;
+            calculatedFG = 1.000 + ((calculatedOG - 1.000) * 0.25 * 0.40);
+            
+            const dynamicPhiBraggot = 1.0 + 0.45 * (1.0 - (gpMalt / totalGP));
+            adjustedIbu = sourceIbu / dynamicPhiBraggot;
+
+            customBriefExtension = `\n- **STRIKT BRAGGOT BLUEPRINT (v2.6):** Berekening opgesteld met ${honeyKg.toFixed(2)} kg honing en ${maltExtractKg.toFixed(2)} kg moutextract. Doel bitterheid na de-escalatie is ${adjustedIbu.toFixed(1)} IBU.`;
+        } else if (isMelomelDriven) {
+            recipeStyleMatrix = 'Melomel';
+            adjustedIbu = sourceIbu / 1.45;
+            honeyKg = (abvValue * 22 * batchSize) / 1000;
+            customBriefExtension = `\n- **MELOMEL FRUIT INTERLOCKS:** Integreer fruitmaceratie passend bij de "${beerStyle}" profielkenmerken. Voeg instructies toe voor een proactieve zuurtitratie en K2CO3 pH-buffering ter voorkoming van een vroege pH-crash onder 3.2.`;
+        } else {
+            honeyKg = (abvValue * 22 * batchSize) / 1000;
+        }
+
         state.tempState = state.tempState || {};
         state.tempState.clonedUntappdBeer = {
-            name: beerData.beer_name,
-            style: beerData.beer_style,
+            name: beerName,
+            style: recipeStyleMatrix,
             abv: abvValue,
-            description: beerData.beer_description || ''
+            og: calculatedOG,
+            fg: calculatedFG,
+            honeyAmount: honeyKg,
+            maltAmount: maltExtractKg,
+            ibu: adjustedIbu,
+            description: beerDescription
         };
 
-        const recipeNameInput = document.getElementById('recipe-name-input');
-        const recipeAbvInput = document.getElementById('recipe-abv-input');
+        const recipeNameInput = document.getElementById('recipe-name-input') || document.getElementById('customDescription');
+        if (recipeNameInput) {
+            if (recipeNameInput.tagName === 'TEXTAREA') {
+                recipeNameInput.value = `Kloon van Untappd bier: ${beerName} (${beerData.beer_style || 'Beer'}). Doel ABV: ${abvValue}%. Doelstijl: ${recipeStyleMatrix}.${customBriefExtension}`;
+            } else {
+                recipeNameInput.value = beerName;
+            }
+        }
 
-        if (recipeNameInput) recipeNameInput.value = beerData.beer_name;
+        const recipeAbvInput = document.getElementById('abv');
         if (recipeAbvInput) recipeAbvInput.value = abvValue;
 
-        window.showToast(`Succesvol gekloond: ${beerData.beer_name}!`, 'success');
+        const styleSelect = document.getElementById('style');
+        if (styleSelect && styleSelect.options) {
+            for (let i = 0; i < styleSelect.options.length; i++) {
+                const option = styleSelect.options.item(i);
+                if (option && option.text.toLowerCase().includes(recipeStyleMatrix.toLowerCase())) {
+                    styleSelect.selectedIndex = i;
+                    break;
+                }
+            }
+            if (typeof window.handleStyleChange === 'function') window.handleStyleChange();
+        }
+
+        window.showToast(`Succesvol getransmuteerd van Untappd: ${beerName} (${recipeStyleMatrix})!`, 'success');
     } catch (error) {
-        window.logSystemError(error, 'brewing.js: cloneTopUntappdBeer', 'ERROR');
-        window.showToast('API-fout bij het ophalen van Untappd data. Controleer je credentials.', 'error');
+        window.logSystemError(error, 'brewing.js: cloneTopUntappdBeer Extrapolation Failure', 'ERROR');
+        window.showToast(error.message || 'Fout bij het parseren of berekenen van de Untappd kloonparameters.', 'error');
+    } finally {
+        if (typeof window.showLoader === 'function') window.showLoader(false);
     }
 }
-
-window.cloneBrew = async function(brewId) {
-    const original = state.brews.find(b => b.id === brewId);
-    if (!original) return;
-    if (!confirm(`Start a new batch based on "${original.recipeName}"?`)) return;
-
-    try {
-        const newBrew = {
-            ...original,
-            recipeName: `${original.recipeName} (Copy)`,
-            createdAt: serverTimestamp(),
-            logData: {}, // Reset log
-            checklist: {}, // Reset checklist
-            primaryComplete: false,
-            isBottled: false
-        };
-        delete newBrew.id; // Nieuw ID genereren
-
-        const docRef = await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews'), newBrew);
-        showToast("Batch cloned! Loading...", "success");
-        
-        // Direct openen in brouwdag modus
-        window.startActualBrewDay(docRef.id);
-    } catch (error) { 
-        window.logSystemError(error, 'brewing.js: cloneBrew', 'ERROR'); 
-        showToast("Dupliceren van batch mislukt.", "error"); 
-    }
-};
 
 window.resumeBrew = function(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
@@ -4009,3 +4051,4 @@ window.startActualBrewDay = startActualBrewDay;
 window.renderBrewDay = renderBrewDay;
 window.closePrimaryDetail = closePrimaryDetail;
 window.cloneTopUntappdBeer = cloneTopUntappdBeer;
+window.buildPrompt = buildPrompt;

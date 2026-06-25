@@ -141,6 +141,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('generateBtn')?.addEventListener('click', () => window.generateRecipe());
     document.getElementById('customDescription')?.addEventListener('input', () => window.handleDescriptionInput());
     document.getElementById('style')?.addEventListener('change', () => window.handleStyleChange());
+    document.getElementById('cloneTopUntappdBeerBtn')?.addEventListener('click', () => {
+        if (typeof window.cloneTopUntappdBeer === 'function') {
+            window.cloneTopUntappdBeer();
+        } else {
+            window.logSystemError(new Error('window.cloneTopUntappdBeer is not defined or initialized'), 'DOMContentLoaded: Untappd Link', 'FATAL');
+            window.showToast('Untappd module niet correct geladen.', 'error');
+        }
+    })
 
     // --- ARCHIVE BREW (Move to History, remove from Active) ---
     window.archiveBrew = async function(brewId, brewName) {

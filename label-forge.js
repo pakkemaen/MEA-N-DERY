@@ -1691,11 +1691,23 @@ window.deleteCustomLabelFormat = deleteCustomLabelFormat;
 window.autoDetectLabelFormat = autoDetectLabelFormat;
 
 // 6. Helpers en Asset Managers (Gezuiverde unieke toewijzingen)
-window.populateLabelRecipeDropdown = populateLabelRecipeDropdown;
-window.updateLabelPreviewDimensions = updateLabelPreviewDimensions;
-window.autoFitLabelText = autoFitLabelText;
-window.updateArtButtons = updateArtButtons;
-window.addLabelStyle = addLabelStyle;
-window.addLabelFont = addLabelFont;
-window.deleteLabelAsset = deleteLabelAsset;
-window.resetLabelLayout = resetLabelLayout;
+try {
+    window.populateLabelRecipeDropdown = populateLabelRecipeDropdown;
+    window.updateLabelPreviewDimensions = updateLabelPreviewDimensions;
+    window.autoFitLabelText = autoFitLabelText;
+    window.updateArtButtons = updateArtButtons;
+    
+    // Explicit scope-binding van de interne asset-laadfunctie voor de orchestrator
+    if (typeof loadLabelAssets === 'function') {
+        window.loadLabelAssets = loadLabelAssets;
+    } else if (typeof loadLabelFromBrew === 'function') {
+        window.loadLabelAssets = loadLabelFromBrew;
+    }
+} catch (error) {
+    if (typeof window.logSystemError === 'function') {
+        window.logSystemError('Error tijdens het binden van de label-forge scope', error);
+    }
+    if (typeof window.showToast === 'function') {
+        window.showToast('Fout bij initialiseren van label componenten', 'error');
+    }
+}

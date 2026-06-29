@@ -25,25 +25,6 @@ const BUILT_IN_WATER_PROFILES = {
 
 let userWaterProfiles = [];
 
-function toggleUntappdSecretVisibility() {
-    try {
-        const secretInput = document.getElementById('untappd-client-secret');
-        const toggleIcon = document.getElementById('untappd-secret-toggle-icon');
-        
-        if (!secretInput) return;
-        
-        if (secretInput.type === 'password') {
-            secretInput.type = 'text';
-            if (toggleIcon) toggleIcon.textContent = 'visibility_off';
-        } else {
-            secretInput.type = 'password';
-            if (toggleIcon) toggleIcon.textContent = 'visibility';
-        }
-    } catch (error) {
-        window.logSystemError(error, 'tools.js: toggleUntappdSecretVisibility', 'ERROR');
-    }
-}
-
 function applySettings() {
     try {
         // Vul de velden in settings-view
@@ -121,18 +102,11 @@ async function saveUserSettings(e) {
         const aiModelInputEl = document.getElementById('aiModelInput');
         const chatModelInputEl = document.getElementById('chatModelInput');
         const imageModelInputEl = document.getElementById('imageModelInput');
-        const untappdClientIdInputEl = document.getElementById('untappd-client-id');
-        const untappdClientSecretInputEl = document.getElementById('untappd-client-secret');
 
         // --- 2. COMMA-TO-DOT & DATA SANITISATIE ---
         const apiKeyVal = apiKeyInputEl ? apiKeyInputEl.value.trim() : '';
         const batchSizeInput = defaultBatchSizeInputEl ? defaultBatchSizeInputEl.value.replace(/,/g, '.') : '5';
         const wcfInput = wcfInputEl ? parseFloat(wcfInputEl.value.replace(/,/g, '.')) : 1.00;
-
-        let untappdClientId = untappdClientIdInputEl ? untappdClientIdInputEl.value.trim() : '';
-        let untappdClientSecret = untappdClientSecretInputEl ? untappdClientSecretInputEl.value.trim() : '';
-        untappdClientId = untappdClientId.replace(/,/g, '.');
-        untappdClientSecret = untappdClientSecret.replace(/,/g, '.');
 
         // --- 3. HARD VALIDATION CONSTRAINTS ---
         if (wcfInput < 1.00 || wcfInput > 1.04) {
@@ -163,19 +137,12 @@ async function saveUserSettings(e) {
         
         const userDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId);
         await updateDoc(userDocRef, {
-            'settings.untappdClientId': untappdClientId,
-            'settings.untappdClientSecret': untappdClientSecret,
             'settings.updatedAt': serverTimestamp()
         });
 
         // --- 6. SINGLE SOURCE OF TRUTH (STATE) SYNCHRONISATIE ---
         state.userSettings = { ...state.userSettings, ...newSettings }; 
-        state.userSettings.untappdClientId = untappdClientId;
-        state.userSettings.untappdClientSecret = untappdClientSecret;
-
         state.settings = state.settings || {};
-        state.settings.untappdClientId = untappdClientId;
-        state.settings.untappdClientSecret = untappdClientSecret;
 
         // --- 7. ECOSYSTEEM TRIGGERS & TOASTS ---
         if (typeof applySettings === 'function') {
@@ -189,7 +156,7 @@ async function saveUserSettings(e) {
         }
 
     } catch (error) {
-        window.logSystemError(error, 'User Settings Modulation & Untappd Certification Chain', 'ERROR');
+        window.logSystemError(error, 'User Settings Modulation', 'ERROR');
         window.showToast("System error: Unable to commit user configuration parameters.", "error");
     }
 }
@@ -2999,18 +2966,6 @@ async function loadUserSettings() {
         if (userSnap.exists() && userSnap.data().settings) {
             const extSettings = userSnap.data().settings;
             state.settings = state.settings || {};
-            state.settings.untappdClientId = extSettings.untappdClientId || '';
-            state.settings.untappdClientSecret = extSettings.untappdClientSecret || '';
-            
-            const clientIdEl = document.getElementById('untappd-client-id');
-            const clientSecretEl = document.getElementById('untappd-client-secret');
-            
-            if (clientIdEl) {
-                clientIdEl.value = extSettings.untappdClientId || '';
-            }
-            if (clientSecretEl) {
-                clientSecretEl.value = extSettings.untappdClientSecret || '';
-            }
         }
     } catch (error) {
         window.logSystemError(error, 'tools.js -> loadUserSettings', 'ERROR');
@@ -3054,5 +3009,3 @@ window.exportInventory = exportInventory;
 window.clearCollection = clearCollection;
 window.calculateCarbonationEngine = calculateCarbonationEngine;
 window.calculateDryHopExtraction = calculateDryHopExtraction;
-window.saveUserSettings = saveUserSettings;
-window.toggleUntappdSecretVisibility = toggleUntappdSecretVisibility;

@@ -2902,140 +2902,227 @@ window.deleteBrew = async function(brewId) {
 };
 
 async function cloneTopUntappdBeer() {
+    console.log("📸 AI Vision Network Gateway: Initializing Gemini Vision Pipeline with Zymological Math...");
+    
+    if (typeof window.showLoader === 'function') {
+        window.showLoader(true);
+    }
+
     try {
-        if (typeof window.showLoader === 'function') window.showLoader(true);
-
-        const clientId = state.settings?.untappdClientId || state.userSettings?.untappdClientId;
-        const clientSecret = state.settings?.untappdClientSecret || state.userSettings?.untappdClientSecret;
-
-        if (!clientId || !clientSecret) {
-            throw new Error('Untappd API-credentials ontbreken in de instellingen!');
+        // 1. API-Sleutel & Model Resolutie
+        const apiKey = state.userSettings?.apiKey || (typeof CONFIG !== 'undefined' ? CONFIG.firebase?.apiKey : null);
+        if (!apiKey) {
+            if (window.showToast) {
+                window.showToast("Fout: Geen geldige Google Gemini API-key gevonden in instellingen.", "error");
+            }
+            if (typeof window.showLoader === 'function') window.showLoader(false);
+            return;
         }
 
-        const endpoint = `https://api.untappd.com/v4/user/beers?client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&sort=highest_rated&limit=1`;
-        
-        window.showToast('Topbier ophalen uit Untappd...', 'info');
-        
-        const response = await fetch(endpoint, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
+        const activeModel = state.userSettings?.aiModel || state.userSettings?.chatModel || "gemini-2.0-flash";
+
+        // 2. Base64 Screenshot Validatie uit de State
+        const base64Image = state.tempState?.untappdScreenshotBase64;
+        if (!base64Image) {
+            if (window.showToast) {
+                window.showToast("Fout: Geen Untappd screenshot data gevonden in het actieve brouwgeheugen.", "error");
             }
+            if (typeof window.showLoader === 'function') window.showLoader(false);
+            return;
+        }
+
+        // 3. Endpoint & Structured JSON System Prompt Blauwdruk
+        const gatewayUrl = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`;
+
+        const structuredSystemPrompt = "Extract data from this Untappd beer screenshot. Return ONLY a valid, minified JSON object containing: { \"beer_name\": \"string\", \"style\": \"string\", \"abv\": number, \"ibu\": number, \"flavor_profile\": [\"strings\"] }. Do not include any markdown backticks, markdown code blocks, explanatory text or trailing characters. Ensure proper data types.";
+
+        // 4. Multi-Modal Vision Payload Constructie
+        const payload = {
+            contents: [
+                {
+                    parts: [
+                        {
+                            text: structuredSystemPrompt
+                        },
+                        {
+                            inline_data: {
+                                mime_type: "image/jpeg",
+                                data: base64Image
+                            }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        // 5. Native Fetch Execution
+        const response = await fetch(gatewayUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
-            throw new Error(`Untappd API Netwerkfout: Ontving statuscode ${response.status}`);
+            throw new Error(`Gemini Vision Gateway HTTP Error! Status: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
 
-        if (!data || !data.response || !data.response.beers || data.response.beers.items.length === 0) {
-            throw new Error('Geen bieren gevonden of ongeldige API response.');
+        // 6. Chat-Parser Bug Compliance: Navigatie via .at() in plaats van vierkante haken
+        if (!data.candidates || data.candidates.length === 0) {
+            throw new Error("Geen candidates geretourneerd door de Gemini AI Vision-engine.");
         }
 
-        const topBeerContainer = data.response.beers.items.at(0);
-        const beerData = topBeerContainer.beer;
+        const candidateZero = data.candidates.at(0);
+        if (!candidateZero || !candidateZero.content || !candidateZero.content.parts) {
+            throw new Error("Malformed payload structure binnen candidate(0).");
+        }
 
-        let abvString = String(beerData.beer_abv || '0').replace(/,/g, '.');
-        let abvValue = parseFloat(abvString) || 0;
+        const partZero = candidateZero.content.parts.at(0);
+        if (!partZero || !partZero.text) {
+            throw new Error("Tekstuele response part ontbreekt in het AI Vision resultaat.");
+        }
+
+        let cleanJsonText = partZero.text.trim();
         
-        let ibuString = String(beerData.beer_ibu || '0').replace(/,/g, '.');
-        let sourceIbu = parseFloat(ibuString) || 0;
+        // Defensieve stripactie mocht het model ondanks instructies toch markdown backticks leveren
+        if (cleanJsonText.startsWith("```json")) {
+            cleanJsonText = cleanJsonText.replace("```json", "");
+            if (cleanJsonText.endsWith("```")) {
+                cleanJsonText = cleanJsonText.substring(0, cleanJsonText.length - 3);
+            }
+        } else if (cleanJsonText.startsWith("```")) {
+            cleanJsonText = cleanJsonText.replace("```", "");
+            if (cleanJsonText.endsWith("```")) {
+                cleanJsonText = cleanJsonText.substring(0, cleanJsonText.length - 3);
+            }
+        }
+        cleanJsonText = cleanJsonText.trim();
 
-        const beerName = beerData.beer_name || 'Untitled Untappd Clone';
-        const beerStyle = (beerData.beer_style || '').toLowerCase();
-        const beerDescription = beerData.beer_description || '';
+        // Deserialisatie van parameters uit de Vision Gateway
+        const parsedBeerData = JSON.parse(cleanJsonText);
+        
+        const beerName = parsedBeerData.beer_name || "Unknown Untappd Beer";
+        const beerStyle = parsedBeerData.style || "Traditional Mead";
+        
+        // Defensieve Sanitisatie: Komma-to-Dot handhaving op de alcoholpercentage string-transformatie
+        const rawAbvStr = String(parsedBeerData.abv || "0.0").replace(/,/g, '.');
+        const beerAbv = parseFloat(rawAbvStr) || 0.0;
+        
+        const beerIbu = parseInt(parsedBeerData.ibu) || 0;
+        const beerFlavorProfile = parsedBeerData.flavor_profile || [];
 
-        const batchInputEl = document.getElementById('batchSize');
-        const batchSize = batchInputEl ? (parseFloat(String(batchInputEl.value).replace(/,/g, '.')) || 5) : 5;
+        // --- FASE 14.3: ZYMOLOGISCHE WISKUNDE & INVERSE HALL INTEGRATIE ---
+        
+        // A. Thermodynamische Alcohol-Conversie (ABV naar ABW)
+        const abw = beerAbv * 0.794;
 
-        const estimatedOG = 1.000 + (abvValue * 0.0075);
-        if (estimatedOG >= 1.775) {
-            throw new Error("Kritieke fout: De vereiste startdensiteit overschrijdt de Hall-limiet (OG >= 1.775).");
+        // B. Achterwaartse Hall-vergelijking om de startdichtheid te isoleren
+        const ogTheoretisch = ((1.775 * abw) + 57.06) / (57.06 + abw);
+
+        // C. Pre-Check Interlock Validatiepoort tegen crashes
+        if (ogTheoretisch >= 1.775) {
+            if (window.logSystemError) {
+                window.logSystemError(`Kritieke overschrijding Hall Equation Input: ogTheoretisch ${ogTheoretisch} overgrijpt de absolute limiet van 1.775.`, "Zymology: Hall Equation Interlock", "FATAL");
+            }
+            if (window.showToast) {
+                window.showToast("Brouw-safeguard: Berekende startdichtheid schendt de fysieke limiet van de Hall-vergelijking. Executie afgebroken.", "error");
+            }
+            if (typeof window.showLoader === 'function') window.showLoader(false);
+            return;
         }
 
-        let calculatedOG = estimatedOG;
-        let calculatedFG = 1.000;
-        let honeyKg = 0;
-        let maltExtractKg = 0;
-        let adjustedIbu = sourceIbu;
-        let recipeStyleMatrix = 'Traditional Mead';
-        let customBriefExtension = '';
+        // D. Braggot Suikertransitie & Extract-Berekening
+        const batchSizeElement = document.getElementById('batchSize');
+        const batchSize = batchSizeElement ? (parseFloat(batchSizeElement.value) || 5.0) : 5.0;
 
-        const isBraggotDriven = beerStyle.includes('ipa') || beerStyle.includes('stout') || beerStyle.includes('porter') || beerStyle.includes('ale') || beerStyle.includes('belgian') || beerStyle.includes('blond') || beerStyle.includes('triple') || beerStyle.includes('dubbel') || beerStyle.includes('quad');
-        const isMelomelDriven = beerStyle.includes('sour') || beerStyle.includes('fruit') || beerStyle.includes('lambic') || beerStyle.includes('wild') || beerStyle.includes('gueuze') || beerStyle.includes('gose');
+        const gpTotal = (ogTheoretisch - 1.000) * 1000 * batchSize;
+        const xMalt = 0.40; // Gefixeerde molfractie van de moutstorting conform mandaat
+        const gpMalt = gpTotal * xMalt;
+        const gpHoney = gpTotal - gpMalt;
 
-        if (isBraggotDriven) {
-            recipeStyleMatrix = 'Braggot';
-            const abw = abvValue * 0.794;
-            const deltaSG = (abw * (1.775 - calculatedOG)) / 76.08;
-            calculatedFG = calculatedOG - deltaSG;
-            
-            const totalGP = (calculatedOG - 1.000) * 1000 * batchSize;
-            const gpMalt = totalGP * 0.40;
-            const gpHoney = totalGP * 0.60;
-            
-            honeyKg = gpHoney / 375;
-            maltExtractKg = gpMalt / 290;
-            calculatedFG = 1.000 + ((calculatedOG - 1.000) * 0.25 * 0.40);
-            
-            const dynamicPhiBraggot = 1.0 + 0.45 * (1.0 - (gpMalt / totalGP));
-            adjustedIbu = sourceIbu / dynamicPhiBraggot;
+        // Potentiaal-Constante Correctie: Honing exact delen door de gecorrigeerde oenologische waarde van 290 GP
+        const honeyKg = gpHoney / 290; 
+        const maltKg = gpMalt / 375;  // Moutstorting (DME) opbrengstpotentiaal van 375 GP
 
-            customBriefExtension = `\n- **STRIKT BRAGGOT BLUEPRINT (v2.6):** Berekening opgesteld met ${honeyKg.toFixed(2)} kg honing en ${maltExtractKg.toFixed(2)} kg moutextract. Doel bitterheid na de-escalatie is ${adjustedIbu.toFixed(1)} IBU.`;
-        } else if (isMelomelDriven) {
-            recipeStyleMatrix = 'Melomel';
-            adjustedIbu = sourceIbu / 1.45;
-            honeyKg = (abvValue * 22 * batchSize) / 1000;
-            customBriefExtension = `\n- **MELOMEL FRUIT INTERLOCKS:** Integreer fruitmaceratie passend bij de "${beerStyle}" profielkenmerken. Voeg instructies toe voor een proactieve zuurtitratie en K2CO3 pH-buffering ter voorkoming van een vroege pH-crash onder 3.2.`;
-        } else {
-            honeyKg = (abvValue * 22 * batchSize) / 1000;
+        // E. Schijnbare Vergistingsgraad & Einddensiteit (75% Conversie-reductie)
+        const fgEst = ogTheoretisch - ((ogTheoretisch - 1.000) * 0.75);
+
+        // F. Dynamische Hopbenutting (IBU-Correctie)
+        const phiBraggot = 1.0 + (0.45 * (1.0 - xMalt));
+        const correctedIbu = beerIbu / phiBraggot;
+
+        // G. Fase-Blokkade & Nutriënt-Instructie (Voor lichte sessiemedes of braggots rond de 1.037)
+        let nutrientInstruction = "";
+        if (ogTheoretisch <= 1.045) {
+            nutrientInstruction = "\n\n⚠️ NUTRIENT PHASE-BLOCK BLOCKADE: Dit recept betreft een lichte sessiemede of braggot. Het is wettelijk verplicht om anorganische stikstofbronnen (DAP) na de 1/3 suikerbreuk of bij het overschrijden van de 9% ABV toxiciteitsgrens wiskundig op nul te zetten om reststikstof-offflavors te voorkomen.";
         }
 
-        state.tempState = state.tempState || {};
+        // H. DOM- & State-Synchronisatie
+        if (!state.tempState) state.tempState = {};
         state.tempState.clonedUntappdBeer = {
-            name: beerName,
-            style: recipeStyleMatrix,
-            abv: abvValue,
-            og: calculatedOG,
-            fg: calculatedFG,
-            honeyAmount: honeyKg,
-            maltAmount: maltExtractKg,
-            ibu: adjustedIbu,
-            description: beerDescription
+            beer_name: beerName,
+            style: beerStyle,
+            abv: beerAbv,
+            ibu: beerIbu,
+            flavor_profile: beerFlavorProfile,
+            abw: abw,
+            ogTheoretisch: ogTheoretisch,
+            fgEst: fgEst,
+            gpTotal: gpTotal,
+            honeyKg: honeyKg,
+            maltKg: maltKg,
+            phiBraggot: phiBraggot,
+            correctedIbu: correctedIbu
         };
 
-        const recipeNameInput = document.getElementById('recipe-name-input') || document.getElementById('customDescription');
-        if (recipeNameInput) {
-            if (recipeNameInput.tagName === 'TEXTAREA') {
-                recipeNameInput.value = `Kloon van Untappd bier: ${beerName} (${beerData.beer_style || 'Beer'}). Doel ABV: ${abvValue}%. Doelstijl: ${recipeStyleMatrix}.${customBriefExtension}`;
-            } else {
-                recipeNameInput.value = beerName;
+        // UI Elementen updaten via gesynchroniseerde DOM-selectoren
+        const targetStyleInput = document.getElementById('style');
+        const targetAbvInput = document.getElementById('abv'); // Gesynchroniseerd naar het kortere id uit index.html
+        const customDescriptionInput = document.getElementById('customDescription');
+
+        if (targetStyleInput) {
+            targetStyleInput.value = beerStyle;
+            if (typeof window.handleStyleChange === 'function') {
+                window.handleStyleChange();
             }
         }
 
-        const recipeAbvInput = document.getElementById('abv');
-        if (recipeAbvInput) recipeAbvInput.value = abvValue;
-
-        const styleSelect = document.getElementById('style');
-        if (styleSelect && styleSelect.options) {
-            for (let i = 0; i < styleSelect.options.length; i++) {
-                const option = styleSelect.options.item(i);
-                if (option && option.text.toLowerCase().includes(recipeStyleMatrix.toLowerCase())) {
-                    styleSelect.selectedIndex = i;
-                    break;
-                }
-            }
-            if (typeof window.handleStyleChange === 'function') window.handleStyleChange();
+        if (targetAbvInput) {
+            targetAbvInput.value = beerAbv.toFixed(2);
         }
 
-        window.showToast(`Succesvol getransmuteerd van Untappd: ${beerName} (${recipeStyleMatrix})!`, 'success');
+        if (customDescriptionInput) {
+            customDescriptionInput.value = `Cloned via Untappd Screenshot Vision Netwerk-Gateway. Original Beer: ${beerName}. Smaakprofiel: ${beerFlavorProfile.join(', ')}. Wiskundige herleiding: berekende OG ${ogTheoretisch.toFixed(3)}, geschatte FG ${fgEst.toFixed(3)}. Vereist: ${honeyKg.toFixed(2)}kg honing en ${maltKg.toFixed(2)}kg DME.${nutrientInstruction}`;
+            if (typeof window.handleDescriptionInput === 'function') {
+                window.handleDescriptionInput();
+            }
+        }
+
+        if (window.showToast) {
+            window.showToast(`Zymologische wiskunde sluitend! OG: ${ogTheoretisch.toFixed(3)}. Starten van receptgeneratie...`, "success");
+        }
+
+        // Automatisch de hoofd-generatiepijplijn triggeren
+        if (typeof window.generateRecipe === 'function') {
+            await window.generateRecipe();
+        } else {
+            throw new Error("window.generateRecipe is niet beschikbaar in de globale scope.");
+        }
+
     } catch (error) {
-        window.logSystemError(error, 'brewing.js: cloneTopUntappdBeer Extrapolation Failure', 'ERROR');
-        window.showToast(error.message || 'Fout bij het parseren of berekenen van de Untappd kloonparameters.', 'error');
+        if (window.logSystemError) {
+            window.logSystemError(error, "brewing.js: async function cloneTopUntappdBeer (Fase 14.3)", "FATAL");
+        }
+        if (window.showToast) {
+            window.showToast(`Zymologische Wiskunde Gateway Crash: ${error.message}`, "error");
+        }
     } finally {
-        if (typeof window.showLoader === 'function') window.showLoader(false);
+        if (typeof window.showLoader === 'function') {
+            window.showLoader(false);
+        }
     }
 }
 

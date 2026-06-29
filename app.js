@@ -90,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await signInWithPopup(auth, googleProvider);
             console.log("✅ Login Success:", result.user.uid);
         } catch (error) {
-            // Gesaneerd naar centraal Black Box Framework
             window.logSystemError(error, 'Auth: Google Sign-In', 'ERROR');
             showToast("Login failed: " + error.message, "error");
         }
@@ -137,18 +136,81 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // --- UNTAPPD SCREENSHOT INTERFACE LOGICA (v2.6 HOTFIX) ---
+    const untappdInput = document.getElementById('untappd-screenshot-input');
+    const untappdTrigger = document.getElementById('untappd-upload-trigger');
+    const untappdPreviewContainer = document.getElementById('untappd-screenshot-preview');
+    const untappdPreviewImg = document.getElementById('untappd-preview-img');
+
+    if (untappdTrigger && untappdInput) {
+        untappdTrigger.addEventListener('click', () => {
+            untappdInput.click();
+        });
+    }
+
+    if (untappdInput) {
+        untappdInput.addEventListener('change', (e) => {
+            try {
+                const fileList = e.target.files;
+                if (!fileList || fileList.length === 0) return;
+
+                // Strikte chat-parser bug preventie op NodeLists: gebruik .item(0)
+                const selectedFile = fileList.item(0);
+                if (!selectedFile) return;
+
+                if (!selectedFile.type.startsWith('image/')) {
+                    window.showToast("Geselecteerd bestand is geen geldige afbeelding.", "error");
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const dataUrl = event.target.result;
+                        
+                        // Visuele preview updaten
+                        if (untappdPreviewImg) untappdPreviewImg.src = dataUrl;
+                        if (untappdPreviewContainer) untappdPreviewContainer.classList.remove('hidden');
+
+                        // INFRASTRUCTURELE HOTFIX: Transmuteren via de native, array-veilige .at() methodiek op de gesplitste string array
+                        const base64Parts = dataUrl.split(',');
+                        const pureBase64 = base64Parts.at(1) || base64Parts.at(0);
+
+                        // Veilig opslaan in de brouw-state van de Single Source of Truth
+                        if (!state.tempState) state.tempState = {};
+                        state.tempState.untappdScreenshotBase64 = pureBase64;
+
+                        window.showToast("Screenshot ingeladen. Starten van de AI-analyse...", "success");
+
+                        // Gecontroleerde asynchrone aanroep triggeren naar de brouw-engine
+                        if (typeof window.cloneTopUntappdBeer === 'function') {
+                            window.cloneTopUntappdBeer();
+                        } else {
+                            throw new Error("window.cloneTopUntappdBeer is niet geïnitialiseerd of gekoppeld.");
+                        }
+                    } catch (innerErr) {
+                        window.logSystemError(innerErr, "Untappd FileReader Processing Lifecycle", "FATAL");
+                        window.showToast("Fout bij verwerken van screenshot.", "error");
+                    }
+                };
+
+                reader.onerror = function(fileError) {
+                    window.logSystemError(fileError, "Untappd Native FileReader Operation", "ERROR");
+                    window.showToast("Fout bij inlezen van bestand.", "error");
+                };
+
+                reader.readAsDataURL(selectedFile);
+            } catch (error) {
+                window.logSystemError(error, "Untappd Input Change Pipeline Handler", "ERROR");
+                window.showToast("Screenshot upload afgebroken wegens een runtime exception.", "error");
+            }
+        });
+    }
+
     // --- BROUWEN ---
     document.getElementById('generateBtn')?.addEventListener('click', () => window.generateRecipe());
     document.getElementById('customDescription')?.addEventListener('input', () => window.handleDescriptionInput());
     document.getElementById('style')?.addEventListener('change', () => window.handleStyleChange());
-    document.getElementById('cloneTopUntappdBeerBtn')?.addEventListener('click', () => {
-        if (typeof window.cloneTopUntappdBeer === 'function') {
-            window.cloneTopUntappdBeer();
-        } else {
-            window.logSystemError(new Error('window.cloneTopUntappdBeer is not defined or initialized'), 'DOMContentLoaded: Untappd Link', 'FATAL');
-            window.showToast('Untappd module niet correct geladen.', 'error');
-        }
-    })
 
     // --- ARCHIVE BREW (Move to History, remove from Active) ---
     window.archiveBrew = async function(brewId, brewName) {
@@ -208,6 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- INSTELLINGEN ---
     document.getElementById('saveSettingsBtn')?.addEventListener('click', () => window.saveUserSettings());
     document.getElementById('fetchModelsBtn')?.addEventListener('click', () => window.fetchAvailableModels());
+    
     // Theme Toggle Listener
     document.getElementById('theme-toggle-checkbox')?.addEventListener('change', (e) => {
         try {
@@ -300,9 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('calcTastingAssessmentBtn')?.addEventListener('click', () => window.calculateTastingAssessment?.());
     document.getElementById('calcWaterMatchingBtn')?.addEventListener('click', () => window.calculateWaterMatching?.());
     document.getElementById('calcBufferBtn')?.addEventListener('click', () => window.calculateBuffer?.());
-
-   // Click-actie gesynchroniseerd naar de correct geëxporteerde v2.6 functie
-   document.getElementById('calcTargetBrixBtn')?.addEventListener('click', () => window.calculateTargetApparentBrix?.());
+    document.getElementById('calcTargetBrixBtn')?.addEventListener('click', () => window.calculateTargetApparentBrix?.());
 
     // Setup Timers & Listeners from Modules
     if(window.setupBrewDayEventListeners) window.setupBrewDayEventListeners();

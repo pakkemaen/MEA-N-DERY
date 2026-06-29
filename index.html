@@ -262,13 +262,21 @@
         <p id="description-priority-warning" class="hidden text-xs text-center text-secondary mt-2 bg-secondary-container p-2 rounded-lg">Using AI Description Mode. Manual settings below will be ignored.</p>
     </div>
 
-<div class="flex flex-wrap gap-3 mt-4 justify-start items-center">
-    <button type="button" id="cloneTopUntappdBeerBtn" class="flex items-center justify-center min-h-[44px] px-6 py-2.5 bg-secondary text-on-secondary text-xs font-bold rounded-full shadow-elevation-1 hover:brightness-110 active:scale-95 transition-all gap-2">
-        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5zm4 4h-2v-5h2v5zm0-6h-2V7h2v2z"/>
-        </svg>
-        <span>Clone my Top Untappd Beer</span>
-    </button>
+<div class="flex flex-col gap-3 mt-4 w-full bg-surface-container-low p-4 rounded-2xl border border-outline-variant/30">
+    <p class="text-[10px] font-bold text-primary uppercase tracking-widest mb-1 ml-1">Untappd Clone Engine v2.6</p>
+    <div class="flex items-center gap-3 flex-wrap">
+        <input type="file" id="untappd-screenshot-input" accept="image/*" class="hidden">
+        <button type="button" id="untappd-upload-trigger" class="flex items-center justify-center min-h-[44px] px-6 py-2.5 bg-secondary text-on-secondary text-xs font-bold rounded-full shadow-elevation-1 hover:brightness-110 active:scale-95 transition-all gap-2 cursor-pointer">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+            </svg>
+            <span>Upload Untappd Screenshot</span>
+        </button>
+    </div>
+    <div id="untappd-screenshot-preview" class="hidden mt-2 p-2 bg-surface rounded-xl border border-outline-variant/50 max-w-xs animate-fade-in flex flex-col gap-2">
+        <p class="text-[9px] font-bold uppercase tracking-wider text-on-surface-variant ml-1">Geselecteerd Screenshot:</p>
+        <img id="untappd-preview-img" class="w-full h-auto rounded-lg border border-outline shadow-sm max-h-48 object-contain" alt="Untappd Preview">
+    </div>
 </div>
 
     <details class="group mb-3 bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden open:shadow-sm transition-all" open>
@@ -1998,20 +2006,6 @@
                             </div>
                         </div>
                     </div>
-
-                <div class="bg-surface-variant/20 rounded-2xl p-4 border border-outline-variant space-y-4">
-        <h3 class="text-sm font-bold text-primary tracking-wide mb-2">Untappd API Instellingen (Fase 14)</h3>
-        
-        <div class="relative w-full">
-            <label for="untappd-client-id" class="block text-[11px] text-primary font-medium ml-1 mb-1">Untappd Client ID</label>
-            <input type="text" id="untappd-client-id" class="w-full bg-surface border border-outline rounded-xl p-3 text-xs text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all transition-colors" placeholder="Voer uw Untappd Client ID in">
-        </div>
-
-        <div class="relative w-full">
-            <label for="untappd-client-secret" class="block text-[11px] text-primary font-medium ml-1 mb-1">Untappd Client Secret</label>
-            <input type="password" id="untappd-client-secret" class="w-full bg-surface border border-outline rounded-xl p-3 text-xs text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all transition-colors" placeholder="Voer uw Untappd Client Secret in">
-        </div>
-    </div> 
 
                 <div class="p-6 rounded-3xl bg-surface border border-outline-variant/50">
                      <div class="flex items-center gap-3 mb-4">

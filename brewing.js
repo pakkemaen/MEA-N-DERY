@@ -231,9 +231,10 @@ function buildPrompt() {
         **CRITICAL INVENTORY RULES:**
         1. **JSON Block:** MUST contain the **TOTAL** ingredients required (ignore stock here).
         2. **SHOPPING LIST TEXT:** - Compare Required Amount vs Stock Amount.
-           - IF (Stock >= Required): **SILENCE**. Do NOT mention this item in the shopping list text. Do NOT write "You have enough".
-           - IF (Stock < Required): Write ONLY: "Buy [Amount Needed] of [Item]".
-           - IF (Stock == 0): Write "Buy [Full Amount] of [Item]".
+           - IF (Stock >= Required): **SILENCE**. Do NOT output a line or bullet for this item in the shopping list text.
+           - IF (Stock < Required): Output EXACTLY one line per item: "- Buy [Amount Needed] of [Item]".
+           - IF (Stock == 0): Output EXACTLY one line per item: "- Buy [Full Amount] of [Item]".
+           - NEVER output empty bullet points ("- ") or lines containing only "Buy" without an item.
         ${stabiliserRule}
         `;
 
@@ -531,42 +532,33 @@ async function generateAndInjectCreativeTitle(markdown) {
         const cleanTitle = newTitle.replace(/['"]/g, '').trim();
         titleHeader.textContent = cleanTitle;
         
-        // Update de markdown variabele ook, zodat we bij opslaan de nieuwe titel hebben
         if (currentRecipeMarkdown) {
             currentRecipeMarkdown = currentRecipeMarkdown.replace(/^#\s*(.*)/m, `# ${cleanTitle}`);
-            // Ook in tempState updaten voor consistentie
             tempState.currentRecipe = currentRecipeMarkdown;
         }
     } catch (error) {
         window.logSystemError(error, "brewing.js: generateAndInjectCreativeTitle", "ERROR");
-        titleHeader.textContent = originalTitle; // Fallback naar origineel bij fout
+        titleHeader.textContent = originalTitle;
     }
 }
 
-// --- HELPER: Haal data (OG, FG, ABV) uit de tekst voor logboek ---
 function parseRecipeData(markdown) {
     const data = {};
     if (!markdown) return data;
 
     try {
-        // Titel zoeken
         const titleMatch = markdown.match(/^#\s*(.*)/m);
         const title = titleMatch ? titleMatch.at(1).trim() : "Untitled Recipe";
-
-        // Regex helpers
         const createRegex = (key) => new RegExp(`(?:${key}|${key.replace('.', '\\.')})[\\s\\*:]*~?([\\d.,]+)`, 'i');
-        
-        // OG Resolution mapping
+
         const ogRegex = createRegex('Target OG|Original Gravity|Start SG|O\\.G\\.|OG');
         const ogMatch = markdown.match(ogRegex);
         if (ogMatch && ogMatch.at(1)) { data.targetOG = ogMatch.at(1); }
 
-        // FG Resolution mapping
         const fgRegex = createRegex('Target FG|Final Gravity|Eind SG|F\\.G\\.|FG');
         const fgMatch = markdown.match(fgRegex);
         if (fgMatch && fgMatch.at(1)) { data.targetFG = fgMatch.at(1); }
 
-        // ABV Resolution mapping
         const abvMatchGlobal = markdown.match(new RegExp(`(?:Target ABV|ABV|Alcoholpercentage)[\\s\\*:]*~?([\\d.,]+)\\s*%?`, 'i'));
         if (abvMatchGlobal && abvMatchGlobal.at(1)) { data.targetABV = abvMatchGlobal.at(1); }
 
@@ -614,13 +606,15 @@ function formatRecipeMarkdown(markdown) {
 
         cleanedMarkdown = cleanedMarkdown.replace(/^>\s*/gm, '');
         cleanedMarkdown = cleanedMarkdown.replace(/\[TIMER:\d+:\d+:\d+\]/gi, '');
+
         cleanedMarkdown = cleanedMarkdown.replace(/\$\s*(\d+(?:[.,]\d+)?)\s*\\\circ\s*C\s*\$/gi, '$1°C');
         cleanedMarkdown = cleanedMarkdown.replace(/(\d+(?:[.,]\d+)?)\s*\\\circ\s*C/gi, '$1°C');
         cleanedMarkdown = cleanedMarkdown.replace(/\$\s*(\d+(?:[.,]\d+)?)\s*%\s*\$/gi, '$1%');
         cleanedMarkdown = cleanedMarkdown.replace(/\$\s*(\d+\/\d+)\s*\$/g, '$1');
-        cleanedMarkdown = cleanedMarkdown.replace(/(SHOPPING LIST.*?:?)\s*(?:Buy|Koop)/gi, '$1\n- Buy');
-        cleanedMarkdown = cleanedMarkdown.replace(/([^\n])\s*(-\s*(?:Buy|Koop))/gi, '$1\n$2');
-        cleanedMarkdown = cleanedMarkdown.replace(/([^\n])\s*(\d+\.)/g, '$1\n$2');
+
+        cleanedMarkdown = cleanedMarkdown.replace(/(SHOPPING LIST.*?:?)\s*(?:Buy|Koop)/gi, '$1\n\n- Buy');
+        cleanedMarkdown = cleanedMarkdown.replace(/([^\n])\s*(-\s*(?:Buy|Koop))/gi, '$1\n\n$2');
+        cleanedMarkdown = cleanedMarkdown.replace(/([^\n])\s*(\d+\.)/g, '$1\n\n$2');
 
         let html = cleanedMarkdown
             .replace(/^#\s+(.*)$/gm, '<h1 class="text-xl font-black font-header text-app-header tracking-tight border-b border-app-brand/10 pb-2 mb-4 mt-2">$1</h1>')
@@ -633,7 +627,13 @@ function formatRecipeMarkdown(markdown) {
         const shoppingListMatch = html.match(/(SHOPPING LIST[\s\S]*?)(?=\n<h[1-3]|\n\n[A-Z]|$)/i);
         if (shoppingListMatch && shoppingListMatch.at(0)) {
             const rawSection = shoppingListMatch.at(0);
-            const items = rawSection.split('\n').filter(line => line.trim().startsWith('-'));
+            const items = rawSection.split('\n').filter(line => {
+                const trimmed = line.trim();
+                if (!trimmed.startsWith('-')) return false;
+                const content = trimmed.replace(/^-\s*/, '').trim().toLowerCase();
+                return content !== '' && content !== 'buy' && content !== 'buy at least' && content !== 'koop';
+            });
+
             if (items.length > 0) {
                 const headerLine = rawSection.split('\n').at(0);
                 let listHtml = `${headerLine}\n<ul class="list-disc pl-5 my-2 space-y-1">`;
@@ -643,6 +643,9 @@ function formatRecipeMarkdown(markdown) {
                 }
                 listHtml += '</ul>';
                 html = html.replace(rawSection, listHtml);
+            } else {
+                const headerLine = rawSection.split('\n').at(0);
+                html = html.replace(rawSection, headerLine);
             }
         }
 
@@ -851,12 +854,28 @@ window.printRecipe = function() {
                     font-size: 10pt !important;
                     line-height: 1.3 !important;
                 }
+                #recipe-output ol {
+                    display: block !important;
+                    list-style-type: decimal !important;
+                    margin: 0.5em 0 0.5em 1.5em !important;
+                    padding-left: 1em !important;
+                }
+                #recipe-output ul {
+                    display: block !important;
+                    list-style-type: disc !important;
+                    margin: 0.5em 0 0.5em 1.5em !important;
+                    padding-left: 1em !important;
+                }
+                #recipe-output li {
+                    display: list-item !important;
+                    margin-bottom: 0.25em !important;
+                }
                 #generated-flavor-wheel, canvas {
                     max-height: 190px !important;
                     width: auto !important;
                     margin: 0 auto !important;
                 }
-                .card, table, tr, img, canvas, div.overflow-x-auto {
+                .card, table, tr, img, canvas, div.overflow-x-auto, li {
                     page-break-inside: avoid !important;
                 }
                 h1, h2, h3 {

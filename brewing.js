@@ -1616,8 +1616,6 @@ window.renderBrewDay2 = async function() {
         }
 
         const listHtml = agingBrews.map(b => {
-
-        const listHtml = agingBrews.map(b => {
             const startDate = b.logData?.brewDate || 'Unknown';
             const days = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
             return `

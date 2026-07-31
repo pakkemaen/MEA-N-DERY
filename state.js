@@ -9,7 +9,7 @@ export const state = {
     userId: null,
     userSettings: {
         apiKey: "",           // Google AI Key
-        aiModel: "gemini-2.5-flash", 
+        aiModel: "gemini-2.0-flash", 
         currency: "€",
         theme: "light",       // 'light' of 'dark'
         defaultBatchSize: 5   // in Liters

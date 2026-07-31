@@ -600,12 +600,43 @@ function parseRecipeData(markdown) {
     return data;
 }
 
-// --- HELPER: Maak van ruwe JSON een mooie tabel ---
 function formatRecipeMarkdown(markdown) {
     try {
         if (!markdown) return "<p class='opacity-50 italic'>Geen receptuur data beschikbaar.</p>";
+
+        let cleanedMarkdown = markdown;
+
+        // Opsporen en transmuteren van het JSON-ingrediëntenblok naar een MD3 HTML-tabel
+        const jsonRegex = /(?:```json\s*)?(\[\s*\{[\s\S]*?\}\s*\])(?:\s*```)?/i;
+        const jsonMatch = cleanedMarkdown.match(jsonRegex);
+
+        if (jsonMatch && jsonMatch.at(1)) {
+            try {
+                const safeJson = jsonMatch.at(1).replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+                const ingredients = JSON.parse(safeJson);
+                
+                if (Array.isArray(ingredients) && ingredients.length > 0) {
+                    let ingredientsHtml = '<div class="overflow-x-auto my-4 rounded-xl border border-app-brand/10 bg-surface/50"><table class="w-full text-left border-collapse text-xs"><thead class="bg-app-primary/10 font-bold text-app-brand border-b border-app-brand/10 text-[10px] uppercase tracking-wider"><tr><th class="p-3 font-semibold">Ingredient</th><th class="p-3 font-semibold">Quantity</th><th class="p-3 font-semibold">Unit</th></tr></thead><tbody>';
+                    
+                    for (let j = 0; j < ingredients.length; j++) {
+                        const item = ingredients.at(j);
+                        const ingName = item.ingredient || item.name || '';
+                        const ingQty = item.quantity !== undefined ? item.quantity : '';
+                        const ingUnit = item.unit || '';
+                        ingredientsHtml += `<tr class="border-b border-app-brand/5 hover:bg-app-primary/5 transition-colors"><td class="p-3 font-medium text-on-surface-variant">${ingName}</td><td class="p-3 font-mono font-bold text-app-brand">${ingQty}</td><td class="p-3 text-on-surface-variant">${ingUnit}</td></tr>`;
+                    }
+                    ingredientsHtml += '</tbody></table></div>';
+                    cleanedMarkdown = cleanedMarkdown.replace(jsonRegex, ingredientsHtml);
+                } else {
+                    cleanedMarkdown = cleanedMarkdown.replace(jsonRegex, '');
+                }
+            } catch (jsonError) {
+                window.logSystemError(jsonError, 'formatRecipeMarkdown JSON extraction', 'WARNING');
+                cleanedMarkdown = cleanedMarkdown.replace(jsonRegex, '');
+            }
+        }
         
-        let html = markdown
+        let html = cleanedMarkdown
             .replace(/^#\s+(.*)$/gm, '<h1 class="text-xl font-black font-header text-app-header tracking-tight border-b border-app-brand/10 pb-2 mb-4 mt-2">$1</h1>')
             .replace(/^##\s+(.*)$/gm, '<h2 class="text-md font-bold text-app-brand font-header mt-4 mb-2">$1</h2>')
             .replace(/^###\s+(.*)$/gm, '<h3 class="text-sm font-bold text-on-surface-variant font-sans mt-3 mb-1">$1</h3>')
@@ -650,7 +681,7 @@ function formatRecipeMarkdown(markdown) {
         }
 
         html = lines.filter(l => !l.trim().startsWith('|')).join('\n');
-        return html.replace(/\n/g, '<br>');
+        return html;
 
     } catch (error) {
         window.logSystemError(error, 'Recipe Table Markdown Serialization Analysis', 'ERROR');
@@ -658,7 +689,6 @@ function formatRecipeMarkdown(markdown) {
     }
 }
 
-// --- MAIN RENDER FUNCTION ---
 async function renderRecipeOutput(markdown, isTweak = false) {
     const recipeOutput = document.getElementById('recipe-output');
     if (!recipeOutput) return;
@@ -1530,7 +1560,6 @@ window.renderBrewDay2 = async function() {
                     </label>
                 </div>
 
-               // 2. VERVANG DOOR:
                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div class="p-4 bg-app-primary rounded-lg border border-app-brand/10">
                         <label class="text-[10px] font-bold text-app-secondary uppercase block mb-1">Actual pH (Threshold: 2.8 - 3.8)</label>

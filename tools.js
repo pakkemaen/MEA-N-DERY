@@ -2261,7 +2261,7 @@ async function clearCollection(collectionName) {
 // --- WATER SOMMELIER LOGIC (BELGIAN EDITION) ---
 async function findCommercialWaterMatch() {
     const resultsDiv = document.getElementById('water-brand-results');
-    const recipeContext = window.currentRecipeMarkdown || "";
+    const recipeContext = window.currentRecipeMarkdown || tempState.currentRecipe || "";
 
     if (!resultsDiv) return;
     if (!recipeContext) {

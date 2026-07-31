@@ -639,11 +639,8 @@ function formatRecipeMarkdown(markdown) {
         let html = cleanedMarkdown
             .replace(/^#\s+(.*)$/gm, '<h1 class="text-xl font-black font-header text-app-header tracking-tight border-b border-app-brand/10 pb-2 mb-4 mt-2">$1</h1>')
             .replace(/^##\s+(.*)$/gm, '<h2 class="text-md font-bold text-app-brand font-header mt-4 mb-2">$1</h2>')
-            .replace(/^###\s+(.*)$/gm, '<h3 class="text-sm font-bold text-on-surface-variant font-sans mt-3 mb-1">$1</h3>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-app-header">$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em class="italic opacity-90">$1</em>');
+            .replace(/^###\s+(.*)$/gm, '<h3 class="text-sm font-bold text-on-surface-variant font-sans mt-3 mb-1">$1</h3>');
 
-        // Transmutatie van Markdown tabellen naar MD3-compliant structuren
         const lines = html.split('\n');
         let inTable = false;
         let tableHtml = "";
@@ -700,10 +697,9 @@ async function renderRecipeOutput(markdown, isTweak = false) {
     }
     
     currentRecipeMarkdown = finalMarkdown;
+    window.currentRecipeMarkdown = finalMarkdown;
     tempState.currentRecipe = finalMarkdown;
 
-    // v2.6 STRUCTUURWIJZIGING: Schakel automatische, parallelle achtergrondaanvragen resoluut uit
-    // Er wordt nu een on-demand placeholder gerenderd om concurrent rate limits (HTTP 429) te elimineren
     let flavorProfileHtml = `
     <div id="flavor-profile-section" class="mt-8 pt-6 border-t border-outline-variant/30 no-print">
         <h3 class="text-2xl font-header font-bold text-center mb-4 text-on-surface">Organoleptic Analysis</h3>
@@ -786,8 +782,6 @@ async function renderRecipeOutput(markdown, isTweak = false) {
         tweakBtn.addEventListener('click', tweakUnsavedRecipe);
     }
 
-    // ON-DEMAND CREATIVE BRANDING INTERFACE (v2.6)
-    // Automatische achtergrondpijplijn gedecimeerd ter voorkoming van HTTP 429 concurrency rate limits.
     const titleSectionHtml = `
     <div id="creative-branding-section" class="mt-4 pt-4 border-t border-outline-variant/30 no-print flex justify-between items-center bg-surface-container-low p-4 rounded-2xl border border-outline-variant/50">
         <div>
@@ -802,7 +796,6 @@ async function renderRecipeOutput(markdown, isTweak = false) {
     recipeOutput.insertAdjacentHTML('beforeend', titleSectionHtml);
 }
 
-// --- ON-DEMAND BRANDING INTERACTION BLOCK (v2.6) ---
 window.triggerOnDemandBrandingAnalysis = async function() {
     const btn = document.getElementById('btn-generate-creative-title');
     if (!currentRecipeMarkdown) return;
@@ -834,7 +827,6 @@ window.triggerOnDemandBrandingAnalysis = async function() {
 
 window.triggerOnDemandBrandingAnalysis = window.triggerOnDemandBrandingAnalysis;
 
-// --- ON-DEMAND INTERACTIE INTERLOCK (v2.6) ---
 window.triggerOnDemandFlavorAnalysis = async function() {
     const wrapper = document.getElementById('flavor-wheel-container-wrapper');
     const statusDiv = document.getElementById('flavor-generation-status');

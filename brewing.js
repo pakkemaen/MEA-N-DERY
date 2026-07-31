@@ -703,7 +703,7 @@ async function renderRecipeOutput(markdown, isTweak = false) {
     tempState.currentRecipe = finalMarkdown;
 
     let flavorProfileHtml = `
-    <div id="flavor-profile-section" class="mt-8 pt-6 border-t border-outline-variant/30 no-print">
+    <div id="flavor-profile-section" class="mt-8 pt-6 border-t border-outline-variant/30">
         <h3 class="text-2xl font-header font-bold text-center mb-4 text-on-surface">Organoleptic Analysis</h3>
         <div id="flavor-wheel-container-wrapper" class="card p-6 rounded-2xl max-w-sm mx-auto text-center bg-surface-container-low border border-outline-variant/50">
             <div class="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-3">
@@ -800,11 +800,27 @@ async function renderRecipeOutput(markdown, isTweak = false) {
 
 window.printRecipe = function() {
     try {
+        const container = document.getElementById('recipe-output');
+        const h1Element = container ? container.querySelector('h1') : null;
+        let originalHeadingText = "";
+
+        if (h1Element) {
+            originalHeadingText = h1Element.textContent;
+            if (!originalHeadingText.startsWith("MEA(N)DERY - ")) {
+                h1Element.textContent = "MEA(N)DERY - " + originalHeadingText;
+            }
+        }
+
         const recipeTitle = extractTitle(currentRecipeMarkdown) || "Recipe";
-        const originalTitle = document.title;
-        document.title = recipeTitle;
+        const originalDocTitle = document.title;
+        document.title = "MEA(N)DERY - " + recipeTitle;
+
         window.print();
-        document.title = originalTitle;
+
+        document.title = originalDocTitle;
+        if (h1Element && originalHeadingText) {
+            h1Element.textContent = originalHeadingText;
+        }
     } catch (error) {
         window.logSystemError(error, "brewing.js: printRecipe", "ERROR");
         window.print();

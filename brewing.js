@@ -3,7 +3,6 @@
 // MEANDERY V2.6
 // ============================================================================
 
-// 1. IMPORTS - Gecentraliseerd via firebase-init.js
 import { 
     db, auth, collection, addDoc, updateDoc, doc, deleteDoc, 
     getDoc, setDoc, query, onSnapshot, serverTimestamp 
@@ -15,16 +14,12 @@ import {
     getLoaderHtml, logSystemError 
 } from './utils.js';
 
-// 2. MODULE VARIABLES
 let currentRecipeMarkdown = "";
 let currentPredictedProfile = null;
 let lastGeneratedPrompt = "";
 let stepTimerInterval = null;
 let remainingTime = 0;
 
-// 3. CORE HELPERS
-
-// Helper: Haal de titel uit een stuk Markdown tekst (alles na de eerste #)
 function extractTitle(markdown) {
     try {
         const match = markdown.match(/^#\s*(.*)/m);
@@ -35,7 +30,6 @@ function extractTitle(markdown) {
     }
 }
 
-// Helper: Formatteer seconden naar MM:SS of UU:MM:SS
 function formatTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return "00:00";
     const h = Math.floor(seconds / 3600);
@@ -46,7 +40,6 @@ function formatTime(seconds) {
         : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
 
-// Helper: De "Wetten van de Mead" voor de AI Prompt
 function getFortKnoxLaws(isNoWater = false, isBraggot = false, isHydromel = false, isHeavy = false, isWild = false) {
     return `
 **THE FORT KNOX PROTOCOLS (NON-NEGOTIABLE):**
@@ -78,24 +71,19 @@ function getFortKnoxLaws(isNoWater = false, isBraggot = false, isHydromel = fals
 
 function buildPrompt() {
     try {
-        // --- NUMERIEKE INPUT VALIDATIE & NULL-SAFE NATIVE DOM ACCESS ---
         const batchSizeEl = document.getElementById('batchSize') || document.getElementById('batch-size');
         const batchSize = parseFloat(String(batchSizeEl ? batchSizeEl.value : '5').replace(/,/g, '.')) || 5;
-
         const customDescriptionEl = document.getElementById('customDescription') || document.getElementById('recipe-name-input');
         const customDescription = customDescriptionEl ? String(customDescriptionEl.value).trim() : '';
-
         const abvEl = document.getElementById('abv') || document.getElementById('target-abv');
-        const rawABV = abvEl ? String(abvEl.value).trim() : ''; 
-        
+        const rawABV = abvEl ? String(abvEl.value).trim() : '';     
         const hasDescription = customDescription !== "";
         const isAutoABV = (rawABV === '' || rawABV === '0') || hasDescription;
         const targetABV = isAutoABV ? 12 : (parseFloat(String(rawABV).replace(/,/g, '.')) || 12);
-
         const sweetnessEl = document.getElementById('sweetness') || document.getElementById('target-sweetness');
         const sweetness = sweetnessEl ? String(sweetnessEl.value).trim() : '';
-
         const styleSelect = document.getElementById('style');
+
         let style = 'Traditional Mead';
         if (styleSelect && styleSelect.selectedOptions && styleSelect.selectedOptions.length > 0) {
             const firstSelectedOption = styleSelect.selectedOptions.item(0);
@@ -107,8 +95,7 @@ function buildPrompt() {
         const inputString = (customDescription + " " + style).toLowerCase();
         const noWaterCheckbox = document.getElementById('isNoWaterCheckbox');
         const isNoWater = (noWaterCheckbox && noWaterCheckbox.checked) || inputString.includes('no-water') || inputString.includes('no water');
-        const isBraggot = inputString.includes('braggot');
-        
+        const isBraggot = inputString.includes('braggot');        
         const beerCloneInputEl = document.getElementById('beerCloneInput') || document.getElementById('beer-clone');
         const beerCloneInput = beerCloneInputEl ? String(beerCloneInputEl.value).trim() : '';
         const hasBeerClone = beerCloneInput !== "";
@@ -169,7 +156,6 @@ function buildPrompt() {
         }
 
         if (isBraggot || hasBeerClone) {
-            // CRUCIAL v2.6 PRE-CHECK SANITISATIE: Voorkom thermodynamische loops en crashes bij de Hall-vergelijking
             const checkOG = 1.000 + (targetABV * 0.0075); 
             if (checkOG >= 1.775) {
                 window.showToast("Kritieke fout: De vereiste startdensiteit overschrijdt de Hall-limiet (OG >= 1.775). Pas uw ABV target aan.", "error");
@@ -401,7 +387,7 @@ function buildPrompt() {
              }
         }
 
-        return `You are "MEA(N)DERY", a master mazer. \n\n${mathContext}\n${carbContext}\n${protocolContext}\n${specificLaws}\n${ncrContext}\n${inventoryLogic}\n${waterContext}\n\n**GLOBAL SAFETY OVERRIDE:**\n1. **Temp:** NEVER recommend a fermentation temp exceeding the yeast manufacturer's limit.\n2. **Sanity Check:** If the user requests impossible physics, correct them politely.\n\n**OUTPUT FORMAT (ABSOLUTE STRICTNESS):**\n- **ROLE:** Act as a headless database. DO NOT speak to the user. DO NOT say "Okay", "Sure", "Here is your recipe".\n- **START:** The output MUST start with the character "#" (The Title). nothing else before it.\n- **STRUCTURE:**\n  1. Title (# Name)\n  2. Inspirational Quote (Do NOT prefix with '>')\n  3. Vital Stats List (ABV, Size, Style, Sweetness, OG)\n  4. Ingredients JSON Block: \`\`\`json\n[{"ingredient": "Name", "quantity": 0, "unit": "kg"}]\n\`\`\`\n  5. Instructions MUST be formatted as a Markdown numbered list with EACH step on a NEW LINE (1. Step one\n2. Step two). Never collapse steps into a single paragraph.\n  6. Timers: \`[TIMER:HH:MM:SS]\` inside the steps.\n  7. Brewer's Notes (Start section with "## Brewer's Notes")\n\nRequest:\n---\n${creativeBrief}\n---`;
+        return `You are "MEA(N)DERY", a master mazer. \n\n${mathContext}\n${carbContext}\n${protocolContext}\n${specificLaws}\n${ncrContext}\n${inventoryLogic}\n${waterContext}\n\n**GLOBAL SAFETY OVERRIDE:**\n1. **Temp:** NEVER recommend a fermentation temp exceeding the yeast manufacturer's limit.\n2. **Sanity Check:** If the user requests impossible physics, correct them politely.\n\n**OUTPUT FORMAT (ABSOLUTE STRICTNESS):**\n- **ROLE:** Act as a headless database. DO NOT speak to the user. DO NOT say "Okay", "Sure", "Here is your recipe".\n- **START:** The output MUST start with the character "#" (The Title). nothing else before it.\n- **LATEX PROHIBITION:** DO NOT use LaTeX formatting (e.g. $18^{\\circ}C$, $10\\%$, $1/4$) for simple units, numbers, or prose. Use standard text (18°C, 10%, 1/4).\n- **STRUCTURE:**\n  1. Title (# Name)\n  2. Inspirational Quote (Do NOT prefix with '>')\n  3. Vital Stats List (ABV, Size, Style, Sweetness, OG)\n  4. Ingredients JSON Block: \`\`\`json\n[{"ingredient": "Name", "quantity": 0, "unit": "kg"}]\n\`\`\`\n  5. Instructions MUST be formatted as a Markdown numbered list with EACH step on a NEW LINE (1. Step one\n2. Step two). Never collapse steps into a single paragraph.\n  6. Timers: \`[TIMER:HH:MM:SS]\` inside the steps.\n  7. Brewer's Notes (Start section with "## Brewer's Notes")\n\nRequest:\n---\n${creativeBrief}\n---`;
 
     } catch (error) {
         window.logSystemError(error, 'brewing.js: buildPrompt Processing Chain', 'ERROR');
@@ -409,7 +395,6 @@ function buildPrompt() {
     }
 }
 
-// --- CORE: Generate Recipe ---
 async function generateRecipe() {
     try {
         const container = document.getElementById('recipe-output');
@@ -454,11 +439,9 @@ async function generateRecipe() {
     }
 }
 
-/// --- HELPER: Flavor Prediction (AI) ---
 async function getPredictedFlavorProfile(markdown) {
     const prompt = `You are a professional mead sommelier. Analyze this recipe and PREDICT its final flavor profile. Assign score 0-5 for: Sweetness, Acidity, Fruity/Floral, Spiciness, Earthy/Woody, Body/Mouthfeel. Output ONLY JSON. Recipe: "${markdown}"`;
     
-    // We dwingen een JSON structuur af voor makkelijk parsen
     const schema = {
         type: "OBJECT",
         properties: { 
@@ -477,14 +460,13 @@ async function getPredictedFlavorProfile(markdown) {
         return JSON.parse(jsonResponse);
     } catch (error) {
         window.logSystemError(error, "brewing.js: getPredictedFlavorProfile Anomaly", "ERROR");
-        return null; // Geen ramp, we tonen gewoon geen grafiek
+        return null;
     }
 }
 
-// --- HELPER: Flavor Wheel Render (Chart.js) ---
 function renderGeneratedFlavorWheel(flavorData) {
     const ctx = document.getElementById('generated-flavor-wheel');
-    if (!ctx) return; // Als canvas niet bestaat, stop.
+    if (!ctx) return;
     
     const labels = ['Sweetness', 'Acidity', 'Fruity/Floral', 'Spiciness', 'Earthy/Woody', 'Body'];
     const data = [
@@ -492,18 +474,15 @@ function renderGeneratedFlavorWheel(flavorData) {
         flavorData.spiciness, flavorData.earthy_woody, flavorData.body_mouthfeel
     ];
     
-    // Kleuren ophalen uit CSS variabelen (zodat het matcht met je thema)
     const brandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand-color').trim() || '#d97706';
     const isDarkMode = document.documentElement.classList.contains('dark');
     const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
     const textColor = isDarkMode ? '#e0e0e0' : '#4a3c2c';
 
-    // Oude grafiek opruimen om glitches te voorkomen
     if (window.generatedFlavorChartInstance) {
         window.generatedFlavorChartInstance.destroy();
     }
 
-    // Nieuwe grafiek tekenen
     window.generatedFlavorChartInstance = new Chart(ctx.getContext('2d'), {
         type: 'radar',
         data: {
@@ -511,7 +490,7 @@ function renderGeneratedFlavorWheel(flavorData) {
             datasets: [{
                 label: 'Predicted Profile',
                 data: data,
-                backgroundColor: brandColor + '4D', // Hex + Alpha voor transparantie
+                backgroundColor: brandColor + '4D',
                 borderColor: brandColor,
                 borderWidth: 2,
                 pointBackgroundColor: brandColor
@@ -534,7 +513,6 @@ function renderGeneratedFlavorWheel(flavorData) {
     });
 }
 
-// --- HELPER: Creative Title Generator ---
 async function generateAndInjectCreativeTitle(markdown) {
     const titleHeader = document.querySelector('#recipe-output h1');
     if (!titleHeader) return;
@@ -636,6 +614,10 @@ function formatRecipeMarkdown(markdown) {
 
         cleanedMarkdown = cleanedMarkdown.replace(/^>\s*/gm, '');
         cleanedMarkdown = cleanedMarkdown.replace(/\[TIMER:\d+:\d+:\d+\]/gi, '');
+        cleanedMarkdown = cleanedMarkdown.replace(/\$\s*(\d+(?:[.,]\d+)?)\s*\\\circ\s*C\s*\$/gi, '$1°C');
+        cleanedMarkdown = cleanedMarkdown.replace(/(\d+(?:[.,]\d+)?)\s*\\\circ\s*C/gi, '$1°C');
+        cleanedMarkdown = cleanedMarkdown.replace(/\$\s*(\d+(?:[.,]\d+)?)\s*%\s*\$/gi, '$1%');
+        cleanedMarkdown = cleanedMarkdown.replace(/\$\s*(\d+\/\d+)\s*\$/g, '$1');
         cleanedMarkdown = cleanedMarkdown.replace(/(SHOPPING LIST.*?:?)\s*(?:Buy|Koop)/gi, '$1\n- Buy');
         cleanedMarkdown = cleanedMarkdown.replace(/([^\n])\s*(-\s*(?:Buy|Koop))/gi, '$1\n$2');
         cleanedMarkdown = cleanedMarkdown.replace(/([^\n])\s*(\d+\.)/g, '$1\n$2');
@@ -647,6 +629,22 @@ function formatRecipeMarkdown(markdown) {
 
         html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         html = html.replace(/\*\*/g, '');
+
+        const shoppingListMatch = html.match(/(SHOPPING LIST[\s\S]*?)(?=\n<h[1-3]|\n\n[A-Z]|$)/i);
+        if (shoppingListMatch && shoppingListMatch.at(0)) {
+            const rawSection = shoppingListMatch.at(0);
+            const items = rawSection.split('\n').filter(line => line.trim().startsWith('-'));
+            if (items.length > 0) {
+                const headerLine = rawSection.split('\n').at(0);
+                let listHtml = `${headerLine}\n<ul class="list-disc pl-5 my-2 space-y-1">`;
+                for (let k = 0; k < items.length; k++) {
+                    const cleanItem = items.at(k).replace(/^-\s*/, '').trim();
+                    listHtml += `<li class="text-xs text-on-surface-variant">${cleanItem}</li>`;
+                }
+                listHtml += '</ul>';
+                html = html.replace(rawSection, listHtml);
+            }
+        }
 
         const lines = html.split('\n');
         let inTable = false;
@@ -749,11 +747,6 @@ async function renderRecipeOutput(markdown, isTweak = false) {
             </button>
             <button onclick="window.printRecipe()" class="bg-surface-container border border-outline-variant text-on-surface py-2 px-4 rounded-xl hover:bg-surface-container-high transition-colors btn text-sm font-bold uppercase tracking-wider">Print Recipe</button>
         </div>
-        
-        <div id="recipe-title-editor-wrapper" class="mb-4 no-print flex items-center gap-2 bg-surface-container-low p-2 rounded-xl border border-outline-variant/40">
-            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">Title:</span>
-            <input type="text" id="recipe-title-input" value="${extractTitle(finalMarkdown) || 'Untitled Batch'}" class="flex-1 bg-surface border border-outline-variant text-sm font-bold p-2 rounded-lg text-on-surface focus:ring-1 focus:ring-primary" oninput="window.updateRecipeTitleFromInput(this.value)">
-        </div>
 
         <div class="recipe-content prose dark:prose-invert max-w-none text-on-surface">${recipeHtml}</div>
 
@@ -840,7 +833,7 @@ window.printRecipe = function() {
             @media print {
                 @page {
                     size: A4;
-                    margin: 15mm 15mm 15mm 15mm;
+                    margin: 10mm 12mm 10mm 12mm;
                 }
                 body * {
                     visibility: hidden !important;
@@ -855,23 +848,31 @@ window.printRecipe = function() {
                     width: 100% !important;
                     margin: 0 !important;
                     padding: 0 !important;
+                    font-size: 10pt !important;
+                    line-height: 1.3 !important;
+                }
+                #generated-flavor-wheel, canvas {
+                    max-height: 190px !important;
+                    width: auto !important;
+                    margin: 0 auto !important;
+                }
+                .card, table, tr, img, canvas, div.overflow-x-auto {
+                    page-break-inside: avoid !important;
+                }
+                h1, h2, h3 {
+                    page-break-after: avoid !important;
                 }
                 .no-print, .no-print * {
                     display: none !important;
                     visibility: hidden !important;
                 }
                 ${!hasFlavorChart ? '#flavor-profile-section { display: none !important; visibility: hidden !important; }' : ''}
-                h1, h2, h3 {
-                    page-break-after: avoid;
-                }
-                table, tr, img, canvas {
-                    page-break-inside: avoid;
-                }
             }
         `;
         document.head.appendChild(styleElement);
 
         window.print();
+
     } catch (error) {
         window.logSystemError(error, "brewing.js: printRecipe", "ERROR");
     } finally {
@@ -2892,7 +2893,6 @@ async function cloneTopUntappdBeer() {
     }
 
     try {
-        // 1. API-Sleutel & Model Resolutie
         const apiKey = state.userSettings?.apiKey || (typeof CONFIG !== 'undefined' ? CONFIG.firebase?.apiKey : null);
         if (!apiKey) {
             if (window.showToast) {
@@ -2904,7 +2904,6 @@ async function cloneTopUntappdBeer() {
 
         const activeModel = state.userSettings?.aiModel || state.userSettings?.chatModel || "gemini-2.0-flash";
 
-        // 2. Base64 Screenshot Validatie uit de State
         const base64Image = state.tempState?.untappdScreenshotBase64;
         if (!base64Image) {
             if (window.showToast) {
@@ -2914,12 +2913,10 @@ async function cloneTopUntappdBeer() {
             return;
         }
 
-        // 3. Endpoint & Structured JSON System Prompt Blauwdruk
         const gatewayUrl = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`;
 
         const structuredSystemPrompt = "Extract data from this Untappd beer screenshot. Return ONLY a valid, minified JSON object containing: { \"beer_name\": \"string\", \"style\": \"string\", \"abv\": number, \"ibu\": number, \"flavor_profile\": [\"strings\"] }. Do not include any markdown backticks, markdown code blocks, explanatory text or trailing characters. Ensure proper data types.";
 
-        // 4. Multi-Modal Vision Payload Constructie
         const payload = {
             contents: [
                 {
@@ -2938,7 +2935,6 @@ async function cloneTopUntappdBeer() {
             ]
         };
 
-        // 5. Native Fetch Execution
         const response = await fetch(gatewayUrl, {
             method: 'POST',
             headers: {
@@ -2953,7 +2949,6 @@ async function cloneTopUntappdBeer() {
 
         const data = await response.json();
 
-        // 6. Chat-Parser Bug Compliance: Navigatie via .at() in plaats van vierkante haken
         if (!data.candidates || data.candidates.length === 0) {
             throw new Error("Geen candidates geretourneerd door de Gemini AI Vision-engine.");
         }
@@ -2970,7 +2965,6 @@ async function cloneTopUntappdBeer() {
 
         let cleanJsonText = partZero.text.trim();
         
-        // Defensieve stripactie mocht het model ondanks instructies toch markdown backticks leveren
         if (cleanJsonText.startsWith("```json")) {
             cleanJsonText = cleanJsonText.replace("```json", "");
             if (cleanJsonText.endsWith("```")) {
@@ -2984,28 +2978,16 @@ async function cloneTopUntappdBeer() {
         }
         cleanJsonText = cleanJsonText.trim();
 
-        // Deserialisatie van parameters uit de Vision Gateway
         const parsedBeerData = JSON.parse(cleanJsonText);
-        
         const beerName = parsedBeerData.beer_name || "Unknown Untappd Beer";
         const beerStyle = parsedBeerData.style || "Traditional Mead";
-        
-        // Defensieve Sanitisatie: Komma-to-Dot handhaving op de alcoholpercentage string-transformatie
         const rawAbvStr = String(parsedBeerData.abv || "0.0").replace(/,/g, '.');
         const beerAbv = parseFloat(rawAbvStr) || 0.0;
-        
         const beerIbu = parseInt(parsedBeerData.ibu) || 0;
         const beerFlavorProfile = parsedBeerData.flavor_profile || [];
-
-        // --- FASE 14.3: ZYMOLOGISCHE WISKUNDE & INVERSE HALL INTEGRATIE ---
-        
-        // A. Thermodynamische Alcohol-Conversie (ABV naar ABW)
         const abw = beerAbv * 0.794;
-
-        // B. Achterwaartse Hall-vergelijking om de startdichtheid te isoleren
         const ogTheoretisch = ((1.775 * abw) + 57.06) / (57.06 + abw);
 
-        // C. Pre-Check Interlock Validatiepoort tegen crashes
         if (ogTheoretisch >= 1.775) {
             if (window.logSystemError) {
                 window.logSystemError(`Kritieke overschrijding Hall Equation Input: ogTheoretisch ${ogTheoretisch} overgrijpt de absolute limiet van 1.775.`, "Zymology: Hall Equation Interlock", "FATAL");
@@ -3017,33 +2999,23 @@ async function cloneTopUntappdBeer() {
             return;
         }
 
-        // D. Braggot Suikertransitie & Extract-Berekening
         const batchSizeElement = document.getElementById('batchSize');
         const batchSize = batchSizeElement ? (parseFloat(batchSizeElement.value) || 5.0) : 5.0;
-
         const gpTotal = (ogTheoretisch - 1.000) * 1000 * batchSize;
-        const xMalt = 0.40; // Gefixeerde molfractie van de moutstorting conform mandaat
+        const xMalt = 0.40;
         const gpMalt = gpTotal * xMalt;
         const gpHoney = gpTotal - gpMalt;
-
-        // Potentiaal-Constante Correctie: Honing exact delen door de gecorrigeerde oenologische waarde van 290 GP
         const honeyKg = gpHoney / 290; 
-        const maltKg = gpMalt / 375;  // Moutstorting (DME) opbrengstpotentiaal van 375 GP
-
-        // E. Schijnbare Vergistingsgraad & Einddensiteit (75% Conversie-reductie)
+        const maltKg = gpMalt / 375;
         const fgEst = ogTheoretisch - ((ogTheoretisch - 1.000) * 0.75);
-
-        // F. Dynamische Hopbenutting (IBU-Correctie)
         const phiBraggot = 1.0 + (0.45 * (1.0 - xMalt));
         const correctedIbu = beerIbu / phiBraggot;
 
-        // G. Fase-Blokkade & Nutriënt-Instructie (Voor lichte sessiemedes of braggots rond de 1.037)
         let nutrientInstruction = "";
         if (ogTheoretisch <= 1.045) {
             nutrientInstruction = "\n\n⚠️ NUTRIENT PHASE-BLOCK BLOCKADE: Dit recept betreft een lichte sessiemede of braggot. Het is wettelijk verplicht om anorganische stikstofbronnen (DAP) na de 1/3 suikerbreuk of bij het overschrijden van de 9% ABV toxiciteitsgrens wiskundig op nul te zetten om reststikstof-offflavors te voorkomen.";
         }
 
-        // H. DOM- & State-Synchronisatie
         if (!state.tempState) state.tempState = {};
         state.tempState.clonedUntappdBeer = {
             beer_name: beerName,
@@ -3061,9 +3033,8 @@ async function cloneTopUntappdBeer() {
             correctedIbu: correctedIbu
         };
 
-        // UI Elementen updaten via gesynchroniseerde DOM-selectoren
         const targetStyleInput = document.getElementById('style');
-        const targetAbvInput = document.getElementById('abv'); // Gesynchroniseerd naar het kortere id uit index.html
+        const targetAbvInput = document.getElementById('abv');
         const customDescriptionInput = document.getElementById('customDescription');
 
         if (targetStyleInput) {
@@ -3088,7 +3059,6 @@ async function cloneTopUntappdBeer() {
             window.showToast(`Zymologische wiskunde sluitend! OG: ${ogTheoretisch.toFixed(3)}. Starten van receptgeneratie...`, "success");
         }
 
-        // Automatisch de hoofd-generatiepijplijn triggeren
         if (typeof window.generateRecipe === 'function') {
             await window.generateRecipe();
         } else {
@@ -3144,14 +3114,11 @@ window.saveBrewToHistory = async function(recipeText, flavorProfile) {
     }
 };
 
-// --- CHARTS & EXTRAS ---
-
 window.runAgingAnalysis = async function(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
     if (!brew) return;
 
     try {
-        // Anti-Parsing Bug: split resultaten via de veilige .at(0) methodiek extraheren
         const todayStamp = new Date().toISOString().split('T').at(0);
         const bottledStamp = brew.logData?.bottlingDate ? brew.logData.bottlingDate.split('T').at(0) : 'Not yet';
 
@@ -3199,7 +3166,6 @@ function renderFermentationGraph(brewId) {
         const WCF = parseFloat(String(state.userSettings?.wcf || 1.04).replace(/,/g, '.'));
         const ogInput = parseFloat(String(brew.logData.actualOG || 1.000).replace(/,/g, '.'));
         
-        // v2.6 Fix: Bates-Brix altijd delen door WCF voor WRI_i
         let WRI_i = 0;
         if (ogInput >= 1.2) {
             WRI_i = ogInput / WCF; 
@@ -3257,7 +3223,6 @@ function renderFermentationGraph(brewId) {
     }
 }
 
-// Bind de sync functie aan het window object voor de 'Opslaan' knop in de UI
 window.syncLogToFinal = syncLogToFinal;
 
 function getBrewLogHtml(brew, idSuffix = null) {
@@ -3265,11 +3230,8 @@ function getBrewLogHtml(brew, idSuffix = null) {
         const suffix = idSuffix || brew.id;
         const logData = brew.logData || {};
         const fermentationLog = logData.fermentationLog || [];
-        
-        // DESIGN REFACTOR: Gecentraliseerde text- en input-classes conform MD3 richtlijnen
         const labelBase = "text-[11px] font-semibold text-on-surface-variant/80 uppercase tracking-wider mb-1.5 block ml-1";
         const inputBase = "bg-surface-container-highest border border-outline-variant text-sm rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all !p-3 !h-11 w-full text-on-surface font-medium";
-        
         const entriesHtml = fermentationLog.map((entry) => {
             return `
                 <div class="log-entry bg-surface-container-low p-5 rounded-2xl shadow-sm border border-outline-variant/10 mb-4 shadow-sm relative animate-fade-in">
@@ -3365,16 +3327,9 @@ function renderFlavorWheel(brewId, labels, data) {
 
     container.innerHTML = `<canvas id="flavorChart-${brewId}"></canvas>`;
     const ctx = document.getElementById(`flavorChart-${brewId}`);
-
-    // MD3 Kleuren
     const cPrimary = `rgb(${window.getThemeColor('--md-sys-color-primary')})`;
     const cOnSurface = `rgb(${window.getThemeColor('--md-sys-color-on-surface')})`;
-    const cOutline = `rgb(${window.getThemeColor('--md-sys-color-outline-variant')})`; // Grid lijnen
-
-    // Transparante fill (Primary kleur met 0.2 opacity)
-    // Omdat getThemeColor "R G B" teruggeeft (zonder commas in sommige browsers of met), 
-    // is het veiliger om de CSS variabele direct in rgba te gebruiken als je tailwind config dat toestaat, 
-    // of hier een kleine hack te doen:
+    const cOutline = `rgb(${window.getThemeColor('--md-sys-color-outline-variant')})`;
     const cFill = cPrimary.replace('rgb', 'rgba').replace(')', ', 0.2)');
 
     new Chart(ctx, {
@@ -3416,15 +3371,12 @@ window.printEmptyLog = function() {
 
 window.autoCalculateABV = function(event, idSuffix) {
     try {
-        // LOCK-OUT MATRIX STAGE: Activeer binaire interlock vlag ter voorkoming van stack-overflow
         tempState.isCalculatingABV = true;
 
         const cleanId = idSuffix.replace('-sec', ''); 
         const logEntryRow = event ? event.target.closest('.log-entry') : null;
-        
         const ogRaw = document.getElementById(`actualOG-${idSuffix}`)?.value || "";
         const fgRaw = document.getElementById(`actualFG-${idSuffix}`)?.value || "";
-        
         const ogInput = parseFloat(ogRaw.replace(',', '.'));
         const fgInput = parseFloat(fgRaw.replace(',', '.'));
         const abvField = document.getElementById(`finalABV-${idSuffix}`);
@@ -3445,7 +3397,6 @@ window.autoCalculateABV = function(event, idSuffix) {
             let finalOG = correctedOG;
             let finalFG = correctedFG;
 
-            // Mixed-tool support (SG vs Brix)
             if (ogInput > 1.2 || fgInput > 1.2) {
                 const getRI = (val) => val > 1.2 ? (val / WCF) : (((182.9622 * Math.pow(val, 3)) - (777.3009 * Math.pow(val, 2)) + (1264.5170 * val) - 670.1831) / WCF);
                 
@@ -3456,7 +3407,6 @@ window.autoCalculateABV = function(event, idSuffix) {
                 finalFG = 1.0 - (0.002349 * RI_i) + (0.006276 * RI_f);
             }
 
-            // Interlock 1: Asymptotische Singulariteit & Ondergrens (Behoud statusvlag)
             if (finalOG >= 1.775 || finalOG <= 1.000) {
                 window.showToast("Critical system conflict: Transmuted Original Gravity value breaches the density thresholds.", "error");
                 abvField.value = "LIMIT ERR";
@@ -3467,7 +3417,6 @@ window.autoCalculateABV = function(event, idSuffix) {
                 return;
             }
 
-            // Interlock 2: Thermodynamische Attenuatie Check (Behoud statusvlag)
             if (finalFG > finalOG) {
                 window.showToast("Critical system conflict: Negative attenuation detected. Data alignment is inconsistent.", "error");
                 abvField.value = "LIMIT ERR";
@@ -3478,7 +3427,6 @@ window.autoCalculateABV = function(event, idSuffix) {
                 return;
             }
 
-            // Interlock 3: Fysische Dichtheidsvloer / Pure Ethanol Limit (Behoud statusvlag)
             if (finalFG < 0.794) {
                 window.showToast("Critical system conflict: Final Gravity falls below physical limits of ethanol.", "error");
                 abvField.value = "LIMIT ERR";
@@ -3489,7 +3437,6 @@ window.autoCalculateABV = function(event, idSuffix) {
                 return;
             }
             
-            // Veilige Hall-berekening na passeren van alle defensieve interlocks
             const abw = (76.08 * (finalOG - finalFG)) / (1.775 - finalOG);
             const abv = abw / 0.794; 
             abvField.value = abv.toFixed(2) + "%";
@@ -3528,10 +3475,8 @@ window.autoCalculateABV = function(event, idSuffix) {
             }
         }
 
-        // De-escalatie van de lock-out status: Geef de synchronisatiepijplijn veilig vrij
         tempState.isCalculatingABV = false;
         
-        // Alleen de synchronisatie forceren als het een fysieke gebruikersmutatie (DOM-event) betreft
         if (event) {
             window.syncLogToFinal(idSuffix);
         }
@@ -3541,15 +3486,12 @@ window.autoCalculateABV = function(event, idSuffix) {
     }
 };
 
-// --- EXTRA AI TOOLS (Water & Gist Advies) ---
 async function getWaterAdvice() {
     const profileSelect = document.getElementById('meadTargetProfile');
     const targetProfile = profileSelect && profileSelect.selectedOptions && profileSelect.selectedOptions.length > 0
         ? profileSelect.selectedOptions.item(0).text
         : "Balanced Mead";
     const batchSize = document.getElementById('batchSize')?.value || 5;
-    
-    // We checken de HUIDIGE waarden in de UI (ingevuld door user of ingeladen profiel)
     const ca = document.getElementById('val-ca')?.textContent || "0";
     const mg = document.getElementById('val-mg')?.textContent || "0";
     const na = document.getElementById('val-na')?.textContent || "0";
@@ -3587,22 +3529,17 @@ async function getWaterAdvice() {
 }
 
 async function getYeastAdvice() {
-    // Inputs uit de Tools sectie (zorg dat deze IDs bestaan in index.html onder tools-view)
-    // Als ze niet bestaan, gebruiken we defaults om crashes te voorkomen
-    const ogInput = document.getElementById('starterOG'); // Eventuele input in tools
+    const ogInput = document.getElementById('starterOG');
     const dateInput = document.getElementById('yeastDate');
     const typeInput = document.getElementById('yeastType');
-    const adviceOutput = document.getElementById('yeast-advice-output'); // Output div
+    const adviceOutput = document.getElementById('yeast-advice-output');
 
-    // Omdat deze functie in de originele file stond, maar de HTML misschien in 'tools' zit:
-    // We checken of de elementen bestaan. Zo niet, geven we een melding.
     if (!adviceOutput) {
         console.warn("Yeast advice output container missing.");
         return;
     }
 
     if (!ogInput || !dateInput) {
-        // Fallback als de inputs nog niet in de HTML staan (toekomstige feature?)
         adviceOutput.innerHTML = `<p class="text-app-secondary text-sm">Yeast calculator inputs not found.</p>`; 
         return;
     }
@@ -3630,14 +3567,13 @@ async function getYeastAdvice() {
     }
 }
 
-// --- BLENDING TOOL ---
 window.addBlendingRow = function(idSuffix) {
     try {
         const tbody = document.querySelector(`#blendingTable-${idSuffix} tbody`);
         if(!tbody) return;
         const today = new Date().toISOString().split('T');
         const tr = document.createElement('tr');
-        // V2.6 Fix: Directe komma-naar-punt vervanging op input niveau
+
         tr.innerHTML = `
             <td><input type="date" value="${today}" class="w-full bg-transparent"></td>
             <td><input type="text" class="w-full bg-transparent" placeholder="Spirit Name"></td>
@@ -3651,7 +3587,6 @@ window.addBlendingRow = function(idSuffix) {
     }
 };
 
-// --- SCOPE FIX: USE STATE.BREWS ---
 window.recalcTotalABV = function(idSuffix) {
     try {
         const finalABVField = document.getElementById(`finalABV-${idSuffix}`);
@@ -3668,17 +3603,14 @@ window.recalcTotalABV = function(idSuffix) {
             baseABV = parseFloat(activeBrew.logData?.targetABV || 0);
         }
 
-        // Comma-to-Dot protocol
         let startVolume = parseFloat(String(currentVolInput?.value || fallbackVol).replace(/,/g, '.')) || fallbackVol;
         
-        // Hall Equation Integratie (v2.6) met Strikte Pre-check
         const ogInputStr = document.getElementById(`actualOG-${idSuffix}`)?.value.replace(/,/g, '.') || "";
         const fgInputStr = document.getElementById(`actualFG-${idSuffix}`)?.value.replace(/,/g, '.') || "";
         const ogVal = parseFloat(ogInputStr);
         const fgVal = parseFloat(fgInputStr);
         
         if (!isNaN(ogVal) && !isNaN(fgVal)) {
-            // STRIKTE EIS: Voorkom deling door nul of fysiek onmogelijke densiteit
             if (ogVal >= 1.775) {
                 if (finalABVField) {
                     finalABVField.value = "LIMIT ERR";
@@ -3689,7 +3621,6 @@ window.recalcTotalABV = function(idSuffix) {
             }
 
             if (ogVal > fgVal) {
-                // Hall Equation: ABW = (76.08 * (OG - FG)) / (1.775 - OG)
                 const abw = (76.08 * (ogVal - fgVal)) / (1.775 - ogVal);
                 baseABV = abw / 0.794;
             }
@@ -3722,7 +3653,6 @@ window.recalcTotalABV = function(idSuffix) {
     }
 };
 
-// --- INVENTORY SYNC ---
 window.deductActualsFromInventory = async function(brewId) {
     if (!confirm("Deduct calculated ingredients from your Inventory Stock?")) return;
     
@@ -3745,7 +3675,6 @@ window.deductActualsFromInventory = async function(brewId) {
     }
 }
 
-// --- PROMPT VIEWER ---
 window.showLastPrompt = function() {
     if(!lastGeneratedPrompt) {
         showToast("No prompt in memory.", "info");
@@ -3754,7 +3683,6 @@ window.showLastPrompt = function() {
     window.showPromptModal(lastGeneratedPrompt);
 }
 
-// --- CLEAR HISTORY ---
 window.clearHistory = async function() {
     if (!state.userId) return;
     if (!confirm("DELETE ALL HISTORY? This cannot be undone.")) return;
@@ -3776,7 +3704,6 @@ window.clearHistory = async function() {
 
         await batch.commit();
         
-        // Reset pointers en UI
         tempState.activeBrewId = null;
         if (state.userSettings) state.userSettings.currentBrewDay = { brewId: null };
         
@@ -3788,30 +3715,23 @@ window.clearHistory = async function() {
     }
 }
 
-// --- RESTORE TIMER ON LOAD ---
 function initializeBrewDayState(brewId, steps) {
-    // Check localstorage
     const savedTimer = localStorage.getItem('activeBrewDayTimer');
     if (savedTimer) {
         const { brewId: savedId, stepIndex, endTime } = JSON.parse(savedTimer);
         
-        // Alleen herstellen als we op de juiste pagina zitten
         if (savedId === brewId) {
             const now = Date.now();
             if (endTime > now) {
-                // Timer loopt nog: hervatten!
                 const remaining = Math.round((endTime - now) / 1000);
                 window.startStepTimer(brewId, stepIndex, remaining);
             } else {
-                // Timer is afgelopen terwijl we weg waren
                 localStorage.removeItem('activeBrewDayTimer');
-                // Optioneel: markeer als klaar of toon melding
             }
         }
     }
 }
 
-// --- TWEAK SAVED RECIPE ---
 window.freeformTweakRecipe = async function(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
     if (!brew) return;
@@ -3824,7 +3744,6 @@ window.freeformTweakRecipe = async function(brewId) {
 
     outputDiv.innerHTML = getLoaderHtml("Master Mazer is rewriting...");
     
-    // Prompt bouwen op basis van bestaand recept
     const prompt = `You are a Mead Expert. Refactor this existing recipe based on user feedback.
     
     ORIGINAL RECIPE:
@@ -3838,7 +3757,6 @@ window.freeformTweakRecipe = async function(brewId) {
 
     try {
         const result = await performApiCall(prompt);
-        // We tonen het resultaat in de div, gebruiker kan het kopiëren
         outputDiv.innerHTML = `<div class="p-4 bg-app-tertiary rounded border border-app-brand/20 prose dark:prose-invert text-sm max-w-none">${marked.parse(result)}</div>
         <button onclick="window.saveBrewToHistory(\`${result.replace(/`/g, '\\`')}\`, null)" class="mt-2 bg-green-600 text-white py-2 px-4 rounded btn text-xs font-bold w-full">Save as New Batch</button>`;
     } catch (error) {
@@ -3846,8 +3764,6 @@ window.freeformTweakRecipe = async function(brewId) {
     }
 }
 
-// --- SHOW SAVED PROMPT ---
-// Onderscheid: showLastPrompt toont geheugen, deze toont Database prompt
 window.showBrewPrompt = function(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
     const text = brew?.prompt || "No prompt saved for this batch (created in older version).";
@@ -3858,22 +3774,18 @@ window.undoStep = async function(stepIndex) {
     const brewId = tempState.activeBrewId;
     if (!brewId) return;
     
-    // 1. Zoek de batch
     const brew = state.brews.find(b => b.id === brewId);
     if (!brew || !brew.checklist) return;
 
     if (!confirm("Do you want to reopen this step for modification?")) return;
 
-    // 2. Verwijder de entry uit de checklist (zowel lokaal als DB)
     delete brew.checklist[`step-${stepIndex}`];
 
     try {
-        // Update Firestore: We sturen het hele checklist object opnieuw op (zonder deze stap)
         await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { 
             checklist: brew.checklist
         });
         
-        // 3. UI Update: Herlaad het scherm
         renderBrewDay(brewId);
         
     } catch (e) {
@@ -3882,9 +3794,7 @@ window.undoStep = async function(stepIndex) {
     }
 };
 
-// --- KEUZE MODAL VOOR NIEUWE BATCH ---
 window.promptNewBrewType = function() {
-    // Check of de modal al bestaat, zo niet, maak hem
     let modal = document.getElementById('new-brew-modal');
     
     if (!modal) {
@@ -3920,7 +3830,6 @@ window.promptNewBrewType = function() {
         modal = document.getElementById('new-brew-modal');
     }
     
-    // Toon de modal
     modal.classList.remove('hidden');
 }
 
@@ -3928,20 +3837,16 @@ window.revertToPrimary = async function(brewId) {
     if (!confirm("⚠️ Reverse operations? This sequence moves the target vessel execution back to Brew Day 1 (Primary phase).")) return;
 
     try {
-        // 1. Revert database tracking flag
         await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { 
             primaryComplete: false 
         });
 
-        // 2. Synchronize memory state context
         const brew = state.brews.find(b => b.id === brewId);
         if(brew) brew.primaryComplete = false;
 
-        // 3. Destructure layout parameters
         tempState.activeBrewId = null; 
         showToast("Batch moved back to Primary tracking!", "success");
-        
-        // 4. Re-evaluate rendering states
+
         renderBrewDay2(); 
         
         switchSubView('brew-day-1', 'brewing-main-view');
@@ -3953,7 +3858,6 @@ window.revertToPrimary = async function(brewId) {
     }
 }
 
-// --- ROBUST REGENERATOR ---
 window.regenerateFlavorProfile = async function(brewId) {
     if (!brewId) return showToast("Error: No brew ID found.", "error");
     
@@ -3993,7 +3897,6 @@ window.regenerateFlavorProfile = async function(brewId) {
         const jsonResponse = await performApiCall(prompt, schema);
         const profileData = JSON.parse(jsonResponse);
 
-        // 5. OPSLAAN IN DATABASE (v2.6: Gebruik centrale firebase-init imports)
         const brewRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId);
         await updateDoc(brewRef, {
             flavorProfile: profileData
@@ -4020,7 +3923,6 @@ window.regenerateFlavorProfile = async function(brewId) {
     }
 };
 
-// --- NEW SAFETY LOGIC: Yeast-Specific Risk Detection (v2.6) ---
 window.evaluateBatchSafety = function(brewId, currentLogEntry) {
     try {
         const brew = state.brews.find(b => b.id === brewId);

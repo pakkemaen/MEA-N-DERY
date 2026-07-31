@@ -710,10 +710,10 @@ async function renderRecipeOutput(markdown, isTweak = false) {
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
             </div>
             <p class="text-xs text-on-surface-variant mb-4 leading-relaxed">Predict the sensory equilibrium, mouthfeel, sweetness, and complexity matrix of this recipe configuration.</p>
-            <button id="btn-generate-flavor-wheel" onclick="window.triggerOnDemandFlavorAnalysis()" class="bg-primary text-on-primary font-bold py-2.5 px-5 rounded-full text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-sm">
+            <button id="btn-generate-flavor-wheel" onclick="window.triggerOnDemandFlavorAnalysis()" class="bg-primary text-on-primary font-bold py-2.5 px-5 rounded-full text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-sm no-print">
                 Generate Flavor Wheel
             </button>
-            <div id="flavor-generation-status" class="mt-2 text-xs font-mono text-primary hidden"></div>
+            <div id="flavor-generation-status" class="mt-2 text-xs font-mono text-primary hidden no-print"></div>
         </div>
     </div>`;
 
@@ -799,10 +799,16 @@ async function renderRecipeOutput(markdown, isTweak = false) {
 }
 
 window.printRecipe = function() {
+    let styleElement = null;
+    let h1Element = null;
+    let originalHeadingText = "";
+    let originalDocTitle = "";
+
     try {
-        const container = document.getElementById('recipe-output');
-        const h1Element = container ? container.querySelector('h1') : null;
-        let originalHeadingText = "";
+        const h1NodeList = document.querySelectorAll('#recipe-output h1');
+        if (h1NodeList && h1NodeList.length > 0) {
+            h1Element = h1NodeList.item(0);
+        }
 
         if (h1Element) {
             originalHeadingText = h1Element.textContent;
@@ -812,18 +818,48 @@ window.printRecipe = function() {
         }
 
         const recipeTitle = extractTitle(currentRecipeMarkdown) || "Recipe";
-        const originalDocTitle = document.title;
+        originalDocTitle = document.title;
         document.title = "MEA(N)DERY - " + recipeTitle;
 
-        window.print();
+        styleElement = document.createElement('style');
+        styleElement.id = 'recipe-print-style';
+        styleElement.textContent = `
+            @media print {
+                body * {
+                    visibility: hidden !important;
+                }
+                #recipe-output, #recipe-output * {
+                    visibility: visible !important;
+                }
+                #recipe-output {
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+                .no-print, .no-print * {
+                    display: none !important;
+                    visibility: hidden !important;
+                }
+            }
+        `;
+        document.head.appendChild(styleElement);
 
-        document.title = originalDocTitle;
+        window.print();
+    } catch (error) {
+        window.logSystemError(error, "brewing.js: printRecipe", "ERROR");
+    } finally {
         if (h1Element && originalHeadingText) {
             h1Element.textContent = originalHeadingText;
         }
-    } catch (error) {
-        window.logSystemError(error, "brewing.js: printRecipe", "ERROR");
-        window.print();
+        if (originalDocTitle) {
+            document.title = originalDocTitle;
+        }
+        if (styleElement && styleElement.parentNode) {
+            styleElement.parentNode.removeChild(styleElement);
+        }
     }
 };
 
@@ -1021,9 +1057,8 @@ function applyWaterTweak(brandName, technicalInstruction) {
 }
 
 function handleDescriptionInput() {
-    // Deze functie zorgt dat de gedetailleerde opties grijs worden als je zelf typt
     const descriptionInput = document.getElementById('customDescription');
-    const optionsContainer = document.querySelector('details[open] > div'); // Fallback selector
+    const optionsContainer = document.querySelector('details[open] > div');
     
     const warningMessage = document.getElementById('description-priority-warning');
     
@@ -1037,7 +1072,6 @@ function handleDescriptionInput() {
     const detailsContainers = structuredContainer.querySelectorAll('.structured-option-group');
     
     detailsContainers.forEach(container => {
-        // Alleen inputs disablen die niet met inventory te maken hebben
         if(!container.innerHTML.includes('inventory-toggle')) {
             container.classList.toggle('opacity-50', hasText);
             container.classList.toggle('pointer-events-none', hasText);
@@ -1075,7 +1109,6 @@ window.handleEquipmentTypeChange = handleEquipmentTypeChange;
 window.loadHistory = loadHistory;
 
 window.regenerateFlavorProfile = async function() {
-    // Retry knop wrapper
     if (currentRecipeMarkdown && typeof renderRecipeOutput === 'function') {
         const btn = document.getElementById('retry-flavor-btn');
         if(btn) btn.innerText = "Retrying...";
@@ -1137,7 +1170,6 @@ function extractStepsFromMarkdown(markdown) {
 
             let duration = 0;
             
-            // 1. Try official AI Tag
             const timerMatch = description.match(/\[TIMER:\s*(\d+):(\d+):(\d+)\]/);
             
             if (timerMatch) {
@@ -1149,7 +1181,6 @@ function extractStepsFromMarkdown(markdown) {
             else {
                 const titleDesc = (title + " " + description).toLowerCase();
                 
-                // Check "24 Hours", "48 Hours" (Veelvoorkomend bij TOSNA)
                 if (titleDesc.includes('24 hours') || titleDesc.includes('24 uur')) duration = 86400;
                 else if (titleDesc.includes('48 hours') || titleDesc.includes('48 uur')) duration = 86400; 
                 else if (titleDesc.includes('72 hours') || titleDesc.includes('72 uur')) duration = 86400;
@@ -1246,7 +1277,6 @@ window.startBrewDay = async function(brewId) {
             mNutrient = mNTotal / (activeNutrient.rawYan * activeNutrient.muNutrient);
 
         } catch (parsingError) {
-            // Vang parsing-afwijkingen onmiddellijk op in de Black Box en blokkeer de start veilig
             window.logSystemError(parsingError, 'brewing.js: startBrewDay Material Balance Verification', 'CRITICAL');
             window.showToast("Materiaalevaluatie mislukt wegens corrupte of incomplete receptuur-metadata.", "error");
             return;
@@ -1292,11 +1322,9 @@ window.startActualBrewDay = async function() {
             return;
         }
 
-        // Lokale state synchroniseren
         if (!state.userSettings) state.userSettings = {};
         state.userSettings.currentBrewDay = { brewId: brewId };
 
-        // --- PAKKET 1: DATABASE-PAD STANDAARDISATIE ---
         if (state.userId) {
             const settingsDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
             await updateDoc(settingsDocRef, {
@@ -1304,7 +1332,6 @@ window.startActualBrewDay = async function() {
             });
         }
 
-        // Transitie naar de actieve brouwdag weergave
         window.renderBrewDay(brewId);
 
     } catch (error) {
@@ -1315,10 +1342,8 @@ window.startActualBrewDay = async function() {
 
 window.renderBrewDay = async function(activeId) {
     try {
-        // 1. Hiërarchische Fallback-Matrix voor ID-Resolutie (v2.6)
         const resolvedId = activeId || tempState.activeBrewId || (state.userSettings && state.userSettings.currentBrewDay ? state.userSettings.currentBrewDay.brewId : null);
 
-        // 2. MD3 Empty State Interlock (Voorkomen van spookschermen bij inactieve status)
         if (!resolvedId || resolvedId === 'none') {
             const container = document.getElementById('brew-day-dynamic-container');
             if (container) {
@@ -1339,11 +1364,9 @@ window.renderBrewDay = async function(activeId) {
             return; 
         }
 
-        // 3. Gecentraliseerd Root-Pad conform v2.6 Richtlijnen
         const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', resolvedId);
         const brewSnapshot = await getDoc(docRef);
         
-        // 4. Ghost Reference-interlock (Automatische opschoning bij corrupte/verwijderde ID's)
         if (!brewSnapshot.exists()) {
             window.showToast("Database mismatch: Active batch profile missing. Auto-cleaning pipeline.", "warning");
             
@@ -1351,7 +1374,6 @@ window.renderBrewDay = async function(activeId) {
                 state.userSettings.currentBrewDay = { brewId: null };
             }
             
-            // ATOMAIRE PAD-SPLITSING: Parameters strikt gescheiden door komma's
             if (state.userId) {
                 const settingsDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
                 await updateDoc(settingsDocRef, {
@@ -1359,7 +1381,6 @@ window.renderBrewDay = async function(activeId) {
                 });
             }
             
-            // Render direct de empty state
             const container = document.getElementById('brew-day-dynamic-container');
             if (container) {
                 container.innerHTML = `
@@ -1397,7 +1418,6 @@ window.renderBrewDay = async function(activeId) {
         if (!state.userSettings.currentBrewDay) state.userSettings.currentBrewDay = {};
         state.userSettings.currentBrewDay.brewId = resolvedId;
 
-        // ATOMAIRE PAD-SPLITSING: Synchronisatie van actieve status naar main settings
         if (state.userId) {
             const settingsDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
             await updateDoc(settingsDocRef, {
@@ -1405,7 +1425,6 @@ window.renderBrewDay = async function(activeId) {
             });
         }
 
-        // 5. CHAT-PARSER INTERLOCK: Render stappen zonder vierkante haken voor indexering
         const stepsContainer = document.getElementById('brewDayStepsContainer');
         if (stepsContainer) {
             if (!brew.steps || brew.steps.length === 0) {
@@ -1426,7 +1445,6 @@ window.renderBrewDay = async function(activeId) {
             }
 
             let stepsHtml = "";
-            // Iteratie over stappen via defensieve array-mapping zonder haken
             brew.steps.forEach((step, idx) => {
                 const isChecked = step.completed ? "checked disabled" : "";
                 const opacityClass = step.completed ? "opacity-40 bg-app-primary/5" : "border-app-brand";
@@ -1472,12 +1490,10 @@ window.renderBrewDay2 = async function() {
     if (!container) return;
 
     try {
-        // 1. Data ophalen (Sluit gesplitste ouderbatches uit van de actieve aging lijst)
         const agingBrews = state.brews.filter(b => b.primaryComplete && !b.isBottled && b.status !== 'split');
         const activeId = tempState.activeBrewId;
         const activeBrew = activeId ? state.brews.find(b => b.id === activeId) : null;
 
-        // --- SCENARIO A: DETAIL ---
         if (activeBrew) {
             let steps = activeBrew.secondarySteps || [];
             if (steps.length === 0 && activeBrew.recipeMarkdown) {
@@ -1507,13 +1523,11 @@ window.renderBrewDay2 = async function() {
                 </div>`;
             }).join('');
 
-            // --- STABILIZATION GATEKEEPER SECTION ---
             const currentPhStr = (activeBrew.logData?.actualFG_pH || activeBrew.logData?.pH || "").toString().replace(',', '.');
             const abv = parseFloat(activeBrew.logData?.finalABV || activeBrew.logData?.targetABV || 0);
             const fgVal = parseFloat(activeBrew.logData?.actualFG || 1.000); 
             const phVal = parseFloat(currentPhStr);
 
-            // Hall/Delle Calculations
             let delleDisplay = "--";
             let isDelleStable = false;
             let hallError = false;
@@ -1522,9 +1536,7 @@ window.renderBrewDay2 = async function() {
                 hallError = true;
                 delleDisplay = "LIMIT ERR";
             } else {
-                // Polynoom altijd berekenen over de volledige fgVal om legitieme negatieve waarden toe te staan
                 const brixVal = (182.9622 * Math.pow(fgVal, 3)) - (777.3009 * Math.pow(fgVal, 2)) + (1264.5170 * fgVal) - 670.1831;
-                // Clamping-vloer via Math.max om negatieve suikerfracties te isoleren van de Delle-index
                 const delleValue = (abv * 4.5) + Math.max(0, brixVal);
                 isDelleStable = delleValue >= 78 || abv >= 15; 
                 delleDisplay = `${delleValue.toFixed(1)} / 78.0`;
@@ -1587,7 +1599,6 @@ window.renderBrewDay2 = async function() {
 
             const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(activeBrew, activeBrew.id + '-sec') : '';
 
-            // Validation Logic
             const isPhValid = !isNaN(phVal) && phVal >= 2.8 && phVal <= 3.8;
             const isGatePassed = checklist.checklist_cleared && checklist.checklist_so2_sync && isPhValid && !hallError;
 
@@ -1676,9 +1687,6 @@ window.renderBrewDay2 = async function() {
     }
 };
 
-// ============================================================================
-// MODIFICATIE: Globale functionaliteit voor het Split Batch Protocol
-// ============================================================================
 window.showSplitModal = function(brewId, currentVolume) {
     let modal = document.getElementById('split-batch-modal');
     if (!modal) {
@@ -1742,7 +1750,6 @@ window.generateSplitVolumeInputs = function() {
     
     if (!container) return;
     
-    // Automatic equal distribution assignment for the baseline fractions
     const netVol = Math.max(0, parentVol - loss);
     const equalShare = (netVol / count).toFixed(2);
     
@@ -1807,14 +1814,12 @@ window.splitBatch = async function(parentBrewId, childVolumes, lossVolume) {
     if (!state.userId || !parentBrewId) return;
 
     try {
-        // 1. Resolve parent from state allocation
         const parentBrew = state.brews.find(b => b.id === parentBrewId);
         if (!parentBrew) throw new Error("Parent brew session missing from local context.");
 
         const sanitizedLoss = parseFloat(String(lossVolume).replace(',', '.')) || 0;
         const { db, collection, addDoc, updateDoc, doc, serverTimestamp } = await import('./firebase-init.js');
 
-        // 2. Data lineage cloning sequence
         const recipeMarkdown = parentBrew.recipeMarkdown || "";
         const originalOG = parentBrew.logData?.actualOG || "";
         const originalFG = parentBrew.logData?.actualFG || "";
@@ -1824,7 +1829,6 @@ window.splitBatch = async function(parentBrewId, childVolumes, lossVolume) {
         const flavorProfile = parentBrew.flavorProfile ? { ...parentBrew.flavorProfile } : {};
         const model = parentBrew.model || "gemini-1.5-flash";
 
-        // Iterative instantiation across target array boundaries
         for (let i = 0; i < childVolumes.length; i++) {
             const childVol = parseFloat(String(childVolumes.at(i)).replace(',', '.')) || 0;
             if (childVol <= 0) continue;
@@ -1858,19 +1862,16 @@ window.splitBatch = async function(parentBrewId, childVolumes, lossVolume) {
             await addDoc(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews'), childBrewObj);
         }
 
-        // 3. Parent transition execution
         const parentRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', parentBrewId);
         await updateDoc(parentRef, {
             status: 'split',
             'logData.agingNotes': (parentBrew.logData?.agingNotes || "") + `\nBatch session broken into ${childVolumes.length} destination vessels on ${new Date().toLocaleDateString()}. Measured volume loss footprint: ${sanitizedLoss}L.`
         });
 
-        // Update lokale cache status vlag
         parentBrew.status = 'split';
 
-        /// 4. UI-Sync en Sluiten van Modal
         window.closeSplitModal();
-        tempState.activeBrewId = null; // Terugkeren naar lijstweergave van de kamer
+        tempState.activeBrewId = null;
         window.renderBrewDay2();
         window.showToast("Batch successfully partitioned into autonomous fractions!", "success");
 
@@ -1880,7 +1881,6 @@ window.splitBatch = async function(parentBrewId, childVolumes, lossVolume) {
     }
 };
 
-// Bind nieuwe handlers aan het window-object om scope-leaks te voorkomen
 window.showSplitModal = showSplitModal;
 window.closeSplitModal = closeSplitModal;
 window.generateSplitVolumeInputs = generateSplitVolumeInputs;
@@ -1888,7 +1888,6 @@ window.calculateSplitBalance = calculateSplitBalance;
 window.executeSplitFromModal = executeSplitFromModal;
 window.splitBatch = splitBatch;
 
-// --- GATEKEEPER PERSISTENCE HELPER (Consolidated v2.6) ---
 window.updateGateStatus = async function(brewId, gateKey) {
     try {
         const brew = state.brews.find(b => b.id === brewId);
@@ -1907,12 +1906,10 @@ window.updateGateStatus = async function(brewId, gateKey) {
             brew.checklist[gateKey] = checkbox.checked;
         }
 
-        // Firestore update via centralized init
         await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), {
             checklist: brew.checklist
         });
 
-        // UI Refresh
         window.renderBrewDay2();
     } catch (error) {
         window.logSystemError(error, 'brewing.js: updateGateStatus', 'ERROR');
@@ -1920,12 +1917,8 @@ window.updateGateStatus = async function(brewId, gateKey) {
     }
 };
 
-// --- NIEUWE NAVIGATIE HELPERS ---
-
 window.openPrimaryDetail = function(brewId) {
-    // Scroll naar boven
     document.getElementById('brewing-main-view').scrollIntoView({ behavior: 'smooth' });
-    // Render met ID
     window.renderBrewDay(brewId);
 }
 
@@ -1942,7 +1935,6 @@ window.closePrimaryDetail = async function() {
             state.userSettings.currentBrewDay.brewId = null;
         }
 
-        // ATOMAIRE PAD-SPLITSING: Reset active brew reference in cloud settings
         if (state.userId) {
             const settingsDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'settings', 'main');
             await updateDoc(settingsDocRef, {
@@ -1959,7 +1951,6 @@ window.closePrimaryDetail = async function() {
 window.openSecondaryDetail = (brewId) => { 
     tempState.activeBrewId = brewId; 
     renderBrewDay2(); 
-    // Scroll naar boven zodat de gebruiker ziet dat er iets gebeurd is
     document.getElementById('brewing-main-view').scrollIntoView({ behavior: 'smooth' }); 
 };
 
@@ -1967,8 +1958,6 @@ window.closeSecondaryDetail = () => {
     tempState.activeBrewId = null; 
     renderBrewDay2(); 
 };
-
-// --- LOGIC: Timers & Checklist (Primary) ---
 
 window.startStepTimer = function(durationSeconds) {
     try {
@@ -1991,7 +1980,6 @@ window.startStepTimer = function(durationSeconds) {
             timerDisplay.classList.add('text-app-brand', 'font-black');
         }
 
-        // Bewaar de actieve timer-status in localStorage voor persistentie
         localStorage.setItem('activeStepTimer', JSON.stringify({
             endTime: Date.now() + (remainingTime * 1000),
             duration: durationSeconds,
@@ -2000,7 +1988,6 @@ window.startStepTimer = function(durationSeconds) {
 
         stepTimerInterval = setInterval(() => {
             try {
-                // Defensieve controle: Bestaan het element en de actieve view nog in de DOM?
                 const activeDisplay = document.getElementById('stepTimerDisplay');
                 const activeView = document.getElementById('brewingView');
                 
@@ -2032,7 +2019,6 @@ window.startStepTimer = function(durationSeconds) {
                 remainingTime--;
                 activeDisplay.textContent = formatTime(remainingTime);
                 
-                // Werk de resterende tijd bij in localStorage
                 localStorage.setItem('activeStepTimer', JSON.stringify({
                     endTime: Date.now() + (remainingTime * 1000),
                     duration: remainingTime,
@@ -2040,7 +2026,6 @@ window.startStepTimer = function(durationSeconds) {
                 }));
 
             } catch (innerError) {
-                // Robuuste Foutisolatie: Ruim de actieve interval op en log de runtime-fout
                 if (stepTimerInterval) {
                     clearInterval(stepTimerInterval);
                     stepTimerInterval = null;
@@ -2059,7 +2044,6 @@ window.startStepTimer = function(durationSeconds) {
 
 window.pauseStepTimer = function(brewId, stepIndex) {
     if (stepTimerInterval) { clearInterval(stepTimerInterval); stepTimerInterval = null; }
-    // Zet UI terug naar 'Resume'
     const controlsDiv = document.getElementById(`controls-${stepIndex}`);
     if (controlsDiv) controlsDiv.innerHTML = `<button onclick="window.startStepTimer('${brewId}', ${stepIndex})" class="text-xs bg-green-600 text-white py-1.5 px-3 rounded font-bold uppercase">Resume</button>`;
 }
@@ -2071,7 +2055,6 @@ window.skipTimer = function(brewId, stepIndex) {
 
 window.completeStep = function(stepIndex) {
     try {
-        // Stop en wis de actieve timer-interval onmiddellijk bij afronding
         if (stepTimerInterval) {
             clearInterval(stepTimerInterval);
             stepTimerInterval = null;
@@ -2100,39 +2083,30 @@ window.completeStep = function(stepIndex) {
     }
 };
 
-// --- MISSING FUNCTION: FINALIZE DAY 1 ---
 window.finalizeBrewDay1 = async function() {
-    // 1. Sla de logs op
     if (tempState.activeBrewId) {
         await window.updateBrewLog(tempState.activeBrewId, 'brew-day-content');
     }
     
-    // 2. Navigeer naar Dag 2
     renderBrewDay2();
     switchSubView('brew-day-2', 'brewing-main-view');
     
-    // 3. Reset pointers
     tempState.activeBrewId = null;
     
-    // 4. Update persistentie
     if (state.userSettings) {
         state.userSettings.currentBrewDay = { brewId: null };
         if (window.saveUserSettings) window.saveUserSettings();
     }
     
-    // 5. Reset Dag 1 UI
     renderBrewDay('none');
 }
 
-// --- SCOPE FIX: USE STATE.BREWS & STATE.USERID ---
 window.toggleSecondaryStep = async function(brewId, stepKey) {
     try {
         const brew = state.brews.find(b => b.id === brewId);
         if (!brew) return;
         if (!brew.checklist) brew.checklist = {};
 
-        // 1. GERANIUM TAINT TRIGGER (v2.6)
-        // Anti-Parsing Bug: Indexering herleid via de chat-veilige .at() methodiek
         const stepObj = (brew.secondarySteps || []).at(parseInt(stepKey.replace('sec-step-', '')));
         const isSorbateStep = stepKey.includes('sorbate') || (stepObj && (stepObj.title.toLowerCase().includes('sorbat') || stepObj.description.toLowerCase().includes('sorbat')));
         
@@ -2144,15 +2118,12 @@ window.toggleSecondaryStep = async function(brewId, stepKey) {
             }
         }
 
-        // 2. Toggle status
         brew.checklist[stepKey] = !brew.checklist[stepKey];
 
-        // 3. Opslaan via gecentraliseerde init
         await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), {
             checklist: brew.checklist
         });
 
-        // 4. UI-Refresh (Mandaat: Alleen na Firestore-bevestiging)
         renderBrewDay2();
     } catch (error) {
         window.logSystemError(error, 'brewing.js: toggleSecondaryStep', 'ERROR');
@@ -2160,7 +2131,6 @@ window.toggleSecondaryStep = async function(brewId, stepKey) {
     }
 };
 
-// --- LOGIC: Reset & Finish ---
 window.resetBrewDay = async function() {
     if (!confirm("Reset all progress for this day?")) return;
     const brewId = tempState.activeBrewId;
@@ -2170,7 +2140,7 @@ window.resetBrewDay = async function() {
         if (stepTimerInterval) clearInterval(stepTimerInterval);
         
         await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { checklist: {} });
-        renderBrewDay(brewId); // Scherm verversen
+        renderBrewDay(brewId);
     }
 }
 
@@ -2207,22 +2177,17 @@ async function markPrimaryAsComplete(brewId) {
     }
 }
 
-// --- HISTORY: Load Data from Firebase ---
 async function loadHistory() {
     if (!state.userId) return;
     
-    // Real-time listener op de 'brews' collectie
     const q = query(collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews'));
     
     onSnapshot(q, (snapshot) => {
         state.brews = snapshot.docs.map(doc => {
             let b = { id: doc.id, ...doc.data() };
             
-            // --- MIGRATIE FIX (V1 -> V2) ---
-            // Zorgt dat oude recepten (zonder logData object) niet crashen
             if (!b.logData) b.logData = {};
             
-            // Velden die vroeger los stonden, kopieren we naar logData
             const oldFields = ['actualOG', 'actualFG', 'targetOG', 'targetFG', 'targetABV', 'finalABV', 'brewDate', 'agingNotes', 'tastingNotes', 'recipeName'];
             oldFields.forEach(field => {
                 if (b[field] !== undefined && b.logData[field] === undefined) {
@@ -2232,25 +2197,21 @@ async function loadHistory() {
             return b;
         });
 
-        // Markeer de initialisatie/synchronisatie-status als voltooid binnen de Single Source of Truth
         tempState.historyLoaded = true;
 
-        // Sorteer: Nieuwste bovenaan
         state.brews.sort((a, b) => {
             const dateA = a.createdAt ? a.createdAt.toDate() : new Date(0);
             const dateB = b.createdAt ? b.createdAt.toDate() : new Date(0);
             return dateB - dateA;
         });
 
-        // Update de UI
         renderHistoryList();
 
         if(window.populateSocialRecipeDropdown) window.populateSocialRecipeDropdown();
         if(window.updateDashboardStats) window.updateDashboardStats();
-        if(typeof updateCostAnalysis === 'function') updateCostAnalysis(); // Oude functionaliteit
-        if(typeof renderActiveBrewTimeline === 'function') renderActiveBrewTimeline(); // Oude functionaliteit
+        if(typeof updateCostAnalysis === 'function') updateCostAnalysis();
+        if(typeof renderActiveBrewTimeline === 'function') renderActiveBrewTimeline();
 
-        // Automatische UI-wedergeboorte trigger bij koude start/refresh
         const activeId = tempState.activeBrewId || state.userSettings?.currentBrewDay?.brewId;
         if (activeId && activeId !== 'none') {
             const brewCheck = state.brews.find(b => b.id === activeId);
@@ -2265,7 +2226,6 @@ async function loadHistory() {
     });
 }
 
-// --- RENDER: History List Sidebar ---
 function renderHistoryList() {
     const list = document.getElementById('history-list');
     if (!list) return;
@@ -2289,12 +2249,10 @@ function renderHistoryList() {
     }).join('');
 }
 
-// --- PARSER: Haal ingrediënten uit Markdown (JSON, Tabel of Lijst) ---
 export function parseIngredientsFromMarkdown(markdown) {
     let ingredients = [];
     if (!markdown) return ingredients;
 
-    // 1. ATTEMPT 1: JSON BLOCK EVALUATION
     const jsonRegex = /(?:```json\s*)?(\[\s*\{[\s\S]*?\}\s*\])(?:\s*```)?/;
     const jsonMatch = markdown.match(jsonRegex);
 
@@ -2312,7 +2270,6 @@ export function parseIngredientsFromMarkdown(markdown) {
         }
     }
 
-    // 2. ATTEMPT 2: MARKDOWN TABLE PARSING MATRIX
     const lines = markdown.split('\n');
     let insideTable = false;
 
@@ -2335,12 +2292,10 @@ export function parseIngredientsFromMarkdown(markdown) {
                 insideTable = false;
             }
         } catch (tableError) {
-            // Foutisolatie conform v2.6 foutafhandelingsarchitectuur
             window.logSystemError(tableError, 'Recipe Table Markdown Serialization Analysis', 'ERROR');
         }
     }
 
-    // 3. ATTEMPT 3: REGEX LIST EXTRAPOLATION
     if (ingredients.length === 0) {
         const listRegex = /^[-*]\s+(\d+[.,]?\d*)\s*([a-zA-Z]+)\s+(.*)$/gm;
         let match;
@@ -2356,8 +2311,6 @@ export function parseIngredientsFromMarkdown(markdown) {
     return ingredients;
 }
 
-// --- HTML GENERATOR: Actual Ingredients Table ---
-// Dit is de functie die eerder ontbrak!
 function getActualIngredientsHtml(brew) {
     if (!brew || !brew.recipeMarkdown) return '';
 
@@ -2367,7 +2320,6 @@ function getActualIngredientsHtml(brew) {
     if (planned.length === 0) return '';
 
     const rows = planned.map(p => {
-        // Zoek of we al een opgeslagen waarde hebben
         const saved = actuals.find(a => a.name === p.name);
         const val = saved ? saved.actualQty : p.quantity;
         
@@ -2481,7 +2433,6 @@ window.syncLogToFinal = function(idSuffix) {
             if (fgField) {
                 fgField.value = lastEntry.sg;
                 
-                // RECURSIE OPTIMALISATIE: Sla de herberekening volledig over bij een actieve foutstatus
                 const hasLimitError = abvField && abvField.value === "LIMIT ERR";
                 if (!tempState.isCalculatingABV && !hasLimitError) {
                     window.autoCalculateABV(null, idSuffix);
@@ -2501,7 +2452,6 @@ window.syncLogToFinal = function(idSuffix) {
     }
 };
 
-// --- RENDER: Detail View (RESTORED TARGET VS ACTUAL) ---
 window.showBrewDetail = function(brewId) {
     const brew = state.brews.find(b => b.id === brewId);
     if (!brew) return;
@@ -2509,25 +2459,20 @@ window.showBrewDetail = function(brewId) {
     switchMainView('brewing');
     switchSubView('history', 'brewing-main-view');
 
-    // 1. Markdown Format
     let processedMarkdown = brew.recipeMarkdown || "";
     processedMarkdown = formatRecipeMarkdown(processedMarkdown);
     const cleanMarkdown = processedMarkdown.replace(/\[d:[\d:]+\]/g, '').replace(/^#\s.*$/m, '');
     const recipeHtml = marked.parse(cleanMarkdown);
 
-    // 2. DATA SPLITSEN
     const targets = parseRecipeData(brew.recipeMarkdown);
     const logData = brew.logData || {};
     
-    // 3. FLAVOR PROFILE HTML VOORBEREIDEN (De Fix)
     let flavorHtml = '';
     const hasFlavorData = brew.flavorProfile && (brew.flavorProfile.sweetness !== undefined || brew.flavorProfile.body_mouthfeel !== undefined);
 
     if (hasFlavorData) {
-        // Data aanwezig: Maak ruimte voor canvas
         flavorHtml = `<div id="flavor-wheel-container-${brew.id}" class="h-64 flex items-center justify-center"><canvas id="flavorChart-${brew.id}"></canvas></div>`;
     } else {
-        // Geen data: Toon Generate knop MET brewId
         flavorHtml = `
            <div id="flavor-wheel-container-${brew.id}" class="h-64 flex flex-col items-center justify-center text-center p-4">
                <div class="w-12 h-12 bg-surface-variant/30 rounded-full flex items-center justify-center mb-2">
@@ -2540,7 +2485,6 @@ window.showBrewDetail = function(brewId) {
            </div>`;
     }
 
-    // 4. KEY STATS HTML
     const keyStatsHtml = `
     <div class="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-app-brand/20 shadow-sm">
         <h3 class="font-header text-lg font-bold mb-3 text-app-brand uppercase tracking-wider">Key Stats (Target)</h3>
@@ -2552,7 +2496,6 @@ window.showBrewDetail = function(brewId) {
         </div>
     </div>`;
 
-    // 5. Logboek & Kosten
     let logHtml = getBrewLogHtml(logData, brew.id);
     logHtml += getActualIngredientsHtml(brew);
 
@@ -2564,7 +2507,6 @@ window.showBrewDetail = function(brewId) {
         costHtml = `<div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-amber-900 text-sm flex justify-between items-center shadow-sm"><span><strong>Total Cost:</strong> ${currency}${brew.totalCost.toFixed(2)}</span><span><strong>Cost/L:</strong> ${currency}${perL.toFixed(2)}</span></div>`;
     }
 
-    // 6. BUILD HTML
     const container = document.getElementById('history-detail-container');
     const listContainer = document.getElementById('history-list-container');
     
@@ -2632,12 +2574,9 @@ window.showBrewDetail = function(brewId) {
     listContainer.classList.add('hidden');
     container.classList.remove('hidden');
 
-    // 7. RENDER CHARTS
     renderFermentationGraph(brew.id);
     
-    // Alleen renderen als er data is, anders staat de knop er al
     if (hasFlavorData) {
-        // Timeout om zeker te weten dat canvas in DOM zit
         setTimeout(() => {
             renderFlavorWheel(brew.id, 
                 ['Sweetness', 'Acidity', 'Fruity', 'Spicy', 'Earthy', 'Body'], 
@@ -2654,7 +2593,6 @@ window.goBackToHistoryList = function() {
     document.getElementById('history-list-container').classList.remove('hidden');
 }
 
-// --- HELPER: Scrape log data voor inventory & updates ---
 function getLogDataFromDOM(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return {};
@@ -2766,7 +2704,6 @@ window.updateBrewLog = async function(brewId, containerId) {
     }
 };
 
-// --- COST CALCULATION (De herstelde logica) ---
 function parseIngredientsAndCalculateCost(markdown, inventoryList, batchSize) {
     let totalCost = 0;
     const warnings = []; 

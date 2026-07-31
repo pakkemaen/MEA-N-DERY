@@ -413,62 +413,45 @@ function buildPrompt() {
 // --- CORE: Generate Recipe ---
 async function generateRecipe() {
     try {
-        // 1. NULL-SAFE DOM ACCESS & COMMA-TO-DOT SANITIZATION
-        const ogElement = document.getElementById('input-target-og');
-        const volElement = document.getElementById('input-target-volume');
-        
-        const rawOG = ogElement ? ogElement.value : "1.050";
-        const rawVol = volElement ? volElement.value : "10";
+        const container = document.getElementById('recipe-output');
+        if (container) {
+            container.innerHTML = getLoaderHtml("Master Mazer is formulating your recipe...");
+        }
 
-        const OG = parseFloat(String(rawOG).replace(',', '.')) || 1.050;
-        const V_most = parseFloat(String(rawVol).replace(',', '.')) || 10;
-
-        // 2. CRITIEKE GUARD CLAUSE: Hall Equation input sanitatie tegen deling door nul / onstabiele state
-        if (OG >= 1.775) {
-            const errorMsg = `Kritieke Hall-Equation limiet overschreden of bereikt (OG: ${OG}). Receptgeneratie afgebroken.`;
-            window.logSystemError(new Error(errorMsg), "brewing.js: generateRecipe -> Hall Guard", "WARNING");
-            window.showToast("Fout: De ingevoerde OG is te hoog voor de Hall Equation (limiet < 1.775).", "error");
+        const promptText = buildPrompt();
+        if (!promptText) {
+            if (container) {
+                container.innerHTML = '';
+            }
             return;
         }
 
-        // 3. EXACTE WISKUNDIGE MODELLEN (Geen vereenvoudigde factoren conform v2.6)
-        const totalGP = (OG - 1.000) * 1000 * V_most;
-        
-        // Strikte v2.6 Braggot-balans: Moutstorting begrensd tussen 30% en 50% van GP_total (gefixeerd op 40%)
-        const gpMaltTarget = totalGP * 0.40; 
-        const gpHoneyTarget = totalGP * 0.60;
-
-        const honeyTargetKg = (gpHoneyTarget / 375).toFixed(2);
-        const maltTargetKg = (gpMaltTarget / 300).toFixed(2);
-        const estimatedFG = (1.000 + ((OG - 1.000) * 0.25)).toFixed(3); // 75% schijnbare vergisting
-
-        // UI loader initialisatie
-        const container = document.getElementById('recipe-container');
-        if (container) container.innerHTML = getLoaderHtml("Scaling mathematical models & gathering ingredients...");
-
-        // 4. CONSTRUCTIE VAN DE AI PROMPT
-        let promptText = `Recept Reconstructie Request:\n`;
-        promptText += `- Doel Volume: ${V_most}L\n`;
-        promptText += `- Doel Original Gravity (OG): ${OG.toFixed(3)}\n`;
-        promptText += `- Berekende Honing Storting: ${honeyTargetKg} kg (op basis van 375 GP)\n`;
-        promptText += `- Berekende Mout Storting: ${maltTargetKg} kg (op basis van 300 GP)\n`;
-        promptText += `- Geschatte Einddensiteit (FG): ${estimatedFG}\n\n`;
-        promptText += `Genereer op basis van deze stoichiometrische parameters een sluitend, robuust stappenplan conform het v2.6 Safety-First brouwregime.`;
-
         lastGeneratedPrompt = promptText;
 
-        // 5. PERFORM API CALL EN UI RENDERING VIA MARKED
         const response = await performApiCall(promptText);
-        if (!response) throw new Error("Missing response from API.");
+        if (!response) {
+            throw new Error("Missing response from API.");
+        }
 
         currentRecipeMarkdown = response;
-        if (container) container.innerHTML = marked.parse(response);
+
+        await renderRecipeOutput(response, false);
 
         window.showToast("Recept succesvol gegenereerd conform v2.6 model!", "success");
 
     } catch (error) {
         window.logSystemError(error, "brewing.js -> generateRecipe", "ERROR");
         window.showToast("Fout bij het compileren of genereren van het recept.", "error");
+        
+        const container = document.getElementById('recipe-output');
+        if (container) {
+            container.innerHTML = `
+                <div class="p-4 bg-error-container/20 border border-error/30 rounded-xl text-xs text-error font-medium max-w-none text-center">
+                    ⚠️ <strong>Generetiefout:</strong> ${error.message}<br>
+                    <span class="opacity-70">Controleer de parameters of uw netwerkverbinding.</span>
+                </div>
+            `;
+        }
     }
 }
 
@@ -1547,9 +1530,10 @@ window.renderBrewDay2 = async function() {
                     </label>
                 </div>
 
+               // 2. VERVANG DOOR:
                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div class="p-4 bg-app-primary rounded-lg border border-app-brand/10">
-                        <label class="text-[10px] font-bold text-app-secondary uppercase block mb-1">Actual pH (Threshold: 2.8 - 4.5)</label>
+                        <label class="text-[10px] font-bold text-app-secondary uppercase block mb-1">Actual pH (Threshold: 2.8 - 3.8)</label>
                         <input type="number" id="gate-ph-input" step="0.01" value="${currentPhStr}" 
                             class="w-full bg-app-tertiary border border-app-brand/30 rounded p-2 text-lg font-mono font-bold text-app-brand focus:ring-1 focus:ring-app-brand" 
                             placeholder="3.x" oninput="this.value = this.value.replace(',', '.'); window.renderBrewDay2()">
@@ -1578,7 +1562,7 @@ window.renderBrewDay2 = async function() {
             const logHtml = (typeof getBrewLogHtml === 'function') ? getBrewLogHtml(activeBrew, activeBrew.id + '-sec') : '';
 
             // Validation Logic
-            const isPhValid = !isNaN(phVal) && phVal >= 2.8 && phVal <= 4.5;
+            const isPhValid = !isNaN(phVal) && phVal >= 2.8 && phVal <= 3.8;
             const isGatePassed = checklist.checklist_cleared && checklist.checklist_so2_sync && isPhValid && !hallError;
 
             container.innerHTML = `
@@ -1623,13 +1607,15 @@ window.renderBrewDay2 = async function() {
                         <button onclick="window.showBottlingModal('${activeBrew.id}')" 
                             ${!isGatePassed ? 'disabled' : ''} 
                             class="w-full ${isGatePassed ? 'bg-green-600' : 'bg-gray-400 cursor-not-allowed'} text-white py-3 px-4 rounded-lg btn font-bold shadow-md uppercase tracking-wider transition-all">
-                            ${isGatePassed ? 'Confirm Stabilization & Back-sweetening / Proceed to Bottling' : 'Check Requirements & pH (2.8-4.5)'}
+                            ${isGatePassed ? 'Confirm Stabilization & Back-sweetening / Proceed to Bottling' : 'Check Requirements & pH (2.8-3.8)'}
                         </button>
                         <button onclick="window.updateBrewLog('${activeBrew.id}', 'brew-day-2-log-container')" class="w-full bg-app-action text-white py-3 px-4 rounded-lg btn font-bold uppercase tracking-wider text-xs">Save Log Notes</button>
                     </div>
                 </div>`;
             return;
         }
+
+        const listHtml = agingBrews.map(b => {
 
         const listHtml = agingBrews.map(b => {
             const startDate = b.logData?.brewDate || 'Unknown';
@@ -1877,8 +1863,6 @@ window.generateSplitVolumeInputs = generateSplitVolumeInputs;
 window.calculateSplitBalance = calculateSplitBalance;
 window.executeSplitFromModal = executeSplitFromModal;
 window.splitBatch = splitBatch;
-
-// Update voltooid. Voor de volgende stap heb ik brewing.js of tools.js nodig.
 
 // --- GATEKEEPER PERSISTENCE HELPER (Consolidated v2.6) ---
 window.updateGateStatus = async function(brewId, gateKey) {

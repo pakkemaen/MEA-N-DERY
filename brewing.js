@@ -635,13 +635,18 @@ function formatRecipeMarkdown(markdown) {
         }
 
         cleanedMarkdown = cleanedMarkdown.replace(/^>\s*/gm, '');
-
+        cleanedMarkdown = cleanedMarkdown.replace(/\[TIMER:\d+:\d+:\d+\]/gi, '');
+        cleanedMarkdown = cleanedMarkdown.replace(/(SHOPPING LIST.*?:?)\s*(?:Buy|Koop)/gi, '$1\n- Buy');
+        cleanedMarkdown = cleanedMarkdown.replace(/([^\n])\s*(-\s*(?:Buy|Koop))/gi, '$1\n$2');
         cleanedMarkdown = cleanedMarkdown.replace(/([^\n])\s*(\d+\.)/g, '$1\n$2');
 
         let html = cleanedMarkdown
             .replace(/^#\s+(.*)$/gm, '<h1 class="text-xl font-black font-header text-app-header tracking-tight border-b border-app-brand/10 pb-2 mb-4 mt-2">$1</h1>')
             .replace(/^##\s+(.*)$/gm, '<h2 class="text-md font-bold text-app-brand font-header mt-4 mb-2">$1</h2>')
             .replace(/^###\s+(.*)$/gm, '<h3 class="text-sm font-bold text-on-surface-variant font-sans mt-3 mb-1">$1</h3>');
+
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*\*/g, '');
 
         const lines = html.split('\n');
         let inTable = false;
@@ -745,6 +750,11 @@ async function renderRecipeOutput(markdown, isTweak = false) {
             <button onclick="window.printRecipe()" class="bg-surface-container border border-outline-variant text-on-surface py-2 px-4 rounded-xl hover:bg-surface-container-high transition-colors btn text-sm font-bold uppercase tracking-wider">Print Recipe</button>
         </div>
         
+        <div id="recipe-title-editor-wrapper" class="mb-4 no-print flex items-center gap-2 bg-surface-container-low p-2 rounded-xl border border-outline-variant/40">
+            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">Title:</span>
+            <input type="text" id="recipe-title-input" value="${extractTitle(finalMarkdown) || 'Untitled Batch'}" class="flex-1 bg-surface border border-outline-variant text-sm font-bold p-2 rounded-lg text-on-surface focus:ring-1 focus:ring-primary" oninput="window.updateRecipeTitleFromInput(this.value)">
+        </div>
+
         <div class="recipe-content prose dark:prose-invert max-w-none text-on-surface">${recipeHtml}</div>
 
         ${titleSectionHtml}
@@ -821,10 +831,17 @@ window.printRecipe = function() {
         originalDocTitle = document.title;
         document.title = "MEA(N)DERY - " + recipeTitle;
 
+        const flavorCanvas = document.getElementById('generated-flavor-wheel');
+        const hasFlavorChart = flavorCanvas && flavorCanvas.width > 0 && flavorCanvas.height > 0 && currentPredictedProfile !== null;
+
         styleElement = document.createElement('style');
         styleElement.id = 'recipe-print-style';
         styleElement.textContent = `
             @media print {
+                @page {
+                    size: A4;
+                    margin: 15mm 15mm 15mm 15mm;
+                }
                 body * {
                     visibility: hidden !important;
                 }
@@ -842,6 +859,13 @@ window.printRecipe = function() {
                 .no-print, .no-print * {
                     display: none !important;
                     visibility: hidden !important;
+                }
+                ${!hasFlavorChart ? '#flavor-profile-section { display: none !important; visibility: hidden !important; }' : ''}
+                h1, h2, h3 {
+                    page-break-after: avoid;
+                }
+                table, tr, img, canvas {
+                    page-break-inside: avoid;
                 }
             }
         `;
@@ -877,22 +901,50 @@ window.triggerOnDemandBrandingAnalysis = async function() {
         if (userApiKey) {
             await generateAndInjectCreativeTitle(currentRecipeMarkdown);
             window.showToast("Creative batch branding sequence complete.", "success");
-            document.getElementById('creative-branding-section')?.classList.add('hidden');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = "Regenerate Name";
+            }
+            const titleInput = document.getElementById('recipe-title-input');
+            if (titleInput) {
+                titleInput.value = extractTitle(currentRecipeMarkdown) || titleInput.value;
+            }
         } else {
             window.showToast("Authentication missing: Provide an API Key configuration.", "error");
-            if (btn) btn.disabled = false;
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = "Regenerate Name";
+            }
         }
     } catch (error) {
         window.logSystemError(error, 'On-Demand Branding Execution Anomaly', 'ERROR');
         window.showToast("Branding generation rate limit constraint mapped.", "error");
         if (btn) {
             btn.disabled = false;
-            btn.innerText = "Generate Name";
+            btn.innerText = "Regenerate Name";
         }
     }
 };
 
 window.triggerOnDemandBrandingAnalysis = window.triggerOnDemandBrandingAnalysis;
+
+window.updateRecipeTitleFromInput = function(newTitle) {
+    try {
+        const cleanTitle = newTitle.trim();
+        if (!cleanTitle || !currentRecipeMarkdown) return;
+
+        currentRecipeMarkdown = currentRecipeMarkdown.replace(/^#\s*(.*)/m, `# ${cleanTitle}`);
+        window.currentRecipeMarkdown = currentRecipeMarkdown;
+        tempState.currentRecipe = currentRecipeMarkdown;
+
+        const h1Element = document.querySelector('#recipe-output h1');
+        if (h1Element) {
+            h1Element.textContent = cleanTitle;
+        }
+    } catch (error) {
+        window.logSystemError(error, 'brewing.js: updateRecipeTitleFromInput', 'ERROR');
+    }
+};
 
 window.triggerOnDemandFlavorAnalysis = async function() {
     const wrapper = document.getElementById('flavor-wheel-container-wrapper');
@@ -2707,7 +2759,6 @@ window.updateBrewLog = async function(brewId, containerId) {
 function parseIngredientsAndCalculateCost(markdown, inventoryList, batchSize) {
     let totalCost = 0;
     const warnings = []; 
-    // Gebruik de parser uit Deel 9B
     const requiredIngredients = parseIngredientsFromMarkdown(markdown); 
 
     if (requiredIngredients.length === 0) return { cost: 0, warnings: ["No ingredients found."] };
@@ -2750,12 +2801,10 @@ function parseIngredientsAndCalculateCost(markdown, inventoryList, batchSize) {
     return { cost: totalCost, warnings: warnings }; 
 }
 
-// --- SCOPE FIX: USE STATE.BREWS & STATE.USERID & STATE.INVENTORY ---
 window.recalculateBatchCost = async function(brewId) {
     const brew = state.brews.find(b => b.id === brewId); 
     if (!brew) return;
     
-    // Check inventory
     if (!state.inventory || state.inventory.length === 0) {
         showToast("Inventory empty.", "error");
         return;
@@ -2771,7 +2820,7 @@ window.recalculateBatchCost = async function(brewId) {
         
         if (confirm(`Calculated Cost: €${costResult.cost.toFixed(2)}. Update batch?`)) {
             await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId), { totalCost: costResult.cost });
-            brew.totalCost = costResult.cost; // Lokale update
+            brew.totalCost = costResult.cost;
             
             if(document.getElementById('history-detail-container') && !document.getElementById('history-detail-container').classList.contains('hidden')) {
                 window.showBrewDetail(brewId);
@@ -2784,7 +2833,6 @@ window.recalculateBatchCost = async function(brewId) {
     }
 };
 
-// --- TITLE MANAGEMENT ---
 window.showTitleEditor = (id) => { document.getElementById(`title-display-${id}`).classList.add('hidden'); document.getElementById(`title-editor-${id}`).classList.remove('hidden'); };
 window.hideTitleEditor = (id) => { document.getElementById(`title-display-${id}`).classList.remove('hidden'); document.getElementById(`title-editor-${id}`).classList.add('hidden'); };
 
@@ -2793,47 +2841,37 @@ window.saveNewTitle = async (id) => {
     if(val) { 
         await updateDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', id), { 
             recipeName: val,
-            "logData.recipeName": val // Consistentie
+            "logData.recipeName": val
         }); 
         window.hideTitleEditor(id); 
-        // Lokale update
         const b = state.brews.find(x => x.id === id); if(b) b.recipeName = val;
-        // UI verversen
         const titleHeader = document.querySelector(`#title-display-${id} h2`);
         if(titleHeader) titleHeader.textContent = val;
         renderHistoryList();
     }
 };
 
-// --- CORE ACTIONS: Delete, Clone, Resume, Save New ---
-
-// --- UPDATED: DELETE BREW (MET SAFETY CLEANUP) ---
 window.deleteBrew = async function(brewId) {
     if (!state.userId) return;
     if (!confirm("Are you sure? This cannot be undone.")) return;
 
     try {
-        // 1. Verwijder uit Database
         await deleteDoc(doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'brews', brewId));
 
-        // 2. CHECK: Was dit de actieve batch? 
         if (tempState.activeBrewId === brewId) {
             console.log("Active batch deleted. Resetting UI.");
             
-            // Stop timers
             if (typeof stepTimerInterval !== 'undefined' && stepTimerInterval) {
                 clearInterval(stepTimerInterval);
             }
             localStorage.removeItem('activeBrewDayTimer');
             
-            // Reset pointer
             tempState.activeBrewId = null;
             if(state.userSettings) {
                 state.userSettings.currentBrewDay = { brewId: null };
                 if (window.saveUserSettings) window.saveUserSettings();
             }
 
-            // Reset UI
             if (typeof renderBrewDay === 'function') renderBrewDay('none');
         }
 

@@ -76,7 +76,6 @@ function getFortKnoxLaws(isNoWater = false, isBraggot = false, isHydromel = fals
 `;
 }
 
-// --- CORE: De Prompt Bouwer (AANGEPAST: AUTO ABV & DESCRIPTION PRIORITY) ---
 function buildPrompt() {
     try {
         // --- NUMERIEKE INPUT VALIDATIE & NULL-SAFE NATIVE DOM ACCESS ---
@@ -402,7 +401,7 @@ function buildPrompt() {
              }
         }
 
-        return `You are "MEA(N)DERY", a master mazer. \n\n${mathContext}\n${carbContext}\n${protocolContext}\n${specificLaws}\n${ncrContext}\n${inventoryLogic}\n${waterContext}\n\n**GLOBAL SAFETY OVERRIDE:**\n1. **Temp:** NEVER recommend a fermentation temp exceeding the yeast manufacturer's limit.\n2. **Sanity Check:** If the user requests impossible physics, correct them politely.\n\n**OUTPUT FORMAT (ABSOLUTE STRICTNESS):**\n- **ROLE:** Act as a headless database. DO NOT speak to the user. DO NOT say "Okay", "Sure", "Here is your recipe".\n- **START:** The output MUST start with the character "#" (The Title). nothing else before it.\n- **STRUCTURE:**\n  1. Title (# Name)\n  2. > Inspirational Quote\n  3. Vital Stats List (ABV, Size, Style, Sweetness, OG)\n  4. Ingredients JSON Block: \`\`\`json\n[{"ingredient": "Name", "quantity": 0, "unit": "kg"}]\n\`\`\`\n  5. Instructions (Numbered list)\n  6. Timers: \`[TIMER:HH:MM:SS]\` inside the steps.\n  7. Brewer's Notes (Start section with "## Brewer's Notes")\n\nRequest:\n---\n${creativeBrief}\n---`;
+        return `You are "MEA(N)DERY", a master mazer. \n\n${mathContext}\n${carbContext}\n${protocolContext}\n${specificLaws}\n${ncrContext}\n${inventoryLogic}\n${waterContext}\n\n**GLOBAL SAFETY OVERRIDE:**\n1. **Temp:** NEVER recommend a fermentation temp exceeding the yeast manufacturer's limit.\n2. **Sanity Check:** If the user requests impossible physics, correct them politely.\n\n**OUTPUT FORMAT (ABSOLUTE STRICTNESS):**\n- **ROLE:** Act as a headless database. DO NOT speak to the user. DO NOT say "Okay", "Sure", "Here is your recipe".\n- **START:** The output MUST start with the character "#" (The Title). nothing else before it.\n- **STRUCTURE:**\n  1. Title (# Name)\n  2. Inspirational Quote (Do NOT prefix with '>')\n  3. Vital Stats List (ABV, Size, Style, Sweetness, OG)\n  4. Ingredients JSON Block: \`\`\`json\n[{"ingredient": "Name", "quantity": 0, "unit": "kg"}]\n\`\`\`\n  5. Instructions MUST be formatted as a Markdown numbered list with EACH step on a NEW LINE (1. Step one\n2. Step two). Never collapse steps into a single paragraph.\n  6. Timers: \`[TIMER:HH:MM:SS]\` inside the steps.\n  7. Brewer's Notes (Start section with "## Brewer's Notes")\n\nRequest:\n---\n${creativeBrief}\n---`;
 
     } catch (error) {
         window.logSystemError(error, 'brewing.js: buildPrompt Processing Chain', 'ERROR');
@@ -606,7 +605,6 @@ function formatRecipeMarkdown(markdown) {
 
         let cleanedMarkdown = markdown;
 
-        // Opsporen en transmuteren van het JSON-ingrediëntenblok naar een MD3 HTML-tabel
         const jsonRegex = /(?:```json\s*)?(\[\s*\{[\s\S]*?\}\s*\])(?:\s*```)?/i;
         const jsonMatch = cleanedMarkdown.match(jsonRegex);
 
@@ -635,7 +633,11 @@ function formatRecipeMarkdown(markdown) {
                 cleanedMarkdown = cleanedMarkdown.replace(jsonRegex, '');
             }
         }
-        
+
+        cleanedMarkdown = cleanedMarkdown.replace(/^>\s*/gm, '');
+
+        cleanedMarkdown = cleanedMarkdown.replace(/([^\n])\s*(\d+\.)/g, '$1\n$2');
+
         let html = cleanedMarkdown
             .replace(/^#\s+(.*)$/gm, '<h1 class="text-xl font-black font-header text-app-header tracking-tight border-b border-app-brand/10 pb-2 mb-4 mt-2">$1</h1>')
             .replace(/^##\s+(.*)$/gm, '<h2 class="text-md font-bold text-app-brand font-header mt-4 mb-2">$1</h2>')
@@ -714,6 +716,17 @@ async function renderRecipeOutput(markdown, isTweak = false) {
             <div id="flavor-generation-status" class="mt-2 text-xs font-mono text-primary hidden"></div>
         </div>
     </div>`;
+
+    const titleSectionHtml = `
+    <div id="creative-branding-section" class="mt-4 mb-6 p-4 border border-outline-variant/50 bg-surface-container-low rounded-2xl no-print flex justify-between items-center border border-outline-variant/50">
+        <div>
+            <h4 class="font-bold text-primary text-sm uppercase flex items-center gap-2">Creative Branding</h4>
+            <p class="text-xs text-on-surface-variant mt-1">Refactor the default title into a unique commercial craft name line.</p>
+        </div>
+        <button id="btn-generate-creative-title" onclick="window.triggerOnDemandBrandingAnalysis()" class="bg-primary text-on-primary py-2.5 px-4 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 btn shadow-sm whitespace-nowrap">
+            Generate Name
+        </button>
+    </div>`;
     
     let processedMarkdown = formatRecipeMarkdown(finalMarkdown);
     processedMarkdown = processedMarkdown.replace(/\[d:[\d:]+\]/g, ''); 
@@ -729,10 +742,12 @@ async function renderRecipeOutput(markdown, isTweak = false) {
             <button onclick="window.generateRecipe()" class="bg-primary text-on-primary py-2 px-4 rounded-xl hover:opacity-90 transition-colors btn text-sm flex items-center gap-1 font-bold uppercase tracking-wider">
                Retry
             </button>
-            <button onclick="window.print()" class="bg-surface-container border border-outline-variant text-on-surface py-2 px-4 rounded-xl hover:bg-surface-container-high transition-colors btn text-sm font-bold uppercase tracking-wider">Print Recipe</button>
+            <button onclick="window.printRecipe()" class="bg-surface-container border border-outline-variant text-on-surface py-2 px-4 rounded-xl hover:bg-surface-container-high transition-colors btn text-sm font-bold uppercase tracking-wider">Print Recipe</button>
         </div>
         
         <div class="recipe-content prose dark:prose-invert max-w-none text-on-surface">${recipeHtml}</div>
+
+        ${titleSectionHtml}
     
         <div id="water-recommendation-card" class="mt-4 p-4 border border-outline-variant/50 bg-surface-container-low rounded-2xl no-print transition-all">
             <div class="flex justify-between items-center">
@@ -781,20 +796,20 @@ async function renderRecipeOutput(markdown, isTweak = false) {
     if(tweakBtn) {
         tweakBtn.addEventListener('click', tweakUnsavedRecipe);
     }
-
-    const titleSectionHtml = `
-    <div id="creative-branding-section" class="mt-4 pt-4 border-t border-outline-variant/30 no-print flex justify-between items-center bg-surface-container-low p-4 rounded-2xl border border-outline-variant/50">
-        <div>
-            <h4 class="font-bold text-primary text-sm uppercase flex items-center gap-2">Creative Branding</h4>
-            <p class="text-xs text-on-surface-variant mt-1">Refactor the default title into a unique commercial craft name line.</p>
-        </div>
-        <button id="btn-generate-creative-title" onclick="window.triggerOnDemandBrandingAnalysis()" class="bg-primary text-on-primary py-2.5 px-4 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 btn shadow-sm whitespace-nowrap">
-            Generate Name
-        </button>
-    </div>`;
-
-    recipeOutput.insertAdjacentHTML('beforeend', titleSectionHtml);
 }
+
+window.printRecipe = function() {
+    try {
+        const recipeTitle = extractTitle(currentRecipeMarkdown) || "Recipe";
+        const originalTitle = document.title;
+        document.title = recipeTitle;
+        window.print();
+        document.title = originalTitle;
+    } catch (error) {
+        window.logSystemError(error, "brewing.js: printRecipe", "ERROR");
+        window.print();
+    }
+};
 
 window.triggerOnDemandBrandingAnalysis = async function() {
     const btn = document.getElementById('btn-generate-creative-title');
@@ -877,7 +892,6 @@ window.triggerOnDemandFlavorAnalysis = async function() {
 
 window.triggerOnDemandFlavorAnalysis = window.triggerOnDemandFlavorAnalysis;
 
-// --- SCOPE FIX: USE STATE.INVENTORY ---
 async function tweakUnsavedRecipe() {
     const tweakRequest = document.getElementById('tweak-unsaved-request').value.trim();
     if (!tweakRequest) { showToast("Please enter your tweak request.", "error"); return; }
@@ -888,7 +902,6 @@ async function tweakUnsavedRecipe() {
     const tweakBtn = document.getElementById('tweak-unsaved-btn');
     tweakBtn.disabled = true;
 
-    // Start animatie
     const thinkingInterval = (typeof window.startThinkingAnimation === 'function') ? window.startThinkingAnimation("loader-text") : null;
 
     let preservedTitle = '', preservedDate = '';
@@ -907,7 +920,6 @@ async function tweakUnsavedRecipe() {
 
     const relevantCategories = ['Honey', 'Yeast', 'Nutrient', 'Malt Extract', 'Fruit', 'Spice', 'Adjunct', 'Chemical', 'Water'];
     
-    // FIX: Gebruik state.inventory, met een veilige fallback
     const currentInventory = state.inventory || [];
     const fullInventoryList = currentInventory.filter(item => relevantCategories.includes(item.category));
     const inventoryString = fullInventoryList.map(item => `${item.name} (${item.qty} ${item.unit})`).join('; ');
@@ -992,21 +1004,17 @@ function applyWaterTweak(brandName, technicalInstruction) {
     }
 }
 
-// --- UI EVENT HANDLERS ---
-
 function handleDescriptionInput() {
     // Deze functie zorgt dat de gedetailleerde opties grijs worden als je zelf typt
     const descriptionInput = document.getElementById('customDescription');
     const optionsContainer = document.querySelector('details[open] > div'); // Fallback selector
-    // Of gebruik ID als je die in HTML hebt toegevoegd, bijv: 'structured-options-container'
     
     const warningMessage = document.getElementById('description-priority-warning');
     
     if(!descriptionInput) return;
     
     const hasText = descriptionInput.value.trim() !== '';
-    
-    // We zoeken de containers met inputs (in de details elementen)
+
     const structuredContainer = document.getElementById('structured-options-container');
     if (!structuredContainer) return;
     
@@ -1043,8 +1051,6 @@ function handleStyleChange() {
     document.getElementById('braggot-section')?.classList.toggle('hidden', !style.includes('braggot'));
 }
 
-// --- TUSSENTIJDSE EXPORTS ---
-// We koppelen deze nu alvast aan window, zodat de HTML in Creator mode werkt
 window.generateRecipe = generateRecipe;
 window.applyWaterTweak = applyWaterTweak;
 window.handleDescriptionInput = handleDescriptionInput;
@@ -1061,7 +1067,6 @@ window.regenerateFlavorProfile = async function() {
     }
 };
 
-// --- SMART PARSER V2.4: Clean Titles & Auto-Timers ---
 function extractStepsFromMarkdown(markdown) {
     if (!markdown) return { day1: [], day2: [] };
 
@@ -1071,20 +1076,17 @@ function extractStepsFromMarkdown(markdown) {
     
     let isParsingInstructions = false;
 
-    // Regexen
     const instructionHeaderRegex = /^(?:#+|__|\*\*)\s*(?:Instructions|Steps|Method|Procedure|Bereiding)(?:__|\*\*|:)?/i;
     const anyHeaderRegex = /^(?:#+|__|\*\*)\s*([a-zA-Z].*)/; 
     const prefixRegex = /^(?:Step\s+)?(\d+)[\.\)\s]\s*|^\s*[-*•]\s+/i;
     const blackList = ['abv:', 'batch size:', 'style:', 'sweetness:', 'og:', 'fg:', 'buy ', 'target '];
 
     for (let i = 0; i < lines.length; i++) {
-        // Chat-Parser Bug Preventie: Gebruik onverbiddelijk de .at(index) methodiek
         const line = lines.at(i);
         let cleanLine = line ? line.trim() : '';
         
         if (!cleanLine) continue;
 
-        // Sectie detectie
         if (cleanLine.match(instructionHeaderRegex)) { isParsingInstructions = true; continue; }
         if (isParsingInstructions && cleanLine.match(anyHeaderRegex)) {
             if (cleanLine.startsWith('#')) break; 
@@ -1093,14 +1095,12 @@ function extractStepsFromMarkdown(markdown) {
         if (!isParsingInstructions) continue;
         if (blackList.some(badWord => cleanLine.toLowerCase().includes(badWord))) continue;
 
-        // 1. Verwijder nummers en bullets
         cleanLine = cleanLine.replace(prefixRegex, '');
         cleanLine = cleanLine.replace(/^\*\*|\*\*$/g, '').trim();
 
         if (cleanLine) {
             const lower = cleanLine.toLowerCase();
             
-            // --- TITEL vs OMSCHRIJVING ---
             let title = "Action"; 
             let description = cleanLine;
 
@@ -1119,7 +1119,6 @@ function extractStepsFromMarkdown(markdown) {
                 else { title = cleanLine; description = ""; }
             }
 
-            // --- TIMER LOGIC (Smart Reader Parsing) ---
             let duration = 0;
             
             // 1. Try official AI Tag
@@ -1130,7 +1129,7 @@ function extractStepsFromMarkdown(markdown) {
                 description = description.replace(timerMatch.at(0), '').trim();
                 title = title.replace(/\[TIMER:.*?\]/, '').trim();
             } 
-            // 2. FALLBACK: Zoek naar tekstuele aanwijzingen (Zoals in jouw voorbeeld!)
+
             else {
                 const titleDesc = (title + " " + description).toLowerCase();
                 
@@ -1140,7 +1139,6 @@ function extractStepsFromMarkdown(markdown) {
                 else if (titleDesc.includes('72 hours') || titleDesc.includes('72 uur')) duration = 86400;
                 else if (titleDesc.includes('7 days') || titleDesc.includes('1 week')) duration = 604800;
                 
-                // Check minuten (bv "Wait 5 minutes")
                 const minMatch = titleDesc.match(/(\d+)\s*(min|minuten|minutes)/i);
                 if (minMatch) {
                     duration = parseInt(minMatch.at(1)) * 60;
@@ -1149,7 +1147,6 @@ function extractStepsFromMarkdown(markdown) {
 
             const stepObj = { title, description, duration };
 
-            // Fase bepalen
             const isSecondary = (
                 lower.includes('rack into') || lower.includes('siphon') || 
                 (lower.includes('secondary') && !lower.includes('primary')) || 
@@ -1162,7 +1159,6 @@ function extractStepsFromMarkdown(markdown) {
         }
     }
     
-    // Correctie voor als alles in Day 2 belandt
     if (day1.length === 0 && day2.length > 0) {
         const splitIndex = day2.findIndex(s => s.description.toLowerCase().includes('rack'));
         if (splitIndex > 0) day1.push(...day2.splice(0, splitIndex));
@@ -1172,7 +1168,6 @@ function extractStepsFromMarkdown(markdown) {
     return { day1, day2 };
 }
 
-// --- SMART START: CHECK STOCK FIRST ---
 window.startBrewDay = async function(brewId) {
     try {
         if (!brewId) {
@@ -1186,10 +1181,8 @@ window.startBrewDay = async function(brewId) {
             return;
         }
 
-        // DEFENSIEVE STOCK-CHECK TELEMETRIE: Geïsoleerd block voor materiaalbalans-verificatie
         let vTarget, ogTarget, brixTarget, mHoning, mNutrient;
         try {
-            // Comma-to-Dot Protocol handhaving op numerieke volume-input
             const targetVolumeRaw = String(brew.batchSize || "5").replace(',', '.');
             vTarget = parseFloat(targetVolumeRaw) || 5;
 
@@ -1197,13 +1190,11 @@ window.startBrewDay = async function(brewId) {
             const ogTargetRaw = String(parsedStats.targetOG || "1.000").replace(',', '.');
             ogTarget = parseFloat(ogTargetRaw) || 1.000;
 
-            // Pre-check op Hall Equation inputs om runtime vastlopers te voorkomen
             if (ogTarget >= 1.775) {
                 window.showToast("Fysische limietoverschrijding: OG target buiten bereik.", "error");
                 return;
             }
 
-            // Deconstructie via Bates-derdegraadspolynoom
             brixTarget = (182.9622 * Math.pow(ogTarget, 3)) - (777.3009 * Math.pow(ogTarget, 2)) + (1264.5170 * ogTarget) - 670.1831;
 
             const mTotalMust = vTarget * ogTarget;
@@ -1245,7 +1236,6 @@ window.startBrewDay = async function(brewId) {
             return;
         }
 
-        // Binaire Validatie-interlock tegen de live-voorraad
         const currentInventory = state.inventory || [];
         
         const honeyStockItem = currentInventory.find(i => i.category === 'Honey');
@@ -1307,7 +1297,6 @@ window.startActualBrewDay = async function() {
     }
 };
 
-// --- RENDER: Brew Day 1 (Dashboard / Detail Split) ---
 window.renderBrewDay = async function(activeId) {
     try {
         // 1. Hiërarchische Fallback-Matrix voor ID-Resolutie (v2.6)

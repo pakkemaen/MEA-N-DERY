@@ -587,12 +587,10 @@ window.resetTroubleshootChat = function() {
     currentChatId = null;
     currentChatImageBase64 = null;
     
-    // UI Reset
     const chatBox = document.getElementById('chat-history');
     const header = document.querySelector('#troubleshoot-view h3');
     
-    // Voeg History knop toe aan de header als die er nog niet is
-    if(header && !document.getElementById('medic-history-btn')) {
+    if (header && !document.getElementById('medic-history-btn')) {
         const btnContainer = document.createElement('div');
         btnContainer.innerHTML = `
             <button id="medic-history-btn" onclick="window.toggleMedicHistory()" class="text-xs bg-app-tertiary border border-app-brand/30 px-2 py-1 rounded mr-2 hover:bg-app-secondary">
@@ -600,18 +598,17 @@ window.resetTroubleshootChat = function() {
             </button>`;
         header.insertBefore(btnContainer.firstElementChild, header.firstChild);
         
-        // Voeg de lijst-container toe aan de HTML als die er nog niet is
         const view = document.getElementById('troubleshoot-view');
         if (!document.getElementById('medic-history-list')) {
             const listDiv = document.createElement('div');
             listDiv.id = 'medic-history-list';
             listDiv.className = 'hidden absolute top-12 left-4 right-4 bg-app-secondary border border-app-brand/20 shadow-xl rounded-lg z-50 max-h-[60vh] overflow-y-auto p-2';
-            view.style.position = 'relative'; // Nodig voor absolute positioning
+            view.style.position = 'relative';
             view.appendChild(listDiv);
         }
     }
 
-    if(chatBox) {
+    if (chatBox) {
         chatBox.innerHTML = `
         <div class="flex items-start gap-3">
             <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs">DOC</div>
@@ -621,11 +618,11 @@ window.resetTroubleshootChat = function() {
         </div>`;
     }
 
-    // Koppel event listeners aan invoerelementen voor betrouwbare interactie
-    const medicInputEl = document.getElementById('medic-input');
+    const medicInputEl = document.getElementById('medic-input') || document.querySelector("textarea[placeholder*='Describe']");
     const medicSendBtnEl = document.getElementById('medic-send-btn') || document.querySelector("button[onclick*='sendTroubleshootMessage']");
 
     if (medicInputEl) {
+        medicInputEl.value = "";
         const newMedicInput = medicInputEl.cloneNode(true);
         if (medicInputEl.parentNode) {
             medicInputEl.parentNode.replaceChild(newMedicInput, medicInputEl);
@@ -650,7 +647,7 @@ window.resetTroubleshootChat = function() {
     }
 
     window.clearChatImage();
-}
+};
 
 // 2. Toggle & Laad Geschiedenis Lijst
 window.toggleMedicHistory = async function() {
@@ -797,12 +794,13 @@ window.clearChatImage = function() {
 }
 
 window.sendTroubleshootMessage = async function() {
-    const inputEl = document.getElementById('medic-input');
+    const inputEl = document.getElementById('medic-input') || document.querySelector("textarea[placeholder*='Describe']");
     const sendBtn = document.getElementById('medic-send-btn') || document.querySelector("button[onclick*='sendTroubleshootMessage']");
-    const chatBox = document.getElementById('chat-history');
+    const chatBox = document.getElementById('chat-history') || document.querySelector(".chat-messages-wrapper");
 
     if (!inputEl || !chatBox) {
-        window.logSystemError(new Error("Essential DOM elements (#medic-input or #chat-history) missing."), 'sendTroubleshootMessage', 'WARNING');
+        window.showToast("System error: Interface elements for chat (#medic-input or #chat-history) are inaccessible.", "error");
+        window.logSystemError(new Error("Essential DOM elements (#medic-input or #chat-history) missing in sendTroubleshootMessage."), 'tools.js -> sendTroubleshootMessage', 'ERROR');
         return;
     }
 
@@ -872,9 +870,12 @@ Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
         });
 
         if (currentChatImageBase64) {
-            contentsPayload.at(-1).parts.push({
-                inline_data: { mime_type: "image/jpeg", data: currentChatImageBase64 }
-            });
+            const lastPayloadItem = contentsPayload.at(-1);
+            if (lastPayloadItem && lastPayloadItem.parts) {
+                lastPayloadItem.parts.push({
+                    inline_data: { mime_type: "image/jpeg", data: currentChatImageBase64 }
+                });
+            }
             window.clearChatImage();
         }
 
@@ -901,7 +902,7 @@ Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
         let replyText = "De Mead Medic kon geen stabiele respons genereren. Controleer de netwerkverbinding.";
         if (data.candidates && data.candidates.length > 0) {
             const candidate = data.candidates.at(0);
-            if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+            if (candidate && candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
                 replyText = candidate.content.parts.at(0).text;
             }
         }

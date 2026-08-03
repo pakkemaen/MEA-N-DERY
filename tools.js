@@ -9,7 +9,7 @@ import {
     orderBy, limit, getCountFromServer, serverTimestamp 
 } from './firebase-init.js';
 
-import { state } from './state.js';
+import { state, tempState } from './state.js';
 import { 
     showToast, performApiCall, getLoaderHtml, switchMainView, 
     switchSubView, logSystemError 
@@ -2284,8 +2284,8 @@ async function clearCollection(collectionName) {
 
 // --- WATER SOMMELIER LOGIC (BELGIAN EDITION) ---
 async function findCommercialWaterMatch() {
-    const resultsDiv = document.getElementById('water-brand-results');
-    const recipeContext = window.currentRecipeMarkdown || tempState.currentRecipe || "";
+    const resultsDiv = document.getElementById('water-brand-results') || document.getElementById('water-advice-output');
+    const recipeContext = window.currentRecipeMarkdown || tempState?.currentRecipe || "";
 
     if (!resultsDiv) return;
     if (!recipeContext) {
@@ -2325,21 +2325,25 @@ async function findCommercialWaterMatch() {
         const response = await performApiCall(prompt, schema);
         const brands = JSON.parse(response);
         let html = `<h5 class="font-bold mb-3 text-app-brand text-sm uppercase">Recommended Belgian Waters:</h5><div class="space-y-3">`;
-        brands.forEach(b => {
-            html += `<div class="p-3 card rounded border border-app-brand/30 shadow-sm flex flex-col gap-2">
-                        <div class="flex justify-between items-start">
-                            <span class="font-bold text-app-header">${b.brand}</span>
-                            <button onclick="window.applyWaterTweak('${b.brand}', '${b.tweak_instruction.replace(/'/g, "\\'")}')" class="text-xs bg-app-tertiary hover:bg-app-secondary text-app-brand border border-app-brand py-1 px-2 rounded transition-colors font-bold uppercase tracking-wider">Select</button>
-                        </div>
-                        <p class="text-xs text-app-secondary">${b.reason}</p>
-                        <p class="text-[10px] text-green-600 font-mono mt-1">✓ ${b.tweak_instruction}</p>
-                     </div>`;
-        });
+        
+        if (Array.isArray(brands)) {
+            brands.forEach(b => {
+                html += `<div class="p-3 card rounded border border-app-brand/30 shadow-sm flex flex-col gap-2">
+                            <div class="flex justify-between items-start">
+                                <span class="font-bold text-app-header">${b.brand}</span>
+                                <button onclick="window.applyWaterTweak('${b.brand}', '${b.tweak_instruction.replace(/'/g, "\\'")}')" class="text-xs bg-app-tertiary hover:bg-app-secondary text-app-brand border border-app-brand py-1 px-2 rounded transition-colors font-bold uppercase tracking-wider">Select</button>
+                            </div>
+                            <p class="text-xs text-app-secondary">${b.reason}</p>
+                            <p class="text-[10px] text-green-600 font-mono mt-1">✓ ${b.tweak_instruction}</p>
+                         </div>`;
+            });
+        }
+        
         html += `</div>`;
         resultsDiv.innerHTML = html;
     } catch (error) {
         window.logSystemError(error, 'tools.js: findCommercialWaterMatch', 'ERROR');
-        resultsDiv.innerHTML = `<p class="text-red-500 text-sm">Could not find matching brands. Error: ${error.message}</p>`;
+        resultsDiv.innerHTML = `<p class="text-red-500 text-sm p-2">Could not find matching commercial water brands: ${error.message}</p>`;
     }
 }
 

@@ -1464,8 +1464,20 @@ async function loadLabelAssets() {
                 }
             }
         }
+
+        if (typeof renderLabelAssetsSettings === 'function') {
+            renderLabelAssetsSettings();
+        }
+        if (typeof populateLabelFontsDropdowns === 'function') {
+            populateLabelFontsDropdowns();
+        }
+        if (typeof populateLabelStylesDropdown === 'function') {
+            populateLabelStylesDropdown();
+        }
+        if (typeof loadGoogleFontsInHeader === 'function') {
+            loadGoogleFontsInHeader();
+        }
     } catch (error) {
-        // SANISATIE: Rauwe console.error omgebouwd naar gecentraliseerd loggen en toast notificatie
         window.logSystemError(error, 'LabelForge: Load Assets', 'ERROR');
         window.showToast("Fout bij het inladen van de label-assets.", "error");
     }

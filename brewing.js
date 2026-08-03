@@ -2279,10 +2279,11 @@ async function loadHistory() {
 
         renderHistoryList();
 
-        if(window.populateSocialRecipeDropdown) window.populateSocialRecipeDropdown();
-        if(window.updateDashboardStats) window.updateDashboardStats();
-        if(typeof updateCostAnalysis === 'function') updateCostAnalysis();
-        if(typeof renderActiveBrewTimeline === 'function') renderActiveBrewTimeline();
+        if (typeof window.populateSocialRecipeDropdown === 'function') window.populateSocialRecipeDropdown();
+        if (typeof window.populateLabelRecipeDropdown === 'function') window.populateLabelRecipeDropdown();
+        if (typeof window.updateDashboardStats === 'function') window.updateDashboardStats();
+        if (typeof updateCostAnalysis === 'function') updateCostAnalysis();
+        if (typeof renderActiveBrewTimeline === 'function') renderActiveBrewTimeline();
 
         const activeId = tempState.activeBrewId || state.userSettings?.currentBrewDay?.brewId;
         if (activeId && activeId !== 'none') {

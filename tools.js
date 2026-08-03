@@ -576,8 +576,6 @@ async function importData(event, collectionName) {
     }
 }
 
-// --- MEAD MEDIC CHAT SYSTEM (MET GESCHIEDENIS) ---
-
 let chatHistory = []; // De actieve berichten
 let currentChatImageBase64 = null; 
 let currentChatId = null; // Houdt bij of we in een bestaand of nieuw gesprek zitten
@@ -587,10 +585,9 @@ window.resetTroubleshootChat = function() {
     currentChatId = null;
     currentChatImageBase64 = null;
     
-    // Hiërarchische Selectielogica: Chatgeschiedenis Box (chatBox)
-    const chatBox = document.getElementById('chat-history') || 
-                    document.querySelector("#troubleshoot-view .chat-messages-wrapper") || 
-                    document.querySelector("#troubleshoot-view [id*='chat']");
+    const chatBox = document.getElementById('chat-history');
+    const chatInput = document.getElementById('chat-input');
+    const chatSendBtn = document.getElementById('chat-send-btn');
                     
     const header = document.querySelector('#troubleshoot-view h3');
     
@@ -625,49 +622,32 @@ window.resetTroubleshootChat = function() {
         </div>`;
     }
 
-    // Hiërarchische Selectielogica: Input Element (inputEl)
-    const medicInputEl = document.getElementById('medic-input') || 
-                         document.querySelector("#troubleshoot-view input") || 
-                         document.querySelector("#troubleshoot-view textarea") || 
-                         document.querySelector("textarea[placeholder*='Describe']");
-
-    // Hiërarchische Selectielogica: Verzendknop (sendBtn)
-    const troubleshootWrapper = document.querySelector("#troubleshoot-view");
-    const fallbackFirstButton = troubleshootWrapper ? troubleshootWrapper.querySelector("button") : null;
-    const medicSendBtnEl = document.getElementById('medic-send-btn') || 
-                          document.querySelector("#troubleshoot-view button[onclick*='sendTroubleshootMessage']") || 
-                          fallbackFirstButton;
-
-    if (medicInputEl) {
-        medicInputEl.value = "";
-        const newMedicInput = medicInputEl.cloneNode(true);
-        if (medicInputEl.parentNode) {
-            medicInputEl.parentNode.replaceChild(newMedicInput, medicInputEl);
+    if (chatInput) {
+        chatInput.value = "";
+        if (!chatInput.dataset.listenerAttached) {
+            chatInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    window.sendTroubleshootMessage();
+                }
+            });
+            chatInput.dataset.listenerAttached = "true";
         }
-        // Event Handler: Enter zonder Shift vuurt e.preventDefault() en direct sendTroubleshootMessage() af
-        newMedicInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                window.sendTroubleshootMessage();
-            }
-        });
     }
 
-    if (medicSendBtnEl) {
-        const newSendBtn = medicSendBtnEl.cloneNode(true);
-        if (medicSendBtnEl.parentNode) {
-            medicSendBtnEl.parentNode.replaceChild(newSendBtn, medicSendBtnEl);
+    if (chatSendBtn) {
+        if (!chatSendBtn.dataset.listenerAttached) {
+            chatSendBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.sendTroubleshootMessage();
+            });
+            chatSendBtn.dataset.listenerAttached = "true";
         }
-        newSendBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            window.sendTroubleshootMessage();
-        });
     }
 
     window.clearChatImage();
 };
 
-// 2. Toggle & Laad Geschiedenis Lijst
 window.toggleMedicHistory = async function() {
     const listDiv = document.getElementById('medic-history-list');
     if (!listDiv) return;
@@ -723,7 +703,6 @@ window.toggleMedicHistory = async function() {
     }
 }
 
-// 3. Laad een specifiek gesprek
 window.loadMedicChat = async function(chatId) {
     if (!state.userId) return;
     
@@ -776,7 +755,6 @@ window.loadMedicChat = async function(chatId) {
     }
 }
 
-// 4. Verwijder Gesprek
 window.deleteMedicChat = async function(chatId) {
     if(!confirm("Delete this history?")) return;
     try {
@@ -789,7 +767,6 @@ window.deleteMedicChat = async function(chatId) {
     }
 };
 
-// 5. Foto Selectie Handling (Ongewijzigd)
 window.handleChatImageSelect = function(input) {
     if (input.files) {
         const fileInstance = input.files.item(0);
@@ -812,27 +789,22 @@ window.clearChatImage = function() {
 }
 
 window.sendTroubleshootMessage = async function() {
-    // Hiërarchische Selectielogica: Input Element (inputEl)
-    const inputEl = document.getElementById('medic-input') || 
-                    document.querySelector("#troubleshoot-view input") || 
-                    document.querySelector("#troubleshoot-view textarea") || 
-                    document.querySelector("textarea[placeholder*='Describe']");
+    const inputEl = document.getElementById('chat-input') || 
+                    document.querySelector("#troubleshoot-view input[type='text']") || 
+                    document.getElementById('medic-input') || 
+                    document.querySelector("#troubleshoot-view textarea");
 
-    // Hiërarchische Selectielogica: Verzendknop (sendBtn)
-    const troubleshootWrapper = document.querySelector("#troubleshoot-view");
-    const fallbackFirstButton = troubleshootWrapper ? troubleshootWrapper.querySelector("button") : null;
-    const sendBtn = document.getElementById('medic-send-btn') || 
-                    document.querySelector("#troubleshoot-view button[onclick*='sendTroubleshootMessage']") || 
-                    fallbackFirstButton;
+    const sendBtn = document.getElementById('chat-send-btn') || 
+                    document.getElementById('medic-send-btn') || 
+                    document.querySelector("#troubleshoot-view button[onclick*='sendTroubleshootMessage']");
 
-    // Hiërarchische Selectielogica: Chatgeschiedenis Box (chatBox)
     const chatBox = document.getElementById('chat-history') || 
                     document.querySelector("#troubleshoot-view .chat-messages-wrapper") || 
                     document.querySelector("#troubleshoot-view [id*='chat']");
 
     if (!inputEl || !chatBox) {
-        window.showToast("System error: Interface elements for chat (#medic-input or #chat-history) are inaccessible.", "error");
-        window.logSystemError(new Error("Essential DOM elements (#medic-input or #chat-history) missing in sendTroubleshootMessage."), 'tools.js -> sendTroubleshootMessage', 'ERROR');
+        window.showToast("System error: Interface elements for chat (#chat-input or #chat-history) are inaccessible.", "error");
+        window.logSystemError(new Error("Essential DOM elements (#chat-input or #chat-history) missing in sendTroubleshootMessage."), 'tools.js -> sendTroubleshootMessage', 'ERROR');
         return;
     }
 
@@ -850,10 +822,14 @@ window.sendTroubleshootMessage = async function() {
             sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
         }
 
+        const parsedUserMessage = (typeof marked !== 'undefined' && typeof marked.parse === 'function') 
+            ? marked.parse(messageText) 
+            : messageText;
+
         const userMsgHtml = `
         <div class="flex items-start gap-3 justify-end mb-4">
-            <div class="bg-blue-600 text-white p-3 rounded-lg shadow-sm text-sm max-w-[85%] text-left">
-                ${messageText}
+            <div class="bg-blue-600 text-white p-3 rounded-lg shadow-sm text-sm max-w-[85%] text-left prose prose-sm prose-invert max-w-none">
+                ${parsedUserMessage}
             </div>
             <img src="logo.png" onerror="this.src='favicon.png'" class="w-8 h-8 rounded-full bg-app-tertiary p-0.5 flex-shrink-0">
         </div>`;
@@ -941,11 +917,15 @@ Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
 
         chatHistory.push({ role: 'model', text: replyText });
 
+        const parsedReplyText = (typeof marked !== 'undefined' && typeof marked.parse === 'function') 
+            ? marked.parse(replyText) 
+            : replyText;
+
         const medicMsgHtml = `
         <div class="flex items-start gap-3 justify-start mb-4">
             <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs flex-shrink-0">DOC</div>
             <div class="bg-white dark:bg-gray-800 text-app-header border border-gray-100 dark:border-gray-700 p-3 rounded-lg shadow-sm text-sm max-w-[85%] text-left prose prose-sm dark:prose-invert max-w-none">
-                ${marked.parse(replyText)}
+                ${parsedReplyText}
             </div>
         </div>`;
         chatBox.insertAdjacentHTML('beforeend', medicMsgHtml);

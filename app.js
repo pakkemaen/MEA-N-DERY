@@ -295,9 +295,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- WATER TOOLS ---
     document.getElementById('water-profile-form')?.addEventListener('submit', (e) => window.saveWaterProfile(e));
     document.getElementById('ai-water-search-btn')?.addEventListener('click', () => window.findWaterProfileWithAI());
+    document.getElementById('getWaterAdviceBtn')?.addEventListener('click', () => {
+        if (typeof window.getWaterAdvice === 'function') {
+            window.getWaterAdvice();
+        } else if (typeof window.findCommercialWaterMatch === 'function') {
+            window.findCommercialWaterMatch();
+        }
+    });
     document.getElementById('waterSource')?.addEventListener('change', () => {
         if (window.handleWaterSourceChange) window.handleWaterSourceChange();
     });
+
+    // --- IMPORT / EXPORT ---
 
     // --- IMPORT / EXPORT ---
     document.getElementById('exportHistoryBtn')?.addEventListener('click', () => window.exportHistory());

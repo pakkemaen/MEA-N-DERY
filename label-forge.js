@@ -771,14 +771,23 @@ function handleLogoUpload(event) {
 // --- GENERATE LABEL ART (V5.1 - SAFE QUALITY BOOST) ---
 async function generateLabelArt() {
     try {
+        const styleVal = document.getElementById('labelArtStyle')?.value || '';
+        const descVal = document.getElementById('labelDescription')?.value || '';
         const promptInput = document.getElementById('label_art_prompt');
-        if (!promptInput || !promptInput.value.trim()) {
-            window.showToast("Voer eerst een omschrijving of prompt in voor de AI.", "error");
+        
+        let prompt = "";
+        if (styleVal || descVal) {
+            prompt = [styleVal, descVal].filter(Boolean).join(', ').trim();
+        } else if (promptInput && promptInput.value.trim()) {
+            prompt = promptInput.value.trim();
+        }
+
+        if (!prompt) {
+            window.showToast("Voer een beschrijving in of kies een kunststijl om labelkunst te genereren.", "error");
             return;
         }
 
-        const prompt = promptInput.value.trim();
-        const generateBtn = document.getElementById('btn_generate_label_art');
+        const generateBtn = document.getElementById('ai-label-art-btn') || document.getElementById('btn_generate_label_art');
         if (generateBtn) generateBtn.disabled = true;
 
         window.showToast("AI genereert labelkunst, een moment geduld...", "info");
@@ -847,7 +856,7 @@ async function generateLabelArt() {
         window.logSystemError(error, 'LabelForge: Generate Art', 'ERROR');
         window.showToast("Fout tijdens het genereren van de labelkunst.", "error");
     } finally {
-        const generateBtn = document.getElementById('btn_generate_label_art');
+        const generateBtn = document.getElementById('ai-label-art-btn') || document.getElementById('btn_generate_label_art');
         if (generateBtn) generateBtn.disabled = false;
     }
 }

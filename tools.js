@@ -136,9 +136,11 @@ async function saveUserSettings(e) {
         await setDoc(mainSettingsRef, newSettings, { merge: true });
         
         const userDocRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId);
-        await updateDoc(userDocRef, {
-            'settings.updatedAt': serverTimestamp()
-        });
+        await setDoc(userDocRef, {
+            settings: {
+                updatedAt: serverTimestamp()
+            }
+        }, { merge: true });
 
         // --- 6. SINGLE SOURCE OF TRUTH (STATE) SYNCHRONISATIE ---
         state.userSettings = { ...state.userSettings, ...newSettings }; 

@@ -1700,6 +1700,8 @@ window.deleteCustomLabelFormat = deleteCustomLabelFormat;
 window.autoDetectLabelFormat = autoDetectLabelFormat;
 
 // 6. Helpers en Asset Managers (Gezuiverde unieke toewijzingen)
+window.addLabelStyle = addLabelStyle;
+
 try {
     window.populateLabelRecipeDropdown = populateLabelRecipeDropdown;
     window.updateLabelPreviewDimensions = updateLabelPreviewDimensions;

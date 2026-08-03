@@ -582,7 +582,6 @@ let chatHistory = []; // De actieve berichten
 let currentChatImageBase64 = null; 
 let currentChatId = null; // Houdt bij of we in een bestaand of nieuw gesprek zitten
 
-// 1. Initialiseer de View (Met History Knop)
 window.resetTroubleshootChat = function() {
     chatHistory = [];
     currentChatId = null;
@@ -621,6 +620,35 @@ window.resetTroubleshootChat = function() {
             </div>
         </div>`;
     }
+
+    // Koppel event listeners aan invoerelementen voor betrouwbare interactie
+    const medicInputEl = document.getElementById('medic-input');
+    const medicSendBtnEl = document.getElementById('medic-send-btn') || document.querySelector("button[onclick*='sendTroubleshootMessage']");
+
+    if (medicInputEl) {
+        const newMedicInput = medicInputEl.cloneNode(true);
+        if (medicInputEl.parentNode) {
+            medicInputEl.parentNode.replaceChild(newMedicInput, medicInputEl);
+        }
+        newMedicInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                window.sendTroubleshootMessage();
+            }
+        });
+    }
+
+    if (medicSendBtnEl) {
+        const newSendBtn = medicSendBtnEl.cloneNode(true);
+        if (medicSendBtnEl.parentNode) {
+            medicSendBtnEl.parentNode.replaceChild(newSendBtn, medicSendBtnEl);
+        }
+        newSendBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.sendTroubleshootMessage();
+        });
+    }
+
     window.clearChatImage();
 }
 
@@ -768,13 +796,17 @@ window.clearChatImage = function() {
     document.getElementById('chat-image-preview').classList.add('hidden');
 }
 
-// 6. Bericht Versturen (MET AUTO-SAVE)
 window.sendTroubleshootMessage = async function() {
-    // 1. UI elementen ophalen voor vergrendeling en interactie
     const inputEl = document.getElementById('medic-input');
     const sendBtn = document.getElementById('medic-send-btn') || document.querySelector("button[onclick*='sendTroubleshootMessage']");
-    const messageText = inputEl?.value.trim();
-    
+    const chatBox = document.getElementById('chat-history');
+
+    if (!inputEl || !chatBox) {
+        window.logSystemError(new Error("Essential DOM elements (#medic-input or #chat-history) missing."), 'sendTroubleshootMessage', 'WARNING');
+        return;
+    }
+
+    const messageText = inputEl.value.trim();
     if (!messageText) return;
 
     try {
@@ -783,31 +815,23 @@ window.sendTroubleshootMessage = async function() {
             return;
         }
 
-        // Medic UI-Lock activeeren om parallelle API requests te voorkomen
         if (sendBtn) {
             sendBtn.disabled = true;
             sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
         }
 
-        const chatBox = document.getElementById('chat-history');
-        
-        // Render het gebruikersbericht onmiddellijk in de lokale chatBox
-        if (chatBox) {
-            const userMsgHtml = `
-            <div class="flex items-start gap-3 justify-end mb-4">
-                <div class="bg-blue-600 text-white p-3 rounded-lg shadow-sm text-sm max-w-[85%] text-left">
-                    ${messageText}
-                </div>
-                <img src="logo.png" onerror="this.src='favicon.png'" class="w-8 h-8 rounded-full bg-app-tertiary p-0.5 flex-shrink-0">
-            </div>`;
-            chatBox.insertAdjacentHTML('beforeend', userMsgHtml);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
+        const userMsgHtml = `
+        <div class="flex items-start gap-3 justify-end mb-4">
+            <div class="bg-blue-600 text-white p-3 rounded-lg shadow-sm text-sm max-w-[85%] text-left">
+                ${messageText}
+            </div>
+            <img src="logo.png" onerror="this.src='favicon.png'" class="w-8 h-8 rounded-full bg-app-tertiary p-0.5 flex-shrink-0">
+        </div>`;
+        chatBox.insertAdjacentHTML('beforeend', userMsgHtml);
+        chatBox.scrollTop = chatBox.scrollHeight;
 
-        // Voeg toe aan lokale geschiedenis-array
         chatHistory.push({ role: 'user', text: messageText, hasImage: !!currentChatImageBase64 });
 
-        // Verzamel de oenologische context van de actuele brews om de Gemini-analyse te voeden
         let brewContextString = "Geen actieve brouwgegevens beschikbaar.";
         if (state.brews && state.brews.length > 0) {
             const activeBrew = state.brews.at(0);
@@ -821,23 +845,17 @@ window.sendTroubleshootMessage = async function() {
             }
         }
 
-        // Bouw de sytemprompt op voor de troubleshooting-omgeving
         const systemInstruction = `Je bent de 'Mead Medic', een AI-expert gecertificeerd in oenologie en de zymologie van mede. 
 Je helpt thuisbrouwers met het diagnosticeren van vastgelopen vergistingen (stalls), infecties en off-flavors.
 Gebruik bij berekeningen ALTIJD de Hall-vergelijking voor alcoholbepalingen en hanteer de TOSNA 3.0-standaarden voor stikstofcorrecties.
 Geef korte, direct toepasbare antwoorden met duidelijke actiepunten.
 Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
 
-        // Haal de API-sleutel en het actieve model op uit de Single Source of Truth
         let apiKey = state.userSettings?.apiKey;
         if (!apiKey && typeof CONFIG !== 'undefined' && CONFIG.firebase) apiKey = CONFIG.firebase.apiKey;
         
         if (!apiKey) {
             window.showToast("Medic Systeemfout: Geen Gemini API-sleutel geconfigureerd in de gebruikersinstellingen.", "error");
-            if (sendBtn) {
-                sendBtn.disabled = false;
-                sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
             return;
         }
 
@@ -846,7 +864,6 @@ Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
         
         let contentsPayload = [];
 
-        // Bouw de payload op met de historische chatberichten (parser-veilig)
         chatHistory.forEach(msg => {
             contentsPayload.push({
                 role: msg.role === 'user' ? 'user' : 'model',
@@ -854,7 +871,6 @@ Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
             });
         });
 
-        // Voeg eventueel de base64 image toe indien aanwezig
         if (currentChatImageBase64) {
             contentsPayload.at(-1).parts.push({
                 inline_data: { mime_type: "image/jpeg", data: currentChatImageBase64 }
@@ -890,22 +906,18 @@ Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
             }
         }
 
-        // Voeg het AI-antwoord toe aan het lokale geheugen
         chatHistory.push({ role: 'model', text: replyText });
 
-        if (chatBox) {
-            const medicMsgHtml = `
-            <div class="flex items-start gap-3 justify-start mb-4">
-                <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs flex-shrink-0">DOC</div>
-                <div class="bg-white dark:bg-gray-800 text-app-header border border-gray-100 dark:border-gray-700 p-3 rounded-lg shadow-sm text-sm max-w-[85%] text-left prose prose-sm dark:prose-invert max-w-none">
-                    ${marked.parse(replyText)}
-                </div>
-            </div>`;
-            chatBox.insertAdjacentHTML('beforeend', medicMsgHtml);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
+        const medicMsgHtml = `
+        <div class="flex items-start gap-3 justify-start mb-4">
+            <div class="w-8 h-8 rounded-full bg-app-brand text-white flex items-center justify-center font-bold text-xs flex-shrink-0">DOC</div>
+            <div class="bg-white dark:bg-gray-800 text-app-header border border-gray-100 dark:border-gray-700 p-3 rounded-lg shadow-sm text-sm max-w-[85%] text-left prose prose-sm dark:prose-invert max-w-none">
+                ${marked.parse(replyText)}
+            </div>
+        </div>`;
+        chatBox.insertAdjacentHTML('beforeend', medicMsgHtml);
+        chatBox.scrollTop = chatBox.scrollHeight;
 
-        // Indien dit een bestaand of nieuw opgeslagen gesprek betreft, synchroniseer naar Firestore
         if (currentChatId) {
             const docRef = doc(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'medicChats', currentChatId);
             await updateDoc(docRef, {
@@ -913,7 +925,6 @@ Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
                 updatedAt: new Date().toISOString()
             });
         } else if (chatHistory.length === 2) {
-            // Maak automatisch een nieuw document aan bij het eerste vraag-antwoordpaar
             const colRef = collection(db, 'artifacts', 'meandery-aa05e', 'users', state.userId, 'medicChats');
             const newChatDoc = await addDoc(colRef, {
                 title: messageText.substring(0, 40) + "...",
@@ -924,14 +935,12 @@ Actuele brouwcontext van deze gebruiker: ${brewContextString}`;
             currentChatId = newChatDoc.id;
         }
 
-        // Data Protection: Leegmaken van het invoerveld pas aan het einde van een geslaagde try-blok execution
-        if (inputEl) inputEl.value = "";
+        inputEl.value = "";
         
     } catch (error) {
         window.logSystemError(error, 'tools.js -> sendTroubleshootMessage', 'ERROR');
         window.showToast("Er is een fout opgetreden bij het verwerken van de chat-respons.", "error");
     } finally {
-        // Medic UI-Lock opheffen
         if (sendBtn) {
             sendBtn.disabled = false;
             sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');

@@ -587,7 +587,11 @@ window.resetTroubleshootChat = function() {
     currentChatId = null;
     currentChatImageBase64 = null;
     
-    const chatBox = document.getElementById('chat-history');
+    // Hiërarchische Selectielogica: Chatgeschiedenis Box (chatBox)
+    const chatBox = document.getElementById('chat-history') || 
+                    document.querySelector("#troubleshoot-view .chat-messages-wrapper") || 
+                    document.querySelector("#troubleshoot-view [id*='chat']");
+                    
     const header = document.querySelector('#troubleshoot-view h3');
     
     if (header && !document.getElementById('medic-history-btn')) {
@@ -596,10 +600,13 @@ window.resetTroubleshootChat = function() {
             <button id="medic-history-btn" onclick="window.toggleMedicHistory()" class="text-xs bg-app-tertiary border border-app-brand/30 px-2 py-1 rounded mr-2 hover:bg-app-secondary">
                 📂 History
             </button>`;
-        header.insertBefore(btnContainer.firstElementChild, header.firstChild);
+        const firstChildNode = btnContainer.children.item(0);
+        if (firstChildNode) {
+            header.insertBefore(firstChildNode, header.firstChild);
+        }
         
         const view = document.getElementById('troubleshoot-view');
-        if (!document.getElementById('medic-history-list')) {
+        if (view && !document.getElementById('medic-history-list')) {
             const listDiv = document.createElement('div');
             listDiv.id = 'medic-history-list';
             listDiv.className = 'hidden absolute top-12 left-4 right-4 bg-app-secondary border border-app-brand/20 shadow-xl rounded-lg z-50 max-h-[60vh] overflow-y-auto p-2';
@@ -618,8 +625,18 @@ window.resetTroubleshootChat = function() {
         </div>`;
     }
 
-    const medicInputEl = document.getElementById('medic-input') || document.querySelector("textarea[placeholder*='Describe']");
-    const medicSendBtnEl = document.getElementById('medic-send-btn') || document.querySelector("button[onclick*='sendTroubleshootMessage']");
+    // Hiërarchische Selectielogica: Input Element (inputEl)
+    const medicInputEl = document.getElementById('medic-input') || 
+                         document.querySelector("#troubleshoot-view input") || 
+                         document.querySelector("#troubleshoot-view textarea") || 
+                         document.querySelector("textarea[placeholder*='Describe']");
+
+    // Hiërarchische Selectielogica: Verzendknop (sendBtn)
+    const troubleshootWrapper = document.querySelector("#troubleshoot-view");
+    const fallbackFirstButton = troubleshootWrapper ? troubleshootWrapper.querySelector("button") : null;
+    const medicSendBtnEl = document.getElementById('medic-send-btn') || 
+                          document.querySelector("#troubleshoot-view button[onclick*='sendTroubleshootMessage']") || 
+                          fallbackFirstButton;
 
     if (medicInputEl) {
         medicInputEl.value = "";
@@ -627,6 +644,7 @@ window.resetTroubleshootChat = function() {
         if (medicInputEl.parentNode) {
             medicInputEl.parentNode.replaceChild(newMedicInput, medicInputEl);
         }
+        // Event Handler: Enter zonder Shift vuurt e.preventDefault() en direct sendTroubleshootMessage() af
         newMedicInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -794,9 +812,23 @@ window.clearChatImage = function() {
 }
 
 window.sendTroubleshootMessage = async function() {
-    const inputEl = document.getElementById('medic-input') || document.querySelector("textarea[placeholder*='Describe']");
-    const sendBtn = document.getElementById('medic-send-btn') || document.querySelector("button[onclick*='sendTroubleshootMessage']");
-    const chatBox = document.getElementById('chat-history') || document.querySelector(".chat-messages-wrapper");
+    // Hiërarchische Selectielogica: Input Element (inputEl)
+    const inputEl = document.getElementById('medic-input') || 
+                    document.querySelector("#troubleshoot-view input") || 
+                    document.querySelector("#troubleshoot-view textarea") || 
+                    document.querySelector("textarea[placeholder*='Describe']");
+
+    // Hiërarchische Selectielogica: Verzendknop (sendBtn)
+    const troubleshootWrapper = document.querySelector("#troubleshoot-view");
+    const fallbackFirstButton = troubleshootWrapper ? troubleshootWrapper.querySelector("button") : null;
+    const sendBtn = document.getElementById('medic-send-btn') || 
+                    document.querySelector("#troubleshoot-view button[onclick*='sendTroubleshootMessage']") || 
+                    fallbackFirstButton;
+
+    // Hiërarchische Selectielogica: Chatgeschiedenis Box (chatBox)
+    const chatBox = document.getElementById('chat-history') || 
+                    document.querySelector("#troubleshoot-view .chat-messages-wrapper") || 
+                    document.querySelector("#troubleshoot-view [id*='chat']");
 
     if (!inputEl || !chatBox) {
         window.showToast("System error: Interface elements for chat (#medic-input or #chat-history) are inaccessible.", "error");
